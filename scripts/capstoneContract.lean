@@ -1,8 +1,8 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
-import SP1Clean.Export.ShardChain
+import SP1Clean.Soundness.HostRegisteredCalls
+import SP1Clean.Export.ShortShardChain
 import SP1CleanTest.Alignment.Core.FixedRamCapacity
-import SP1Clean.Export.SixCallResources
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Proofs.Completeness.HintInventory
@@ -97,6 +97,7 @@ example :
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
           (∀ event ∈ events, SixCallProfile.event event) ∧
+          ExecutionPath.Encoded (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           ExecutionPath.ReleaseLinks (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           SP1Clean.FormalModel.Shard.DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
 
@@ -127,6 +128,11 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
   ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
   ``SP1Clean.Export.InstalledAssembly.native_resources_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak,
+  ``SP1Clean.Export.InstalledAssembly.native_release_of_short_statement,
+  ``SP1Clean.Export.InstalledAssembly.native_release_of_short_halt,
+  ``SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release,
   ``SP1Clean.Export.InstalledAssembly.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
@@ -136,6 +142,10 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.admissibleExecution_hintInventory,
   ``SP1Clean.HostControl.noop_spec_of_run,
   ``SP1Clean.HostNoopChip.run_of_spec,
+  ``SP1Clean.HostControl.choice_spec_of_run,
+  ``SP1Clean.Soundness.HostRegisteredCalls.noopTable_component,
+  ``SP1Clean.Soundness.HostRegisteredCalls.receipt_heights,
+  ``SP1Clean.Soundness.HostRegisteredCalls.classified,
   ``SP1Clean.TraceGen.routed_successor_at,
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,

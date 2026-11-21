@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HostObservedDynamic
-import SP1Clean.Soundness.HostFinalMemoryReleaseLinks
+import SP1Clean.Soundness.HostFinalMemoryEncoding
 import SP1Clean.FormalModel.ShardMachine
 
 /-! # Raw acceptance of the exported native circuit as a Sail machine trace
@@ -20,7 +20,8 @@ integer registers, clock and host projection. `DynamicMatch` identifies the five
 Sail entries against the ordinary receipts in this same trace. The header binds the well-formed
 commitment statement and every actual COMMIT/COMMIT_DEFERRED declaration agrees with it. Every
 event in the trace belongs to the six-call profile. Every ordinary source in this same trace
-satisfies the released jump-link encoding.
+satisfies the released jump-link encoding and the native load/store span checks. Every active
+source clock has phase one modulo eight.
 
 The proof applies to every prime field with `2 ^ 25 < p`, including SP1's. All installed tables
 are lookup-free, so projection preserves each row's constraints even when canonical prover data
@@ -100,6 +101,7 @@ def SailTrace (commitments : CommitmentStatement) (image : ProgramImage)
     ∃ (events : List ExecutionEvent) (actual : ExecutionState),
       (sp1Machine p image).Trace source.realize events actual ∧
       commitments.Matches events ∧ (∀ event ∈ events, SixCallProfile.event event) ∧
+      ExecutionPath.Encoded (policy p image) image.program source.realize events ∧
       ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
       DynamicMatch source target events ∧ Endpoint source target final header events actual
 
@@ -161,9 +163,9 @@ theorem sail_trace {image : ProgramImage} {source target : ExecutionSnapshot}
   obtain ⟨sourceValid, sourceFor, events, actual, trace, endpoint, profile, order, declared⟩ :=
     trace_of_witness (HostObserved.baseWitness observed) (HostObserved.baseWitness_constraints observed checked)
       (HostObserved.grounding_balance observed funded)
-  have links := order.releaseLinks (HostObserved.baseWitness observed) sourceValid.1.1
+  have encoding := order.encoding (HostObserved.baseWitness observed) sourceValid.1.1
     (HostObserved.baseWitness_constraints observed checked) (HostObserved.grounding_balance observed funded)
-  rw [← image.program_eq sourceValid.1.1] at links
+  rw [← image.program_eq sourceValid.1.1] at encoding
   have silent := HostObserved.verifier_declarations_silent (image := image) (source := source)
     (target := target) (final := final)
   have requests : CommitmentEnsemble.Declared observed events := declared.transfer fun _ member => by
@@ -175,6 +177,6 @@ theorem sail_trace {image : ProgramImage} {source target : ExecutionSnapshot}
         silent constraints balanced)
   rw [HostObserved.baseWitness_publicInput] at sourceFor endpoint
   exact ⟨sourceValid, sourceFor, sail, CommitmentEnsemble.statement_spec witness balanced, events, actual,
-    trace, agrees, profile, links, HostObserved.dynamicMatch observed checked funded order, endpoint⟩
+    trace, agrees, profile, encoding.1, encoding.2, HostObserved.dynamicMatch observed checked funded order, endpoint⟩
 
 end SP1Clean.Soundness.Shard

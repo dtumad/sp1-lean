@@ -92,6 +92,13 @@
       "typeFingerprint": "2685543859"
     },
     {
+      "bodyFingerprint": "1960918033",
+      "local": false,
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "AddMonoid.toAddZeroClass",
+      "typeFingerprint": "2363751083"
+    },
+    {
       "bodyFingerprint": "986691760",
       "local": false,
       "module": "Mathlib.Data.Nat.Cast.Defs",
@@ -104,6 +111,20 @@
       "module": "Mathlib.Data.Nat.Cast.Defs",
       "name": "AddMonoidWithOne.toOne",
       "typeFingerprint": "1498187716"
+    },
+    {
+      "bodyFingerprint": "1541015074",
+      "local": false,
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "AddZero.toAdd",
+      "typeFingerprint": "2997542936"
+    },
+    {
+      "bodyFingerprint": "2952982000",
+      "local": false,
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "AddZeroClass.toAddZero",
+      "typeFingerprint": "4082037184"
     },
     {
       "bodyFingerprint": null,
@@ -209,6 +230,20 @@
       "module": "ToClean.Air.VerifierExtension",
       "name": "Air.Flat.ClosedVerifier.program._proof_2",
       "typeFingerprint": "3611559428"
+    },
+    {
+      "bodyFingerprint": "2288295670",
+      "local": true,
+      "module": "ToClean.Air.VerifierExtension",
+      "name": "Air.Flat.ClosedVerifier.project",
+      "typeFingerprint": "1652195747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.VerifierExtension",
+      "name": "Air.Flat.ClosedVerifier.project._proof_1",
+      "typeFingerprint": "1299955615"
     },
     {
       "bodyFingerprint": null,
@@ -505,6 +540,13 @@
       "typeFingerprint": "1283073026"
     },
     {
+      "bodyFingerprint": "2114617335",
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness.BalancedChannel",
+      "typeFingerprint": "3152301358"
+    },
+    {
       "bodyFingerprint": "1200951942",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
@@ -519,6 +561,20 @@
       "typeFingerprint": "4035227937"
     },
     {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness._proof_2",
+      "typeFingerprint": "3327466540"
+    },
+    {
+      "bodyFingerprint": "2957410169",
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness.data",
+      "typeFingerprint": "190836072"
+    },
+    {
       "bodyFingerprint": "3397887335",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
@@ -526,11 +582,81 @@
       "typeFingerprint": "836582716"
     },
     {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness.mk",
+      "typeFingerprint": "3476961422"
+    },
+    {
+      "bodyFingerprint": "2459015998",
+      "local": true,
+      "module": "ToClean.Air.EnsembleBuild",
+      "name": "Air.Flat.EnsembleWitness.ofCanonicalTables",
+      "typeFingerprint": "3008642951"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.EnsembleBuild",
+      "name": "Air.Flat.EnsembleWitness.ofCanonicalTables._proof_1",
+      "typeFingerprint": "491046173"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.EnsembleBuild",
+      "name": "Air.Flat.EnsembleWitness.ofCanonicalTables._proof_2",
+      "typeFingerprint": "692094753"
+    },
+    {
       "bodyFingerprint": "3235948893",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
       "name": "Air.Flat.EnsembleWitness.publicInput",
       "typeFingerprint": "3525768574"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness.same_data",
+      "typeFingerprint": "1948694258"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness.same_length",
+      "typeFingerprint": "2920271275"
+    },
+    {
+      "bodyFingerprint": "1285613762",
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.EnsembleWitness.tables",
+      "typeFingerprint": "226954073"
+    },
+    {
+      "bodyFingerprint": "1076049497",
+      "local": true,
+      "module": "ToClean.Air.EnsembleBuild",
+      "name": "Air.Flat.EnsembleWitness.withEnsemble",
+      "typeFingerprint": "561222208"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.EnsembleBuild",
+      "name": "Air.Flat.EnsembleWitness.withEnsemble._proof_1",
+      "typeFingerprint": "2009509897"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.EnsembleBuild",
+      "name": "Air.Flat.EnsembleWitness.withEnsemble._proof_2",
+      "typeFingerprint": "2413561872"
     },
     {
       "bodyFingerprint": null,
@@ -659,6 +785,13 @@
       "typeFingerprint": "1831742773"
     },
     {
+      "bodyFingerprint": "2910983753",
+      "local": true,
+      "module": "ToClean.Air.ReceiverView",
+      "name": "Air.Flat.ReceiverView.activity",
+      "typeFingerprint": "904679258"
+    },
+    {
       "bodyFingerprint": "3082251610",
       "local": true,
       "module": "ToClean.Air.ReceiverView",
@@ -673,11 +806,25 @@
       "typeFingerprint": "2133721731"
     },
     {
+      "bodyFingerprint": "3119119916",
+      "local": true,
+      "module": "ToClean.Air.ReceiverView",
+      "name": "Air.Flat.ReceiverView.message",
+      "typeFingerprint": "2876761986"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "ToClean.Air.ReceiverView",
       "name": "Air.Flat.ReceiverView.mk",
       "typeFingerprint": "1893158550"
+    },
+    {
+      "bodyFingerprint": "212504202",
+      "local": true,
+      "module": "ToClean.Air.ReceiverView",
+      "name": "Air.Flat.ReceiverView.tableMessages",
+      "typeFingerprint": "3178055674"
     },
     {
       "bodyFingerprint": null,
@@ -750,11 +897,25 @@
       "typeFingerprint": "172420427"
     },
     {
+      "bodyFingerprint": "2905230884",
+      "local": false,
+      "module": "Clean.Air.FlatComponent",
+      "name": "Air.Flat.Table.environment",
+      "typeFingerprint": "3344257547"
+    },
+    {
       "bodyFingerprint": "3705028241",
       "local": false,
       "module": "Clean.Air.FlatComponent",
       "name": "Air.Flat.Table.interactionsWith",
       "typeFingerprint": "45144818"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Clean.Air.FlatComponent",
+      "name": "Air.Flat.Table.length_le",
+      "typeFingerprint": "3044965998"
     },
     {
       "bodyFingerprint": null,
@@ -769,6 +930,48 @@
       "module": "Clean.Air.FlatComponent",
       "name": "Air.Flat.Table.table",
       "typeFingerprint": "2382974394"
+    },
+    {
+      "bodyFingerprint": "3865294926",
+      "local": true,
+      "module": "ToClean.Air.ComponentReplacement",
+      "name": "Air.Flat.Table.withComponent",
+      "typeFingerprint": "451514027"
+    },
+    {
+      "bodyFingerprint": "360875169",
+      "local": true,
+      "module": "ToClean.Air.ComponentReplacement",
+      "name": "Air.Flat.Table.withComponent._auto_1",
+      "typeFingerprint": "3481363729"
+    },
+    {
+      "bodyFingerprint": "360875169",
+      "local": true,
+      "module": "ToClean.Air.ComponentReplacement",
+      "name": "Air.Flat.Table.withComponent._auto_3",
+      "typeFingerprint": "3481363729"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.ComponentReplacement",
+      "name": "Air.Flat.Table.withComponent._proof_1",
+      "typeFingerprint": "3694183882"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.ComponentReplacement",
+      "name": "Air.Flat.Table.withComponent._proof_2",
+      "typeFingerprint": "2723849513"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.ComponentReplacement",
+      "name": "Air.Flat.Table.withComponent._proof_3",
+      "typeFingerprint": "1024386180"
     },
     {
       "bodyFingerprint": null,
@@ -846,6 +1049,20 @@
       "module": "ToClean.Air.TransitionView",
       "name": "Air.Flat.TransitionView.mk",
       "typeFingerprint": "919918386"
+    },
+    {
+      "bodyFingerprint": "996920561",
+      "local": true,
+      "module": "ToClean.Air.TransitionView",
+      "name": "Air.Flat.TransitionView.readIndexedRows",
+      "typeFingerprint": "3172234911"
+    },
+    {
+      "bodyFingerprint": "4072615392",
+      "local": true,
+      "module": "ToClean.Air.TransitionView",
+      "name": "Air.Flat.TransitionView.readIndexedRows.match_1",
+      "typeFingerprint": "798182908"
     },
     {
       "bodyFingerprint": "3133747720",
@@ -1954,6 +2171,13 @@
       "typeFingerprint": "1473901610"
     },
     {
+      "bodyFingerprint": "264781718",
+      "local": false,
+      "module": "Clean.Circuit.CircuitType",
+      "name": "CircuitType.Value",
+      "typeFingerprint": "1473901610"
+    },
+    {
       "bodyFingerprint": "355651525",
       "local": false,
       "module": "Clean.Circuit.CircuitType",
@@ -2253,6 +2477,13 @@
       "module": "Clean.Circuit.Expression",
       "name": "Environment.data",
       "typeFingerprint": "3773529689"
+    },
+    {
+      "bodyFingerprint": "2114233561",
+      "local": false,
+      "module": "Clean.Circuit.Expression",
+      "name": "Environment.fromArray",
+      "typeFingerprint": "1884525708"
     },
     {
       "bodyFingerprint": "2324462677",
@@ -17529,6 +17760,13 @@
       "typeFingerprint": "3807510281"
     },
     {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Batteries.Data.List.Basic",
+      "name": "List.Forall\u2082",
+      "typeFingerprint": "2505626646"
+    },
+    {
       "bodyFingerprint": "2864493157",
       "local": false,
       "module": "Init.Data.List.Basic",
@@ -18131,6 +18369,13 @@
       "typeFingerprint": "3277217472"
     },
     {
+      "bodyFingerprint": "1593557107",
+      "local": false,
+      "module": "Mathlib.Algebra.Group.Nat.Defs",
+      "name": "Nat.instAddMonoid",
+      "typeFingerprint": "3168754568"
+    },
+    {
       "bodyFingerprint": "979615821",
       "local": false,
       "module": "Init.Data.Nat.Bitwise.Basic",
@@ -18353,6 +18598,13 @@
       "module": "Clean.Circuit.Operations",
       "name": "NestedOperations.toFlat",
       "typeFingerprint": "1572181097"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "Nonempty",
+      "typeFingerprint": "4091481359"
     },
     {
       "bodyFingerprint": "147715320",
@@ -34548,6 +34800,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.ShortShardChain",
+      "name": "SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release",
+      "typeFingerprint": "3114219370"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.ShardChain",
       "name": "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
       "typeFingerprint": "2531483871"
@@ -34620,7 +34879,7 @@
       "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.ExecutionFacts.mk",
-      "typeFingerprint": "1454740308"
+      "typeFingerprint": "89958273"
     },
     {
       "bodyFingerprint": "746068900",
@@ -34737,6 +34996,27 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.ShortShard",
+      "name": "SP1Clean.Export.InstalledAssembly.native_release_of_short_halt",
+      "typeFingerprint": "99211903"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.ShortShard",
+      "name": "SP1Clean.Export.InstalledAssembly.native_release_of_short_statement",
+      "typeFingerprint": "1405682145"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.SixCallResources",
+      "name": "SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak",
+      "typeFingerprint": "2627891380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.SixCallResources",
       "name": "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
       "typeFingerprint": "2878849353"
@@ -34765,6 +35045,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.SixCallResources",
+      "name": "SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement",
+      "typeFingerprint": "1528230111"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.soundness",
       "typeFingerprint": "1194192588"
@@ -34775,6 +35062,13 @@
       "module": "SP1Clean.Export.InstalledHintCompleteness",
       "name": "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
       "typeFingerprint": "2203224658"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedRamCapacity",
+      "name": "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
+      "typeFingerprint": "3110810333"
     },
     {
       "bodyFingerprint": null,
@@ -36350,6 +36644,13 @@
       "module": "SP1Clean.FormalModel.Shard",
       "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution",
       "typeFingerprint": "3154178738"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedRamCapacity",
+      "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity",
+      "typeFingerprint": "726134347"
     },
     {
       "bodyFingerprint": null,
@@ -39362,6 +39663,13 @@
       "typeFingerprint": "3036723548"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostControlPopulate",
+      "name": "SP1Clean.HostControl.choice_spec_of_run",
+      "typeFingerprint": "191119483"
+    },
+    {
       "bodyFingerprint": "4027889166",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.HostControlPopulate",
@@ -40797,6 +41105,13 @@
       "typeFingerprint": "3045986214"
     },
     {
+      "bodyFingerprint": "2746176978",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.HostControl",
+      "name": "SP1Clean.HostNoopChip.ChoiceSpec",
+      "typeFingerprint": "1511463754"
+    },
+    {
       "bodyFingerprint": "769278823",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.HostControl",
@@ -40858,6 +41173,139 @@
       "module": "SP1Clean.FormalModel.Contracts.HostControl",
       "name": "SP1Clean.HostNoopChip.Spec",
       "typeFingerprint": "4074495811"
+    },
+    {
+      "bodyFingerprint": "478096511",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceCircuit",
+      "typeFingerprint": "159189644"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceCircuit._proof_1",
+      "typeFingerprint": "1168938821"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceCircuit._proof_2",
+      "typeFingerprint": "3671202042"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceCircuit._proof_3",
+      "typeFingerprint": "1028038107"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceCircuit._proof_4",
+      "typeFingerprint": "2445792021"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceCircuit._proof_5",
+      "typeFingerprint": "1062437896"
+    },
+    {
+      "bodyFingerprint": "2195165764",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceElaborated",
+      "typeFingerprint": "3813147082"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceElaborated._proof_1",
+      "typeFingerprint": "3878456087"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceElaborated._proof_2",
+      "typeFingerprint": "1802910485"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceElaborated._proof_3",
+      "typeFingerprint": "2317755057"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceElaborated._proof_4",
+      "typeFingerprint": "380847196"
+    },
+    {
+      "bodyFingerprint": "895717831",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain",
+      "typeFingerprint": "3647814667"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain._proof_1",
+      "typeFingerprint": "1692152972"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain._proof_2",
+      "typeFingerprint": "1885022586"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain._proof_3",
+      "typeFingerprint": "2936928425"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain._proof_4",
+      "typeFingerprint": "918657465"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain._proof_5",
+      "typeFingerprint": "3810659771"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostNoopChip.Choice",
+      "name": "SP1Clean.HostNoopChip.choiceMain._proof_6",
+      "typeFingerprint": "2573870304"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostControlLedger",
+      "name": "SP1Clean.HostNoopChip.choice_host_values",
+      "typeFingerprint": "496564955"
     },
     {
       "bodyFingerprint": "291149590",
@@ -40991,6 +41439,13 @@
       "module": "SP1Clean.Proofs.Chips.HostNoopChip.Bridge",
       "name": "SP1Clean.HostNoopChip.execution",
       "typeFingerprint": "2327813701"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.HostControlLedger",
+      "name": "SP1Clean.HostNoopChip.host_values",
+      "typeFingerprint": "2633802982"
     },
     {
       "bodyFingerprint": "4219129271",
@@ -61984,6 +62439,20 @@
       "module": "SP1Clean.Semantics.Host.HostExecution",
       "name": "SP1Clean.Semantics.HostReadContext.register",
       "typeFingerprint": "3567989751"
+    },
+    {
+      "bodyFingerprint": "3215724661",
+      "local": true,
+      "module": "SP1Clean.Semantics.Host.SixCallProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.code",
+      "typeFingerprint": "1616523472"
+    },
+    {
+      "bodyFingerprint": "2561094069",
+      "local": true,
+      "module": "SP1Clean.Semantics.Host.SixCallProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.code.match_1",
+      "typeFingerprint": "2561012691"
     },
     {
       "bodyFingerprint": null,
@@ -85996,6 +86465,13 @@
       "typeFingerprint": "2865357514"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.bound",
+      "typeFingerprint": "2499085497"
+    },
+    {
       "bodyFingerprint": "236306841",
       "local": true,
       "module": "SP1Clean.Soundness.HaltPadding",
@@ -86015,6 +86491,55 @@
       "module": "SP1Clean.Soundness.HaltPadding",
       "name": "SP1Clean.Soundness.HaltPadding.install._proof_2",
       "typeFingerprint": "209496550"
+    },
+    {
+      "bodyFingerprint": "2278877477",
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project",
+      "typeFingerprint": "1765782129"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project._proof_1",
+      "typeFingerprint": "4120773965"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project._proof_2",
+      "typeFingerprint": "3240503568"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project._proof_3",
+      "typeFingerprint": "273572218"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project._proof_4",
+      "typeFingerprint": "858037584"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project._proof_5",
+      "typeFingerprint": "3498115230"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HaltPadding",
+      "name": "SP1Clean.Soundness.HaltPadding.project._proof_6",
+      "typeFingerprint": "4263335441"
     },
     {
       "bodyFingerprint": "4228178990",
@@ -86059,6 +86584,55 @@
       "typeFingerprint": "2964634776"
     },
     {
+      "bodyFingerprint": "790992174",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.activeRows",
+      "typeFingerprint": "3518263195"
+    },
+    {
+      "bodyFingerprint": "3206772502",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.call",
+      "typeFingerprint": "1888435190"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.call._proof_1",
+      "typeFingerprint": "2271130875"
+    },
+    {
+      "bodyFingerprint": "1163387126",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.calls",
+      "typeFingerprint": "2851587354"
+    },
+    {
+      "bodyFingerprint": "233953595",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.cleanBalanceDecidableEq",
+      "typeFingerprint": "1867141115"
+    },
+    {
+      "bodyFingerprint": "3713143500",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.clock",
+      "typeFingerprint": "3042145564"
+    },
+    {
+      "bodyFingerprint": "4174797253",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallLedger",
+      "name": "SP1Clean.Soundness.HostCallLedger.input",
+      "typeFingerprint": "3656215710"
+    },
+    {
       "bodyFingerprint": "1597438571",
       "local": true,
       "module": "SP1Clean.Soundness.HostCallLedger",
@@ -86066,11 +86640,18 @@
       "typeFingerprint": "3257495891"
     },
     {
-      "bodyFingerprint": "3140100020",
+      "bodyFingerprint": "2441820251",
       "local": true,
       "module": "SP1Clean.Soundness.HostCallReceivers",
       "name": "SP1Clean.Soundness.HostCallReceivers.available",
       "typeFingerprint": "3470299116"
+    },
+    {
+      "bodyFingerprint": "3644314112",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallReceivers",
+      "name": "SP1Clean.Soundness.HostCallReceivers.availableFor",
+      "typeFingerprint": "279140027"
     },
     {
       "bodyFingerprint": "711938149",
@@ -86143,25 +86724,18 @@
       "typeFingerprint": "2252444825"
     },
     {
-      "bodyFingerprint": "1659473391",
+      "bodyFingerprint": "2254910414",
       "local": true,
       "module": "SP1Clean.Soundness.HostCallReceivers",
       "name": "SP1Clean.Soundness.HostCallReceivers.noop",
       "typeFingerprint": "3326865296"
     },
     {
-      "bodyFingerprint": null,
+      "bodyFingerprint": "2421795299",
       "local": true,
       "module": "SP1Clean.Soundness.HostCallReceivers",
-      "name": "SP1Clean.Soundness.HostCallReceivers.noop._proof_1",
-      "typeFingerprint": "56282816"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Soundness.HostCallReceivers",
-      "name": "SP1Clean.Soundness.HostCallReceivers.noop._proof_2",
-      "typeFingerprint": "1927029439"
+      "name": "SP1Clean.Soundness.HostCallReceivers.profileNoop",
+      "typeFingerprint": "1137918933"
     },
     {
       "bodyFingerprint": "3649333017",
@@ -86318,6 +86892,13 @@
       "typeFingerprint": "2900697789"
     },
     {
+      "bodyFingerprint": "4186364245",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintQueueBoundary",
+      "name": "SP1Clean.Soundness.HostHintQueueBoundary.Balanced",
+      "typeFingerprint": "824440185"
+    },
+    {
       "bodyFingerprint": "1225918096",
       "local": true,
       "module": "SP1Clean.Soundness.HostHintQueueBoundary",
@@ -86351,6 +86932,27 @@
       "module": "SP1Clean.Soundness.HostHintQueueBoundary",
       "name": "SP1Clean.Soundness.HostHintQueueBoundary.ensemble",
       "typeFingerprint": "1916960121"
+    },
+    {
+      "bodyFingerprint": "3596351833",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintQueueBoundary",
+      "name": "SP1Clean.Soundness.HostHintQueueBoundary.hiddenChannels",
+      "typeFingerprint": "1789335327"
+    },
+    {
+      "bodyFingerprint": "1856053261",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintQueueBoundary",
+      "name": "SP1Clean.Soundness.HostHintQueueBoundary.projected",
+      "typeFingerprint": "3137596834"
+    },
+    {
+      "bodyFingerprint": "972749665",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintQueueBoundary",
+      "name": "SP1Clean.Soundness.HostHintQueueBoundary.underlying",
+      "typeFingerprint": "2870678206"
     },
     {
       "bodyFingerprint": "2961877379",
@@ -86409,6 +87011,27 @@
       "typeFingerprint": "3225563957"
     },
     {
+      "bodyFingerprint": "2360368773",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintReadLocal",
+      "name": "SP1Clean.Soundness.HostHintReadLocal.handlerTable",
+      "typeFingerprint": "3025474656"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintReadLocal",
+      "name": "SP1Clean.Soundness.HostHintReadLocal.handlerTable._proof_1",
+      "typeFingerprint": "3908212399"
+    },
+    {
+      "bodyFingerprint": "1226009633",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostHintReadLocalQueue",
+      "name": "SP1Clean.Soundness.HostHintReadLocal.queueTables",
+      "typeFingerprint": "3330187238"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.HostHintReadLocalRecords",
@@ -86421,6 +87044,20 @@
       "module": "SP1Clean.Soundness.HostHintReadLocalRecords",
       "name": "SP1Clean.Soundness.HostHintReadLocal.sourceResources",
       "typeFingerprint": "3377441961"
+    },
+    {
+      "bodyFingerprint": "1415469249",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalCore",
+      "name": "SP1Clean.Soundness.HostLocalCore.Witness",
+      "typeFingerprint": "3041806388"
+    },
+    {
+      "bodyFingerprint": "2936392411",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalCoreLedger",
+      "name": "SP1Clean.Soundness.HostLocalCore.auxiliaryTables",
+      "typeFingerprint": "807296391"
     },
     {
       "bodyFingerprint": "1112028132",
@@ -86449,6 +87086,20 @@
       "module": "SP1Clean.Soundness.HostLocalCore",
       "name": "SP1Clean.Soundness.HostLocalCore.ensemble",
       "typeFingerprint": "1326332936"
+    },
+    {
+      "bodyFingerprint": "363083998",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalCore",
+      "name": "SP1Clean.Soundness.HostLocalCore.hostCallTable",
+      "typeFingerprint": "4266190963"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalCore",
+      "name": "SP1Clean.Soundness.HostLocalCore.hostCallTable._proof_2",
+      "typeFingerprint": "1066162183"
     },
     {
       "bodyFingerprint": null,
@@ -86486,6 +87137,27 @@
       "typeFingerprint": "3706921449"
     },
     {
+      "bodyFingerprint": "4160320296",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalHandoff",
+      "name": "SP1Clean.Soundness.HostLocalHandoff.receiverTable",
+      "typeFingerprint": "4011158226"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalHandoff",
+      "name": "SP1Clean.Soundness.HostLocalHandoff.receiverTable._proof_1",
+      "typeFingerprint": "3783331158"
+    },
+    {
+      "bodyFingerprint": "2617114287",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostLocalHandoff",
+      "name": "SP1Clean.Soundness.HostLocalHandoff.receiverTables",
+      "typeFingerprint": "2734097962"
+    },
+    {
       "bodyFingerprint": "212014853",
       "local": true,
       "module": "SP1Clean.Soundness.HostObserved",
@@ -86504,14 +87176,14 @@
       "local": true,
       "module": "SP1Clean.Soundness.HostObserved",
       "name": "SP1Clean.Soundness.HostObserved.producers._proof_1",
-      "typeFingerprint": "4148998453"
+      "typeFingerprint": "2065095045"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.HostObserved",
       "name": "SP1Clean.Soundness.HostObserved.producers._proof_2",
-      "typeFingerprint": "1898631838"
+      "typeFingerprint": "1112954315"
     },
     {
       "bodyFingerprint": null,
@@ -86596,6 +87268,111 @@
       "module": "SP1Clean.Soundness.HostOrdinaryReceipts",
       "name": "SP1Clean.Soundness.HostOrdinaryReceipts.replace._proof_2",
       "typeFingerprint": "663086025"
+    },
+    {
+      "bodyFingerprint": "1994016612",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostQueueCPUOrder",
+      "name": "SP1Clean.Soundness.HostQueueCPUOrder.call",
+      "typeFingerprint": "3860905670"
+    },
+    {
+      "bodyFingerprint": "1932947089",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostQueueCPUOrder",
+      "name": "SP1Clean.Soundness.HostQueueCPUOrder.call.match_1",
+      "typeFingerprint": "557260053"
+    },
+    {
+      "bodyFingerprint": "817086436",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostQueueOrder",
+      "name": "SP1Clean.Soundness.HostQueueOrder.Index",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "2643125463",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostQueueOrder",
+      "name": "SP1Clean.Soundness.HostQueueOrder.Row",
+      "typeFingerprint": "3972626760"
+    },
+    {
+      "bodyFingerprint": "4042339168",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostQueueOrder",
+      "name": "SP1Clean.Soundness.HostQueueOrder.indices",
+      "typeFingerprint": "3571116692"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.classified",
+      "typeFingerprint": "2811049140"
+    },
+    {
+      "bodyFingerprint": "2937682528",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.ensemble",
+      "typeFingerprint": "1475755912"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.ensemble._proof_1",
+      "typeFingerprint": "2999301987"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.ensemble._proof_2",
+      "typeFingerprint": "1193250256"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.ensemble._proof_3",
+      "typeFingerprint": "2295809483"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.ensemble._proof_4",
+      "typeFingerprint": "2624259765"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.ensemble._proof_5",
+      "typeFingerprint": "279583312"
+    },
+    {
+      "bodyFingerprint": "779673875",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.noopTable",
+      "typeFingerprint": "4138782453"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.noopTable_component",
+      "typeFingerprint": "1039624142"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "SP1Clean.Soundness.HostRegisteredCalls.receipt_heights",
+      "typeFingerprint": "3332914807"
     },
     {
       "bodyFingerprint": "931088847",
@@ -87494,7 +88271,7 @@
       "typeFingerprint": "1404712657"
     },
     {
-      "bodyFingerprint": "1983462468",
+      "bodyFingerprint": "3939544863",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.SailTrace",
@@ -98897,6 +99674,13 @@
       "typeFingerprint": "2154538674"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1CleanTest.Alignment.Core.FixedRamCapacity",
+      "name": "SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement",
+      "typeFingerprint": "1679676383"
+    },
+    {
       "bodyFingerprint": "3863074956",
       "local": false,
       "module": "Sail.ArchSem",
@@ -102369,6 +103153,27 @@
       "typeFingerprint": "2525075006"
     },
     {
+      "bodyFingerprint": "1007720396",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallReceivers",
+      "name": "_private.SP1Clean.Soundness.HostCallReceivers.0.SP1Clean.Soundness.HostCallReceivers.noopReceiver",
+      "typeFingerprint": "3649763387"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallReceivers",
+      "name": "_private.SP1Clean.Soundness.HostCallReceivers.0.SP1Clean.Soundness.HostCallReceivers.noopReceiver._proof_1",
+      "typeFingerprint": "2030354205"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostCallReceivers",
+      "name": "_private.SP1Clean.Soundness.HostCallReceivers.0.SP1Clean.Soundness.HostCallReceivers.noopReceiver._proof_2",
+      "typeFingerprint": "3502766557"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.HostFinalMemory",
@@ -102437,6 +103242,20 @@
       "module": "SP1Clean.Soundness.HostObserved",
       "name": "_private.SP1Clean.Soundness.HostObserved.0.SP1Clean.Soundness.HostObserved.endpoint_registered",
       "typeFingerprint": "2705016220"
+    },
+    {
+      "bodyFingerprint": "3513981612",
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "_private.SP1Clean.Soundness.HostRegisteredCalls.0.SP1Clean.Soundness.HostRegisteredCalls.noopIndex",
+      "typeFingerprint": "2630004510"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostRegisteredCalls",
+      "name": "_private.SP1Clean.Soundness.HostRegisteredCalls.0.SP1Clean.Soundness.HostRegisteredCalls.noopIndex._proof_1",
+      "typeFingerprint": "4026955871"
     },
     {
       "bodyFingerprint": null,
@@ -103361,6 +104180,11 @@
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
     "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
+    "SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement",
+    "SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak",
+    "SP1Clean.Export.InstalledAssembly.native_release_of_short_statement",
+    "SP1Clean.Export.InstalledAssembly.native_release_of_short_halt",
+    "SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release",
     "SP1Clean.Export.InstalledAssembly.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",
@@ -103370,9 +104194,16 @@
     "SP1Clean.TraceGen.admissibleExecution_hintInventory",
     "SP1Clean.HostControl.noop_spec_of_run",
     "SP1Clean.HostNoopChip.run_of_spec",
+    "SP1Clean.HostControl.choice_spec_of_run",
+    "SP1Clean.Soundness.HostRegisteredCalls.noopTable_component",
+    "SP1Clean.Soundness.HostRegisteredCalls.receipt_heights",
+    "SP1Clean.Soundness.HostRegisteredCalls.classified",
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
+    "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
+    "SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity",
+    "SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement",
     "SP1Clean.FormalModel.Shard.Executes",
     "SP1Clean.FormalModel.Shard.nativeProfile",
     "SP1Clean.FormalModel.Shard.AdmissibleExecution",

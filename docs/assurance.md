@@ -45,6 +45,7 @@ quantifiers at these boundaries:
 | [Commitment statement](../SP1Clean/Semantics/Execution/CommitmentStatement.lean) | Every actual declaration agrees with one immutable digest; raw host overwrites remain operational and flags imply no coverage? |
 | [Native Sail trace](../SP1Clean/Soundness/Shard/Trace.lean) | Raw committed acceptance yields the complete machine trace, with full RAM/register endpoints, clock and host obligations; no additional readiness premise? |
 | [Production export](../SP1Clean/Export/InstalledAssembly.lean) | Does raw acceptance give one trace between the supplied complete states, with their commitments and the six installed handlers? Do consecutive statements compose across equal realized boundaries? Does adding private generation inputs preserve acceptance for every header and height vector? |
+| [Registered host calls](../SP1Clean/Soundness/HostRegisteredCalls.lean) | In the seven-call profile, do ENTER and VERIFY share one physical receiver, with one receipt per row and distinct instruction clocks? Does every instruction-produced call have an admitted full code and either an authenticated HINT_READ row or a successful host dispatch with the observed result? |
 | [Shard composition](../SP1Clean/Export/ShardChain.lean) | Is each local statement checked at its own header and physical heights? Does the boot-to-HALT conclusion identify the last call on the same trace? |
 | [Observation construction](../SP1Clean/Proofs/Completeness/ExecutionObservationEndpoint.lean) | Does semantic admissibility supply the padded consumer and all three terminal tables, with constraints, guarantees and signed ledgers tied to the 25 routed instruction families and the supplied endpoints? |
 | [Shard targets](../SP1Clean/Soundness/Shard/Contract.lean) | Raw acceptance on the AIR side, total data-only construction on the semantic side, no hidden readiness premises? |
@@ -53,13 +54,15 @@ quantifiers at these boundaries:
 | [Complete execution](../SP1Clean/Semantics/Execution/Execution.lean) | One evolving complete Sail/host/clock state? |
 | [Memory snapshots](../SP1Clean/Semantics/Memory/MemorySnapshot.lean) | Untouched locations, absent keys and full boundary changes covered? |
 | [Rust coverage](../rust/sp1-comparison/inventory/coverage.json) | Released component agreement, native semantics and deliberately different public/host contracts distinguished? |
+| [Fixed RAM capacity](../SP1Clean/Export/FixedRamCapacity.lean) | Does the installed provider impose a strict support bound at every public header and height? Does a bound on semantic boundary bytes leave room on both endpoint channels? |
+| [Empty release execution](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean) | Does the same complete snapshot both admit an empty release trace and exclude every installed witness? |
 | [Realizes](../ToClean/Air/Realizes.lean) | The intended public language rather than a vacuous profile? |
 
 SP1 v6.10.0 gates the link addition on `is_real - op_a_0` and constrains the high result limb
 to zero in both jump chips. The native chip proofs establish the resulting bound for every
 satisfying row assignment. The installed-shard proof transfers this bound to every ordinary cut
 of the accepted execution through the ordered physical CPU rows and the committed Program decode.
-[Accepted execution proof](../SP1Clean/Soundness/HostFinalMemoryReleaseLinks.lean) · [Released JAL AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jal/air.rs#L89-L96) · [Released JALR AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jalr/air.rs#L145-L152)
+[Accepted execution proof](../SP1Clean/Soundness/HostFinalMemoryEncoding.lean) · [Released JAL AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jal/air.rs#L89-L96) · [Released JALR AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jalr/air.rs#L145-L152)
 
 `python3 scripts/check_capstone_contract.py` builds the checked roots and compares their types
 and semantic definition dependencies with the [reviewed manifest](snapshots/capstone-contract.json).
