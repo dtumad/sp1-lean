@@ -88,7 +88,7 @@ example :
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
           (∀ event ∈ events, SixCallProfile.event event) ∧
-          Endpoint source target final header events actual := Iff.rfl
+          DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.
 example {events : List ExecutionEvent} {actual : ExecutionState}
@@ -114,7 +114,9 @@ def roots : Array Name := #[
   ``SP1Clean.Soundness.Shard.sail_trace,
   ``SP1Clean.Export.InstalledAssembly.proverStatement_iff,
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
-  ``SP1Clean.Export.InstalledAssembly.host_execution_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.soundness,
+  ``SP1Clean.Export.InstalledAssembly.append_soundness,
   ``SP1Clean.Export.InstalledAssembly.identity_of_statement,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,

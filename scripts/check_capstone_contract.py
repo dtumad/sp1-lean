@@ -26,7 +26,9 @@ EXPECTED_ROOTS = {
      for name in ("Executes", "nativeProfile", "AdmissibleExecution", "sp1Machine")} | {
     "SP1Clean.Export.InstalledAssembly.proverStatement_iff",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
-    "SP1Clean.Export.InstalledAssembly.host_execution_of_statement",
+    "SP1Clean.Export.InstalledAssembly.execution_of_statement",
+    "SP1Clean.Export.InstalledAssembly.soundness",
+    "SP1Clean.Export.InstalledAssembly.append_soundness",
     "SP1Clean.Export.InstalledAssembly.identity_of_statement",
     "Air.Flat.Realizes",
 }

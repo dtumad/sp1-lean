@@ -157,13 +157,11 @@ theorem trace_of_statement (context : Context)
   obtain ⟨committed, boundaries⟩ := (boundary_statement_iff context header heights).mp accepted
   exact ⟨Shard.sail_trace committed, boundaries⟩
 
-/-- Observations of one execution recovered from the six-handler assembly. -/
+/-- Public observations of the six-handler execution between both complete snapshots. -/
 structure ExecutionFacts (context : Context) (header : SP1PublicIO Fp)
-    (events : List Machine.ExecutionEvent) (actual : ExecutionState) : Prop where
-  path : (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events actual
-  endpoint : Shard.Endpoint context.source context.target context.finalHints header events actual
-  host : actual.host = context.target.host
-  clock : actual.clock = context.target.clock
+    (events : List Machine.ExecutionEvent) : Prop where
+  path : (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events context.target.realize
+  endpoint : Shard.Endpoint context.source context.target context.finalHints header events context.target.realize
   handlers : ∀ event ∈ events, SixCallProfile.event event
   commitments : context.commitments.Matches events
   ticks : executionResources (FormalModel.Shard.policy SP1Prime context.image) context.image.program
@@ -174,17 +172,18 @@ structure ExecutionFacts (context : Context) (header : SP1PublicIO Fp)
 
 /-- Raw acceptance gives a bounded execution from the authenticated source. All outgoing host,
 clock, memory, public commitment and handler observations refer to that execution. -/
-theorem host_execution_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+theorem execution_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (accepted : (assembly context).Statement .logUp header heights) :
     ExecutionSourceValid context.image context.source ∧ header.SourceFor context.source ∧
       SailBoundary.Spec context.source context.target header ∧ CommitmentBoundary.Spec context.commitments header ∧
-      ∃ events actual, ExecutionFacts context header events actual := by
-  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, endpoint⟩, checked⟩ :=
+      ∃ events, ExecutionFacts context header events := by
+  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, dynamic, endpoint⟩, checked⟩ :=
     trace_of_statement context accepted
+  obtain rfl := (endpoint.realize_eq sail dynamic checked.host).symm
   have execution := FormalModel.Shard.trace_iff_executionPath.mp path
   obtain ⟨clock, ticks, count⟩ := checked.resources.path_work execution endpoint.clock
-  refine ⟨valid, sourceFor, sail, declared, events, actual,
-    ⟨path, endpoint, endpoint.host_eq checked.host, clock, handlers, agrees, ticks, count, checked.resources, ?_⟩⟩
+  refine ⟨valid, sourceFor, sail, declared, events,
+    ⟨path, endpoint, handlers, agrees, ticks, count, checked.resources, ?_⟩⟩
   rw [sail.2.2]
   by_cases same : context.source.clock = context.target.clock
   · have noEvents : events.length = 0 := by omega
@@ -195,28 +194,50 @@ theorem host_execution_of_statement (context : Context) {header : SP1PublicIO Fp
     exact same ((congrArg ExecutionState.clock identity).symm.trans clock)
 
 
-/-- An accepted zero-duration segment authenticates the complete supplied target.
-The equality compares all realized Sail fields, RAM, host and clock. -/
+/-- Raw acceptance of the exported assembly implies a six-handler SP1 trace between the
+complete supplied Sail, host and clock states, with one immutable commitment statement. -/
+theorem soundness (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    (accepted : (assembly context).Statement .logUp header heights) :
+    ∃ events : List Machine.ExecutionEvent, (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events context.target.realize ∧
+      context.commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+  obtain ⟨trace, checked⟩ := trace_of_statement context accepted
+  exact trace.realized checked.host
+
+/-- An accepted zero-duration segment preserves the complete supplied state. -/
 theorem identity_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (accepted : (assembly context).Statement .logUp header heights)
     (flag : header.is_execution_shard = 0) : context.source.realize = context.target.realize := by
-  obtain ⟨⟨_, _, boundary, _, events, actual, path, _, _, endpoint⟩, checked⟩ := trace_of_statement context accepted
-  have clocks : context.source.clock = context.target.clock := by
-    by_contra different
-    rw [boundary.2.2, SailBoundary.executionShardFlag, ite_eq_right different] at flag
-    exact one_ne_zero flag
-  have execution := FormalModel.Shard.trace_iff_executionPath.mp path
-  obtain ⟨rfl, target⟩ := endpoint.empty_of_equal_clock execution boundary checked.host clocks
-  exact (ExecutionPath.nil_iff.mp execution).symm.trans target
+  obtain ⟨_, _, _, _, events, facts⟩ := execution_of_statement context accepted
+  have path := FormalModel.Shard.trace_iff_executionPath.mp facts.path
+  rw [facts.empty.mp flag] at path
+  exact (ExecutionPath.nil_iff.mp path).symm
+
+/-- Two accepted local segments compose across extensionally equal complete snapshots. -/
+theorem append_soundness (left right : Context) {leftHeader rightHeader : SP1PublicIO Fp}
+    {leftHeights rightHeights : List ℕ}
+    (first : (assembly left).Statement .logUp leftHeader leftHeights)
+    (second : (assembly right).Statement .logUp rightHeader rightHeights)
+    (sameImage : right.image = left.image) (sameStatement : right.commitments = left.commitments)
+    (joined : left.target.equivalent right.source = true) :
+    ∃ events : List Machine.ExecutionEvent, (FormalModel.Shard.sp1Machine SP1Prime left.image).Trace left.source.realize events right.target.realize ∧
+      left.commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+  obtain ⟨xs, xPath, xCommit, xCalls⟩ := soundness left first
+  obtain ⟨ys, yPath, yCommit, yCalls⟩ := soundness right second
+  rw [sameImage, ← (ExecutionSnapshot.equivalent_iff ..).mp joined] at yPath
+  rw [sameStatement] at yCommit
+  refine ⟨xs ++ ys, FormalModel.Shard.trace_iff_executionPath.mpr
+    ((FormalModel.Shard.trace_iff_executionPath.mp xPath).append (FormalModel.Shard.trace_iff_executionPath.mp yPath)),
+    (left.commitments.matches_append xs ys).mpr ⟨xCommit, yCommit⟩, fun event member => ?_⟩
+  exact (List.mem_append.mp member).elim (xCalls event) (yCalls event)
 
 /-- Every cut of the recovered execution respects the declared hint, request and output
 ceilings, including the intermediate state and the peak so far. -/
 theorem ExecutionFacts.prefix_host_bounds {context : Context} {header : SP1PublicIO Fp}
-    {events : List Machine.ExecutionEvent} {actual : ExecutionState} (facts : ExecutionFacts context header events actual)
+    {events : List Machine.ExecutionEvent} (facts : ExecutionFacts context header events)
     (cut : ℕ) :
     let policy := FormalModel.Shard.policy SP1Prime context.image
     ∃ middle, ExecutionPath policy context.image.program context.source.realize (events.take cut) middle ∧
-      ExecutionPath policy context.image.program middle (events.drop cut) actual ∧
+      ExecutionPath policy context.image.program middle (events.drop cut) context.target.realize ∧
       ∀ kind ∈ [ResourceKind.liveHints, .liveHintBytes, .requests, .outputBytes],
         executionResources policy context.image.program context.source.realize (events.take cut) kind ≤
           context.limits.ceiling kind ∧ middle.resources kind ≤ context.limits.ceiling kind := by
@@ -229,23 +250,22 @@ theorem ExecutionFacts.prefix_host_bounds {context : Context} {header : SP1Publi
 
 /-- A segment beginning in a stopped host is the complete identity on its actual source. -/
 theorem ExecutionFacts.of_stopped {context : Context} {header : SP1PublicIO Fp}
-    {events : List Machine.ExecutionEvent} {actual : ExecutionState}
-    (facts : ExecutionFacts context header events actual) (stopped : context.source.host.exitCode ≠ none) :
-    events = [] ∧ actual = context.source.realize :=
+    {events : List Machine.ExecutionEvent}
+    (facts : ExecutionFacts context header events) (stopped : context.source.host.exitCode ≠ none) :
+    events = [] ∧ context.target.realize = context.source.realize :=
   (FormalModel.Shard.trace_iff_executionPath.mp facts.path).of_halted stopped
 
 /-- For a running-to-stopped segment, an actual final HALT supplies the public exit code.
 The released default exit policy can then be checked on its public field. -/
 theorem ExecutionFacts.halted {context : Context} {header : SP1PublicIO Fp}
-    {events : List Machine.ExecutionEvent} {actual : ExecutionState} {code : BitVec 32}
-    (facts : ExecutionFacts context header events actual) (running : context.source.host.exitCode = none)
+    {events : List Machine.ExecutionEvent} {code : BitVec 32}
+    (facts : ExecutionFacts context header events) (running : context.source.host.exitCode = none)
     (stopped : context.target.host.exitCode = some code) :
     (∃ beforeEvents call, events = beforeEvents ++ [.syscall call] ∧ call.rawCode = 0 ∧ call.arg1.setWidth 32 = code) ∧
       code.toNat = header.exit_code.val ∧ (ReleasePolicy.acceptsExit code = true ↔ header.exit_code = 0) := by
-  have finalExit : actual.host.exitCode = some code := facts.host ▸ stopped
   obtain ⟨beforeEvents, _, call, last, _, _, halt, operand⟩ :=
-    (FormalModel.Shard.trace_iff_executionPath.mp facts.path).ends_in_halt running finalExit
-  have exitCode := facts.endpoint.exit code running finalExit
+    (FormalModel.Shard.trace_iff_executionPath.mp facts.path).ends_in_halt running stopped
+  have exitCode := facts.endpoint.exit code running stopped
   refine ⟨⟨beforeEvents, call, last, halt, operand⟩, exitCode, ?_⟩
   rw [ReleasePolicy.acceptsExit_iff, ← BitVec.toNat_inj, ← ZMod.val_eq_zero, ← exitCode]
   rfl

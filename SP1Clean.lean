@@ -118,6 +118,11 @@ import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Soundness.HostOrdinaryReceipts
 import SP1Clean.Soundness.HostObserved
 import SP1Clean.Soundness.HostObservedLedger
+import SP1Clean.Soundness.HostObservedConsumer
+import SP1Clean.Soundness.HostObservedHistory
+import SP1Clean.Soundness.HostObservedProducers
+import SP1Clean.Soundness.HostObservedRetirement
+import SP1Clean.Soundness.HostObservedDynamic
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter
@@ -245,6 +250,7 @@ import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.Shard.Contract
+import SP1Clean.Soundness.Shard.DynamicMatch
 import SP1Clean.Soundness.Shard.TargetEndpoint
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Soundness.SnapshotMemoryEnsemble

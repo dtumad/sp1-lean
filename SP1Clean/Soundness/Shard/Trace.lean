@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.HostObserved
+import SP1Clean.Soundness.HostObservedDynamic
 import SP1Clean.FormalModel.ShardMachine
 
 /-! # Raw acceptance of the exported native circuit as a Sail machine trace
@@ -14,16 +14,17 @@ frame. The exported circuit installs the verifier-owned commitment statement abo
 Sail `try_step` that takes `Retire_Success` (`SailRetiresNormally`); each host step runs SP1's
 concrete host interpreter on an ECALL of the committed program.
 
-The statement has no caller-supplied grounding, provider validity, syscall inactivity or
-readiness premise. `Endpoint` collects what the header and verifier endpoints fix about the
-actual final state of that trace, including all integer registers and the entire RAM map. The
-header binds the well-formed commitment statement and every actual COMMIT/COMMIT_DEFERRED
-declaration agrees with it. Each event in that same trace belongs to the six-call profile.
-The theorem holds over every prime field with `2 ^ 25 < p`, SP1's
-among them: every installed table is lookup-free, so forgetting the statement provider keeps
-each row's constraints although canonical prover data changes at its name. Complete
-outgoing-snapshot equality, WRITE/VERIFY installation and resource limits remain obligations of
-`SoundnessTarget` (#12).
+The accepted source boundary establishes image validity. `Endpoint` records the entire RAM map,
+integer registers, clock and host projection. `DynamicMatch` identifies the five remaining mutable
+Sail entries against the ordinary receipts in this same trace. The header binds the well-formed
+commitment statement and every actual COMMIT/COMMIT_DEFERRED declaration agrees with it. Every
+event in the trace belongs to the six-call profile.
+
+The proof applies to every prime field with `2 ^ 25 < p`, including SP1's. All installed tables
+are lookup-free, so projection preserves each row's constraints even when canonical prover data
+changes. The exported host checker binds the decoded hint suffix and preserved host fields.
+WRITE, VERIFY and the full resource-bounded compiler remain part of `SoundnessTarget` and
+`CompilerTarget` (#12).
 -/
 
 namespace SP1Clean.Soundness.Shard
@@ -88,7 +89,7 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
 /-- What one accepted header proves: the checked source is valid and is the header's incoming
 endpoint, the commitment statement is well formed, and the SP1 Sail machine has a trace from the
 source whose ordinary writes respect ROM protection, whose declarations agree with the statement,
-and whose final state has the header's endpoint and the outgoing registers and RAM. -/
+and whose ordinary history binds the supplied dynamic Sail bookkeeping, outgoing registers and RAM. -/
 def SailTrace (commitments : CommitmentStatement) (image : ProgramImage)
     (source target : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p))
     (header : SP1PublicIO (ZMod p)) : Prop :=
@@ -97,7 +98,7 @@ def SailTrace (commitments : CommitmentStatement) (image : ProgramImage)
     ∃ (events : List ExecutionEvent) (actual : ExecutionState),
       (sp1Machine p image).Trace source.realize events actual ∧
       commitments.Matches events ∧ (∀ event ∈ events, SixCallProfile.event event) ∧
-      Endpoint source target final header events actual
+      DynamicMatch source target events ∧ Endpoint source target final header events actual
 
 /-- Constraints and balance outside the commitment declarations already give the trace; each
 actual commitment call requests its declaration in the witness ledger. -/
@@ -129,7 +130,7 @@ attribute [local irreducible] HostObserved.ensemble in
 /-- **The exported native circuit proves a Sail trace.** Over any prime field with `2 ^ 25 < p`,
 SP1's among them, raw acceptance of the complete-memory assembly with the verifier-owned
 commitment statement installed above it gives a trace of the SP1 Sail machine from the valid
-source snapshot, ending at the header's endpoint with the outgoing registers and RAM. The
+source snapshot, ending at the header's endpoint with the outgoing registers, RAM and dynamic Sail bookkeeping. The
 statement's fixed provider authenticates every declaration request, so each actual
 COMMIT/COMMIT_DEFERRED call agrees with the well-formed statement. The accepted source boundary
 supplies image validity. The header binds every public commitment field and each recovered
@@ -153,7 +154,7 @@ theorem sail_trace {image : ProgramImage} {source target : ExecutionSnapshot}
   have funded : HostObserved.DeclarationsOpen observed := fun channel member different =>
     CommitmentEnsemble.project_balancedChannel witness balanced channel member different
   have sail := HostObserved.target_spec observed funded
-  obtain ⟨sourceValid, sourceFor, events, actual, trace, endpoint, profile, -, declared⟩ :=
+  obtain ⟨sourceValid, sourceFor, events, actual, trace, endpoint, profile, order, declared⟩ :=
     trace_of_witness (HostObserved.baseWitness observed) (HostObserved.baseWitness_constraints observed checked)
       (HostObserved.grounding_balance observed funded)
   have silent := HostObserved.verifier_declarations_silent (image := image) (source := source)
@@ -167,6 +168,6 @@ theorem sail_trace {image : ProgramImage} {source target : ExecutionSnapshot}
         silent constraints balanced)
   rw [HostObserved.baseWitness_publicInput] at sourceFor endpoint
   exact ⟨sourceValid, sourceFor, sail, CommitmentEnsemble.statement_spec witness balanced, events, actual,
-    trace, agrees, profile, endpoint⟩
+    trace, agrees, profile, HostObserved.dynamicMatch observed checked funded order, endpoint⟩
 
 end SP1Clean.Soundness.Shard

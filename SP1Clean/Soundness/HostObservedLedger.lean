@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostObserved
+import SP1Clean.Soundness.OrdinaryObservation
 
 /-! # Physical participants of the installed ordinary observation protocols
 
@@ -295,5 +296,165 @@ theorem state_interactions (witness : EnsembleWitness (ensemble image source tar
   rw [split, before, List.nil_append,
     NativeCore.flatMap_split witness.tables _ 90 4, NativeCore.flatMap_split witness.tables _ 94 4, after, stop]
   simp [channel]
+
+/-- The ordinary consumer or a particular terminal, read directly from the raw accepted table. -/
+def observationTable (witness : EnsembleWitness (ensemble image source target final)) (i : Fin 4) :
+    Table (ZMod p) :=
+  (observationSlot i).table witness
+
+private theorem fourRows {α : Type*} (rows : List α) (len : rows.length = 98)
+    (slots : Fin 4 → α) (atSlot : ∀ i, slots i = rows[90 + i.val]'(by rw [len]; omega)) :
+    (rows.drop 90).take 4 = [slots 0, slots 1, slots 2, slots 3] := by
+  have array : (rows.drop 90).take 4 = List.ofFn slots := by
+    apply List.ext_getElem
+    · simp only [List.length_take, List.length_drop, len, List.length_ofFn]
+      decide
+    · intro n left right
+      have bound : n < 4 := by simpa only [List.length_ofFn] using right
+      simp only [List.getElem_take, List.getElem_drop, List.getElem_ofFn]
+      exact (atSlot ⟨n, bound⟩).symm
+  exact array.trans rfl
+
+attribute [local irreducible] observationSlot ensemble in
+private theorem observation_block (witness : EnsembleWitness (ensemble image source target final)) :
+    (witness.tables.drop 90).take 4 =
+      [observationTable witness 0, observationTable witness 1, observationTable witness 2, observationTable witness 3] := by
+  apply fourRows witness.tables (length_witness witness) (observationTable witness)
+  intro i
+  unfold observationTable TableSlot.table
+  exact getElem_congr_idx (c := witness.tables)
+    (observationSlot_position (image := image) (source := source) (target := target) (final := final) i)
+
+private theorem terminal_silent (table : Table (ZMod p)) (mode : SP1Clean.OrdinaryObservation.Mode)
+    (registered : table.component = OrdinaryObservation.terminalComponent mode) :
+    table.interactionsWith InstructionReceipt.channel.toRaw = [] := by
+  apply Table.interactionsWith_nil_of_channel_not_mem
+  rw [registered, OrdinaryObservation.terminal_channels]
+  simp [InstructionReceipt.channel, SP1Clean.OrdinaryObservation.stateChannel, Channel.toRaw]
+
+/-- On the accepted witness, all ordinary instruction pushes are matched against precisely the
+signed pulls of the physical ordinary consumer. Its padding rows have zero multiplicity. -/
+theorem receipt_rows (witness : EnsembleWitness (ensemble image source target final)) :
+    witness.interactionsWith InstructionReceipt.channel.toRaw =
+      ((witness.tables.drop 7).take 25).flatMap (·.interactionsWith InstructionReceipt.channel.toRaw) ++
+      (OrdinaryObservation.rows (observationTable witness 0) witness.data).map
+        (fun row => InstructionReceipt.channel.pulledIfValue row.2 row.1.receipt) := by
+  rw [receipt_interactions, observation_block]
+  simp only [List.flatMap_cons, List.flatMap_nil,
+    terminal_silent (observationTable witness 1) .empty ((observationSlot 1).table_component witness),
+    terminal_silent (observationTable witness 2) .nonempty ((observationSlot 2).table_component witness),
+    terminal_silent (observationTable witness 3) .any ((observationSlot 3).table_component witness),
+    List.append_nil, OrdinaryObservation.receipt_ledger (observationTable witness 0) witness.data
+      ((observationSlot 0).table_component witness)]
+
+open SP1Clean.OrdinaryObservation (TerminalInputs Mode terminal stateChannel)
+
+/-- Decode each physical terminal input in its own table environment. -/
+def terminalRows (table : Table (ZMod p)) : List (TerminalInputs (ZMod p)) :=
+  table.table.map fun physical => valueFromOffset TerminalInputs 0 (table.environment physical)
+
+/-- The actual terminal edge, keeping the two carries on the decoded input. -/
+def terminalEdge (mode : Mode) (input : TerminalInputs (ZMod p)) :=
+  (input.previous, SP1Clean.OrdinaryObservation.final mode input.previous.counter input.pc input.previous.enabled)
+
+private theorem terminal_values (mode : Mode) (env : Environment (ZMod p)) :
+    (OrdinaryObservation.terminalComponent mode).operations.interactionValuesWith
+      (SP1Clean.OrdinaryObservation.stateChannel (p := p)).toRaw env =
+      [SP1Clean.OrdinaryObservation.stateChannel.pulledValue
+        (terminalEdge mode (valueFromOffset TerminalInputs 0 env)).1,
+       SP1Clean.OrdinaryObservation.stateChannel.pushedValue
+        (terminalEdge mode (valueFromOffset TerminalInputs 0 env)).2] := by
+  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
+    OrdinaryObservation.terminalComponent, SP1Clean.OrdinaryObservation.terminal_interactions,
+    List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed]
+  rw [← eval_varFromOffset_valueFromOffset TerminalInputs 0 env]
+  cases mode <;>
+    simp only [terminalEdge, SP1Clean.OrdinaryObservation.final, SP1Clean.OrdinaryObservation.Mode.sentinel,
+      TerminalInputs.pc, circuit_norm]
+
+/-- Every terminal row supplies exactly one unguarded incoming pull and one sentinel push. -/
+theorem terminal_state_ledger (table : Table (ZMod p)) (mode : Mode)
+    (registered : table.component = OrdinaryObservation.terminalComponent mode) :
+    table.interactionsWith SP1Clean.OrdinaryObservation.stateChannel.toRaw =
+      (terminalRows table).flatMap (fun input =>
+        [SP1Clean.OrdinaryObservation.stateChannel.pulledValue (terminalEdge mode input).1,
+         SP1Clean.OrdinaryObservation.stateChannel.pushedValue (terminalEdge mode input).2]) := by
+  simp only [Table.interactionsWith, registered, terminal_values, terminalRows, List.flatMap_map]
+
+/-- Validity of every decoded terminal comes from that terminal's local table specification. -/
+theorem terminal_rows_valid (table : Table (ZMod p)) (mode : Mode)
+    (registered : table.component = OrdinaryObservation.terminalComponent mode) (valid : table.Spec) :
+    ∀ input ∈ terminalRows table, input.Valid mode := by
+  intro input member
+  obtain ⟨row, inTable, rfl⟩ := List.mem_map.mp member
+  have atRow := valid row inTable
+  rw [registered] at atRow
+  cases mode <;> exact atRow
+
+/-- Every terminal in the three physical tables, tagged with the mode of its actual component. -/
+def terminals (witness : EnsembleWitness (ensemble image source target final)) :
+    List (Mode × TerminalInputs (ZMod p)) :=
+  ((terminalRows (observationTable witness 1)).map (Prod.mk .empty)) ++
+  ((terminalRows (observationTable witness 2)).map (Prod.mk .nonempty)) ++
+  ((terminalRows (observationTable witness 3)).map (Prod.mk .any))
+
+/-- A single chronological-edge ledger accounts for all live or padded observation rows and every
+concrete terminal, with the verifier endpoints belonging to the supplied snapshots. -/
+theorem state_rows (witness : EnsembleWitness (ensemble image source target final)) :
+    witness.interactionsWith SP1Clean.OrdinaryObservation.stateChannel.toRaw =
+      [SP1Clean.OrdinaryObservation.stateChannel.pushedValue (startFor source.sail),
+       SP1Clean.OrdinaryObservation.stateChannel.pulledValue (finalFor source.sail target.sail)] ++
+      (OrdinaryObservation.rows (observationTable witness 0) witness.data).flatMap
+        (fun row => [SP1Clean.OrdinaryObservation.stateChannel.pulledIfValue row.2 row.1.previous,
+          SP1Clean.OrdinaryObservation.stateChannel.pushedIfValue row.2 row.1.next]) ++
+      (terminals witness).flatMap (fun tagged =>
+        [SP1Clean.OrdinaryObservation.stateChannel.pulledValue (terminalEdge tagged.1 tagged.2).1,
+         SP1Clean.OrdinaryObservation.stateChannel.pushedValue (terminalEdge tagged.1 tagged.2).2]) := by
+  rw [state_interactions, observation_block]
+  simp only [List.flatMap_cons, List.flatMap_nil, OrdinaryObservation.state_ledger (observationTable witness 0)
+      witness.data ((observationSlot 0).table_component witness),
+    terminal_state_ledger (observationTable witness 1) .empty ((observationSlot 1).table_component witness),
+    terminal_state_ledger (observationTable witness 2) .nonempty ((observationSlot 2).table_component witness),
+    terminal_state_ledger (observationTable witness 3) .any ((observationSlot 3).table_component witness),
+    terminals, List.flatMap_append, List.flatMap_map, List.append_nil, List.append_assoc]
+
+private theorem terminal_spec_of_constraints (table : Table (ZMod p)) (mode : Mode)
+    (registered : table.component = OrdinaryObservation.terminalComponent mode) (constraints : table.Constraints) :
+    table.Spec := by
+  apply (Table.weakSoundness (table := table) ?_ constraints ?_).1
+  · intro row occurs
+    rw [registered]
+    cases mode <;> trivial
+  · apply table.guarantees_iff_channelGuarantees.mpr
+    intro channel _
+    apply (table.channelGuarantees_iff_forall channel).mpr
+    intro interaction member
+    by_cases same : channel = SP1Clean.OrdinaryObservation.stateChannel.toRaw
+    · have free (ch : RawChannel (ZMod p)) (eq : ch = SP1Clean.OrdinaryObservation.stateChannel.toRaw)
+          (mult : ZMod p) (msg : Vector (ZMod p) ch.arity) (data : ProverData (ZMod p)) : ch.Guarantees mult msg data := by
+        subst ch
+        simp [SP1Clean.OrdinaryObservation.stateChannel, Channel.toRaw]
+      exact fun _ => free _ ((table.channel_eq_of_mem_interactionsWith member).trans same) _ _ _
+    · have silent : channel ∉ table.component.circuit.channels := by
+        rw [registered, OrdinaryObservation.terminal_channels]
+        simp [same]
+      rw [Table.interactionsWith_nil_of_channel_not_mem silent] at member
+      contradiction
+
+/-- Accepted local assertions establish the mode and both carry bits on every physical terminal. -/
+theorem terminals_valid (witness : EnsembleWitness (ensemble image source target final)) (checked : witness.Constraints) :
+    ∀ tagged ∈ terminals witness, tagged.2.Valid tagged.1 := by
+  intro tagged member
+  simp only [terminals, List.mem_append, List.mem_map] at member
+  rcases member with ((⟨row, occurs, rfl⟩ | ⟨row, occurs, rfl⟩) | ⟨row, occurs, rfl⟩)
+  · exact terminal_rows_valid _ .empty ((observationSlot 1).table_component witness)
+      (terminal_spec_of_constraints _ .empty ((observationSlot 1).table_component witness)
+        ((observationSlot 1).table_constraints witness checked)) row occurs
+  · exact terminal_rows_valid _ .nonempty ((observationSlot 2).table_component witness)
+      (terminal_spec_of_constraints _ .nonempty ((observationSlot 2).table_component witness)
+        ((observationSlot 2).table_constraints witness checked)) row occurs
+  · exact terminal_rows_valid _ .any ((observationSlot 3).table_component witness)
+      (terminal_spec_of_constraints _ .any ((observationSlot 3).table_component witness)
+        ((observationSlot 3).table_constraints witness checked)) row occurs
 
 end SP1Clean.Soundness.HostObserved

@@ -22,25 +22,6 @@ open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-/-- The supplied target's dynamic Sail bookkeeping agrees with the trace's: nextPC, the
-retirement flag and count, the interrupt refresh and the written event index. -/
-structure DynamicMatch (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop where
-  nextPC : target.sail.registers.get? Register.nextPC =
-    nextPcAfter events (source.sail.registers.get? Register.nextPC) (some target.pc)
-  increment : target.sail.registers.get? Register.minstret_increment =
-    if events.countP ExecutionEvent.isOrdinary = 0
-      then source.sail.registers.get? Register.minstret_increment
-      else some (retirementEnabled source.sail.realize)
-  retired : target.sail.registers.get? Register.minstret =
-    (source.sail.registers.get? Register.minstret).map (fun value => value + BitVec.ofNat 64
-      (if retirementEnabled source.sail.realize then events.countP ExecutionEvent.isOrdinary else 0))
-  interrupts : target.sail.registers.get? Register.mip =
-    if events.countP ExecutionEvent.isOrdinary = 0 then source.sail.registers.get? Register.mip
-      else some (TryStepReduction.refreshedMip source.sail.realize)
-  eventIndex : target.sail.registers.get? Register.written_event_index =
-    if events.countP ExecutionEvent.isOrdinary = 0
-      then source.sail.registers.get? Register.written_event_index else some none
-
 omit [Fact (2 ^ 25 < p)] in
 /-- At equal clocks the verifier authenticates the full optional Sail bookkeeping for an empty tape. -/
 theorem DynamicMatch.nil_of_equal_clock {source target : ExecutionSnapshot} {header : SP1PublicIO (ZMod p)}
@@ -129,5 +110,17 @@ theorem Endpoint.empty_of_equal_clock {source target : ExecutionSnapshot} {final
   have nil : events = [] := List.length_eq_zero_iff.mp (by omega)
   subst events
   exact ⟨rfl, endpoint.realize_eq boundary (DynamicMatch.nil_of_equal_clock boundary clock) host⟩
+
+/-- With the verifier-checked host suffix, the six-call machine trace reaches the literal supplied
+Sail, host and clock state. The same ordered events bind the commitment statement. -/
+theorem SailTrace.realized {commitments : CommitmentStatement} {image : ProgramImage}
+    {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {header : SP1PublicIO (ZMod p)}
+    (accepted : SailTrace commitments image source target final header)
+    (host : HostHintTarget.Spec source.host target.host (Address.toNat final.head)) :
+    ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
+      commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+  obtain ⟨_, _, boundary, _, events, actual, path, commitmentsMatch, calls, dynamic, endpoint⟩ := accepted
+  rw [endpoint.realize_eq boundary dynamic host] at path
+  exact ⟨events, path, commitmentsMatch, calls⟩
 
 end SP1Clean.Soundness.Shard
