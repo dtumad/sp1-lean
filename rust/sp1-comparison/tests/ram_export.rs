@@ -245,3 +245,34 @@ fn source_rows() {
 fn target_rows() {
     check::<target::Ensemble>("target", 749);
 }
+
+#[test]
+fn source_words_match_released_initialization_events() {
+    // SP1 authenticates words. The native fixed interval encoding is private to Clean.
+    for (address, bytes) in [
+        (65536, [17, 0, 0, 0, 0, 0, 0, 171]),
+        (131064, [0, 0, 0, 0, 0, 0, 0, 254]),
+        (131072, [18, 18, 18, 18, 0, 0, 0, 0]),
+        (ram::LIMIT - 8, [0, 0, 0, 0, 0, 0, 0, 255]),
+    ] {
+        let events = sp1_core_executor::chunked_memory_init_events(address, &bytes);
+        let [event] = events.as_slice() else {
+            panic!("an aligned eight-byte span must yield one initialization event");
+        };
+        let row = complete_row::<source::Ensemble>(&fields(&ram::word(address))).unwrap();
+        assert!(valid::<source::Ensemble>(&row));
+        let interactions = <source::Ensemble as Program<F>>::interactions(0, &row);
+        let records: Vec<_> = interactions
+            .iter()
+            .filter(|e| e.channel == "SP1Memory")
+            .collect();
+        let [record] = records.as_slice() else {
+            panic!("the generated provider must emit one source memory record");
+        };
+        let message = values(&record.message);
+        assert_eq!(record.direction, Direction::Push);
+        assert_eq!(record.signed_multiplicity(), F::ONE);
+        assert_eq!(unpack(&message[2..5]), event.addr);
+        assert_eq!(unpack(&message[5..]), event.value);
+    }
+}

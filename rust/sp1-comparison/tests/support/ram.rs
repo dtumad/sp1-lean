@@ -1,20 +1,29 @@
-//! Independent expectations for the sparse RAM export fixture.
+//! Independent sparse input and expected RAM values for the native export fixture.
 
 pub const LIMIT: u64 = 1 << 48;
+
+// The first entry at an address wins. The order is deliberately nonmonotone.
+const ENTRIES: &[(u64, u8)] = &[
+    (131074, 18),
+    (131072, 18),
+    (65536, 17),
+    (65536, 99),
+    (65543, 171),
+    (131075, 18),
+    (131071, 254),
+    (131073, 18),
+    (LIMIT - 1, 255),
+];
 
 pub fn word(value: u64) -> Vec<u64> {
     (0..4).map(|limb| (value >> (16 * limb)) & 0xffff).collect()
 }
 
 pub fn byte(address: u64) -> u64 {
-    match address {
-        65536 => 17, // The first source entry wins over the later value 99.
-        65543 => 171,
-        131071 => 254,
-        131072 => 18,
-        a if a == LIMIT - 1 => 255,
-        _ => 0,
-    }
+    ENTRIES
+        .iter()
+        .find(|&&(key, _)| key == address)
+        .map_or(0, |&(_, value)| u64::from(value))
 }
 
 pub fn value(address: u64) -> u64 {
@@ -28,20 +37,19 @@ pub fn interval(lower: u64, upper: u64, byte: u64) -> Vec<u64> {
 }
 
 pub fn intervals() -> Vec<Vec<u64>> {
-    [
-        (0, 65536, 0),
-        (65536, 65537, 17),
-        (65537, 65543, 0),
-        (65543, 65544, 171),
-        (65544, 131071, 0),
-        (131071, 131072, 254),
-        (131072, 131072, 0),
-        (131072, 131073, 18),
-        (131073, LIMIT - 1, 0),
-        (LIMIT - 1, LIMIT, 255),
-        (LIMIT, LIMIT, 0),
-    ]
-    .into_iter()
-    .map(|(a, b, v)| interval(a, b, v))
-    .collect()
+    // A sparse byte can only change the value at its address or the following address.
+    // Keep exactly the changes in the independently evaluated public memory function.
+    let mut cuts = vec![0, LIMIT];
+    for &(address, _) in ENTRIES {
+        for cut in [address, address + 1] {
+            if cut > 0 && cut < LIMIT && byte(cut - 1) != byte(cut) {
+                cuts.push(cut);
+            }
+        }
+    }
+    cuts.sort_unstable();
+    cuts.dedup();
+    cuts.windows(2)
+        .map(|ends| interval(ends[0], ends[1], byte(ends[0])))
+        .collect()
 }

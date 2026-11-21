@@ -911,6 +911,10 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
     )))
     .unwrap();
     let source = ram::intervals();
+    // Eight live bytes make nine maximal runs. Four consecutive equal bytes share one row.
+    assert_eq!(source.len(), 9);
+    assert!(source.contains(&ram::interval(131072, 131076, 18)));
+    let height = source.len().next_power_of_two();
     let first = ram::interval(65536, 65537, 17);
     let mut requests: Vec<_> = source
         .iter()
@@ -929,8 +933,8 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
         &[&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9][..]]
     );
     let fixed = fixed_trace::<P>(0);
-    assert_eq!((fixed.height(), fixed.width()), (16, 10));
-    let fixed_rows: Vec<_> = (0..16)
+    assert_eq!((fixed.height(), fixed.width()), (height, 10));
+    let fixed_rows: Vec<_> = (0..height)
         .map(|index| {
             source
                 .get(index)
@@ -992,21 +996,40 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
         );
         assert_eq!(actual, case["witness"]);
     }
+    // Semantically correct fragments cannot impersonate a whole fixed run, and a
+    // zero-width request cannot use the former empty side interval or an ineligible pad.
+    for absent in [
+        ram::interval(131072, 131073, 18),
+        ram::interval(131073, 131076, 18),
+        ram::interval(131072, 131072, 0),
+        ram::interval(ram::LIMIT, ram::LIMIT, 0),
+        ram::interval(0, 0, 0),
+    ] {
+        let inputs: Vec<_> = [absent, first.clone()]
+            .concat()
+            .into_iter()
+            .map(field)
+            .collect();
+        assert!(clean_backend::witness_generation::generate::<F, P>(&inputs, &[], 1).is_err());
+    }
     let public: Vec<_> = [first.clone(), first]
         .concat()
         .into_iter()
         .map(field)
         .collect();
-    let statement = GeneratedEnsemble::<F, P>::new(&[16], 1).unwrap();
-    assert_eq!(statement.interaction_counts().values().sum::<u128>(), 18);
-    for height in [0, 8, 32] {
+    let statement = GeneratedEnsemble::<F, P>::new(&[height], 1).unwrap();
+    assert_eq!(
+        statement.interaction_counts().values().sum::<u128>(),
+        height as u128 + 2
+    );
+    for height in [0, height / 2, height * 2] {
         assert!(GeneratedEnsemble::<F, P>::new(&[height], 1).is_err());
     }
     let traces = clean_backend::witness_generation::generate::<F, P>(&public, &[], 1)
         .unwrap()
         .into_traces()
         .unwrap();
-    assert_eq!((traces[0].height(), traces[0].width()), (16, 1));
+    assert_eq!((traces[0].height(), traces[0].width()), (height, 1));
     let mut key = EnsembleKey::new(config(), 1).unwrap();
     let proof = key.prove(&statement, traces.clone(), &public).unwrap();
     key.verify(&statement, &proof, &public).unwrap();
@@ -1015,8 +1038,8 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
         forged[cell] += field(1);
         assert!(key.verify(&statement, &proof, &forged).is_err());
     }
-    // Every demanded, unused, empty-interval and padding row retains a bound count.
-    for row in 0..16 {
+    // Every demanded, unused and padded physical row retains an authenticated count.
+    for row in 0..height {
         let mut forged = traces.clone();
         forged[0].values[row] += field(1);
         assert_backend_rejection(|| {
@@ -1027,8 +1050,9 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
     }
     // Equal padding messages can cancel; eligibility must still forbid both nonzero counts.
     let mut forged = traces.clone();
-    forged[0].values[14] = field(1);
-    forged[0].values[15] = -field(1);
+    assert!(height >= source.len() + 2);
+    forged[0].values[source.len()] = field(1);
+    forged[0].values[height - 1] = -field(1);
     assert_backend_rejection(|| {
         let mut key = EnsembleKey::new(config(), 1).unwrap();
         let proof = key.prove(&statement, forged, &public).unwrap();
