@@ -43,6 +43,50 @@ theorem membership_height_lt_prime_iff (memory : ByteMemory) (limit : ℕ) (name
 
 end SP1Clean.InitialMemoryLookup
 
+namespace SP1Clean.FormalModel.Shard
+open Semantics Machine
+
+/-- A public ceiling on total boundary payload bounds the preallocated RAM provider at both
+complete endpoints. The field has the stated remaining capacity even at maximum padded height;
+for any independent strict capacity, the last equivalence gives the exact budget left after
+the endpoint's actual provider height. Other occurrences include all consumers of its channel. -/
+theorem AdmissibleExecution.endpoint_ram_capacity {limits : ResourceLimits} {image : ProgramImage}
+    {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (execution : AdmissibleExecution limits SP1Prime image source target events)
+    (ceiling : limits.boundaryBytes ≤ 2 ^ 29 + 124) :
+    ∀ endpoint ∈ [source, target], ∀ name : String,
+      let height := (InitialMemoryLookup.membership (p := SP1Prime) endpoint.sail.memory
+        NativeLayout.sailMemory.upper name).height
+      height ≤ 2 ^ 30 ∧
+      (∀ other ≤ SP1Prime - 1 - 2 ^ 30, height + other < SP1Prime) ∧
+      ∀ capacity other : ℕ, height + other < capacity ↔
+        height < capacity ∧ other ≤ capacity - 1 - height := by
+  intro endpoint member name
+  have checked : endpoint.realize.resources.Fits limits := by
+    rcases List.mem_cons.mp member with rfl | last
+    · exact execution.2.2.2.1
+    · obtain rfl := List.mem_singleton.mp last
+      exact execution.2.2.2.2.1
+  rw [endpoint.resources_realize] at checked
+  have payload := checked .boundaryBytes
+  change endpoint.resources .boundaryBytes ≤ limits.boundaryBytes at payload
+  have overhead : (endpoint.sail.memory.supportBelow NativeLayout.sailMemory.upper).card + 125 ≤
+      endpoint.resources .boundaryBytes := by
+    simp only [ExecutionSnapshot.resources, HostState.payloadCost, hintPayloadCost, bytePayloadCost]
+    omega
+  have count : 2 * (endpoint.sail.memory.supportBelow NativeLayout.sailMemory.upper).card + 1 ≤ 2 ^ 30 := by
+    omega
+  have padded := Nat.pow_le_pow_right (by decide : 0 < 2) ((Nat.clog_le_iff_le_pow (by decide)).mpr count)
+  dsimp only
+  rw [InitialMemoryLookup.membership_height]
+  refine ⟨padded, ?_, ?_⟩
+  · intro other remaining
+    exact (Nat.add_le_add padded remaining).trans_lt (by decide)
+  · intro capacity other
+    omega
+
+end SP1Clean.FormalModel.Shard
+
 namespace SP1Clean.Export.InstalledAssembly
 open Air.Flat Semantics Soundness
 

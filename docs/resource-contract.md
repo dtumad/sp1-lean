@@ -130,6 +130,11 @@ installed raw LogUp statement for that context. This is a capacity limit of the 
 representation. [Fixed RAM capacity](../SP1Clean/Export/FixedRamCapacity.lean) ·
 [Empty release execution](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean)
 
+For an independently chosen boundary payload ceiling of at most 536,871,036 bytes, at least
+125 bytes pay for host fields and the Sail output length. Each endpoint's RAM provider then
+has at most 2^30 rows, leaving at least 1,056,964,608 occurrences on its own KoalaBear channel.
+For actual provider height `h < p`, the remaining budget is exactly `p - 1 - h`.
+
 C10 requires a representation and capacity policy that cover the release domain. Per-channel
 physical costs include all fixed providers, dynamic consumers and padding in the same ledger.
 
