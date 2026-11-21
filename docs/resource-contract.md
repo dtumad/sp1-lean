@@ -162,7 +162,10 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 including interleaved WRITE allocations, hook replies and HINT_READ pops. At every cut its size
 equals the initial hint count plus cumulative allocations. The suffix reuses that store and
 preserves every historical pointer. The native KoalaBear ceilings on those two terms imply that
-the head and allocation frontier both fit 48 bits. Authentication of the new node and word rows
+the head and allocation frontier both fit 48 bits. Every historical hint was live when added.
+The live-byte ceiling therefore bounds its length even after a pop. The canonical node record
+and every padded word row fit their encodings and bind that hint in the final store.
+Authentication of the new node and word rows
 belongs to the mixed host assembly. [Persistent hint inventory](../SP1Clean/Proofs/Completeness/HintInventory.lean)
 
 | Compatibility surface | Replacement / removal condition |

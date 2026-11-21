@@ -36,6 +36,46 @@ variable {policy : HostPolicy} {program : GuestProgram}
   {source middle target : ExecutionState} {event : ExecutionEvent}
   {events first second : List ExecutionEvent}
 
+private theorem advance_bytes {source target : HostState} {cursor next : Store × ℕ}
+    (advanced : advance? source target cursor event = some next) {bytes : Bytes}
+    (member : bytes ∈ next.1.toList.map Node.bytes) :
+    bytes ∈ cursor.1.toList.map Node.bytes ∨ bytes ∈ target.io.hints := by
+  cases event with
+  | ordinary => exact Or.inl (Option.some.inj advanced ▸ member)
+  | syscall call =>
+    unfold advance? at advanced
+    obtain ⟨kind, _, applied⟩ := Option.bind_eq_some_iff.mp advanced
+    unfold HostState.hintUpdate at applied
+    split at applied
+    · obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp applied
+      exact Or.inl member
+    · obtain rfl := Option.some.inj applied
+      rw [prepend_bytes] at member
+      exact (List.mem_append.mp member).imp_right fun fresh =>
+        List.mem_of_mem_take (List.mem_reverse.mp fresh)
+
+/-- All node sizes, including popped nodes, are bounded by the peak live-byte measurement
+and the incoming store. Newly allocated bytes occur in the target of the allocating step. -/
+theorem storeAfter_byte_bound (path : ExecutionPath policy program source events target)
+    {cursor next : Store × ℕ} {limit : ℕ}
+    (built : storeAfter? policy program source events cursor = some next)
+    (incoming : ∀ bytes ∈ cursor.1.toList.map Node.bytes, bytes.length ≤ limit)
+    (peak : executionResources policy program source events .liveHintBytes ≤ limit) :
+    ∀ bytes ∈ next.1.toList.map Node.bytes, bytes.length ≤ limit := by
+  induction path generalizing cursor with
+  | nil => exact Option.some.inj built ▸ incoming
+  | @cons before mid last e rest step _ ih =>
+    simp only [storeAfter?, step.replay, Option.bind_eq_bind, Option.bind_some] at built
+    obtain ⟨afterStep, advanced, remaining⟩ := Option.bind_eq_some_iff.mp built
+    rw [executionResources_cons step] at peak
+    simp only [ResourceUsage.combine, ResourceKind.cumulative, Bool.false_eq_true, ↓reduceIte,
+      max_le_iff] at peak
+    apply ih remaining _ peak.2.2
+    intro bytes member
+    rcases advance_bytes advanced member with old | fresh
+    · exact incoming bytes old
+    · exact (List.le_sum_of_mem (List.mem_map_of_mem (f := List.length) fresh)).trans peak.2.1
+
 private theorem step_store (step : ExecutionStep policy program source event target)
     {cursor : Store × ℕ} (valid : WellFormed cursor.1)
     (represented : Represents cursor.1 cursor.2 source.host.io.hints) :
@@ -98,7 +138,7 @@ theorem storeAfter_at (path : ExecutionPath policy program source events target)
     ∃ reached cursor final,
       ExecutionPath policy program source (events.take cut) reached ∧
       storeAfter? policy program source (events.take cut) (ofList source.host.io.hints) = some cursor ∧
-      Represents cursor.1 cursor.2 reached.host.io.hints ∧
+      WellFormed cursor.1 ∧ Represents cursor.1 cursor.2 reached.host.io.hints ∧
       cursor.1.size = source.host.io.hints.length +
         executionResources policy program source (events.take cut) .allocatedHints ∧
       storeAfter? policy program reached (events.drop cut) cursor = some final ∧
@@ -108,7 +148,7 @@ theorem storeAfter_at (path : ExecutionPath policy program source events target)
   obtain ⟨cursor, start, _, valid, rep, size⟩ := storeAfter_of_path firstPath
     (ofList_wellFormed source.host.io.hints) (ofList_represents source.host.io.hints)
   obtain ⟨final, finish, extension, _, finalRep, _⟩ := storeAfter_of_path lastPath valid rep
-  refine ⟨reached, cursor, final, firstPath, start, rep, (ofList_size _ ▸ size), finish, ?_, extension, finalRep⟩
+  refine ⟨reached, cursor, final, firstPath, start, valid, rep, (ofList_size _ ▸ size), finish, ?_, extension, finalRep⟩
   have combined := storeAfter_append (second := events.drop cut) firstPath (ofList source.host.io.hints)
   simpa only [List.take_append_drop, start, Option.bind_some, finish] using combined
 
