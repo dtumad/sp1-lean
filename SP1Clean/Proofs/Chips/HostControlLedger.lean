@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostNoopChip.Formal
+import SP1Clean.Proofs.Chips.HostNoopChip.Choice
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Air.ChannelClosure
 
@@ -123,6 +123,31 @@ theorem row_spec_of_constraints (kind : Kind) (env : Environment (ZMod p))
       (by trivial) constraints guarantees).1
     simpa only [circuit, eval_varFromOffset_valueFromOffset] using result
   rw [Operations.guarantees_iff _ _ _ ((circuit kind).in_channels_or_guarantees_full
+    (varFromOffset Inputs 0) (size Inputs) env)]
+  intro selected member
+  change selected ∈ [HostCallChip.channel.toRaw] at member
+  obtain rfl := List.mem_singleton.mp member
+  exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The shared no-effect row contributes one complete HostCall pull at every physical occurrence. -/
+theorem choice_host_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
+    ((choiceMain input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
+      [HostCallChip.channel.pulledValue (Eval.eval env input)] := by
+  have raw : ((choiceMain input).operations offset).interactionsWith HostCallChip.channel.toRaw =
+      [(HostCallChip.channel.pulled input).toRaw] := by
+    simp only [choiceMain, circuit_norm, control_equality_empty, List.nil_append]
+  simp only [Operations.interactionValuesWith, raw, List.map_cons, List.map_nil, Channel.eval_pulled]
+
+/-- Raw constraints of the shared physical row select one complete call contract. -/
+theorem choice_spec_of_constraints (env : Environment (ZMod p))
+    (constraints : ((choiceCircuit.main (varFromOffset Inputs 0)).operations (size Inputs)).ConstraintsHold env) :
+    ChoiceSpec (valueFromOffset Inputs 0 env) := by
+  suffices guarantees : ((choiceCircuit.main (varFromOffset Inputs 0)).operations (size Inputs)).FullGuarantees env by
+    have result := (choiceCircuit.original_full_soundness (size Inputs) env (varFromOffset Inputs 0)
+      (by trivial) constraints guarantees).1
+    simpa only [choiceCircuit, eval_varFromOffset_valueFromOffset] using result
+  rw [Operations.guarantees_iff _ _ _ (choiceCircuit.in_channels_or_guarantees_full
     (varFromOffset Inputs 0) (size Inputs) env)]
   intro selected member
   change selected ∈ [HostCallChip.channel.toRaw] at member

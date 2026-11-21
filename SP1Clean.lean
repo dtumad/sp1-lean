@@ -116,6 +116,7 @@ import SP1Clean.Soundness.HostFinalMemoryReleaseLinks
 import SP1Clean.Soundness.HostFinalMemoryDeclarations
 import SP1Clean.Soundness.HostFinalMemoryLookups
 import SP1Clean.Soundness.HostFinalMemoryRegistry
+import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Soundness.HostResourceExtension
 import SP1Clean.Soundness.HostFinalMemoryView
 import SP1Clean.Soundness.HostFinalMemoryLedger

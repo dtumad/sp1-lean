@@ -45,3 +45,19 @@ theorem ne_write {word : BitVec 64} (admitted : code word) : word ≠ SyscallKin
   exact (by decide : SyscallKind.write ∉ kinds) member
 
 end SP1Clean.Semantics.SixCallProfile
+
+namespace SP1Clean.Semantics.HostReceiptProfile
+
+/-- Full words admitted by the receiver inventory. The extended no-effect slot also accepts VERIFY. -/
+def code : Bool → BitVec 64 → Prop
+  | false => SixCallProfile.code
+  | true => fun word => SixCallProfile.code word ∨ word = SyscallKind.verifyProof.code
+
+/-- Both configurations retain all six original host calls. -/
+theorem of_six (includeVerify : Bool) {word : BitVec 64} (admitted : SixCallProfile.code word) :
+    code includeVerify word := by
+  cases includeVerify
+  · exact admitted
+  · exact Or.inl admitted
+
+end SP1Clean.Semantics.HostReceiptProfile

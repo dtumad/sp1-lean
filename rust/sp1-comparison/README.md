@@ -193,7 +193,10 @@ Cuts agree on their public clock/PC endpoints. These finite fixture constructors
 access compiler and semantic host steps; they are neither an interpreter nor a total Sail compiler.
 The standalone VERIFY receiver shares the constrained ENTER circuit and uses the released x5
 result for each call. Its comparison binds the full argument words and the single host-call pull.
-General generation completeness and WRITE/VERIFY installation remain open.
+The alternative seven-call host inventory uses one 22-cell ENTER/VERIFY slot. Its comparison
+checks both events in one released execution. The 100-slot six-call raw capstone and its cell
+counts retain their original meaning. Full seven-call replay, WRITE installation and general
+generation completeness remain open.
 
 The unmodified upstream Clean pin supplies typed demand triggers, indexed fixed providers and
 reusable ensemble keys. The provider fixtures exercise these APIs; general whole-assembly

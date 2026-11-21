@@ -81,15 +81,28 @@ theorem hostTables_lookupFree (image : ProgramImage) (source : ExecutionSnapshot
     LookupFree (HostLocalCore.tables image source auxiliary) :=
   ((protectedTables_lookupFree image source).set (by row_lookups) _).append free
 
+private theorem noop_lookupFree (includeVerify : Bool) :
+    (HostCallReceivers.profileNoop (p := p) includeVerify).component.operations.lookups = [] := by
+  rw [Component.lookups_eq]
+  cases includeVerify with
+  | false =>
+    change ((HostNoopChip.main .enter (varFromOffset HostNoopChip.Inputs (F := ZMod p) 0)).operations
+      (size HostNoopChip.Inputs)).lookups = []
+    simp [circuit_norm]
+  | true =>
+    change ((HostNoopChip.choiceMain (varFromOffset HostNoopChip.Inputs (F := ZMod p) 0)).operations
+      (size HostNoopChip.Inputs)).lookups = []
+    simp [HostNoopChip.choiceMain, circuit_norm]
+
 /-- Every implemented control, commitment and HINT_LEN receiver is lookup-free. -/
-theorem available_lookupFree :
-    LookupFree ((HostCallReceivers.available (p := p)).map (·.component)) := by
+theorem available_lookupFree (includeVerify : Bool := false) :
+    LookupFree ((HostCallReceivers.availableFor (p := p) includeVerify).map (·.component)) := by
   apply LookupFree.map
   intro view member
-  simp only [HostCallReceivers.available, List.mem_append, List.mem_cons, List.mem_ofFn,
+  simp only [HostCallReceivers.availableFor, List.mem_append, List.mem_cons, List.mem_ofFn,
     List.not_mem_nil, or_false] at member
   rcases member with (((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩) | rfl | rfl
-  all_goals row_lookups
+  all_goals first | exact noop_lookupFree includeVerify | row_lookups
 
 /-- The ordinary observation consumer and its three terminals are lookup-free. -/
 theorem observation_lookupFree : LookupFree (Soundness.OrdinaryObservation.tables (p := p)) := by

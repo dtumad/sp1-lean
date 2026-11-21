@@ -80,4 +80,15 @@ theorem noop_spec_of_run (kind : HostNoopChip.Kind) (clock : ℕ) (execution : H
     HostState.result, HostNoopChip.Spec, HostNoopChip.codeWord, HostNoopChip.resultWord, bitVecToWord]
   rfl
 
+omit [Fact (2 ^ 25 < p)] in
+/-- Successful replay of either no-effect call constructs one row of the shared physical receiver. -/
+theorem choice_spec_of_run (kind : HostNoopChip.Kind) (clock : ℕ) (execution : HostExecution)
+    (selected : execution.kind = kind.syscall) (host : HostState) (policy : HostPolicy)
+    (context : HostReadContext) (success : host.run policy context = some execution) :
+    HostNoopChip.ChoiceSpec (message (p := p) clock execution) := by
+  have spec := noop_spec_of_run (p := p) kind clock execution selected host policy context success
+  cases kind with
+  | enter => exact Or.inl spec
+  | verify => exact Or.inr spec
+
 end SP1Clean.HostControl

@@ -360,11 +360,11 @@ theorem tables_interface : HostLocalCore.AuxiliaryInterface (Soundness.OrdinaryO
       (by simp [Channels.stateChannel, InstructionReceipt.channel, Channel.toRaw])
       (by simp [Channels.stateChannel, OrdinaryObservation.stateChannel, Channel.toRaw])
 
-private theorem source_auxiliary_names (hints : List Bytes) :
-    (((receiver (p := p) :: HostCallReceivers.available).map
+private theorem source_auxiliary_names (includeVerify : Bool) (hints : List Bytes) :
+    (((receiver (p := p) :: HostCallReceivers.availableFor includeVerify).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
       (wordResources ++ sourceResources hints)).map (fun component : Component (ZMod p) => component.circuit.name)) =
-    ["sp1.native.hint_read", "sp1.native.host_halt", "sp1.native.enter",
+    ["sp1.native.hint_read", "sp1.native.host_halt", if includeVerify then "sp1.native.enter_or_verify" else "sp1.native.enter",
       "sp1.native.commit.0", "sp1.native.commit.1", "sp1.native.commit.2",
       "sp1.native.commit.3", "sp1.native.commit.4", "sp1.native.commit.5",
       "sp1.native.commit.6", "sp1.native.commit.7", "sp1.native.commit_deferred.0",
@@ -375,14 +375,14 @@ private theorem source_auxiliary_names (hints : List Bytes) :
       "sp1.native.hint_word.source", "sp1.native.commit.terminal", "sp1.native.commit_deferred.terminal",
       "sp1.native.ordinary_observation", "sp1.native.ordinary_observation.terminal.empty",
       "sp1.native.ordinary_observation.terminal.nonempty", "sp1.native.ordinary_observation.terminal.any"] := by
-  rfl
+  cases includeVerify <;> rfl
 
 private theorem source_auxiliary_fresh (image : ProgramImage) (source : ExecutionSnapshot)
-    (hints : List Bytes) :
+    (hints : List Bytes) (includeVerify : Bool) :
     (((ProtectedLocalCore.tables (p := p) image source).map
       (fun component : Component (ZMod p) => component.circuit.name)).set 58
       (HostCallLedger.producer (p := p)).circuit.name).all
-      (fun name => !(((receiver (p := p) :: HostCallReceivers.available).map
+      (fun name => !(((receiver (p := p) :: HostCallReceivers.availableFor includeVerify).map
         (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
         (wordResources ++ sourceResources hints)).map
           (fun component : Component (ZMod p) => component.circuit.name)).contains name) = true := by
@@ -391,12 +391,12 @@ private theorem source_auxiliary_fresh (image : ProgramImage) (source : Executio
   simp only [LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
     SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
     MemorySnapshot.registerTable, StaticTable.ofRows]
-  rfl
+  cases includeVerify <;> rfl
 
 /-- The concrete source inventory has distinct physical data keys, including each commit slot. -/
-theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (hints : List Bytes) :
+theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (hints : List Bytes) (includeVerify : Bool := false) :
     ((HostLocalCore.tables (p := p) image source
-      ((receiver :: HostCallReceivers.available).map (·.component) ++ (wordResources ++ sourceResources hints))).map
+      ((receiver :: HostCallReceivers.availableFor includeVerify).map (·.component) ++ (wordResources ++ sourceResources hints))).map
         (·.circuit.name)).Nodup := by
   rw [HostLocalCore.tables_names, source_auxiliary_names, List.nodup_append]
   refine ⟨?_, ?_, ?_⟩
@@ -406,8 +406,8 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
       SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
       MemorySnapshot.registerTable, StaticTable.ofRows]
     exact of_decide_eq_true rfl
-  · exact of_decide_eq_true rfl
-  · have fresh := source_auxiliary_fresh (p := p) image source hints
+  · cases includeVerify <;> exact of_decide_eq_true rfl
+  · have fresh := source_auxiliary_fresh (p := p) image source hints includeVerify
     rw [source_auxiliary_names] at fresh
     intro a old b added same
     have absent := List.all_eq_true.mp fresh a old
@@ -417,14 +417,14 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
 /-- Fixed source records authenticate from actual physical prefixes and canonical prover data.
 An appended resource block silent on both record channels authenticates vacuously. No additional
 source-validity or membership-balance premise is supplied by the caller. -/
-theorem source_record_authentication {extra : List (Component (ZMod p))}
-    {names : ((HostLocalCore.tables image source ((receiver :: HostCallReceivers.available).map (·.component) ++
+theorem source_record_authentication {includeVerify : Bool} {extra : List (Component (ZMod p))}
+    {names : ((HostLocalCore.tables image source ((receiver :: HostCallReceivers.availableFor includeVerify).map (·.component) ++
       (wordResources ++ (sourceResources source.host.io.hints ++ extra)))).map (·.circuit.name)).Nodup}
     {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
-    {tableChannels : ∀ component ∈ ((receiver :: HostCallReceivers.available).map (·.component) ++
+    {tableChannels : ∀ component ∈ ((receiver :: HostCallReceivers.availableFor includeVerify).map (·.component) ++
       (wordResources ++ (sourceResources source.host.io.hints ++ extra))),
       component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify)
       (sourceResources source.host.io.hints ++ extra) channels names channelNames tableChannels))
     (silent : ∀ component ∈ extra,
       nodeChannel.toRaw ∉ component.circuit.channels ∧ wordChannel.toRaw ∉ component.circuit.channels)
@@ -482,8 +482,8 @@ theorem source_record_authentication {extra : List (Component (ZMod p))}
   · exact fromComponent ⟨Component.Authenticates.of_silent _ _ _ (silent _ added).1,
       Component.Authenticates.of_silent _ _ _ (silent _ added).2⟩
 
-theorem bank_interface (hints : List Bytes) :
-    ExtensionInterface (HostCallReceivers.available (p := p)) (bankResources hints) := by
+theorem bank_interface (hints : List Bytes) (includeVerify : Bool := false) :
+    ExtensionInterface (HostCallReceivers.availableFor (p := p) includeVerify) (bankResources hints) := by
   have sourceSilent (component : Component (ZMod p)) (member : component ∈ bankResources hints)
       (channel : RawChannel (ZMod p)) (node : channel ≠ nodeChannel.toRaw) (word : channel ≠ wordChannel.toRaw)
       (commit : channel ≠ (HostCommitChip.stateChannel false).toRaw)
@@ -501,7 +501,7 @@ theorem bank_interface (hints : List Bytes) :
   · constructor
     · intro component member env checked
       rcases List.mem_append.mp member with handler | fixed
-      · exact HostCallReceivers.auxiliaryInterface.byte component handler env checked
+      · exact (HostCallReceivers.auxiliaryInterface includeVerify).byte component handler env checked
       · apply Operations.requirements_of_not_mem _ _ _
           (component.inChannelsOrRequirements_of_constraints env checked)
         intro used
@@ -513,7 +513,7 @@ theorem bank_interface (hints : List Bytes) :
           (List.mem_append_right _ used)
     · intro component member
       rcases List.mem_append.mp member with handler | fixed
-      · exact HostCallReceivers.auxiliaryInterface.state component handler
+      · exact (HostCallReceivers.auxiliaryInterface includeVerify).state component handler
       · exact sourceSilent component fixed Channels.stateChannel.toRaw
           (by simp [Channels.stateChannel, nodeChannel, Channel.toRaw])
           (by simp [Channels.stateChannel, wordChannel, Channel.toRaw])
@@ -527,7 +527,7 @@ theorem bank_interface (hints : List Bytes) :
       (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
   · intro component member
     rcases List.mem_append.mp member with handler | fixed
-    · exact availableInterface.cursor component (List.mem_append_left [] handler)
+    · exact (availableInterface includeVerify).cursor component (List.mem_append_left [] handler)
     · exact sourceSilent component fixed HintReadWordChip.stateChannel.toRaw
         (by simp [HintReadWordChip.stateChannel, nodeChannel, Channel.toRaw])
         (by simp [HintReadWordChip.stateChannel, wordChannel, Channel.toRaw])
@@ -535,9 +535,9 @@ theorem bank_interface (hints : List Bytes) :
         (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
 
 /-- The observation tables join the bank resources without changing the host interface. -/
-theorem source_interface (hints : List Bytes) :
-    ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) :=
-  (bank_interface hints).appendResources tables_interface
+theorem source_interface (hints : List Bytes) (includeVerify : Bool := false) :
+    ExtensionInterface (HostCallReceivers.availableFor (p := p) includeVerify) (sourceResources hints) :=
+  (bank_interface hints includeVerify).appendResources tables_interface
     (fun component member => tables_silent component member _
       (by simp [HostCallChip.channel, Channels.byteChannel, Channel.toRaw])
       (by simp [HostCallChip.channel, InstructionReceipt.channel, Channel.toRaw])

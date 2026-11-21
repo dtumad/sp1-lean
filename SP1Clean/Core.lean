@@ -459,6 +459,7 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
+import SP1Clean.Proofs.Chips.HostNoopChip.Choice
 import SP1Clean.Proofs.Chips.HostNoopChip.Formal
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal

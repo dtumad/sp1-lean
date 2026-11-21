@@ -2,7 +2,7 @@ import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Semantics.ReleasePolicy
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostNoopChip.Formal
+import SP1Clean.Proofs.Chips.HostNoopChip.Choice
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Native.Operations.HostCommitBoundary
@@ -31,7 +31,8 @@ private def commitName (deferred : Bool) (slot : Fin 8) : String :=
 def rustExports : List (String × Except String String) :=
   [("host_halt.rs", exportCircuit HostHaltChip.circuit),
    ("host_enter.rs", exportCircuit (HostNoopChip.circuit .enter)),
-   ("host_verify.rs", exportCircuit (HostNoopChip.circuit .verify))] ++
+   ("host_verify.rs", exportCircuit (HostNoopChip.circuit .verify)),
+   ("host_enter_or_verify.rs", exportCircuit HostNoopChip.choiceCircuit)] ++
   [false, true].flatMap (fun deferred =>
     (List.finRange 8).map fun slot =>
       (s!"{commitName deferred slot}.rs", exportCircuit (HostCommitChip.circuit deferred slot))) ++
