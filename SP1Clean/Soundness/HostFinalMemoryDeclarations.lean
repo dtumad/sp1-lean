@@ -57,16 +57,13 @@ theorem verifier_external_silent {channel : RawChannel (ZMod p)} (outside : chan
     registration.unique registration.tables
   have declared : channel ∈
       HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels target.sail.memorySnapshot) := by
-    simp only [externalChannels, List.mem_cons, List.not_mem_nil, or_false] at outside
-    rcases outside with rfl | rfl | rfl <;> simp [HostLocalCore.registry, sourceChannels]
+    have known := external_registered target.sail.memorySnapshot outside
+    simp [HostLocalCore.registry, known]
   have originalDeclared : channel ∈ original.channels :=
     List.mem_append_left _ declared
   have boundaryRegistered : (HostHintQueueBoundary.boundary source final target.host).circuit.channels ⊆ original.channels := by
-    intro selected used
-    apply List.mem_append_left _ (registration.boundary ?_)
-    by_contra absent
-    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at absent
-    exact HostHintQueueBoundary.boundary_silent selected absent.1 absent.2.1 absent.2.2.1 absent.2.2.2 used
+    exact fun _ used => List.mem_append_left _ (registration.boundary
+      (HostHintQueueBoundary.boundary_channels_subset source final target.host used))
   let beforeChanges := withReceipts image source target.sail.memorySnapshot final target.host HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels target.sail.memorySnapshot)
     (source_unique_names image source target.sail.memorySnapshot) registration
@@ -79,7 +76,7 @@ theorem verifier_external_silent {channel : RawChannel (ZMod p)} (outside : chan
       rcases used with ⟨_, same⟩ | same
       · exact same.symm
       · exact same
-    simp [equal]
+    simp [equal, receiptChannels]
   have quiet {other : RawChannel (ZMod p)}
       (absent : other.name ∉ (externalChannels (p := p)).map RawChannel.name) : channel ≠ other :=
     fun eq => absent (eq ▸ List.mem_map_of_mem (f := RawChannel.name) outside)

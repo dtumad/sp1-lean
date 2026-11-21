@@ -46,17 +46,18 @@ private theorem ordinary_platform {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] {
   exact Prod.ext refreshed (Prod.ext effect.interrupts effect.eventIndex)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance bookkeepingLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance bookkeepingLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 private theorem step_bookkeeping (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current next : ExecutionState} {row : ExecutionRow p}
     (atRow : carrier.ordered[n]? = some row)
@@ -81,8 +82,7 @@ private theorem step_bookkeeping (valid : image.Valid)
         execution.other_register_frame current.sail pc Register.nextPC (by decide) (by decide)⟩
 
 private theorem step_platform (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current next : ExecutionState} {row : ExecutionRow p}
     (atRow : carrier.ordered[n]? = some row)
@@ -106,8 +106,7 @@ private theorem step_platform (valid : image.Valid)
 retirements are idempotent, and every host adapter preserves both observations. Empty and
 host-only tapes retain the original values, including the original event marker. -/
 theorem GroundingCarrier.platform (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -134,8 +133,7 @@ theorem GroundingCarrier.platform (valid : image.Valid)
 /-- The actual ordinary inventory fixes both retirement slots, preserving the source enable
 policy and handling empty segments, inhibited counting, and wraparound uniformly. -/
 theorem GroundingCarrier.retirement (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -162,8 +160,7 @@ theorem GroundingCarrier.retirement (valid : image.Valid)
 /-- Final nextPC follows from the semantic tape and final PC. Host-only and empty shards
 preserve the incoming nextPC, including when HALT parks PC at its sentinel. -/
 theorem GroundingCarrier.nextPC (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)

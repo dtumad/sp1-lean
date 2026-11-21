@@ -16,7 +16,7 @@ open Circuit Air.Flat Semantics HostHintReadLocal HostQueueOrder HostQueueCPUOrd
 open NativeCore Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 local instance currentLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -117,14 +117,14 @@ theorem of_prefix
   exact ⟨store, bounded, equal ▸ binding⟩
 
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 /-- In the installed source-record assembly, raw AIR constraints and balance derive the current
 queue at any actual queue syscall. There is no current-queue or record-authentication premise. -/
 theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
@@ -148,7 +148,7 @@ theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostS
   have calls := by
     exact HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have interface := by
-    exact HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+    exact GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have ordering := by
     exact HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have specs := by
@@ -166,13 +166,16 @@ theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostS
 /-- Installed non-word hint resources cannot create positive write permissions. -/
 theorem source_permission_pulls (source : ExecutionSnapshot) :
     ∀ component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing),
+      (sourceResources source.host.io.hints ++ extra),
       WritePermission.Pulls component := by
   intro component member
   rcases List.mem_append.mp member with handler | resource
   · exact available_permission_pulls component handler
-  · have checked : (sourceResources (p := p) source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing).all (fun component =>
-        !(component.circuit.channels.map RawChannel.name).contains (WritePermissionProvider.channel (p := p)).toRaw.name) = true := rfl
+  · have checked : (sourceResources (p := p) source.host.io.hints ++ extra).all (fun component =>
+        !(component.circuit.channels.map RawChannel.name).contains (WritePermissionProvider.channel (p := p)).toRaw.name) = true :=
+      by
+        rw [List.all_append, Bool.and_eq_true_iff]
+        exact ⟨by rfl, GroundingResources.quiet (extra := extra) WritePermissionProvider.channel.toRaw (by simp [groundingChannels])⟩
     apply WritePermission.pulls_of_silent
     intro used
     have silent := List.all_eq_true.mp checked component resource
@@ -182,15 +185,16 @@ theorem source_permission_pulls (source : ExecutionSnapshot) :
 /-- Installed host resources cannot supply writable-interval membership. -/
 theorem source_membership_silent (image : ProgramImage) (source : ExecutionSnapshot) :
     ∀ component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing),
+      (sourceResources source.host.io.hints ++ extra),
       image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements := by
   have checked : ((HostCallReceivers.available (p := p)).map
       (fun receiver : HostLocalHandoff.Receiver (p := p) => receiver.component) ++
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)).all (fun component =>
+      (sourceResources source.host.io.hints ++ extra)).all (fun component =>
         !(component.circuit.channelsWithRequirements.map RawChannel.name).contains
           (image.writePermissionTable (p := p)).name) = true := by
-    unfold ProgramImage.writePermissionTable
-    rfl
+    simp only [List.all_append, Bool.and_eq_true_iff]
+    exact ⟨by unfold ProgramImage.writePermissionTable; rfl, by unfold ProgramImage.writePermissionTable; rfl,
+      GroundingResources.permissionMembership (extra := extra) image⟩
   intro component member used
   have valid := List.all_eq_true.mp checked component member
   change (!(component.circuit.channelsWithRequirements.map RawChannel.name).contains
@@ -278,9 +282,7 @@ The preceding replay, running status, and the grounding engine's register curren
 semantic inputs. Program balance authenticates the operand indices and currency supplies all
 three current observations; dispatch and write inventory need no prior Memory guarantees. -/
 theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
@@ -311,7 +313,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
   have sameData : retained.data = witness.data := HostHintQueueBoundary.projected_data witness
   have samePublic : retained.publicInput = witness.publicInput := HostHintQueueBoundary.projected_publicInput witness
   have interface := by
-    exact HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+    exact GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have checks := by
     exact HostHintQueueBoundary.projected_constraints witness constraints
   have records := by
@@ -355,9 +357,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
 /-- An installed HINT_LEN return is the actual current host queue's observation, derived from
 the preceding replay and AIR. This conclusion requires no Memory-channel guarantees. -/
 theorem length_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
@@ -375,7 +375,7 @@ theorem length_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFina
     prior rest event split (some empty, env) member clock policy program current replayed
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have authentication := HostHintQueueBoundary.source_authentication witness constraints
   have specs := queue_specs (HostHintQueueBoundary.projected witness) interface _ authentication checks records
   have retainedMember : (some empty, env) ∈ TransitionView.readIndexedRows indices

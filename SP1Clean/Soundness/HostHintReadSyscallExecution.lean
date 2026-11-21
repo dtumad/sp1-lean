@@ -14,7 +14,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 local instance syscallLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance syscallLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -91,13 +91,13 @@ private theorem control_not_read (event : ExecutionRow p) (wrapper : HostCallChi
   rw [← sameRow]
   exact code
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 private theorem control_step (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -133,7 +133,7 @@ private theorem control_step (valid : image.Valid)
   have before : carrier.trajectory valid n = some current.sail := by
     simp only [GroundingCarrier.trajectory, paired, Option.map_some]
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
@@ -207,9 +207,7 @@ private theorem control_step (valid : image.Valid)
 Full-call balance selects and discharges control and hint cases internally, including actual
 host returns and RAM effects; no handler or successful-dispatch premise is supplied. -/
 theorem GroundingCarrier.syscall_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈
@@ -221,7 +219,7 @@ theorem GroundingCarrier.syscall_engineFacts (valid : image.Valid)
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.syscall row)) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
   obtain ⟨physical, active, same⟩ := syscall_physical (HostHintQueueBoundary.projected witness) member

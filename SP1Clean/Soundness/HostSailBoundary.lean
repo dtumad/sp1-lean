@@ -22,8 +22,8 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p))
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
-    [registration : HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels] : Ensemble (ZMod p) SP1PublicIO :=
+    (names : HostFinalMemory.UniqueNames image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources)
+    [registration : HostFinalMemory.Registration image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources channels] : Ensemble (ZMod p) SP1PublicIO :=
   (SailBoundary.checker source target).install
     (HostFinalMemory.ensemble image source target.sail.memorySnapshot final target.host others resources channels names registration)
 
@@ -31,8 +31,8 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
-  {names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources}
-variable [registration : HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+  {names : HostFinalMemory.UniqueNames image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources}
+variable [registration : HostFinalMemory.Registration image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources channels]
 
 /-- The Memory proof view retains every physical table, row, lookup environment and public field. -/
 def baseWitness (witness : EnsembleWitness (ensemble image source target final others resources channels names)) :
@@ -67,7 +67,7 @@ theorem statement_iff (input : SP1PublicIO (ZMod p)) (heights : List ℕ) :
 /-- Raw acceptance binds the complete Memory comparison and the actual target register presence.
 No static circuit-interface proof or endpoint certificate is a caller premise. -/
 theorem source_target_checks
-    [sourceRegistration : HostFinalMemory.Registration image source target.sail.memorySnapshot HostCallReceivers.available
+    [sourceRegistration : HostFinalMemory.Registration image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) channels]
     (witness : EnsembleWitness (ensemble image source target final HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) channels

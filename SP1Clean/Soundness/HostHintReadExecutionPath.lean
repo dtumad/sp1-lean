@@ -40,7 +40,7 @@ private theorem path_of_replay {policy : HostPolicy} {program : Target.GuestProg
     simpa only [List.take_succ_cons, replayEvents?, step, Option.bind_some] using prefixReplay
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 local instance pathLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance pathLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -49,14 +49,14 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 /-- The registered chip step, effect and permission at an actual replayed instruction occurrence. Incoming
 truth and operand currency are supplied by the same installed grounding proof. -/
 theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current : ExecutionState} {row : DecodedInstructionRow p}
     (atRow : carrier.ordered[n]? = some (.instruction row))
@@ -64,7 +64,12 @@ theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
       source.realize (carrier.events.take n) = some current) :
     ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current .ordinary next ∧
       Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail ∧
-      InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail := by
+      InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail ∧
+      DecodedRowStaticInputs row witness.data ∧ DecodedRowDynamicInputs row witness.data (image.toGuestProgram valid) current.sail ∧
+      (row.toChipRow witness.data).is_real = 1 ∧
+      Target.decodedInROM (image.toGuestProgram valid) (programAccess (row.toChipRow witness.data).view).toRow ∧
+      current.sail.regs.get? LeanRV64D.Register.PC = some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) ∧
+      Target.SailConfigured current.sail := by
   have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
   have grounded := (carrier.ground valid constraints balanced).1 _ member
   have time := carrier.time_of_ordered_at atRow
@@ -81,9 +86,7 @@ theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
 /-- The registered chip effect at an actual replayed instruction occurrence. All incoming
 truth and operand currency are supplied by the same installed grounding proof. -/
 theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current next : ExecutionState} {row : DecodedInstructionRow p}
     (atRow : carrier.ordered[n]? = some (.instruction row))
@@ -99,9 +102,7 @@ theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
   exact ⟨step, effect⟩
 
 private theorem step_of_replay (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (n : ℕ) (current next : ExecutionState) (event : Machine.ExecutionEvent)
     (atEvent : carrier.events[n]? = some event)
@@ -151,9 +152,7 @@ private theorem step_of_replay (valid : image.Valid)
         exact execution.other_register_frame current.sail pc R notPc (notGpr 5)
 
 private theorem final_replay (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (truth : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (finalBoundaryStateMessage witness.publicInput)) :
@@ -178,9 +177,7 @@ private theorem final_replay (valid : image.Valid)
 /-- Raw installed AIR constraints and balance yield a normally retiring local execution on the
 derived complete event tape. Its endpoint agrees with the public PC/clock and every final record. -/
 theorem GroundingCarrier.execution (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize carrier.events target ∧
@@ -207,9 +204,7 @@ theorem GroundingCarrier.execution (valid : image.Valid)
 
 /-- The same actual replay preserves the full Sail memory map outside the native address range. -/
 theorem GroundingCarrier.memory_outside (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -221,9 +216,7 @@ theorem GroundingCarrier.memory_outside (valid : image.Valid)
 
 /-- Native instruction and host steps preserve Sail's simulator counter and output exactly. -/
 theorem GroundingCarrier.runtime (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -237,9 +230,7 @@ theorem GroundingCarrier.runtime (valid : image.Valid)
 
 /-- Every Sail register outside the GPR/PC/retirement footprint retains its complete source observation. -/
 theorem GroundingCarrier.other_registers (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -258,9 +249,7 @@ theorem GroundingCarrier.other_registers (valid : image.Valid)
 grounding, or event semantics. The path exhausts the active physical inventory, preserving repeated
 occurrences and erasing inactive padding. Complete outgoing snapshot binding is not asserted. -/
 theorem source_execution (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧

@@ -22,14 +22,16 @@ open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGroun
 open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance finalMemoryLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance finalMemoryLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 private theorem no_push_of_empty {α : Type*} (events : List α) (facts : α → RowFacts p)
@@ -44,8 +46,7 @@ private theorem no_push_of_empty {α : Type*} (events : List α) (facts : α →
 /-- A missing physical final record means no active event pushes this location. Strict
 chronology excludes hidden cycles, including cycles containing physical refresh rows. -/
 theorem source_no_push_of_final_none (valid : image.Valid)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (loc : MemLoc)
     (absent : LocalCore.memoryFinalFrontier
@@ -66,8 +67,7 @@ theorem source_no_push_of_final_none (valid : image.Valid)
 
 /-- The source value survives at every location omitted by the physical final frontier. -/
 theorem GroundingCarrier.untouched_memory (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (target : ExecutionState)
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -99,8 +99,7 @@ theorem GroundingCarrier.untouched_memory (valid : image.Valid)
 /-- Every register and every native RAM cell has its exact final value. Locations absent from
 the final inventory retain their source value, including RAM below the register-reserved window. -/
 theorem GroundingCarrier.final_memory (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (target : ExecutionState)
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -121,16 +120,14 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
       rw [← carrier.finalClock, ← carrier.events_length] at value
       exact (localValueAt_stepStart_iff atEnd).mp value
   | none =>
-      have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-        (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
+      have ordering := HostHintQueueBoundary.SourceWitness.orderingChannels witness constraints balanced
       have sourceValid := (LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte).2.1
       exact carrier.untouched_memory valid constraints balanced target replay loc _
         (sourceValid.memory.locContent_of_address_lt loc bound) present
 
 /-- The finite source has no out-of-window entries, and every actual event preserves their absence. -/
 theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)

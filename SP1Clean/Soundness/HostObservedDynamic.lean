@@ -68,7 +68,7 @@ theorem dynamicMatch (witness : EnsembleWitness (ensemble image source target fi
   have hostChecks := HostHintQueueBoundary.projected_constraints projected projectedChecked
   have constraints : core.Constraints := HostLocalCore.localWitness_constraints host hostChecks
   have channels : LocalCore.OrderingChannels core := HostHintQueueBoundary.projected_orderingChannels projected
-    (HostFinalMemory.sourceInterface source.host.io.hints target.sail.memorySnapshot) projectedChecked
+    (GroundingResources.sourceInterface source.host.io.hints (FinalMemoryChecks.checkTables target.sail.memorySnapshot)) projectedChecked
     (HostFinalMemory.baseWitness_hostBalanced memory (grounding_balance witness funded))
   have contract := LocalCore.public_contract_of_byte core channels.sourceChecks channels.verifierByte
   have sail := target_spec witness funded

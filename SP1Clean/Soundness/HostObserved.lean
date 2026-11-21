@@ -25,15 +25,15 @@ abbrev producers (image : ProgramImage) (source target : ExecutionSnapshot)
     (HostHintReadLocal.sourceResources source.host.io.hints) (HostFinalMemory.sourceChannels target.sail.memorySnapshot)
     (HostFinalMemory.source_unique_names image source target.sail.memorySnapshot)
 
-private theorem protocol_mem (image : ProgramImage) (source target : ExecutionSnapshot)
+private theorem base_external_registered (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) (channel : RawChannel (ZMod p))
-    (member : channel ∈ HostFinalMemory.sourceChannels target.sail.memorySnapshot) :
+    (member : channel ∈ HostFinalMemory.externalChannels (p := p)) :
     channel ∈ (HostFinalMemory.Installed image source target final).channels := by
   change _ ∈ (_ ++ [_]) ++ [_]
   apply List.mem_append_left _ (List.mem_append_left _ ?_)
   change _ ∈ _ ++ [_]
   apply List.mem_append_left
-  exact List.mem_append_right _ (List.mem_cons_of_mem _ member)
+  exact List.mem_append_right _ (List.mem_cons_of_mem _ (HostFinalMemory.external_registered _ member))
 
 private theorem endpoint_registered (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) :
@@ -42,7 +42,7 @@ private theorem endpoint_registered (image : ProgramImage) (source target : Exec
   intro channel used
   simp only [endpoint, SP1Clean.OrdinaryObservation.endpointCircuit, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at used
   subst channel
-  exact List.mem_append_left _ (protocol_mem image source target final _ (by simp [HostFinalMemory.sourceChannels]))
+  exact List.mem_append_left _ (base_external_registered image source target final _ (by simp [HostFinalMemory.externalChannels]))
 
 /-- Install the observation start and final links on the existing verifier and channel registry. -/
 def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
@@ -62,10 +62,15 @@ theorem table_names :
     (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
     (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot)
 
+/-- Installing the ordinary receipts and endpoints preserves all external host channels. -/
+theorem external_registered {channel : RawChannel (ZMod p)} (external : channel ∈ HostFinalMemory.externalChannels) :
+    channel ∈ (ensemble image source target final).channels :=
+  List.mem_append_left _ (base_external_registered image source target final channel external)
+
 /-- The immutable commitment provider's channel is registered in the observed assembly. -/
 theorem declarationsRegistered :
     CommitmentDeclaration.channel.toRaw ∈ (ensemble image source target final).channels :=
-  List.mem_append_left _ (protocol_mem image source target final _ (by simp [HostFinalMemory.sourceChannels]))
+  external_registered (by simp [HostFinalMemory.externalChannels])
 
 /-- Receipt publication preserves the absence of legacy lookups in every physical component. -/
 theorem lookupFree : LookupFree (ensemble image source target final).tables := by
@@ -114,13 +119,10 @@ theorem verifier_external (env : Environment (ZMod p)) (channel : RawChannel (ZM
       if channel = SP1Clean.OrdinaryObservation.stateChannel.toRaw then
         [SP1Clean.OrdinaryObservation.stateChannel.pushedValue (startFor source.sail),
          SP1Clean.OrdinaryObservation.stateChannel.pulledValue (finalFor source.sail target.sail)] else [] := by
-  have known : channel ∈ HostFinalMemory.sourceChannels (p := p) target.sail.memorySnapshot := by
-    simp only [HostFinalMemory.externalChannels, List.mem_cons, List.not_mem_nil, or_false] at outside
-    rcases outside with rfl | rfl | rfl <;> simp [HostFinalMemory.sourceChannels]
   let original := HostFinalMemory.Installed image source target final
   have silent : (producers image source target final).verifierOperations.interactionValuesWith channel env = [] := by
     change ((SailBoundary.checker source target).install original).verifierOperations.interactionValuesWith channel env = []
-    rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ (protocol_mem image source target final channel known)]
+    rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ (base_external_registered image source target final channel outside)]
     exact HostFinalMemory.verifier_external_silent outside env
   rw [verifier_interactions, silent, List.nil_append]
 
@@ -178,7 +180,7 @@ theorem baseWitness_interactions (witness : EnsembleWitness (ensemble image sour
 theorem baseWitness_declarations (witness : EnsembleWitness (ensemble image source target final)) :
     (baseWitness witness).interactionsWith CommitmentDeclaration.channel.toRaw =
       witness.interactionsWith CommitmentDeclaration.channel.toRaw :=
-  baseWitness_interactions witness _ (protocol_mem image source target final _ (by simp [HostFinalMemory.sourceChannels]))
+  baseWitness_interactions witness _ (base_external_registered image source target final _ (by simp [HostFinalMemory.externalChannels]))
     (by simp [CommitmentDeclaration.channel, InstructionReceipt.channel, Channel.toRaw])
     (by simp [CommitmentDeclaration.channel, SP1Clean.OrdinaryObservation.stateChannel, Channel.toRaw])
 
@@ -206,14 +208,14 @@ theorem target_spec (witness : EnsembleWitness (ensemble image source target fin
   let selected := check.channel original
   have fresh (channel) (registered : channel ∈ original.channels) : selected ≠ channel :=
     fun eq => check.channel_not_mem original (show selected ∈ original.channels from eq ▸ registered)
-  have outside (channel) (registered : channel ∈ HostFinalMemory.sourceChannels target.sail.memorySnapshot) :
-      selected ≠ channel := fresh _ (protocol_mem image source target final _ registered)
+  have outside (channel) (registered : channel ∈ HostFinalMemory.externalChannels (p := p)) :
+      selected ≠ channel := fresh _ (base_external_registered image source target final _ registered)
   let sail := HostOrdinaryReceipts.baseWitness (producerWitness witness)
   have h := balanced selected (List.mem_append_right _ (List.mem_singleton_self selected))
-    (outside _ (by simp [HostFinalMemory.sourceChannels]))
+    (outside _ (by simp [HostFinalMemory.externalChannels]))
   change BalancedInteractions (witness.interactionsWith selected) at h
-  rw [← producerWitness_interactions witness selected (outside _ (by simp [HostFinalMemory.sourceChannels])),
-      ← HostOrdinaryReceipts.baseWitness_interactions _ selected (outside _ (by simp [HostFinalMemory.sourceChannels]))] at h
+  rw [← producerWitness_interactions witness selected (outside _ (by simp [HostFinalMemory.externalChannels])),
+      ← HostOrdinaryReceipts.baseWitness_interactions _ selected (outside _ (by simp [HostFinalMemory.externalChannels]))] at h
   have same : sail.interactionsWith selected = _ := check.installed_check_interactions (ens := original) sail
   change BalancedInteractions (sail.interactionsWith selected) at h
   rw [same] at h

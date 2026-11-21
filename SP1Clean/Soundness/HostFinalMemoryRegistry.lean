@@ -18,35 +18,41 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalNamesLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- The complete physical host inventory has distinct canonical names before receipt wrapping. -/
-abbrev UniqueNames (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
+abbrev UniqueNames (image : ProgramImage) (source : ExecutionSnapshot) (extra : List (Component (ZMod p)))
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) : Prop :=
   ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: others).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ (resources ++ FinalMemoryChecks.checkTables target)))).map
+      (HostHintReadHandoff.wordResources ++ (resources ++ extra)))).map
       (·.circuit.name)).Nodup
 
 /-- Static channel coverage and unique protocol names for the complete host inventory. -/
-class Registration (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
+class Registration (image : ProgramImage) (source : ExecutionSnapshot) (extra : List (Component (ZMod p)))
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p))) : Prop where
   unique : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup
   tables : ∀ component ∈ (HostHintReadHandoff.receiver :: others).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ (resources ++ FinalMemoryChecks.checkTables target)),
+      (HostHintReadHandoff.wordResources ++ (resources ++ extra)),
     component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)
   boundary : [HostHintQueue.stateChannel.toRaw, (HostCommitChip.stateChannel false).toRaw,
       (HostCommitChip.stateChannel true).toRaw, HostExitBoundary.channel.toRaw] ⊆
     HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)
 
+/-- Finalizers hand these three protocols to the outgoing memory checks. -/
+def receiptChannels : List (RawChannel (ZMod p)) :=
+  [(FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw, FinalMemoryChange.channel.toRaw]
+
+/-- Channels supplied above the complete-memory host proof view. -/
+def externalChannels : List (RawChannel (ZMod p)) :=
+  [CommitmentDeclaration.channel.toRaw, InstructionReceipt.channel.toRaw, OrdinaryObservation.stateChannel.toRaw]
+
 /-- Target consumers register both receipt protocols and the change protocol. -/
 theorem Registration.targetChannels {image : ProgramImage} {source : ExecutionSnapshot}
     {target : MemorySnapshot} {others : List (HostLocalHandoff.Receiver (p := p))}
     {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
-    (registered : Registration image source target others resources channels) :
-    [(FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
-      FinalMemoryChange.channel.toRaw] ⊆
-        HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels) := by
+    (registered : Registration image source (FinalMemoryChecks.checkTables target) others resources channels) :
+    receiptChannels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels) := by
   intro channel member
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  simp only [receiptChannels, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl
   · apply registered.tables ((FinalMemoryChecks.checkTables target)[0]'(by simp only [FinalMemoryChecks.checkTables, List.length_cons, List.length_nil]; omega))
       (List.mem_append_right _ (List.mem_append_right _ (List.mem_append_right _ (List.getElem_mem (by simp only [FinalMemoryChecks.checkTables, List.length_cons, List.length_nil]; omega)))))
@@ -68,12 +74,14 @@ their producers are installed above this inventory. -/
 def sourceChannels (target : MemorySnapshot) : List (RawChannel (ZMod p)) :=
   [HostHintQueue.wordChannel.toRaw, HostHintQueue.nodeChannel.toRaw, HostHintQueue.stateChannel.toRaw,
     HostExitBoundary.channel.toRaw, (HostCommitChip.stateChannel false).toRaw,
-    (HostCommitChip.stateChannel true).toRaw, HostRamAccessChip.channel.toRaw,
-    (FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
-    FinalMemoryChange.channel.toRaw, (FinalRegisterValue.membership target).channel.toRaw,
-    (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw,
-    CommitmentDeclaration.channel.toRaw, InstructionReceipt.channel.toRaw,
-    OrdinaryObservation.stateChannel.toRaw]
+    (HostCommitChip.stateChannel true).toRaw, HostRamAccessChip.channel.toRaw] ++ receiptChannels ++
+    [(FinalRegisterValue.membership target).channel.toRaw,
+      (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw] ++ externalChannels
+
+omit [Fact (2 ^ 25 < p)] in
+/-- The registry includes every protocol supplied by the outer assembly. -/
+theorem external_registered (target : MemorySnapshot) : externalChannels ⊆ sourceChannels (p := p) target :=
+  fun _ => List.mem_append_right _
 
 /-- Indices of the complete raw channel declarations for the physical host suffix.
 Repeated declarations remain here; the registry they index contains each protocol once. -/
@@ -95,15 +103,20 @@ private theorem source_channel_declarations (image : ProgramImage) (source : Exe
 
 /-- The standard source-backed host assembly has complete, unique channel registration. -/
 theorem source_registration (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) :
-    Registration (p := p) image source target HostCallReceivers.available
+    Registration (p := p) image source (FinalMemoryChecks.checkTables target) HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels target) := by
   constructor
   · simp only [HostLocalCore.registry, LocalCore.baseEnsemble, sp1Ensemble_channels,
-      sourceChannels, List.map_cons, List.map_nil, List.cons_append,
+      sourceChannels, receiptChannels, externalChannels, List.map_cons, List.map_nil, List.cons_append,
       List.nil_append, StaticTable.channel, StaticTable.ofRows, MemorySnapshot.registerTable,
       ProgramImage.writePermissionTable, InitialMemoryLookup.membership, FinalRegisterValue.membership,
       Channel.toRaw_name]
-    change (["sp1.native.host_call", "SP1WritePermission", "sp1.native.write_permission", "SP1NativeMemoryInitOrder", "SP1NativeMemoryFinalOrder", "sp1.native.source_registers", "sp1.native.initial_memory", "SP1State", "SP1Byte", "SP1Program", "SP1Memory", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.hint_read_state", "sp1.native.hint_word", "sp1.native.hint_node", "sp1.native.hint_queue_state", "SP1HostExit", "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access", "SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange", "sp1.native.target_registers", "sp1.native.target_memory", "sp1.native.commitment_declaration", "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"]).Nodup
+    dsimp only [HostCallChip.channel, WritePermissionProvider.channel, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
+      stateChannel, byteChannel, programChannel, memoryChannel, exitChannel, syscallChannel, publicValuesChannel,
+      HintReadWordChip.stateChannel, HostHintQueue.wordChannel, HostHintQueue.nodeChannel, HostHintQueue.stateChannel,
+      HostExitBoundary.channel, HostCommitChip.stateChannel, HostRamAccessChip.channel, FinalMemoryValue.channel,
+      FinalMemoryChange.channel, CommitmentDeclaration.channel, InstructionReceipt.channel, OrdinaryObservation.stateChannel]
     decide
   · intro component member channel used
     have declared := List.mem_map_of_mem
@@ -119,7 +132,7 @@ attribute [instance] source_registration
 
 /-- The concrete host registry and both target validators have distinct canonical names. -/
 theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) :
-    UniqueNames (p := p) image source target HostCallReceivers.available
+    UniqueNames (p := p) image source (FinalMemoryChecks.checkTables target) HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) := by
   let original := HostLocalCore.tables (p := p) image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
@@ -161,35 +174,5 @@ theorem not_required (component : Component (ZMod p))
   change (component.circuit.channelsWithRequirements.map RawChannel.name).contains "SP1Byte" = true at present
   rw [quiet] at present
   contradiction
-
-/-- A name check over the validators shows they never use a channel. -/
-theorem checks_silent (target : MemorySnapshot) (channel : RawChannel (ZMod p))
-    (quiet : (FinalMemoryChecks.checkTables (p := p) target).all
-      (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true) :
-    ∀ component ∈ FinalMemoryChecks.checkTables target, channel ∉ component.circuit.channels := by
-  intro component member used
-  have silent := List.all_eq_true.mp quiet component member
-  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
-  contradiction
-
-/-- The target consumers have a proved static host-resource interface. -/
-theorem targetInterface (target : MemorySnapshot)
-    {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
-    (interface : HostHintReadLocal.ExtensionInterface others resources) :
-    HostHintReadLocal.ExtensionInterface others (resources ++ FinalMemoryChecks.checkTables target) := by
-  apply interface.appendResources
-  · constructor
-    · intro component member env checked
-      simp only [FinalMemoryChecks.checkTables, List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl | rfl <;> exact not_required _ (by rfl) env checked
-    · exact checks_silent target stateChannel.toRaw (by rfl)
-  · exact checks_silent target HostCallChip.channel.toRaw (by rfl)
-  · exact checks_silent target HintReadWordChip.stateChannel.toRaw (by rfl)
-
-/-- The concrete host registry with both target validators has a proved static interface. -/
-theorem sourceInterface (hints : List Bytes) (target : MemorySnapshot) :
-    HostHintReadLocal.ExtensionInterface (HostCallReceivers.available (p := p))
-      (HostHintReadLocal.sourceResources hints ++ FinalMemoryChecks.checkTables target) :=
-  targetInterface target (HostHintReadLocal.source_interface hints)
 
 end SP1Clean.Soundness.HostFinalMemory

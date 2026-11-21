@@ -19,8 +19,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
-  {names : UniqueNames image source target others resources}
-  {registration : Registration image source target others resources channels}
+  {names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources}
+  {registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels}
 
 /-- Every Byte provider proves its own requirement in the complete installed component inventory. -/
 theorem component_byte_requirements (interface : HostHintReadLocal.ExtensionInterface others resources)
@@ -35,7 +35,7 @@ theorem component_byte_requirements (interface : HostHintReadLocal.ExtensionInte
   · rcases List.mem_or_eq_of_mem_set member with member | rfl
     · rcases List.mem_or_eq_of_mem_set member with member | rfl
       · exact HostLocalCore.component_byte_requirements image source _
-          (HostHintReadLocal.auxiliaryInterface (targetInterface target interface)) component
+          (HostHintReadLocal.auxiliaryInterface (GroundingResources.appendInterface (FinalMemoryChecks.checkTables target) interface)) component
           member env checked
       · exact not_required _ (by rfl) env checked
     · exact not_required _ (by rfl) env checked
