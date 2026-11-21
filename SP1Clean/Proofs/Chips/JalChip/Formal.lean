@@ -37,7 +37,7 @@ def linkTargetWord (input : Inputs (ZMod p)) : Word (ZMod p) :=
     #v[input.state.pc[0], input.state.pc[1], input.state.pc[2], 0] #v[4, 0, 0, 0]
 
 /-- Honest prover-side row well-formedness: operand `isU64`s, `is_real` binary, CPUState clock bounds,
-op_a register-access timestamp bounds, `value[3] = 0` for both add results, and the `is_real`-gated
+op_a register-access timestamp bounds, a 48-bit jump target and an enabled 48-bit link, and the `is_real`-gated
 4-byte alignment check (`jump_target[0] / 4 < 2^14`). The destination flag is exact: padding has
 `op_a_0 = 0`, while a real row may select either an ordinary write (`0`) or `jal x0` (`1`). -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
@@ -56,7 +56,7 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
     ⟨input.adapter.op_a_memory, input.is_real,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4⟩ ∧
   (jumpTargetWord input)[3] = 0 ∧
-  (linkTargetWord input)[3] = 0 ∧
+  (input.is_real - input.adapter.op_a_0 = 1 → (linkTargetWord input)[3] = 0) ∧
   (input.is_real = 1 → ((jumpTargetWord input)[0] * (4 : ZMod p)⁻¹).val < 2 ^ 14) ∧
   (input.is_real = 1 → input.adapter.op_a.val < 32 ∧ input.state.pc[0].val < 2 ^ 16 ∧
     input.state.pc[1].val < 2 ^ 16 ∧ input.state.pc[2].val < 2 ^ 16) ∧
@@ -233,7 +233,7 @@ theorem completeness :
     · have hoav3 := congrArg (·[3]) (hval2_off hg1)
       simp only [Vector.getElem_mapRange, circuit_norm] at hoav3
       rw [hoav3]
-      exact h_lt3
+      exact h_lt3 hg1
   · intro _
     rcases h_gate2 with hg0 | hg1
     · rw [hval2_on hg0]

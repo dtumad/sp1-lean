@@ -1604,9 +1604,31 @@ fn jal() {
             }
         }
     }
-    assert_eq!(record.jal_events.len(), 40);
+    // The last PC fits in three limbs. Its link is 2^48, which rd=x0 discards.
+    let clk = 9 + 8 * record.jal_events.len() as u64;
+    let last_pc = (1 << 48) - 4;
+    record.jal_events.push((
+        JumpEvent {
+            clk,
+            pc: last_pc,
+            next_pc: last_pc,
+            opcode: Opcode::JAL,
+            a: 0,
+            b: 0,
+            c: 0,
+            op_a_0: true,
+        },
+        JTypeRecord {
+            op_a: 0,
+            a: write_record(0, 0, clk + 4, clk - 8),
+            op_b: 0,
+            op_c: 0,
+            is_untrusted: false,
+        },
+    ));
+    assert_eq!(record.jal_events.len(), 41);
     let chip = JalChip::<SupervisorMode>::default();
-    let trace = padded_trace(&chip, &record, 40);
+    let trace = padded_trace(&chip, &record, 41);
     check_all_rows::<JalInstruction>(
         &trace,
         |row| {
@@ -1660,12 +1682,12 @@ fn jalr() {
             }
         }
     }
-    // Add a distinct x0 source/destination case, and ensure the trace has padding.
+    // Set both registers to x0 in the last fetch slot, where the link would overflow.
     let clk = 9 + 8 * record.jalr_events.len() as u64;
     record.jalr_events.push((
         JumpEvent {
             clk,
-            pc: 4096,
+            pc: (1 << 48) - 4,
             next_pc: 0,
             opcode: Opcode::JALR,
             a: 0,

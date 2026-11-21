@@ -95,8 +95,14 @@ theorem proverAssumptions_of_event {e : ITypeEvent} (h : e.WellFormedJalr) (htgt
   -- the uncleared jump target is a program counter: 48 bits, so its committed high limb is zero
   · rw [jumpTargetWord_toJalrInputs]
     exact wordOfNat_three_eq_zero htgt48
-  -- so is the link address `pc + 4`
-  · rw [linkTargetWord_toJalrInputs hpc]
+  -- The physical link addition is enabled only for a nonzero destination register.
+  · intro enabled
+    change 1 - (iTypeReaderCols (p := p) e).op_a_0 = 1 at enabled
+    have writes : e.opA ≠ 0 := by
+      intro discarded
+      simp [iTypeReaderCols_op_a_0_eq_one discarded] at enabled
+    have bound := hlink writes
+    rw [linkTargetWord_toJalrInputs hpc]
     exact wordOfNat_three_eq_zero (by omega)
   -- and the **cleared** target is 4-byte aligned — the `Range((value[0] - lsb) / 4, 14)` byte pull
   · intro _
@@ -104,10 +110,7 @@ theorem proverAssumptions_of_event {e : ITypeEvent} (h : e.WellFormedJalr) (htgt
     exact wordOfNat_div_four_val_lt (p := p) (n := e.jalrTarget) (sub := e.jalrTarget % 2)
       (by omega) htgt4
 
-/-- **A padding row satisfies the same contract.** `is_real = 0` makes every gated conjunct vacuous;
-what survives is the three operand `isU64`s, the `op_a_0` zero flag, and — because they are stated
-**ungated** — the two `value[3] = 0` gates, which the zero row's two sums `0 + 0` and `0 + 4`
-satisfy. -/
+/-- A padding row has zero operands and jump target. Its link addition is disabled. -/
 theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ProverAssumptions (jalrPaddingInputs (p := p)) data hint := by
   have hzero : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) :=

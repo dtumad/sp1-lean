@@ -724,11 +724,10 @@ def JTypeEvent.jalTarget (e : JTypeEvent) : ℕ := (e.pc + e.immB) % 2 ^ 64
   compressed extension, so every instruction is four bytes and RISC-V raises an
   instruction-address-misaligned exception on any other target — which traps rather than emitting a
   row. This is exactly the content of the chip's `Range(add_operation.value[0] / 4, 14)` byte pull.
-* `link_lt` — the link address `pc + 4` is a 48-bit address too (`op_a_operation.value[3] = 0`);
-  it is the address the jump returns to, hence itself a program counter.
+* A nonzero destination receives the 48-bit link `pc + 4`. A discarded link has zero witness limbs.
 -/
 def JTypeEvent.JalTargets (e : JTypeEvent) : Prop :=
-  e.jalTarget < 2 ^ 48 ∧ e.jalTarget % 4 = 0 ∧ e.pc + 4 < 2 ^ 48
+  e.jalTarget < 2 ^ 48 ∧ e.jalTarget % 4 = 0 ∧ (e.opA ≠ 0 → e.pc + 4 < 2 ^ 48)
 
 /-- The **uncleared** address a `JALR` row computes: `rs1 + op_c`, truncated to 64 bits. The row
 jumps to this value with its low bit cleared (`next_pc = target - target % 2`, SP1's `& !1`), but
@@ -745,10 +744,10 @@ low bit is cleared — which is the whole difference between the two chips:
   is RISC-V's rule for `JALR` (the LSB is cleared by the instruction, and the result must still be
   instruction-aligned or the access traps), and it is exactly the content of the chip's
   `Range((add_operation.value[0] - lsb) / 4, 14)` byte pull.
-* `link_lt` — the link address `pc + 4` is a 48-bit address (`op_a_operation.value[3] = 0`).
+* A nonzero destination receives `pc + 4` in three limbs. With x0 the link word is zero.
 -/
 def ITypeEvent.JalrTargets (e : ITypeEvent) : Prop :=
-  e.jalrTarget < 2 ^ 48 ∧ (e.jalrTarget - e.jalrTarget % 2) % 4 = 0 ∧ e.pc + 4 < 2 ^ 48
+  e.jalrTarget < 2 ^ 48 ∧ (e.jalrTarget - e.jalrTarget % 2) % 4 = 0 ∧ (e.opA ≠ 0 → e.pc + 4 < 2 ^ 48)
 
 /-! ## The branch family
 

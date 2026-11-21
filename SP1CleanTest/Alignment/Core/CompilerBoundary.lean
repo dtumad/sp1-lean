@@ -1,5 +1,7 @@
 import SP1Clean.Math.SP1Field
 import SP1Clean.Proofs.Chips.BranchChip.Complete
+import SP1Clean.Proofs.Chips.JalChip.Complete
+import SP1Clean.Proofs.Chips.JalrChip.Complete
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Semantics.Execution.ConfiguredState
 import SP1Clean.Semantics.Sail.SailControlExecute
@@ -53,7 +55,7 @@ theorem lastSlot_jal_executes (rd : BitVec 5) :
 private def lastEvent (rd : ℕ) : JTypeEvent where
   clk := 1
   pc := 2 ^ 48 - 4
-  opcode := 46
+  opcode := Soundness.Opcode.JAL.toNat
   opA := rd
   immB := 0
   immC := 0
@@ -92,10 +94,31 @@ theorem lastEvent_target (rd : ℕ) :
     (lastEvent rd).jalTarget < 2 ^ 48 ∧ (lastEvent rd).jalTarget % 4 = 0 := by
   norm_num [lastEvent, JTypeEvent.jalTarget]
 
-/-- This is the named repair obligation for deriving full JAL validity at the semantic boundary:
-`JalTargets` currently rejects every last-slot self-jump, including the link-discarding x0 form. -/
-theorem lastEvent_not_valid (rd : ℕ) : ¬ InstructionChipId.jal.Valid (lastEvent rd) := by
-  simp [InstructionChipId.Valid, JTypeEvent.JalTargets, lastEvent]
+/-- At the last fetch slot an enabled link would be 2^48. Selecting x0 disables that link. -/
+theorem lastEvent_valid_iff (rd : ℕ) : InstructionChipId.jal.Valid (lastEvent rd) ↔ rd = 0 := by
+  constructor
+  · intro valid
+    by_contra writes
+    have bound := valid.2.2.2 writes
+    norm_num [lastEvent] at bound
+  · rintro rfl
+    exact ⟨lastEvent_wellFormed 0 (by decide), (lastEvent_target 0).1, (lastEvent_target 0).2,
+      fun writes => (writes rfl).elim⟩
+
+private def lastJalr (rd : ℕ) : ITypeEvent :=
+  ⟨1, 2 ^ 48 - 4, Soundness.Opcode.JALR.toNat, rd, 1, 0, 2 ^ 48 - 4, 0, 0, 0⟩
+
+/-- On the last fetch slot JALR can discard the link while jumping back to itself. -/
+theorem lastJalr_targets_iff (rd : ℕ) : (lastJalr rd).JalrTargets ↔ rd = 0 := by
+  simp [ITypeEvent.JalrTargets, ITypeEvent.jalrTarget, lastJalr]
+
+/-- Both discarded-link events supply their actual Clean chip's honest-prover contract. -/
+theorem lastSlot_discardedLinks (data : ProverData (ZMod SP1Prime)) (hint : ProverHint (ZMod SP1Prime)) :
+    JalChip.ProverAssumptions (lastEvent 0).toJalInputs data hint ∧
+      JalrChip.ProverAssumptions (lastJalr 0).toJalrInputs data hint := by
+  obtain ⟨well, targets⟩ := (lastEvent_valid_iff 0).mpr rfl
+  exact ⟨JalChip.proverAssumptions_of_event well targets data hint,
+    JalrChip.proverAssumptions_of_event (by constructor <;> decide) ((lastJalr_targets_iff 0).mpr rfl) data hint⟩
 
 private def untakenEvent : ITypeEvent where
   clk := 1
