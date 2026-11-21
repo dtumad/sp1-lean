@@ -1024,11 +1024,9 @@ def boundaryInputs (initClk initPc finalClk finalPc : ℕ) : SP1PublicIO (ZMod p
   final_pc0 := ((finalPc % 2 ^ 16 : ℕ) : ZMod p)
   final_pc1 := ((finalPc / 2 ^ 16 % 2 ^ 16 : ℕ) : ZMod p)
   final_pc2 := ((finalPc / 2 ^ 32 % 2 ^ 16 : ℕ) : ZMod p)
-  -- The terminal cells of a non-halting, non-committing execution shard: exit code zero, the
-  -- execution-shard selector one, and an all-zero digest.  Committed carrier data only — the
-  -- boundary verifier constrains none of them (matching upstream).
+  -- Raw non-halting, non-committing header. SP1 classifies the shard by clock change.
   exit_code := 0
-  is_execution_shard := 1
+  is_execution_shard := if initClk = finalClk then 0 else 1
   committed_value_digest := Vector.replicate 32 0
   deferredProofsDigest := Vector.replicate 8 0
   commitSyscall := 0

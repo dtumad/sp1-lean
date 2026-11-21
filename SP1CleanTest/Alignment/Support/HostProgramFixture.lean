@@ -24,6 +24,7 @@ namespace SP1CleanTest.Alignment.HostProgram
 open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 
 /-- Register setup and actual host calls in the finite programs. -/
 inductive Action
@@ -94,7 +95,7 @@ def addi (construction : Construction) (destination source : BitVec 5)
   let .ok _ executed := (runSail (Advance.execute_ITYPE' immediate (.Regidx source) (.Regidx destination) .ADDI))
       before.sail.skeleton | throw "Sail ADDI execute stage failed"
   let after : ExecutionSnapshot := { before with
-    sail := { before.sail with registers := executed.regs.insert .PC (pc + 4) }
+    sail := retiredSnapshot before.sail executed.regs (pc + 4)
     clock := before.clock + 8 }
   let decoded := LeanRV64D.instruction.ITYPE (immediate, .Regidx source, .Regidx destination, .ADDI)
   let some routeKey := Target.instructionRouteKey decoded | throw "ADDI route missing"
@@ -173,7 +174,7 @@ def finish (image : ProgramImage) (incoming : ExecutionSnapshot) (commitments : 
     (final : Construction) : Except String (Context × List Seed × SP1PublicIO Fp) := do
   let context : Context := {
     image, source := incoming, target := final.current
-    finalHints := HostHintQueue.State.encode final.queueClock final.queueHead final.store.size
+    lastHintClock := BitVec.ofNat 48 final.queueClock
     commitments }
   let padding := if final.current.host.exitCode.isSome then [] else
     (emptyConsumers context).filter (fun seed => seed.table == 57)

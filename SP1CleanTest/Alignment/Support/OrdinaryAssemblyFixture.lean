@@ -18,6 +18,7 @@ namespace SP1CleanTest.Alignment.OrdinaryAssembly
 open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 
 /-- One located decoded instruction and its finite outgoing observation. -/
 structure Step where
@@ -42,7 +43,7 @@ def source : ExecutionSnapshot where
 
 private def next (source : ExecutionSnapshot) (pc : ℕ) : ExecutionSnapshot :=
   { source with
-    sail.registers := source.sail.registers.insert .PC (BitVec.ofNat 64 pc)
+    sail := retiredSnapshot source.sail source.sail.registers (BitVec.ofNat 64 pc)
     clock := source.clock + 8 }
 
 private def store (source : ExecutionSnapshot) (value : BitVec 64) : ByteMemory :=
@@ -113,7 +114,7 @@ def prepare (start : ℕ := 0) (count : ℕ := 9) : Except String (Context × Li
     touched := touched ++ compiled.plan.map (·.loc)
   let context : Context := {
     image, source := incoming, target := outgoing
-    finalHints := HostHintQueue.State.encode 0 0 0, commitments := default }
+    lastHintClock := 0, commitments := default }
   if selected.isEmpty then
     return (context, emptyConsumers context,
       boundaryInputs incoming.clock incoming.pc.toNat outgoing.clock outgoing.pc.toNat)

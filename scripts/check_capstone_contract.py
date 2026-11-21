@@ -23,7 +23,13 @@ EXPECTED_ROOTS = {
     "SP1Clean.Soundness.Shard." + name
     for name in ("statement_iff", "SoundnessTarget", "CompilerTarget", "SailTrace", "Endpoint", "sail_trace")
 } | {"SP1Clean.FormalModel.Shard." + name
-     for name in ("Executes", "nativeProfile", "AdmissibleExecution", "sp1Machine")} | {"Air.Flat.Realizes"}
+     for name in ("Executes", "nativeProfile", "AdmissibleExecution", "sp1Machine")} | {
+    "SP1Clean.Export.InstalledAssembly.proverStatement_iff",
+    "SP1Clean.Export.InstalledAssembly.trace_of_statement",
+    "SP1Clean.Export.InstalledAssembly.host_execution_of_statement",
+    "SP1Clean.Export.InstalledAssembly.identity_of_statement",
+    "Air.Flat.Realizes",
+}
 
 
 def validate_manifest(data):
@@ -41,7 +47,7 @@ def main() -> int:
     if not args.no_build:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
-             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Soundness.Shard.Trace"],
+             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.InstalledAssembly"],
             cwd=ROOT, check=True,
         )
     with tempfile.TemporaryDirectory(prefix="sp1-capstone-contract-") as temporary:

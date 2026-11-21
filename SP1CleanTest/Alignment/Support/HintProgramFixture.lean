@@ -11,6 +11,7 @@ namespace SP1CleanTest.Alignment.HintProgram
 
 open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1CleanTest.Alignment.InstalledAssembly HostProgram
+open SP1Clean.Export.InstalledAssembly
 
 private def bytes (length : ℕ) : Bytes :=
   (List.range length).map fun index => BitVec.ofNat 8 (19 * index + 3)

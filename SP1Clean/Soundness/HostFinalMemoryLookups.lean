@@ -94,13 +94,15 @@ theorem available_lookupFree :
 /-- The ordinary observation consumer and its three terminals are lookup-free. -/
 theorem observation_lookupFree : LookupFree (Soundness.OrdinaryObservation.tables (p := p)) := by
   simp only [Soundness.OrdinaryObservation.tables, LookupFree.cons_iff, LookupFree.nil, and_true]
-  refine ⟨?_, ?_, ?_, ?_⟩ <;> rw [Component.lookups_eq] <;>
-    simp [Soundness.OrdinaryObservation.consumer, Soundness.OrdinaryObservation.terminalComponent,
-      OrdinaryObservation.circuit, OrdinaryObservation.main, OrdinaryObservation.terminal,
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [Component.lookups_eq]
+    exact Guarded.main_lookups OrdinaryObservation.circuit OrdinaryObservation.guardSupported _ _
+  all_goals rw [Component.lookups_eq]
+  all_goals
+    simp [Soundness.OrdinaryObservation.terminalComponent, OrdinaryObservation.terminal,
       OrdinaryObservation.terminalEmpty, OrdinaryObservation.terminalNonempty,
       OrdinaryObservation.terminalAny, OrdinaryObservation.emptyMain,
-      OrdinaryObservation.nonemptyMain, OrdinaryObservation.anyMain, ClockOrder.circuit,
-      WordRangeCheck.circuit, AddOperation.circuit, AddOperation.main, Gadgets.Equality.main, assertBool,
+      OrdinaryObservation.nonemptyMain, OrdinaryObservation.anyMain, Gadgets.Equality.main, assertBool,
       Gadgets.IsZeroField.circuit, circuit_norm, List.ofFn_succ]
 
 /-- The HINT_READ handler, every other receiver, the word consumers and the source resources. -/

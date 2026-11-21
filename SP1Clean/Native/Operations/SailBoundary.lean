@@ -3,9 +3,9 @@ import ToClean.Air.PublicVerifier
 
 /-! # Native verifier checks for the supplied Sail frame and endpoints
 
-Snapshot data supplies a finite invariant-field check. Five field equations bind the real
-public endpoint to that same target. The circuit has no witness cells. Its verifier adapter adds
-twelve interactions on a fresh channel and preserves every existing channel ledger.
+Snapshot data supplies a finite invariant-field check. Six field equations bind the real
+public endpoint and execution flag to the same timestamps and target PC. The circuit has no
+witness cells. Its verifier adapter adds fourteen interactions on a fresh channel.
 -/
 
 namespace SP1Clean.SailBoundary
@@ -22,6 +22,7 @@ def main (source target : ExecutionSnapshot) (input : Var SP1PublicIO (ZMod p)) 
   assertZero (input.final_pc0 - .const ((bitVecToWord target.pc)[0]))
   assertZero (input.final_pc1 - .const ((bitVecToWord target.pc)[1]))
   assertZero (input.final_pc2 - .const ((bitVecToWord target.pc)[2]))
+  assertZero (input.is_execution_shard - .const (executionShardFlag source target))
 
 /-- Proof-complete static frame and public-endpoint subcircuit. -/
 def circuit (source target : ExecutionSnapshot) : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
@@ -30,17 +31,17 @@ def circuit (source target : ExecutionSnapshot) : GeneralFormalCircuit (ZMod p) 
   ProverAssumptions input _ _ := Spec source target input
   soundness := by
     circuit_proof_start [main]
-    obtain ⟨checked, high, low, pc0, pc1, pc2⟩ := h_holds
-    refine ⟨?_, ⟨sub_eq_zero.mp high, sub_eq_zero.mp low⟩,
-      sub_eq_zero.mp pc0, sub_eq_zero.mp pc1, sub_eq_zero.mp pc2⟩
+    obtain ⟨checked, high, low, pc0, pc1, pc2, flag⟩ := h_holds
+    refine ⟨?_, ⟨⟨sub_eq_zero.mp high, sub_eq_zero.mp low⟩,
+      sub_eq_zero.mp pc0, sub_eq_zero.mp pc1, sub_eq_zero.mp pc2⟩, sub_eq_zero.mp flag⟩
     by_cases valid : checkStatic source target = true
     · exact valid
     · simp [valid] at checked
   completeness := by
     circuit_proof_start [main]
-    obtain ⟨checked, ⟨high, low⟩, pc0, pc1, pc2⟩ := h_assumptions
+    obtain ⟨checked, ⟨⟨high, low⟩, pc0, pc1, pc2⟩, flag⟩ := h_assumptions
     exact ⟨by simp [checked], sub_eq_zero.mpr high, sub_eq_zero.mpr low,
-      sub_eq_zero.mpr pc0, sub_eq_zero.mpr pc1, sub_eq_zero.mpr pc2⟩
+      sub_eq_zero.mpr pc0, sub_eq_zero.mpr pc1, sub_eq_zero.mpr pc2, sub_eq_zero.mpr flag⟩
 
 /-- Installable public assertions, retaining every existing physical occurrence. -/
 def checker (source target : ExecutionSnapshot) : PublicVerifier (ZMod p) SP1PublicIO where
@@ -51,10 +52,10 @@ def checker (source target : ExecutionSnapshot) : PublicVerifier (ZMod p) SP1Pub
   lookups := by intros; rfl
   interactions := by intros; rfl
 
-/-- The existing SP1 field bound covers all twelve public-check occurrences. -/
+/-- The existing SP1 field bound covers all fourteen public-check occurrences. -/
 theorem count_bound [Fact (2 ^ 25 < p)] (source target : ExecutionSnapshot) :
     (checker (p := p) source target).CountBound := by
-  change 2 * 6 < ringChar (ZMod p)
+  change 2 * 7 < ringChar (ZMod p)
   rw [ZMod.ringChar_zmod_n]
   have := Fact.out (p := 2 ^ 25 < p)
   omega
@@ -69,8 +70,8 @@ theorem checks_iff (source target : ExecutionSnapshot) (input : SP1PublicIO (ZMo
   exact (raw (varFromOffset SP1PublicIO 0) (size SP1PublicIO) (Environment.fromInput input data)).trans
     (by rw [ProvableType.eval_fromInput_varFromOffset_zero])
 
-/-- The boundary adds exactly six constant/public assertions and no auxiliary rows or cells. -/
+/-- The boundary adds seven constant/public assertions and no auxiliary rows or cells. -/
 theorem assertion_count (source target : ExecutionSnapshot) (input : Var SP1PublicIO (ZMod p)) (offset : ℕ) :
-    ((main source target input).operations offset).constraints.length = 6 := rfl
+    ((main source target input).operations offset).constraints.length = 7 := rfl
 
 end SP1Clean.SailBoundary

@@ -1,4 +1,4 @@
-import SP1CleanTest.Alignment.Support.InstalledAssembly
+import SP1Clean.Export.InstalledAssembly
 
 /-! # Generation inputs cannot supply uncommitted program metadata
 
@@ -10,7 +10,7 @@ Program-binding consumers must use an authenticated boundary.
 
 namespace SP1CleanTest.CanonicalAssembly
 
-open SP1Clean SP1Clean.Semantics SP1CleanTest.Alignment.InstalledAssembly Air.Flat
+open SP1Clean SP1Clean.Semantics SP1Clean.Export.InstalledAssembly Air.Flat
 
 /-- No witness of this physical inventory contains the legacy initial-PC data entry. -/
 theorem uncommittedInitialPcAbsent {context : Context}
@@ -21,7 +21,7 @@ theorem uncommittedInitialPcAbsent {context : Context}
     rw [tables_eq, List.map_append]
     simp only [List.mem_append, not_or]
     constructor
-    · dsimp only [withoutCommitments]
+    · rw [withoutCommitments, Soundness.Shard.installed, Soundness.HostObserved.table_names]
       erw [Soundness.HostFinalMemory.tables_eq]
       simp only [List.map_set, Soundness.HostFinalMemory.beforeChecks,
         Soundness.HostLocalCore.tables_names, Soundness.ProtectedLocalCore.tables_names,

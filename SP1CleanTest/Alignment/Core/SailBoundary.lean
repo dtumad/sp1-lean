@@ -31,8 +31,24 @@ private def check (target : ExecutionSnapshot) (input : SP1PublicIO Fp := header
 theorem activeAcceptance : check target = true := by native_decide
 
 /-- An empty segment preserves arbitrary initialized register/runtime values. -/
-theorem identityAcceptance : check source { header with final_clk_0_16 := 9, final_pc0 := 0 } = true := by
+theorem identityAcceptance : check source
+    { header with final_clk_0_16 := 9, final_pc0 := 0, is_execution_shard := 0 } = true := by
   native_decide
+
+/-- An unchanged timestamp binds the full optional retirement count and next PC. -/
+theorem identityBookkeepingMutations :
+    let input := { header with final_clk_0_16 := 9, final_pc0 := 0, is_execution_shard := 0 }
+    let counter := (source.sail.registers.get? Register.minstret : Option (BitVec 64)).getD 0
+    let next := (source.sail.registers.get? Register.nextPC : Option (BitVec 64)).getD 0
+    [check { source with sail.registers := source.sail.registers.insert .minstret (counter + 1) } input,
+     check { source with sail.registers := source.sail.registers.erase .minstret } input,
+     check { source with sail.registers := source.sail.registers.insert .nextPC (next + 2 ^ 48) } input] =
+      [false, false, false] := by native_decide
+
+/-- Swapping the flags of a running identity and an active step violates both public statements. -/
+theorem executionFlagMutations :
+    check source { header with final_clk_0_16 := 9, final_pc0 := 0, is_execution_shard := 1 } = false ∧
+    check target { header with is_execution_shard := 0 } = false := by native_decide
 
 private def missingZero : ExecutionSnapshot :=
   { target with sail := { target.sail with registers := target.sail.registers.erase .x31 } }

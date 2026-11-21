@@ -8,7 +8,7 @@ import ToClean.Air.HintIndex
 
 One terminal row pulls the chain's last observation, checks that its clock is bounded and agrees
 with its mode, and pushes the same counter, nextPC and flag at the mode's sentinel clock. The mode
-needs no extra column when it is `empty` or `any`; `nonempty` witnesses the two clock limbs' zero
+uses two base-65536 carries to normalize the raw successor PC; `nonempty` also witnesses the clock limbs' zero
 tests through Clean's bundled `IsZeroField`. The three modes are separate tables, all installed:
 the verifier pulls only the sentinel of the mode the target fixes, so another mode's push cannot
 balance.
@@ -27,102 +27,118 @@ def terminalName : Mode → String
   | .nonempty => "sp1.native.ordinary_observation.terminal.nonempty"
   | .any => "sp1.native.ordinary_observation.terminal.any"
 
+/-- The one private routing tag distinguishes an all-zero last observation from an absent hint. -/
+def terminalModeHint : String := "sp1.native.ordinary_observation.terminal_mode"
+
 omit [Fact p.Prime] in
 private theorem limbBound : 2 ^ 24 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
 
 /-- No ordinary retirement: the last observation is the start, at clock zero. -/
-def emptyMain (input : Var State (ZMod p)) : Circuit (ZMod p) Unit := do
-  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.clkHigh
-  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.clkLow
-  assertZero input.clkHigh
-  assertZero input.clkLow
-  stateChannel.pull input
-  stateChannel.push (final .empty input.counter input.pc input.enabled)
+def emptyMain (input : Var TerminalInputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertBool input.carryLow
+  assertBool input.carryMiddle
+  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.previous.clkHigh
+  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.previous.clkLow
+  assertZero input.previous.clkHigh
+  assertZero input.previous.clkLow
+  stateChannel.pull input.previous
+  stateChannel.push (final .empty input.previous.counter input.pc input.previous.enabled)
 
 /-- Some ordinary retirement: the last observation is a receipt, at a nonzero clock. -/
-def nonemptyMain (input : Var State (ZMod p)) : Circuit (ZMod p) Unit := do
-  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.clkHigh
-  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.clkLow
-  let high ← Gadgets.IsZeroField.circuit input.clkHigh
-  let low ← Gadgets.IsZeroField.circuit input.clkLow
+def nonemptyMain (input : Var TerminalInputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertBool input.carryLow
+  assertBool input.carryMiddle
+  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.previous.clkHigh
+  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.previous.clkLow
+  let high ← Gadgets.IsZeroField.circuit input.previous.clkHigh
+  let low ← Gadgets.IsZeroField.circuit input.previous.clkLow
   high * low === 0
-  stateChannel.pull input
-  stateChannel.push (final .nonempty input.counter input.pc input.enabled)
+  stateChannel.pull input.previous
+  stateChannel.push (final .nonempty input.previous.counter input.pc input.previous.enabled)
 
 /-- The target's bookkeeping does not distinguish the two cases. -/
-def anyMain (input : Var State (ZMod p)) : Circuit (ZMod p) Unit := do
-  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.clkHigh
-  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.clkLow
-  stateChannel.pull input
-  stateChannel.push (final .any input.counter input.pc input.enabled)
+def anyMain (input : Var TerminalInputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertBool input.carryLow
+  assertBool input.carryMiddle
+  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.previous.clkHigh
+  assertion (Gadgets.ToBits.rangeCheck 24 limbBound) input.previous.clkLow
+  stateChannel.pull input.previous
+  stateChannel.push (final .any input.previous.counter input.pc input.previous.enabled)
 
 /-- The terminal when the target records no ordinary retirement. -/
-def terminalEmpty : GeneralFormalCircuit (ZMod p) State unit where
+def terminalEmpty : GeneralFormalCircuit (ZMod p) TerminalInputs unit where
   name := terminalName .empty
   main := emptyMain
-  Spec input _ _ := TerminalSpec .empty input
-  ProverAssumptions input _ _ := TerminalSpec .empty input
+  Spec input _ _ := TerminalInputs.Valid .empty input
+  ProverAssumptions input _ _ := TerminalInputs.Valid .empty input
   channelsWithRequirements := [stateChannel.toRaw]
   soundness := by
-    circuit_proof_start [emptyMain, Gadgets.ToBits.rangeCheck, stateChannel, final, Mode.sentinel, TerminalSpec]
+    circuit_proof_start [emptyMain, Gadgets.ToBits.rangeCheck, assertBool, stateChannel, final, Mode.sentinel, TerminalInputs.Valid, TerminalSpec]
     simp_all
   completeness := by
-    circuit_proof_start [emptyMain, Gadgets.ToBits.rangeCheck, stateChannel, final, Mode.sentinel, TerminalSpec]
+    circuit_proof_start [emptyMain, Gadgets.ToBits.rangeCheck, assertBool, stateChannel, final, Mode.sentinel, TerminalInputs.Valid, TerminalSpec]
     simp_all
 
 /-- The terminal when the target records at least one ordinary retirement. -/
-def terminalNonempty : GeneralFormalCircuit (ZMod p) State unit where
+def terminalNonempty : GeneralFormalCircuit (ZMod p) TerminalInputs unit where
   name := terminalName .nonempty
   main := nonemptyMain
-  Spec input _ _ := TerminalSpec .nonempty input
-  ProverAssumptions input _ _ := TerminalSpec .nonempty input
+  Spec input _ _ := TerminalInputs.Valid .nonempty input
+  ProverAssumptions input _ _ := TerminalInputs.Valid .nonempty input
   channelsWithRequirements := [stateChannel.toRaw]
   soundness := by
     circuit_proof_start [nonemptyMain, Gadgets.ToBits.rangeCheck, Gadgets.IsZeroField.circuit,
-      stateChannel, final, Mode.sentinel, TerminalSpec]
-    refine ⟨h_holds.1, h_holds.2.1, ?_⟩
+      assertBool, stateChannel, final, Mode.sentinel, TerminalInputs.Valid, TerminalSpec]
+    obtain ⟨carryLow, carryMiddle, highBound, lowBound, rest⟩ := h_holds
+    refine ⟨carryLow, carryMiddle, highBound, lowBound, ?_⟩
     rintro ⟨high, low⟩
     simp_all
-    obtain ⟨highZero, lowZero, product | product⟩ := h_holds <;> simp_all
+    obtain ⟨highZero, lowZero, product | product⟩ := rest <;> simp_all
   completeness := by
     circuit_proof_start [nonemptyMain, Gadgets.ToBits.rangeCheck, Gadgets.IsZeroField.circuit,
-      stateChannel, final, Mode.sentinel, TerminalSpec]
-    obtain ⟨high, low, nonzero⟩ := h_assumptions
-    refine ⟨high, low, ?_⟩
-    by_cases zero : input_clkHigh = 0 <;> simp_all
+      assertBool, stateChannel, final, Mode.sentinel, TerminalInputs.Valid, TerminalSpec]
+    obtain ⟨carryLow, carryMiddle, high, low, nonzero⟩ := h_assumptions
+    refine ⟨carryLow, carryMiddle, high, low, ?_⟩
+    by_cases zero : input_previous_clkHigh = 0 <;> simp_all
 
 /-- The terminal when the target does not distinguish the two cases. -/
-def terminalAny : GeneralFormalCircuit (ZMod p) State unit where
+def terminalAny : GeneralFormalCircuit (ZMod p) TerminalInputs unit where
   name := terminalName .any
   main := anyMain
-  Spec input _ _ := TerminalSpec .any input
-  ProverAssumptions input _ _ := TerminalSpec .any input
+  Spec input _ _ := TerminalInputs.Valid .any input
+  ProverAssumptions input _ _ := TerminalInputs.Valid .any input
   channelsWithRequirements := [stateChannel.toRaw]
   soundness := by
-    circuit_proof_start [anyMain, Gadgets.ToBits.rangeCheck, stateChannel, final, Mode.sentinel, TerminalSpec]
+    circuit_proof_start [anyMain, Gadgets.ToBits.rangeCheck, assertBool, stateChannel, final, Mode.sentinel, TerminalInputs.Valid, TerminalSpec]
     simp_all
   completeness := by
-    circuit_proof_start [anyMain, Gadgets.ToBits.rangeCheck, stateChannel, final, Mode.sentinel, TerminalSpec]
+    circuit_proof_start [anyMain, Gadgets.ToBits.rangeCheck, assertBool, stateChannel, final, Mode.sentinel, TerminalInputs.Valid, TerminalSpec]
     simp_all
 
 /-- The terminal for a static mode. -/
-def terminal : Mode → GeneralFormalCircuit (ZMod p) State unit
+def terminal : Mode → GeneralFormalCircuit (ZMod p) TerminalInputs unit
   | .empty => terminalEmpty
   | .nonempty => terminalNonempty
   | .any => terminalAny
 
 /-- Exactly the complete private last observation routes the chain's final occurrence. A valid
 chain has one terminal row, so its physical height needs no padding. -/
-def terminalGeneration (mode : Mode) : Air.Flat.WitnessGeneration.Generation (ZMod p) State :=
+def terminalGeneration (mode : Mode) : Air.Flat.WitnessGeneration.Generation (ZMod p) TerminalInputs :=
   .demand {
     channel := stateChannel
     trigger := .push
     guard message :=
-      let candidate : State (Witgen.FExpr (ZMod p)) :=
-        fromElements (Vector.ofFn fun column => .hintGet (terminalName mode) (size State) 0 column)
-      Witgen.HintIndex.messageEq candidate message
-    input message := pure (fromElements ((toElements (M := State) message).map
-      (fun value => Air.Flat.WitnessGeneration.Cell.witness (.expr value))))
+      let candidate : TerminalInputs (Witgen.FExpr (ZMod p)) :=
+        fromElements (Vector.ofFn fun column => .hintGet (terminalName mode) (size TerminalInputs) 0 column)
+      .and ((Witgen.FExpr.hintGet terminalModeHint 1 0 0 : Witgen.FExpr (ZMod p)) =?
+        Witgen.FExpr.const (mode.sentinel : ZMod p))
+        (Witgen.HintIndex.messageEq candidate.previous message)
+    input message := do
+      let carryLow ← Witgen.letU (message.pc[0].val / 65536)
+      let carryMiddle ← Witgen.letU ((message.pc[1].val + carryLow) / 65536)
+      pure ⟨fromElements ((toElements (M := State) message).map
+        (fun value => Air.Flat.WitnessGeneration.Cell.witness (.expr value))),
+        carryLow.toField, carryMiddle.toField⟩
   }
 
 omit [Fact (2 ^ 25 < p)] in
@@ -134,13 +150,19 @@ private theorem range_empty (target : RawChannel (ZMod p)) (n : ℕ) (bound : 2 
     (Gadgets.ToBits.rangeCheck n bound) target input List.not_mem_nil List.not_mem_nil
 
 /-- Each terminal emits exactly the pull of its last observation and the push of the sentinel. -/
-theorem terminal_interactions (mode : Mode) (input : Var State (ZMod p)) (offset : ℕ) :
+theorem terminal_interactions (mode : Mode) (input : Var TerminalInputs (ZMod p)) (offset : ℕ) :
     (((terminal mode).main input).operations offset).interactionsWith stateChannel.toRaw =
-      [(stateChannel.pulled input).toRaw,
-        (stateChannel.pushed (final mode input.counter input.pc input.enabled)).toRaw] := by
+      [(stateChannel.pulled input.previous).toRaw,
+        (stateChannel.pushed (final mode input.previous.counter input.pc input.previous.enabled)).toRaw] := by
+  have boolEmpty (value : Expression (ZMod p)) (n : ℕ) :
+      (FlatOperation.interactions ((assertBool (p := p)).toSubcircuit n value).ops.toFlat).filter
+        (fun i => decide (i.channel = stateChannel.toRaw)) = [] :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil
+      assertBool stateChannel.toRaw value List.not_mem_nil List.not_mem_nil
+  simp only [circuit_norm] at boolEmpty
   cases mode <;>
     simp only [terminal, terminalEmpty, terminalNonempty, terminalAny, emptyMain, nonemptyMain,
-      anyMain, circuit_norm, range_empty, List.nil_append,
+      anyMain, circuit_norm, range_empty, boolEmpty, List.nil_append,
       @InteractionRecovery.filter_interactions_formalAssertion_eq_nil (ZMod p) _
         (ProvablePair field field) ProvablePair.instance (Gadgets.Equality.circuit field)
         stateChannel.toRaw _ _ List.not_mem_nil List.not_mem_nil,

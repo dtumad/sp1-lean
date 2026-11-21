@@ -20,38 +20,46 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)}
 
-/-- The declaration channel is fresh for the local core. -/
-private theorem declaration_fresh :
-    CommitmentDeclaration.channel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels := by
+/-- The protocols supplied by outer verifier and receipt layers are fresh for the local core. -/
+theorem external_not_local {channel : RawChannel (ZMod p)} (outside : channel ∈ externalChannels (p := p)) :
+    channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels := by
   intro member
   have used := List.mem_map_of_mem (f := RawChannel.name) member
-  simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-    SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, CommitmentDeclaration.channel,
-    stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-    publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
-    StaticTable.ofRows, Channel.toRaw] at used
+  simp only [externalChannels, List.mem_cons, List.not_mem_nil, or_false] at outside
+  rcases outside with rfl | rfl | rfl <;>
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, CommitmentDeclaration.channel,
+      InstructionReceipt.channel, OrdinaryObservation.stateChannel, stateChannel, memoryChannel, byteChannel,
+      programChannel, exitChannel, syscallChannel, publicValuesChannel, StaticTable.channel,
+      InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at used
+
+private theorem declaration_fresh :
+    CommitmentDeclaration.channel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels :=
+  external_not_local (by simp [externalChannels])
 
 omit [Fact (2 ^ 25 < p)] in
 /-- A closed boundary that never mentions the declaration channel emits nothing on it. -/
-private theorem closed_silent (closed : ClosedVerifier (ZMod p))
-    (silent : CommitmentDeclaration.channel.toRaw ∉ closed.circuit.channels) (env : Environment (ZMod p)) :
-    closed.operations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = [] := by
+private theorem closed_silent {channel : RawChannel (ZMod p)} (closed : ClosedVerifier (ZMod p))
+    (silent : channel ∉ closed.circuit.channels) (env : Environment (ZMod p)) :
+    closed.operations.interactionValuesWith channel env = [] := by
   simp only [Operations.interactionValuesWith, ClosedVerifier.operations,
     InteractionRecovery.interactionsWith_main_eq_nil closed.circuit.base _ () 0 silent, List.map_nil]
 
-/-- No public-verifier layer of the installed assembly emits a declaration. -/
-theorem verifier_declarations_silent (env : Environment (ZMod p)) :
+/-- No underlying verifier emits on the external declarations, receipt, or observation protocol. -/
+theorem verifier_external_silent {channel : RawChannel (ZMod p)} (outside : channel ∈ externalChannels (p := p))
+    (env : Environment (ZMod p)) :
     (Installed image source target final).verifierOperations.interactionValuesWith
-      CommitmentDeclaration.channel.toRaw env = [] := by
+      channel env = [] := by
   let registration := source_registration (p := p) image source target.sail.memorySnapshot
   let original := HostHintReadLocal.ensemble image source HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables target.sail.memorySnapshot)
     (sourceChannels target.sail.memorySnapshot) (source_unique_names image source target.sail.memorySnapshot)
     registration.unique registration.tables
-  have declared : (CommitmentDeclaration.channel (p := p)).toRaw ∈
+  have declared : channel ∈
       HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels target.sail.memorySnapshot) := by
-    simp [HostLocalCore.registry, sourceChannels]
-  have originalDeclared : CommitmentDeclaration.channel.toRaw ∈ original.channels :=
+    simp only [externalChannels, List.mem_cons, List.not_mem_nil, or_false] at outside
+    rcases outside with rfl | rfl | rfl <;> simp [HostLocalCore.registry, sourceChannels]
+  have originalDeclared : channel ∈ original.channels :=
     List.mem_append_left _ declared
   have boundaryRegistered : (HostHintQueueBoundary.boundary source final target.host).circuit.channels ⊆ original.channels := by
     intro selected used
@@ -72,24 +80,39 @@ theorem verifier_declarations_silent (env : Environment (ZMod p)) :
       · exact same.symm
       · exact same
     simp [equal]
+  have quiet {other : RawChannel (ZMod p)}
+      (absent : other.name ∉ (externalChannels (p := p)).map RawChannel.name) : channel ≠ other :=
+    fun eq => absent (eq ▸ List.mem_map_of_mem (f := RawChannel.name) outside)
   change ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target.sail.memorySnapshot).install
-    beforeChanges changesRegistered).verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = []
+    beforeChanges changesRegistered).verifierOperations.interactionValuesWith channel env = []
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ beforeChanges changesRegistered env _
       (List.mem_append_left _ originalDeclared),
-    closed_silent _ (by simp [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
-      CommitmentDeclaration.channel, FinalMemoryChange.channel, Channel.toRaw, circuit_norm]), List.append_nil]
+    closed_silent _ (by
+      intro used
+      have same : channel = FinalMemoryChange.channel.toRaw := by
+        simp only [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
+          circuit_norm, List.mem_append, List.mem_ofFn, List.mem_singleton] at used
+        rcases used with ⟨_, same⟩ | same
+        · exact same.symm
+        · exact same
+      exact quiet (of_decide_eq_true rfl) same), List.append_nil]
   change ((HostHintQueueBoundary.boundary source final target.host).install original boundaryRegistered).verifierOperations.interactionValuesWith
-    CommitmentDeclaration.channel.toRaw env = []
+    channel env = []
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ original boundaryRegistered env _ originalDeclared,
     closed_silent _ (HostHintQueueBoundary.boundary_silent _
-      (by simp [CommitmentDeclaration.channel, HostHintQueue.stateChannel, Channel.toRaw])
-      (by simp [CommitmentDeclaration.channel, HostCommitChip.stateChannel, Channel.toRaw])
-      (by simp [CommitmentDeclaration.channel, HostCommitChip.stateChannel, Channel.toRaw])
-      (by simp [CommitmentDeclaration.channel, HostExitBoundary.channel, Channel.toRaw])), List.append_nil]
+      (quiet (of_decide_eq_true rfl))
+      (quiet (of_decide_eq_true rfl))
+      (quiet (of_decide_eq_true rfl))
+      (quiet (of_decide_eq_true rfl))), List.append_nil]
   change ((LocalSourceBoundary.checker image source).install (HostLocalCore.baseEnsemble image source _ _ _ _ _)).verifierOperations.interactionValuesWith
-    CommitmentDeclaration.channel.toRaw env = []
+    channel env = []
   rw [PublicVerifier.install_verifier_interactions_of_mem _ _ env _ declared]
-  exact LocalCore.boundaryVerifier_silent image source _ declaration_fresh env
+  exact LocalCore.boundaryVerifier_silent image source _ (external_not_local outside) env
+
+/-- No underlying verifier emits a commitment declaration. -/
+theorem verifier_declarations_silent (env : Environment (ZMod p)) :
+    (Installed image source target final).verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = [] :=
+  verifier_external_silent (by simp [externalChannels]) env
 
 omit [Fact (2 ^ 25 < p)] in
 /-- A component whose channel metadata omits the declaration channel authenticates it vacuously. -/

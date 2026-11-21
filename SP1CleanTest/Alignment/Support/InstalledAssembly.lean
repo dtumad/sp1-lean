@@ -1,95 +1,30 @@
-import SP1Clean.Soundness.HostFinalMemory
-import SP1Clean.Soundness.CommitmentEnsemble
+import SP1Clean.Export.InstalledAssembly
+import SP1Clean.Proofs.Completeness.OrdinaryObservationHistory
 import ToClean.Air.ChannelRegistry
 import ToClean.Air.TableBuild
 import SP1CleanTest.Core.StaticMembership
 
-/-! # Shared complete installed assembly for export comparisons
+/-! # Finite comparison inputs for the installed SP1 assembly
 
-Instance data selects the program, source, memory target and host endpoints. Every fixture
-uses the same production assembly and physical registry; changing a source from running to
-stopped does not replace it with a smaller circuit. This fixture context does not claim the
-remaining complete Sail/host target equality or mixed compiler theorem.
+These helpers supply component inputs for the released-SP1 comparison fixtures.
 -/
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
-open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Export.InstalledAssembly
 
-/-- The native SP1 field used by the installed comparison fixtures. -/
-abbrev Fp := ZMod SP1Prime
-
-/-- Data determining the complete installed assembly and its verifier. -/
-structure Context where
-  /-- Committed program and its initial byte image. -/
-  image : ProgramImage
-  /-- Complete finite incoming Sail, host and clock snapshot. -/
-  source : ExecutionSnapshot
-  /-- Complete outgoing Sail, host and clock snapshot: it supplies the outgoing registers and RAM,
-  the final banks and the optional exit status. -/
-  target : ExecutionSnapshot
-  /-- Outgoing authenticated hint-queue cursor. -/
-  finalHints : HostHintQueue.State Fp
-  /-- Immutable proof statement, independent of partially populated mutable banks. -/
-  commitments : CommitmentStatement
-
-/-- All installed components, source resources and target checks in their canonical order. -/
-def withoutCommitments (context : Context) : Ensemble Fp SP1PublicIO :=
-  HostFinalMemory.ensemble context.image context.source context.target.sail.memorySnapshot
-    context.finalHints context.target.host HostCallReceivers.available
-    (HostHintReadLocal.sourceResources context.source.host.io.hints)
-    (HostFinalMemory.sourceChannels context.target.sail.memorySnapshot)
-    (HostFinalMemory.source_unique_names context.image context.source context.target.sail.memorySnapshot)
-    (HostFinalMemory.source_registration context.image context.source context.target.sail.memorySnapshot)
-
-/-- The declaration provider has a fresh name in the complete host inventory. -/
-theorem declaration_fresh (context : Context) :
-    (CommitmentDeclaration.source (p := SP1Prime) context.commitments).circuit.name ∉
-      (withoutCommitments context).tables.map (·.circuit.name) := by
-  change "sp1.native.commitment_declaration.source" ∉ _
-  simp only [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
-    HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
-    FinalReceiptEnsemble.install, Ensemble.replaceComponent, HostFinalMemory.base,
-    HostHintQueueBoundary.ensemble, HaltPadding.install, HostHintReadLocal.ensemble,
-    HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install,
-    HostLocalCore.baseEnsemble]
-  simp only [List.map_set, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
-    LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
-    SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
-    MemorySnapshot.registerTable, StaticTable.ofRows, FinalMemoryChecks.checkTables,
-    FinalRegisterValue.membership, HostHintReadLocal.sourceResources, HostHintReadLocal.bankResources,
-    HostHintQueue.source, HostHintQueue.sourceWord, StaticTable.payloadComponent,
-    StaticTable.payloadProvider]
-  exact of_decide_eq_true rfl
-
-/-- Commitment requests already belong to the production protocol registry. -/
-theorem declarations_registered (context : Context) :
-    CommitmentDeclaration.channel.toRaw ∈ (withoutCommitments context).channels := by
-  simp [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
-    HostFinalMemory.withReceipts, HostFinalMemory.withRegisters, FinalReceiptEnsemble.install,
-    Ensemble.replaceComponent, HostFinalMemory.base, HostHintQueueBoundary.ensemble,
-    HaltPadding.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
-    HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble,
-    HostLocalCore.registry, HostFinalMemory.sourceChannels]
-
-/-- Complete production assembly with the verifier-owned commitment statement installed. -/
-def assembly (context : Context) : Ensemble Fp SP1PublicIO :=
-  CommitmentEnsemble.install context.commitments (withoutCommitments context) (declaration_fresh context)
-    (declarations_registered context)
-
-theorem without_tables_length (context : Context) : (withoutCommitments context).tables.length = 98 := by
-  simp only [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
-    HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
-    FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set,
-    HostFinalMemory.base_tables_length]
-  rfl
-
-theorem tables_eq (context : Context) : (assembly context).tables =
-    (withoutCommitments context).tables ++ [CommitmentDeclaration.source context.commitments] := rfl
-
-theorem tables_length (context : Context) : (assembly context).tables.length = 99 := by
-  rw [tables_eq, List.length_append, without_tables_length]
-  rfl
+/-- Finish an ordinary fixture step with the Sail bookkeeping observed by the shard verifier.
+The fixture supplies the instruction's computed register writes and successor PC. -/
+def retiredSnapshot (source : SailSnapshot) (registers : SailRegisterFile.Map) (nextPC : BitVec 64) :
+    SailSnapshot :=
+  let enabled := retirementEnabled source.skeleton
+  let counter := (source.registers.get? .minstret).getD 0
+  let updated := registers.insert .PC nextPC |>.insert .nextPC nextPC
+    |>.insert .minstret (counter + if enabled then 1 else 0)
+    |>.insert .minstret_increment enabled
+    |>.insert .mip (TryStepReduction.refreshedMip source.skeleton)
+    |>.insert .written_event_index none
+  { source with registers := updated }
 
 /-- One consumer input at its actual physical table position. -/
 structure Seed where
@@ -114,6 +49,37 @@ def seedValid (tables : List (Component Fp)) (seed : Seed) : Bool :=
   match tables[seed.table]? with
   | none => false
   | some component => StaticMembership.acceptsSeed component && seed.cells.length == component.rowOffset
+
+/-- Recover the active receipts from the physical instruction rows, then build the ordered
+observation inputs and the one terminal selected by the supplied snapshots. -/
+def withObservationSeeds (context : Context) (seeds : List Seed) : Except String (List Seed) := do
+  let tables := (assembly context).tables
+  let observationNames := (Soundness.OrdinaryObservation.tables (p := SP1Prime)).map (·.circuit.name)
+  let receiptName := (InstructionReceipt.channel (p := SP1Prime)).name
+  let data := ProverData.empty Fp
+  let mut receipts : List (Channels.StateMsg Fp) := []
+  for seed in seeds do
+    let some component := tables[seed.table]? | throw "invalid physical table position"
+    unless seedValid tables seed do throw "invalid component input"
+    if observationNames.contains component.circuit.name then throw "observation inputs are derived from the physical receipts"
+    if component.circuit.channelsWithRequirements.any (·.name == receiptName) then
+      let row := seed.build component data
+      for interaction in component.operations.interactionValues (Environment.fromArray row data) do
+        if interaction.channel.name == receiptName && interaction.direction == .push && interaction.mult != 0 then
+          unless interaction.mult == 1 do throw "instruction receipt multiplicity must be one"
+          if width : interaction.msg.size = size Channels.StateMsg then
+            receipts := fromElements (M := Channels.StateMsg) ⟨interaction.msg, width⟩ :: receipts
+          else throw "invalid instruction receipt width"
+  let sorted := receipts.mergeSort (fun left right => Semantics.StateMsg.timeNat left ≤ Semantics.StateMsg.timeNat right)
+  unless (sorted.map Semantics.StateMsg.timeNat).Nodup do throw "duplicate ordinary receipt clock"
+  let (inputs, previous) := SP1Clean.OrdinaryObservation.historyFromReceipts
+    (SP1Clean.OrdinaryObservation.startFor context.source.sail) sorted
+  let mode := SP1Clean.OrdinaryObservation.Mode.of context.source.sail context.target.sail
+  let consumer := tables.findIdx (·.circuit.name == (Soundness.OrdinaryObservation.consumer (p := SP1Prime)).circuit.name)
+  let terminal := tables.findIdx (·.circuit.name == SP1Clean.OrdinaryObservation.terminalName mode)
+  let active := inputs.map fun input =>
+    Seed.ofCells consumer (toElements (SP1Clean.OrdinaryObservation.activeRow input)).toList
+  return seeds ++ active ++ [⟨terminal, (toElements (SP1Clean.OrdinaryObservation.terminalInput previous)).toList⟩]
 
 /-- One complete register/RAM message, with canonical address and value limbs. -/
 def memoryRecord (address clock : ℕ) (value : BitVec 64) : Channels.MemoryMsg Fp :=

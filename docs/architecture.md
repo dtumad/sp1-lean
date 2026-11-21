@@ -12,7 +12,7 @@ and a chip should be understandable with its local correctness proofs.
 | Contracts | `SP1Clean/FormalModel/` | Semantic Specs and checked relation/capstone targets |
 | Circuits | `SP1Clean/Circuits/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Channel declarations (`Circuits/Channels/`), native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
 | Machine | `SP1Clean/Machine/`, `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Trace-level ledger (`Machine/Ledger/`), table identities, registration, assembly, grounding, Sail bridges and physical compiler |
-| Export and comparison | `SP1CleanTest/Core/`, `SP1CleanTest/Alignment/Support/`, `rust/sp1-comparison/` | Built-in Clean export fixtures and independent released-SP1 comparisons |
+| Export and comparison | `SP1Clean/Export/`, `SP1CleanTest/`, `rust/sp1-comparison/` | Production installed assembly and its public statement, Clean export fixtures, and independent released-SP1 comparisons |
 | Upstream additions | `ToClean/`, `ToMathlib/` | Reusable missing APIs in upstream namespaces, independent of SP1 |
 | Tests | `SP1CleanTest/` | Executable examples, non-vacuity, adversarial witnesses and native computation |
 
@@ -161,7 +161,7 @@ Projected ledgers retain every fixed row, including unused intervals and zero-co
 The host grounding proofs are stated over the installed complete-memory resource list and take
 balance on every registered channel except `HostHintQueueBoundary.hiddenChannels`: the
 final-memory receipts and commitment declarations, whose producers lie outside the host proof
-view. The grounding proofs assume no balance on those channels. The target comparison
+view. The observed assembly projects its original rows through the 25 producer replacements. It also hides receipt and observation-state traffic when proving host grounding. The verifier retains both observation endpoints, and the source and target determine their payloads. The target comparison
 (`HostFinalMemory.checkFinal_of_channels`) and commitment-statement authentication
 (`CommitmentEnsemble.declared_member`) use their balance, which complete acceptance supplies.
 Ordered source/final rows and target checks carry a separate Boolean activity column. Raw

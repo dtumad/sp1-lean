@@ -12,6 +12,7 @@ namespace SP1CleanTest.Alignment.EnterAssembly
 
 open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.TraceGen
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 
 /-- ENTER; BEQ x5,x0,+12; ADDI x5,x0,4; EXIT; HALT. -/
 def image : ProgramImage :=

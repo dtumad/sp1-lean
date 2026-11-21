@@ -29,14 +29,14 @@ def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
 
 
 /-- Run the native scheduler and authenticated checker before recording the expected result. -/
-def installedCase (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+def installedCase (context : SP1Clean.Export.InstalledAssembly.Context)
     (prepared : SP1CleanTest.Alignment.InstalledAssemblyExport.Prepared)
     (name : String) (publicInput : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime))
     (privateInput : fields prepared.data.size
       (ZMod SP1Clean.SP1Prime)) (expected : Bool) : IO Json := do
   -- The built-in exporter checks that this verifier depends only on public inputs.
   -- Retain its occurrences even when witness generation rejects the instance.
-  let verifier := (SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).verifierOperations
+  let verifier := (SP1Clean.Export.InstalledAssembly.assembly context).verifierOperations
     |>.interactionValues (Environment.fromInput publicInput (ProverData.empty (ZMod SP1Clean.SP1Prime)))
   let fields := [("name", toJson name), ("accepted", toJson expected),
     ("verifier", toJson (verifier.map interactionReference)),
@@ -47,14 +47,14 @@ def installedCase (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
     if expected then throw (IO.userError s!"installed assembly {name}: {message}")
     pure (Json.mkObj (fields ++ [("error", toJson message)]))
   | .ok witness =>
-    unless (SP1CleanTest.Alignment.InstalledAssembly.description context).checkWitness
-        (witness.withEnsemble (SP1CleanTest.Alignment.InstalledAssembly.assembly context) rfl) == expected do
+    unless (SP1Clean.Export.InstalledAssembly.description context).checkWitness
+        (witness.withEnsemble (SP1Clean.Export.InstalledAssembly.assembly context) rfl) == expected do
       throw (IO.userError s!"unexpected installed assembly acceptance: {name}")
     pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
 
 /-- Physical table positions and fixed-column dimensions. -/
-def installedInventory (context : SP1CleanTest.Alignment.InstalledAssembly.Context) : Json :=
-  toJson ((SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).tables.map fun component =>
+def installedInventory (context : SP1Clean.Export.InstalledAssembly.Context) : Json :=
+  toJson ((SP1Clean.Export.InstalledAssembly.assembly context).tables.map fun component =>
     Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
       ("fixedColumns", toJson (component.generation.cells.1.toList.zipIdx.filterMap
         (fun (cell, index) => if cell.isFixed then some index else none))),

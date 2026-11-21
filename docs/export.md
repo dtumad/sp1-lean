@@ -20,12 +20,23 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- The complete installed 99-table assembly uses the same exporter and scheduler. Fixtures cover
+- The production installed assembly supplies the verifier, physical tables and channel registry to
+  Clean's exporter and scheduler. For every public header and height vector, `proverStatement_iff`
+  proves that adding private witness-generation inputs preserves raw acceptance in both directions.
+  The proof transports the same physical rows and canonical data. Finite fixtures supply their
+  private inputs separately. [Production assembly](../SP1Clean/Export/InstalledAssembly.lean)
+- Fixtures for the complete installed 99-table assembly cover
   arithmetic/branch/RAM programs and local cuts, empty and stopped segments, repeated HINT_LEN
   around overlapping empty/aligned/byte-tail HINT_READ calls, constrained ENTER replay, HALT,
   repeated commitments and partial/full declarations followed by HALT. Comparisons retain every row, empty position,
   verifier occurrence and physical count. Fresh proofs test endpoints, missing terminals,
   duplicate Exit, fixed-provider authentication, changed counts and padding. These are finite cases, not a total compiler.
+- Protected instruction rows publish their actual raw successor. The installed ordinary
+  observation consumer orders those receipts and carries the retirement counter. Its padding
+  row has zero weight on the Byte, receipt and observation channels. One verifier-selected
+  terminal checks the final counter and nextPC, including carry across 16-bit PC limbs.
+  A local segment with an unchanged clock must preserve its complete state. The released
+  execution flag uses the incoming and outgoing timestamps. [Native boundary](../SP1Clean/FormalModel/Contracts/SailBoundary.lean)
 - A verifier-owned statement fixes all sixteen commitment words and both flags. The public header
   binds 32 canonical bytes, eight deferred field elements and two flags to that same statement.
   Every active declaration consumes its fixed payload; conflicting repeats cannot choose a new

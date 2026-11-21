@@ -1,6 +1,7 @@
 import SP1CleanTest.Core.HostChecks
 import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Operations.OrdinaryObservation
+import SP1Clean.Native.Operations.OrdinaryObservationBoundary
 
 /-! # Executed ordinary retirement observations
 
@@ -69,6 +70,45 @@ private def accepts (start finish : State Fp) (inputs : List (Inputs Fp)) : Bool
     [("SP1OrdinaryObservation", (toElements start).toList, 1),
      ("SP1OrdinaryObservation", (toElements finish).toList, -1)])
 
+private def terminalAccepts (mode : Mode) (input : TerminalInputs Fp) (outgoing : State Fp) : Bool :=
+  let evaluated := evaluateProgram ((terminal mode).main (varFromOffset TerminalInputs 0))
+    (toElements input).toList
+  evaluated.1 && balance (evaluated.2 ++
+    [("SP1OrdinaryObservation", (toElements input.previous).toList, 1),
+     ("SP1OrdinaryObservation", (toElements outgoing).toList, -1)])
+
+/-- The actual terminal binds both kinds of carry, a wrong successor, and both carry bits. -/
+theorem terminalCarry :
+    [.nonempty, .any].all (fun mode =>
+      let check := fun (raw canonical : Vector Fp 3) =>
+        let last := { (first true 0).next with pc := raw }
+        let input := terminalInput last
+        let expected := final mode last.counter canonical last.enabled
+        terminalAccepts mode input expected &&
+          !terminalAccepts mode input { expected with pc := #v[1, 0, 1] } &&
+          !terminalAccepts mode { input with carryLow := 2 } expected &&
+          !terminalAccepts mode { input with carryMiddle := 2 } expected
+      check #v[65536, 1, 0] #v[0, 2, 0] &&
+      check #v[65536, 65535, 0] #v[0, 0, 1] &&
+      check #v[0, 0, 1] #v[0, 0, 1]) = true := by native_decide
+
+private def nextPcSnapshot (pc : BitVec 64) : Semantics.SailSnapshot :=
+  let registers : Semantics.SailRegisterFile.Map := ∅
+  { registers := registers.insert .nextPC pc |>.insert .minstret_increment true
+      |>.insert .mip 0 |>.insert .written_event_index none
+    memory := {} }
+
+/-- An identity can retain an arbitrary nextPC. Changing only its high limb fails both
+endpoint checks, while an in-range ordinary successor can select the nonempty case. -/
+theorem nextPcHighBits :
+    let high := nextPcSnapshot (2 ^ 48 + 4)
+    let other := nextPcSnapshot (2 ^ 49 + 4)
+    let low := nextPcSnapshot 4
+    quiet high high = true ∧ refreshed high high = false ∧
+      quiet high other = false ∧ refreshed high other = false ∧
+      Mode.of high high = .empty ∧ Mode.of high low = .nonempty ∧ Mode.of low low = .any := by
+  native_decide
+
 /-- Physical table order is irrelevant; balance authenticates the chronological counter, PC and
 the chain's flag. Empty inventories preserve the complete initial observation. -/
 theorem histories : [false, true].all (fun enabled =>
@@ -95,5 +135,24 @@ theorem cost : [false, true].all (fun enabled =>
 /-- info: exportable ✓ (186 witness cells) -/
 #guard_msgs in
 #assert_exportable (circuit (p := SP1Prime))
+
+private def evaluateRow (row : RowInput Fp) :=
+  evaluateProgram (guardedCircuit.main (varFromOffset RowInput 0)) (toElements row).toList
+
+/-- A padded fourth row can accompany three live observations. Enabling the padding or
+choosing a non-Boolean activity rejects the same generated witness. -/
+theorem consumerPadding :
+    let a := first true 8
+    let b := populate a.next ⟨0, 25, 0x2010, 0, 0⟩
+    let c := populate b.next ⟨0, 33, 0x2018, 0, 0⟩
+    let live := [a, b, c].map (fun input => evaluateRow (activeRow input))
+    let padding := evaluateRow 0
+    (live.all (fun result => result.1 && result.2.length == 7) &&
+      padding.1 && padding.2.isEmpty &&
+      !(evaluateRow (activeRow 0)).1 && !(evaluateRow (a, 2)).1) = true := by native_decide
+
+/-- info: exportable ✓ (186 witness cells) -/
+#guard_msgs in
+#assert_exportable (guardedCircuit (p := SP1Prime))
 
 end SP1CleanTest.Core.OrdinaryObservation

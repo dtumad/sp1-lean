@@ -10,6 +10,8 @@ only constructs consumer inputs; Clean owns all witness generation and provider 
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
+open SP1Clean.Export.InstalledAssembly
+
 open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 
 /-- Close every touched register/RAM location, in address order, with target receipt checks. -/

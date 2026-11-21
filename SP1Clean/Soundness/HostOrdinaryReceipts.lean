@@ -7,9 +7,8 @@ Only the 25 instruction components change. They retain all original row arrays, 
 lookups and ledgers, including each store's byte-permission requests. Complete Memory checks,
 host resources and the supplied Sail frame remain installed. The receipt protocol is registered
 with the host inventory, next to its ordered observation consumer, before the producers are
-installed; the host proofs treat it as hidden. Authentic observation endpoints and the consumer's
-Byte closure are subsequent integration obligations. This producer installation alone is not an
-end-to-end capstone.
+installed. The host proofs hide both observation protocols. HostObserved adds the verifier links
+selected by the supplied source and target.
 -/
 
 namespace SP1Clean.Soundness.HostOrdinaryReceipts
@@ -119,11 +118,13 @@ private theorem replacement_layout
   · rw [show replace index.val _ = _ from dite_eq_right within]
     exact ⟨rfl, rfl, rfl⟩
 
-private theorem replacement_channels
+/-- Each installed slot retains its ordered declarations, including duplicates. A protected
+instruction appends exactly one receipt declaration. -/
+theorem replacement_channels
     (index : Fin (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
-    (replace index.val original).circuit.channels ⊆
-      original.circuit.channels ++ [InstructionReceipt.channel.toRaw] := by
+    (replace index.val original).circuit.channels = original.circuit.channels ++
+      (if 7 ≤ index.val ∧ index.val < 32 then [InstructionReceipt.channel.toRaw] else []) := by
   dsimp only
   by_cases within : 7 ≤ index.val ∧ index.val < 32
   · rw [show replace index.val _ = ProtectedOrdinaryReceipt.component
@@ -132,13 +133,22 @@ private theorem replacement_channels
       (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
       ⟨index.val - 7, by omega⟩
     simp only [show 7 + (index.val - 7) = index.val by omega] at selected
-    rw [selected]
-    intro channel member
-    change channel ∈ (ProtectedOrdinaryReceipt.provider _).channelsWithGuarantees ++
-      ((ProtectedOrdinaryReceipt.provider _).channelsWithRequirements ++ [InstructionReceipt.channel.toRaw]) at member
-    simpa only [GeneralFormalCircuit.channels, List.append_assoc] using member
-  · rw [show replace index.val _ = _ from dite_eq_right within]
-    exact List.subset_append_left _ _
+    rw [selected, ite_eq_left within]
+    change _ ++ (_ ++ [_]) = (_ ++ _) ++ [_]
+    exact (List.append_assoc ..).symm
+  · rw [show replace index.val _ = _ from dite_eq_right within, ite_eq_right within, List.append_nil]
+
+private theorem replacement_names :
+    let base := HostSailBoundary.ensemble (p := p) image source target final others resources channels names
+    (base.tables.mapIdx replace).map (·.circuit.name) = base.tables.map (·.circuit.name) := by
+  dsimp only
+  apply List.ext_getElem
+  · simp only [List.length_map, List.length_mapIdx]
+  · intro index left right
+    rw [List.getElem_map, List.getElem_map, List.getElem_mapIdx]
+    exact (replacement_layout (image := image) (source := source) (target := target)
+      (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
+      ⟨index, by simpa only [List.length_map] using right⟩).1
 
 /-- Install the producers without moving or removing any physical table. -/
 def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
@@ -151,16 +161,7 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
   let base := HostSailBoundary.ensemble image source target final others resources channels names
   { base with tables := base.tables.mapIdx replace
               unique_names := by
-                have unchanged : (base.tables.mapIdx replace).map (·.circuit.name) =
-                    base.tables.map (·.circuit.name) := by
-                  apply List.ext_getElem
-                  · simp only [List.length_map, List.length_mapIdx]
-                  · intro index left right
-                    rw [List.getElem_map, List.getElem_map, List.getElem_mapIdx]
-                    exact (replacement_layout (image := image) (source := source) (target := target)
-                      (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
-                      ⟨index, by simpa only [List.length_map] using right⟩).1
-                rw [unchanged]
+                rw [replacement_names]
                 exact base.unique_names
               tables_channels := by
                 intro component member channel used
@@ -169,10 +170,13 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
                 have bound' : index < base.tables.length := by simpa using bound
                 have declared := replacement_channels (image := image) (source := source) (target := target)
                   (final := final) (others := others) (resources := resources) (channels := channels)
-                  (names := names) ⟨index, bound'⟩ used
-                rcases List.mem_append.mp declared with old | added
+                  (names := names) ⟨index, bound'⟩
+                rw [declared] at used
+                rcases List.mem_append.mp used with old | added
                 · exact base.tables_channels _ (List.getElem_mem _) old
-                · obtain rfl := List.mem_singleton.mp added
+                · split at added
+                  case isFalse => exact (List.not_mem_nil added).elim
+                  obtain rfl := List.mem_singleton.mp added
                   change _ ∈ (((HostLocalCore.registry image source
                     (HintReadWordChip.stateChannel.toRaw :: channels) ++ [_]) ++ [_]) ++ [_]) ++ [_]
                   exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _
@@ -186,6 +190,15 @@ theorem tables_length :
     (ensemble (p := p) image source target final others resources channels names).tables.length =
       (HostSailBoundary.ensemble image source target final others resources channels names).tables.length :=
   by simp only [ensemble, List.length_mapIdx]
+
+/-- Component names stay at their original indices. -/
+theorem table_names :
+    (ensemble (p := p) image source target final others resources channels names).tables.map (·.circuit.name) =
+      (HostSailBoundary.ensemble image source target final others resources channels names).tables.map (·.circuit.name) :=
+  by
+    simp only [ensemble]
+    exact replacement_names (image := image) (source := source) (target := target) (final := final)
+      (others := others) (resources := resources) (channels := channels) (names := names)
 
 /-- Each instruction retains its original physical position under a typed receipt registration. -/
 def slot (index : Fin 25) : TableSlot
@@ -228,6 +241,7 @@ theorem instructionTable_receipt_count (index : Fin 25)
   rw [instructionTable_receipts, List.length_map]
 
 omit receiptRegistered in
+/-- Component replacement preserves local checks and every channel outside the receipt protocol. -/
 private theorem component_projection
     (index : Fin (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
@@ -249,6 +263,22 @@ private theorem component_projection
       ProtectedOrdinaryReceipt.interactions _⟩
   · rw [show replace index.val _ = _ from dite_eq_right within]
     exact ⟨rfl, rfl, fun _ _ => rfl⟩
+
+/-- Every new component has an original component with the same checks and off-receipt traffic. -/
+theorem original_of_mem (component : Component (ZMod p))
+    (member : component ∈ (ensemble image source target final others resources channels names).tables) :
+    ∃ original ∈ (HostSailBoundary.ensemble image source target final others resources channels names).tables,
+      component.operations.constraints = original.operations.constraints ∧
+      component.operations.lookups = original.operations.lookups ∧
+      ∀ channel, channel ≠ InstructionReceipt.channel.toRaw →
+        component.operations.interactionsWith channel = original.operations.interactionsWith channel := by
+  let base := HostSailBoundary.ensemble image source target final others resources channels names
+  simp only [ensemble] at member
+  obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp member
+  rw [List.getElem_mapIdx]
+  have index : i < base.tables.length := by simpa only [List.length_mapIdx] using hi
+  exact ⟨base.tables[i], List.getElem_mem _, component_projection (image := image) (source := source) (target := target) (final := final)
+    (others := others) (resources := resources) (channels := channels) (names := names) ⟨i, index⟩⟩
 
 private theorem layout (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p))
@@ -378,7 +408,7 @@ theorem baseWitness_interactions
     exact List.map_congr_left fun _ _ => AbstractInteraction.eval_congr rfl
   · rw [← tables_length, witness.same_length, List.drop_length, List.flatMap_nil]
 
-/-- Each unchanged-channel balance and its occurrence bound transports independently. -/
+/-- Balance on each unchanged channel transports independently. -/
 theorem baseWitness_balancedChannel
     (witness : EnsembleWitness (ensemble image source target final others resources channels names))
     (channel : RawChannel (ZMod p)) (different : channel ≠ InstructionReceipt.channel.toRaw)

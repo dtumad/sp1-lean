@@ -143,7 +143,7 @@ for path in files:
 
     # 2. namespace agreement
     PILLARS = {"Math", "Model", "Semantics", "Circuits", "Extracted", "FormalModel", "Native", "Proofs", "Faithful",
-               "Soundness", "Composition"}
+               "Soundness", "Composition", "Export"}
     if pillar != "-" and ns_root in PILLARS and ns_root != pillar and path not in allowed_ns:
         nsbad.append((path, ns_root, pillar))
 

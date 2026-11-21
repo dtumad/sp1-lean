@@ -144,6 +144,20 @@ theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
     obtain ⟨message, present, rfl⟩ := List.mem_map.mp member
     exact MemLoc.busAddress_lt_two_pow_48 (records.1 message present).1
 
+/-- The physical CPU State walk whose ordered row labels are precisely the replayed machine tape. -/
+def PhysicalEventOrder (data : ProverData (ZMod p)) (header : SP1PublicIO (ZMod p))
+    (inventory : List (ExecutionRow p)) (events : List Machine.ExecutionEvent) : Prop :=
+  ∃ ordered : List (ExecutionRow p), ordered.Perm inventory ∧
+    Walk.IsWalk (ExecutionRow.canonEdge data) (initialBoundaryStateMessage header)
+      (finalBoundaryStateMessage header) ordered ∧ ordered.map ExecutionRow.event = events
+
+/-- Erasing the row order recovers the exact event multiset of the physical inventory. -/
+theorem PhysicalEventOrder.perm {data : ProverData (ZMod p)} {header : SP1PublicIO (ZMod p)}
+    {inventory : List (ExecutionRow p)} {events : List Machine.ExecutionEvent}
+    (order : PhysicalEventOrder data header inventory events) : events.Perm (inventory.map ExecutionRow.event) := by
+  obtain ⟨ordered, exhaustive, _, rfl⟩ := order
+  exact exhaustive.map ExecutionRow.event
+
 /-- The installed AIR yields one local execution with complete host reconstruction and every
 native Memory value and the complete RAM domain, including untouched locations. Sail runtime,
 register frames, all retirement/nextPC effects, and the actual HALT's public exit code are retained;
@@ -155,8 +169,8 @@ theorem source_execution_with_memory (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
-      events.Perm ((LocalCore.executionRows
-        (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
+      PhysicalEventOrder witness.data witness.publicInput (LocalCore.executionRows
+        (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) events ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
       target.sail.regs.get? LeanRV64D.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
@@ -208,7 +222,7 @@ theorem source_execution_with_memory (valid : image.Valid)
   rw [pc] at nextPc
   refine ⟨carrier.events, target, hints, path, ?_, clock, pc, ?_, ?_, ?_,
     nextPc, ?_, ?_, ?_, decoded, host, ?_, ?_⟩
-  · exact carrier.exhaustive.map ExecutionRow.event
+  · exact ⟨carrier.ordered, carrier.exhaustive, carrier.cpuWalk, rfl⟩
   · intro loc bound
     have observed := carrier.final_memory valid constraints balanced target path.replay loc bound
     generalize LocalCore.memoryFinalFrontier

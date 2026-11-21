@@ -56,3 +56,4 @@
 
 # 9 — assembly: a trace record becomes built tables and an EnsembleWitness.
 9   Soundness     SP1Clean/Proofs/Completeness/
+9   Export        SP1Clean/Export/

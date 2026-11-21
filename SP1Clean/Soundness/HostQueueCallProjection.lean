@@ -1,6 +1,7 @@
 import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Semantics.Host.QueueReplay
+import SP1Clean.Semantics.Host.SixCallProfile
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 
@@ -66,7 +67,7 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
 
 private theorem control_projection (message : HostCallChip.Message (ZMod p))
     (code : ControlCode message.code) :
-    safe message ∧ project message = none ∧ Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
+    safe message ∧ project message = none ∧ SixCallProfile.code (Word.toBitVec64 message.code) := by
   have small (n : ℕ) (bound : n < 2 ^ 17) : ((n : ℕ) : ZMod p).val = n :=
     ZMod.val_natCast_of_lt (lt_trans bound (Fact.out (p := 2 ^ 17 < p)))
   have three : (3 : ZMod p).val = 3 := small 3 (by decide)
@@ -75,7 +76,8 @@ private theorem control_projection (message : HostCallChip.Message (ZMod p))
   rcases code with code | code | code | code
   all_goals
     simp [safe, project, code, HostEnterChip.codeWord, HostCommitChip.codeWord,
-      Word.toBitVec64, Word.toNat, three, sixteen, twentySix, queueCallEvent?, SyscallKind.code]
+      Word.toBitVec64, Word.toNat, three, sixteen, twentySix, queueCallEvent?, SixCallProfile.code,
+      SixCallProfile.kinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
 
 /-- Both queue operations have the exact action decoded from their complete call. -/
 theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Spec row.2) :
@@ -178,7 +180,7 @@ private theorem controls_projection (receivers : List (HostLocalHandoff.Receiver
     (constraints : ∀ table ∈ tables, table.Constraints)
     (bytes : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
     ∀ message ∈ ReceiverView.messages receivers tables,
-      safe message ∧ project message = none ∧ Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
+      safe message ∧ project message = none ∧ SixCallProfile.code (Word.toBitVec64 message.code) := by
   induction aligned with
   | nil => simp [ReceiverView.messages, TransitionView.readIndexedRows]
   | @cons receiver table receivers tables same aligned ih =>
@@ -279,7 +281,7 @@ private theorem control_calls
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw) :
     ∀ message ∈ ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness),
-      safe message ∧ project message = none ∧ Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
+      safe message ∧ project message = none ∧ SixCallProfile.code (Word.toBitVec64 message.code) := by
   have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
     (controlTables witness) (by
       simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
@@ -288,6 +290,29 @@ private theorem control_calls
     (fun table present => constraints table (controlTables_mem witness table present))
     (fun table present => byte_guarantees witness interface constraints balanced table
       (controlTables_mem witness table present))
+
+/-- Every message received by the complete installed handler inventory has a unique six-call code. -/
+theorem calls_code
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
+    (specs : ∀ table ∈ queueTables witness, table.Spec)
+    (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
+    SixCallProfile.code (Word.toBitVec64 message.code) := by
+  rcases List.mem_append.mp ((calls_split witness).mem_iff.mp member) with queue | control
+  · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp queue
+    have valid := rows_spec _ (queueTables_aligned witness) specs row rowMem
+    rcases row with ⟨index, env⟩
+    cases index with
+    | none =>
+      change HostHintReadChip.Spec (HostHintReadCoverage.input env) at valid
+      refine ⟨.hintRead, by decide, (SyscallKind.decode?_eq_some_iff _ _).mpr ?_⟩
+      simp only [call, valid.1, HostHintReadChip.codeWord, Target.toBitVec64_bitVecToWord]
+    | some empty =>
+      change HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.Inputs 0 env) at valid
+      refine ⟨.hintLength, by decide, (SyscallKind.decode?_eq_some_iff _ _).mpr ?_⟩
+      simp only [call, valid.1, HostHintLengthChip.codeWord, Target.toBitVec64_bitVecToWord]
+  · exact (control_calls witness interface constraints balanced message control).2.2
 
 /-- Every installed call is either an actual queue-handler row or a control call whose
 dispatch succeeds on the observed registers of any running host. Control dispatch modifies

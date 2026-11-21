@@ -137,6 +137,59 @@ fn check_cut<P: Program<F>>(
         (initial_clock, initial_pc),
         (initial_clock + 8 * count as u64, final_pc),
     );
+    assert_eq!(public[15], if count == 0 { F::ZERO } else { F::ONE });
+    let consumer = P::COMPONENT_NAMES
+        .iter()
+        .position(|name| *name == "sp1.native.ordinary_observation")
+        .unwrap();
+    let rows = &witness.tables[consumer];
+    assert_eq!(
+        rows.len(),
+        if count == 0 {
+            0
+        } else {
+            count.next_power_of_two()
+        }
+    );
+    let mut observed = Vec::new();
+    for row in rows {
+        let ledger = P::interactions(consumer, row);
+        let receipts = ledger
+            .iter()
+            .filter(|entry| entry.channel == "SP1OrdinaryStateReceipt")
+            .collect::<Vec<_>>();
+        assert_eq!(receipts.len(), 1);
+        let receipt = receipts[0];
+        if receipt.multiplicity == F::ZERO {
+            assert!(ledger.iter().all(|entry| entry.multiplicity == F::ZERO));
+        } else {
+            assert_eq!(receipt.signed_multiplicity(), -F::ONE);
+            let msg = receipt
+                .message
+                .iter()
+                .map(PrimeField64::as_canonical_u64)
+                .collect::<Vec<_>>();
+            assert_eq!(msg.len(), 5);
+            observed.push((
+                (msg[0] << 24) + msg[1],
+                msg[2] + (msg[3] << 16) + (msg[4] << 32),
+            ));
+        }
+    }
+    observed.sort_unstable();
+    let released = steps[start..start + count]
+        .iter()
+        .enumerate()
+        .map(|(index, step)| (initial_clock + 8 * (index as u64 + 1), step.next_pc))
+        .collect::<Vec<_>>();
+    assert_eq!(observed, released);
+    let terminal_rows: usize = P::COMPONENT_NAMES
+        .iter()
+        .enumerate()
+        .filter(|(_, name)| name.starts_with("sp1.native.ordinary_observation.terminal."))
+        .map(|(index, _)| witness.tables[index].len())
+        .sum();
+    assert_eq!(terminal_rows, 1);
     let mut expected = vec![];
     if count > 0 {
         let first = steps[start].clock;

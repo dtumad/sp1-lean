@@ -1,4 +1,4 @@
-import SP1Clean.Native.Operations.OrdinaryObservation
+import SP1Clean.Native.Operations.OrdinaryObservationRow
 import SP1Clean.Native.Operations.OrdinaryObservationBoundary
 import ToClean.Air.HintIndex
 
@@ -15,25 +15,19 @@ fixes, so the same four tables serve every source and target.
 namespace SP1Clean.Soundness.OrdinaryObservation
 
 open Circuit Air.Flat Channels
-open SP1Clean.OrdinaryObservation (Inputs Mode terminal terminalGeneration terminalName circuit)
+open SP1Clean.OrdinaryObservation (RowInput Mode terminal terminalGeneration terminalName guardedCircuit)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-/-- Each ordinary receipt demands one consumer row, indexed by the receipt's clock. -/
-def consumerDemand : WitnessGeneration.DemandMode (ZMod p) Inputs where
-  channel := InstructionReceipt.channel
-  trigger := .push
-  guard message :=
-    Witgen.HintIndex.messageEq
-      (Witgen.HintIndex.input (Input := Inputs) (circuit (p := p)).name
-        (message.clk_high.val * 16777216 + message.clk_low.val)).receipt message
-  input message := pure (fromElements ((toElements (Witgen.HintIndex.input (Input := Inputs)
-      (circuit (p := p)).name (message.clk_high.val * 16777216 + message.clk_low.val))).map
-    WitnessGeneration.Cell.witness))
+/-- Each receipt demands one active row indexed by clock. The zero input pads the table. -/
+def consumerGeneration : WitnessGeneration.Generation (ZMod p) RowInput :=
+  Witgen.HintIndex.unitDemand (Input := RowInput) (guardedCircuit (p := p)).name
+    InstructionReceipt.channel .push (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
+    (fun input => input.1.receipt) Prod.snd
 
 /-- The ordered receipt consumer. -/
 def consumer : Component (ZMod p) :=
-  { circuit := circuit, generation := .demand consumerDemand, Assumptions := circuit.Assumptions }
+  { circuit := guardedCircuit, generation := consumerGeneration, Assumptions := guardedCircuit.Assumptions }
 
 /-- The chain's terminal for one mode. -/
 def terminalComponent (mode : Mode) : Component (ZMod p) :=

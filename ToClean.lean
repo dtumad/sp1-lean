@@ -34,6 +34,7 @@ public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
 public import ToClean.Air.VerifierChannel
 public import ToClean.Air.PublicVerifier
+public import ToClean.Air.ProverInputStatement
 public import ToClean.Air.Footprint
 public import ToClean.Air.ChannelClosure
 public import ToClean.Air.Authentication
