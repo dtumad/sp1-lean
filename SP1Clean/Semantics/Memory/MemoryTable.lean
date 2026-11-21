@@ -53,16 +53,17 @@ theorem MemoryInterval.encode_endpoints (interval : MemoryInterval)
   StaticTable.ofRows "sp1.native.initial_memory" ((memory.intervals limit).map MemoryInterval.encode)
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The fixed lookup contains a row for every canonical interval, including empty intervals. -/
+/-- The fixed lookup has exactly one row per maximal constant-byte run. -/
 theorem ByteMemory.fixedTable_length (memory : ByteMemory) (limit : ℕ) :
-    (memory.fixedTable (p := p) limit).length = 2 * (memory.supportBelow limit).card + 1 := by
-  simpa only [fixedTable, StaticTable.ofRows, List.length_map] using memory.intervals_length limit
+    (memory.fixedTable (p := p) limit).length = (memory.intervals limit).length := by
+  simp only [fixedTable, StaticTable.ofRows, List.length_map]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The semantic address domain bounds the interval inventory independently of update history. -/
 theorem ByteMemory.fixedTable_length_le (memory : ByteMemory) (limit : ℕ) :
     (memory.fixedTable (p := p) limit).length ≤ 2 * limit + 1 := by
   rw [fixedTable_length]
+  have runs := memory.intervals_length_le limit
   have support := memory.supportBelow_card_le_limit limit
   omega
 

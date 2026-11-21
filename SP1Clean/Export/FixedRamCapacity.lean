@@ -13,23 +13,16 @@ open Semantics
 /-- The verifier preallocates the next power of two above the exact interval count. -/
 theorem membership_height (memory : ByteMemory) (limit : ℕ) (name : String) :
     (membership (p := SP1Prime) memory limit name).height =
-      2 ^ Nat.clog 2 (2 * (memory.supportBelow limit).card + 1) := by
+      2 ^ Nat.clog 2 (memory.intervals limit).length := by
   change 2 ^ Nat.clog 2 (memory.fixedTable (p := SP1Prime) limit).length = _
   rw [ByteMemory.fixedTable_length]
 
-/-- Exactly 2^29 live bytes force 2^31 physical rows before any request is issued. -/
-theorem membership_height_at_threshold (memory : ByteMemory) (limit : ℕ) (name : String)
-    (support : (memory.supportBelow limit).card = 2 ^ 29) :
-    (membership (p := SP1Prime) memory limit name).height = 2 ^ 31 := by
-  rw [membership_height, support]
-  decide
-
-/-- The height of the fixed provider, by itself, exceeds the field capacity at this first
-support size. A smaller support may still overflow when other tables share the channel. -/
+/-- A fixed RAM slot fits the field exactly when the snapshot has fewer than 2^30
+interior byte changes. Other consumers still share the same channel. -/
 theorem membership_height_lt_prime_iff (memory : ByteMemory) (limit : ℕ) (name : String) :
     (membership (p := SP1Prime) memory limit name).height < SP1Prime ↔
-      (memory.supportBelow limit).card < 2 ^ 29 := by
-  rw [membership_height]
+      (memory.changePoints limit).card < 2 ^ 30 := by
+  rw [membership_height, ByteMemory.intervals_length]
   have exactCut (exponent : ℕ) : 2 ^ exponent < SP1Prime ↔ exponent ≤ 30 := by
     constructor
     · intro small
@@ -39,7 +32,12 @@ theorem membership_height_lt_prime_iff (memory : ByteMemory) (limit : ℕ) (name
     · intro small
       exact (Nat.pow_le_pow_right (by decide : 0 < 2) small).trans_lt (by decide)
   rw [exactCut, Nat.clog_le_iff_le_pow (by decide)]
-  omega
+  by_cases positive : 0 < limit
+  · rw [ite_eq_left positive]
+    omega
+  · obtain rfl : limit = 0 := by omega
+    have noCuts : memory.changePoints 0 = ∅ := by ext; simp
+    simp [noCuts]
 
 end SP1Clean.InitialMemoryLookup
 
@@ -76,7 +74,8 @@ theorem AdmissibleExecution.endpoint_ram_capacity {limits : ResourceLimits} {ima
     omega
   have count : 2 * (endpoint.sail.memory.supportBelow NativeLayout.sailMemory.upper).card + 1 ≤ 2 ^ 30 := by
     omega
-  have padded := Nat.pow_le_pow_right (by decide : 0 < 2) ((Nat.clog_le_iff_le_pow (by decide)).mpr count)
+  have rows := (endpoint.sail.memory.intervals_length_le NativeLayout.sailMemory.upper).trans count
+  have padded := Nat.pow_le_pow_right (by decide : 0 < 2) ((Nat.clog_le_iff_le_pow (by decide)).mpr rows)
   dsimp only
   rw [InitialMemoryLookup.membership_height]
   refine ⟨padded, ?_, ?_⟩
@@ -120,11 +119,11 @@ private def targetRamSlot (context : Context) :
     [CommitmentDeclaration.source context.commitments, HostHintQueueTerminal.component (publicCursor context)]).cast
       (tables_eq context).symm
 
-/-- Every accepted raw statement already limits the support of the supplied target RAM by its
+/-- Every accepted raw statement already limits the actual byte changes of the supplied target RAM by its
 fixed provider alone. The bound is independent of event count, multiplicities and public ceilings. -/
-theorem target_ram_support_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+theorem target_ram_changes_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (accepted : (assembly context).Statement .logUp header heights) :
-    (context.target.sail.memory.supportBelow NativeLayout.sailMemory.upper).card < 2 ^ 29 := by
+    (context.target.sail.memory.changePoints NativeLayout.sailMemory.upper).card < 2 ^ 30 := by
   obtain ⟨fit, witness, _, heightEq, _, _⟩ := accepted
   rw [← heightEq] at fit
   let slot := targetRamSlot context
@@ -149,11 +148,11 @@ theorem target_ram_support_of_statement (context : Context) {header : SP1PublicI
   apply (InitialMemoryLookup.membership_height_lt_prime_iff _ _ _).mp
   exact Nat.lt_of_le_of_lt bound (by decide)
 
-/-- No choice of prover rows or announced heights admits a target with this much live RAM
+/-- No choice of prover rows or announced heights admits a target with this many changes between neighboring bytes
 through the current installed representation. -/
-theorem not_statement_of_target_ram_support (context : Context)
-    (large : 2 ^ 29 ≤ (context.target.sail.memory.supportBelow NativeLayout.sailMemory.upper).card)
+theorem not_statement_of_target_ram_changes (context : Context)
+    (large : 2 ^ 30 ≤ (context.target.sail.memory.changePoints NativeLayout.sailMemory.upper).card)
     (header : SP1PublicIO Fp) (heights : List ℕ) : ¬ (assembly context).Statement .logUp header heights :=
-  fun accepted => (Nat.not_lt_of_ge large) (target_ram_support_of_statement context accepted)
+  fun accepted => (Nat.not_lt_of_ge large) (target_ram_changes_of_statement context accepted)
 
 end SP1Clean.Export.InstalledAssembly

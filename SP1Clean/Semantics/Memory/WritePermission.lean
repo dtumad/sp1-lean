@@ -90,7 +90,7 @@ theorem writableIntervals_complete (image : ProgramImage) (address : ℕ)
 
 theorem writableIntervals_length_le (image : ProgramImage) :
     image.writableIntervals.length ≤ 2 * image.romBytes.length + 1 := by
-  have bound := image.protectionMask.intervals_length (2 ^ 48)
+  have bound := image.protectionMask.intervals_length_le (2 ^ 48)
   have filtered := List.length_filter_le
     (fun interval : MemoryInterval => decide (interval.value = 0 ∧ interval.lower < interval.upper))
     (image.protectionMask.intervals (2 ^ 48))
