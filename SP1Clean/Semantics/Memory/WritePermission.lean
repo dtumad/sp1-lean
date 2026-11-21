@@ -90,7 +90,7 @@ theorem writableIntervals_complete (image : ProgramImage) (address : ℕ)
 
 theorem writableIntervals_length_le (image : ProgramImage) :
     image.writableIntervals.length ≤ 2 * image.romBytes.length + 1 := by
-  have bound := image.protectionMask.intervals_length (2 ^ 48)
+  have bound := image.protectionMask.intervals_length_le (2 ^ 48)
   have filtered := List.length_filter_le
     (fun interval : MemoryInterval => decide (interval.value = 0 ∧ interval.lower < interval.upper))
     (image.protectionMask.intervals (2 ^ 48))
@@ -101,6 +101,53 @@ theorem writableIntervals_length_le (image : ProgramImage) :
     simp only [protectionMask, List.length_map]
   rw [rows] at support
   omega
+
+/-- Nonempty writable gaps have distinct right endpoints. Except for the final address-space
+limit, each such endpoint is exactly a ROM start, even when code is sparse or out of order. -/
+theorem writableIntervals_length_le_rom (image : ProgramImage) :
+    image.writableIntervals.length ≤ image.rom.length + 1 := by
+  let limit := 2 ^ 48
+  let ends := image.writableIntervals.map MemoryInterval.upper
+  have unique : ends.Nodup := by
+    apply List.nodup_iff_count_le_one.mpr
+    intro address
+    simp only [ends, List.count_eq_countP, List.countP_map, writableIntervals, List.countP_filter]
+    have bound := image.protectionMask.intervals_count limit (address - 1)
+    apply le_trans (List.countP_mono_left (q := fun i => decide (i.Contains (address - 1))) ?_) (b := _)
+    · rw [bound]
+      split <;> decide
+    · intro interval _ h
+      simp only [Function.comp_apply, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at h
+      apply decide_eq_true
+      obtain ⟨rfl, _, nonempty⟩ := h
+      exact ⟨by omega, by omega⟩
+  let starts := ((image.rom.map Prod.fst).map BitVec.toNat).toFinset
+  have subset : ends.toFinset ⊆ insert limit starts := by
+    intro endpoint listed
+    obtain ⟨gap, member, rfl⟩ := List.mem_map.mp (List.mem_toFinset.mp listed)
+    obtain ⟨raw, qualifies⟩ := List.mem_filter.mp member
+    obtain ⟨zero, nonempty⟩ := of_decide_eq_true qualifies
+    rcases image.protectionMask.intervals_zero_upper limit gap raw zero with last | live
+    · exact Finset.mem_insert.mpr (Or.inl last)
+    · have liveByte := ((ByteMemory.mem_supportBelow ..).mp live).2
+      rw [image.protectionMask_read] at liveByte
+      have readonly : image.readOnly gap.upper = true := by
+        cases h : image.readOnly gap.upper <;> simp_all
+      obtain ⟨row, rowMem, lower, upper⟩ := (image.readOnly_iff _).mp readonly
+      have prior := ((image.writableIntervals_sound gap member).2.2 (gap.upper - 1) ⟨by omega, by omega⟩).2
+      have start : gap.upper = row.1.toNat := by
+        by_contra different
+        have before := (image.readOnly_iff _).mpr ⟨row, rowMem,
+          (show row.1.toNat ≤ gap.upper - 1 by omega), (show gap.upper - 1 < row.1.toNat + 4 by omega)⟩
+        simp_all
+      apply Finset.mem_insert_of_mem
+      exact List.mem_toFinset.mpr (List.mem_map.mpr
+        ⟨row.1, List.mem_map.mpr ⟨row, rowMem, rfl⟩, start.symm⟩)
+  have count := (Finset.card_le_card subset).trans (Finset.card_insert_le limit starts)
+  have startsBound : starts.card ≤ image.rom.length := by
+    simpa only [starts, List.length_map] using List.toFinset_card_le ((image.rom.map Prod.fst).map BitVec.toNat)
+  rw [List.toFinset_card_of_nodup unique] at count
+  simpa only [ends, List.length_map] using count.trans (Nat.add_le_add_right startsBound 1)
 
 /-- Deterministic finite lookup for permission-row construction. -/
 def writableIntervalAt? (image : ProgramImage) (address : ℕ) : Option MemoryInterval :=

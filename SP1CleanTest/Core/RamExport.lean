@@ -18,10 +18,10 @@ open Air.Flat Circuit SP1Clean SP1Clean.Semantics
 abbrev Fp := ZMod SP1Prime
 abbrev Requests := ProvableVector MemoryIntervalRow 2
 
-/-- Unsorted entries include first-write precedence, a sparse gap and the final native byte. -/
+/-- The sparse input includes shadowing, four adjacent equal bytes and the final native byte. -/
 def memory : ByteMemory :=
-  ⟨[(131072, 18), (65536, 17), (65536, 99), (65543, 171),
-    (131071, 254), (2 ^ 48 - 1, 255)]⟩
+  ⟨[(131074, 18), (131072, 18), (65536, 17), (65536, 99), (65543, 171),
+    (131075, 18), (131071, 254), (131073, 18), (2 ^ 48 - 1, 255)]⟩
 
 def snapshot : MemorySnapshot := ⟨Vector.replicate 32 0, memory⟩
 

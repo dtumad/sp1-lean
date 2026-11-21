@@ -61,6 +61,10 @@ preserve repeated keys, zero-multiplicity occurrences and count bounds.
 - Preserve the full capstone domain: arbitrary bounded local segments, complete authenticated
   boundaries and all eight host calls. Do not add caller-supplied readiness, grounding, provider
   validity, syscall inactivity or conservative compiler footprints to close a target.
+- When a completeness claim fails, keep a checked example and identify the responsible
+  layer. Fix avoidable representation costs and prove the replacement preserves the semantic
+  contract. Justify release restrictions against released SP1 and derive shard presets from
+  the installed table heights and complete channel ledgers. Keep the wider Sail model available.
 - Native semantic correctness, agreement with SP1, correctness of code generation and
   cryptographic verifier soundness are distinct claims. Rust comparisons are tests, not a
   formal lowering proof. Do not claim deterministic verifyCore acceptance implies execution

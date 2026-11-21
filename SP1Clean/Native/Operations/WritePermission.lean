@@ -24,7 +24,7 @@ omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 comes from the finite address space, independently of how the ROM stores repeated entries. -/
 theorem membership_height_lt_uint64 (image : ProgramImage) :
     (image.writePermissionTable (p := p)).height < UInt64.size := by
-  have intervals := image.protectionMask.intervals_length (2 ^ 48)
+  have intervals := image.protectionMask.intervals_length_le (2 ^ 48)
   have support := image.protectionMask.supportBelow_card_le_limit (2 ^ 48)
   have filtered := List.length_filter_le
     (fun interval : MemoryInterval => decide (interval.value = 0 ∧ interval.lower < interval.upper))

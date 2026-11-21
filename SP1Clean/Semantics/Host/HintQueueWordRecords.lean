@@ -198,10 +198,10 @@ def sourceWordRows (hints : List Bytes) : List (WordRecord (ZMod p)) :=
   else []
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The complete physical source-word inventory fits the actual hint count and byte payload.
-The mandatory final word costs one row per hint, including empty and aligned buffers. -/
-theorem sourceWordRows_length_le (hints : List Bytes) :
-    (sourceWordRows (p := p) hints).length ≤ hints.length + (hints.map List.length).sum := by
+/-- The fixed word generator uses every encodable index of every encodable source node. -/
+theorem sourceWordRows_length (hints : List Bytes) :
+    (sourceWordRows (p := p) hints).length = if hints.length < 2 ^ 48 then
+      (hints.map fun bytes => min (wordCount bytes) (2 ^ 48)).sum else 0 := by
   unfold sourceWordRows
   split
   · simp only [List.length_flatten, List.map_ofFn, Function.comp_def, nodeWordRows_length]
@@ -217,7 +217,16 @@ theorem sourceWordRows_length_le (hints : List Bytes) :
       rw [← ofList_bytes hints, List.map_map]
       rfl
     rw [mappedBytes, List.map_reverse, List.sum_reverse]
-    have bound (buffers : List Bytes) :
+  · rfl
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The complete physical source-word inventory fits the actual hint count and byte payload.
+The mandatory final word costs one row per hint, including empty and aligned buffers. -/
+theorem sourceWordRows_length_le (hints : List Bytes) :
+    (sourceWordRows (p := p) hints).length ≤ hints.length + (hints.map List.length).sum := by
+  rw [sourceWordRows_length]
+  split
+  · have bound (buffers : List Bytes) :
         (buffers.map fun bytes => min (wordCount bytes) (2 ^ 48)).sum ≤
           buffers.length + (buffers.map List.length).sum := by
       induction buffers with
@@ -228,7 +237,7 @@ theorem sourceWordRows_length_le (hints : List Bytes) :
           have small := (Nat.min_le_left (wordCount bytes) (2 ^ 48)).trans word
           omega
     exact bound hints
-  · simp
+  · exact Nat.zero_le _
 
 @[irreducible] def sourceWordTable (hints : List Bytes) : StaticTable (ZMod p) WordRecord :=
   StaticTable.ofRows "sp1.native.hint_source_words" (sourceWordRows hints)

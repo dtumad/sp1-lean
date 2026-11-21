@@ -54,8 +54,8 @@ quantifiers at these boundaries:
 | [Complete execution](../SP1Clean/Semantics/Execution/Execution.lean) | One evolving complete Sail/host/clock state? |
 | [Memory snapshots](../SP1Clean/Semantics/Memory/MemorySnapshot.lean) | Untouched locations, absent keys and full boundary changes covered? |
 | [Rust coverage](../rust/sp1-comparison/inventory/coverage.json) | Released component agreement, native semantics and deliberately different public/host contracts distinguished? |
-| [Fixed RAM capacity](../SP1Clean/Export/FixedRamCapacity.lean) | Does the installed provider impose a strict support bound at every public header and height? Does a bound on semantic boundary bytes leave room on both endpoint channels? |
-| [Empty release execution](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean) | Does the same complete snapshot both admit an empty release trace and exclude every installed witness? |
+| [Fixed RAM capacity](../SP1Clean/Export/FixedRamCapacity.lean) | Does the installed provider impose a strict bound on changes between neighboring bytes at every public header and height? Does a bound on semantic boundary bytes leave room on both endpoint channels? |
+| [Empty release execution](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean) | Does a uniform region compress to four RAM rows? Does a checked alternating region both admit an empty release trace and exclude every installed witness? |
 | [Realizes](../ToClean/Air/Realizes.lean) | The intended public language rather than a vacuous profile? |
 
 SP1 v6.10.0 gates the link addition on `is_real - op_a_0` and constrains the high result limb

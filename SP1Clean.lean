@@ -2,6 +2,8 @@ import SP1Clean.Core
 import SP1Clean.Export.FixedHintAssembly
 import SP1Clean.Export.InstalledAssembly
 import SP1Clean.Export.InstalledHintAssembly
+import SP1Clean.Export.FixedHintCapacity
+import SP1Clean.Export.FixedImageCapacity
 import SP1Clean.Export.FixedRamCapacity
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Export.InstalledHintProjection
@@ -177,6 +179,7 @@ import SP1Clean.Proofs.Completeness.ObservationData
 import SP1Clean.Proofs.Completeness.ExecutionObservationSuccessor
 import SP1Clean.Proofs.Completeness.ExecutionObservationEndpoint
 import SP1Clean.Proofs.Completeness.HintInventory
+import SP1Clean.Proofs.Completeness.HintReadCapacity
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint

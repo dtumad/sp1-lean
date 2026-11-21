@@ -9,7 +9,7 @@ open SP1Clean.Semantics
 
 private def memory : ByteMemory := ⟨[(7, 42), (0, 13), (7, 9), (15, 255), (16, 99)]⟩
 
-example : (memory.canonicalBelow 16).entries = [(0, 13), (7, 42), (15, 255)] := by
+example : (memory.changePoints 16).sort = [1, 7, 8, 15] := by
   native_decide
 
 /-- Newer zero writes erase old nonzero values; redundant/out-of-window history costs no rows. -/
@@ -24,8 +24,14 @@ example : (List.range 17).map (fun query =>
       some 0, some 0, some 0, some 0, some 0, some 0, some 0, some 255, none] := by
   native_decide
 
-example : (memory.intervals 16).length = 2 * (memory.supportBelow 16).card + 1 :=
-  memory.intervals_length 16
+example : memory.intervals 16 =
+    [⟨0, 1, 13⟩, ⟨1, 7, 0⟩, ⟨7, 8, 42⟩, ⟨8, 15, 0⟩, ⟨15, 16, 255⟩] := by
+  native_decide
+
+example : (ByteMemory.mk [(0, 9), (1, 9), (2, 9)]).intervals 4 = [⟨0, 3, 9⟩, ⟨3, 4, 0⟩] := by
+  native_decide
+
+example : memory.intervals 0 = [] := by native_decide
 
 example : (memory.intervalAt? 0 0).isSome = false := by native_decide
 

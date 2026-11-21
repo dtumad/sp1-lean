@@ -911,6 +911,13 @@
       "typeFingerprint": "45144818"
     },
     {
+      "bodyFingerprint": "3543159018",
+      "local": false,
+      "module": "Clean.Air.FlatComponent",
+      "name": "Air.Flat.Table.length",
+      "typeFingerprint": "2657263108"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "Clean.Air.FlatComponent",
@@ -3023,6 +3030,13 @@
       "module": "Mathlib.Data.Finset.Defs",
       "name": "Finset.instSetLike",
       "typeFingerprint": "2306622808"
+    },
+    {
+      "bodyFingerprint": "3090067671",
+      "local": false,
+      "module": "Mathlib.Data.Finset.Lattice.Basic",
+      "name": "Finset.instUnion",
+      "typeFingerprint": "357946650"
     },
     {
       "bodyFingerprint": null,
@@ -35067,8 +35081,8 @@
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Export.FixedRamCapacity",
-      "name": "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
-      "typeFingerprint": "3110810333"
+      "name": "SP1Clean.Export.InstalledAssembly.target_ram_changes_of_statement",
+      "typeFingerprint": "191937456"
     },
     {
       "bodyFingerprint": null,
@@ -35076,6 +35090,27 @@
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.trace_of_statement",
       "typeFingerprint": "2204152289"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedImageCapacity",
+      "name": "SP1Clean.Export.fixedPermission_occurrences",
+      "typeFingerprint": "3655483499"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedImageCapacity",
+      "name": "SP1Clean.Export.fixedProgram_occurrences",
+      "typeFingerprint": "3505318909"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedHintCapacity",
+      "name": "SP1Clean.Export.fixed_hint_occurrences",
+      "typeFingerprint": "1657238715"
     },
     {
       "bodyFingerprint": null,
@@ -36651,6 +36686,20 @@
       "module": "SP1Clean.Export.FixedRamCapacity",
       "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity",
       "typeFingerprint": "726134347"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedHintCapacity",
+      "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution.fixed_hint_capacity",
+      "typeFingerprint": "2033762710"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedImageCapacity",
+      "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution.fixed_image_capacity",
+      "typeFingerprint": "2781938276"
     },
     {
       "bodyFingerprint": null,
@@ -60740,11 +60789,11 @@
       "typeFingerprint": "3377243693"
     },
     {
-      "bodyFingerprint": "13763666",
+      "bodyFingerprint": "1556159462",
       "local": true,
-      "module": "SP1Clean.Semantics.Memory.MemoryNormalization",
-      "name": "SP1Clean.Semantics.ByteMemory.canonicalBelow",
-      "typeFingerprint": "536980754"
+      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
+      "name": "SP1Clean.Semantics.ByteMemory.changePoints",
+      "typeFingerprint": "3943847898"
     },
     {
       "bodyFingerprint": "1996176250",
@@ -60761,11 +60810,25 @@
       "typeFingerprint": "419589244"
     },
     {
-      "bodyFingerprint": "1388813103",
+      "bodyFingerprint": "770530987",
       "local": true,
       "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
       "name": "SP1Clean.Semantics.ByteMemory.intervals",
       "typeFingerprint": "421177069"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
+      "name": "SP1Clean.Semantics.ByteMemory.intervals_congr",
+      "typeFingerprint": "986546354"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
+      "name": "SP1Clean.Semantics.ByteMemory.intervals_length_minimal",
+      "typeFingerprint": "2700746019"
     },
     {
       "bodyFingerprint": null,
@@ -61881,6 +61944,34 @@
       "typeFingerprint": "1378553725"
     },
     {
+      "bodyFingerprint": "3602388384",
+      "local": true,
+      "module": "SP1Clean.Semantics.Resources.HintReadDemand",
+      "name": "SP1Clean.Semantics.HintReadDemand.continuing",
+      "typeFingerprint": "434822048"
+    },
+    {
+      "bodyFingerprint": "2953863591",
+      "local": true,
+      "module": "SP1Clean.Semantics.Resources.HintReadDemand",
+      "name": "SP1Clean.Semantics.HintReadDemand.length?",
+      "typeFingerprint": "3349014417"
+    },
+    {
+      "bodyFingerprint": "2774585135",
+      "local": true,
+      "module": "SP1Clean.Semantics.Resources.HintReadDemand",
+      "name": "SP1Clean.Semantics.HintReadDemand.length?.match_1",
+      "typeFingerprint": "2819375395"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Semantics.Resources.HintReadDemand",
+      "name": "SP1Clean.Semantics.HintReadDemand.writeBytes",
+      "typeFingerprint": "659141729"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Semantics.Host.HostIO",
@@ -62987,20 +63078,6 @@
       "typeFingerprint": "3553233433"
     },
     {
-      "bodyFingerprint": "826323468",
-      "local": true,
-      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "SP1Clean.Semantics.MemoryInterval.instDecidableContains",
-      "typeFingerprint": "2810053776"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "SP1Clean.Semantics.MemoryInterval.instDecidableContains._proof_1",
-      "typeFingerprint": "2743292750"
-    },
-    {
       "bodyFingerprint": "98351046",
       "local": true,
       "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
@@ -63027,13 +63104,6 @@
       "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
       "name": "SP1Clean.Semantics.MemoryInterval.value",
       "typeFingerprint": "1496103631"
-    },
-    {
-      "bodyFingerprint": "3392018459",
-      "local": true,
-      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "SP1Clean.Semantics.MemoryInterval.write",
-      "typeFingerprint": "546120665"
     },
     {
       "bodyFingerprint": null,
@@ -97161,6 +97231,20 @@
       "typeFingerprint": "2224809935"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.HintReadCapacity",
+      "name": "SP1Clean.TraceGen.HintReadCapacity.padded_counts_le",
+      "typeFingerprint": "2433080963"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.HintReadCapacity",
+      "name": "SP1Clean.TraceGen.HintReadCapacity.table_counts",
+      "typeFingerprint": "572591018"
+    },
+    {
       "bodyFingerprint": "2180079543",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.HintInventory",
@@ -99558,6 +99642,13 @@
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Math.SP1Field",
+      "name": "SP1Clean.instFactPow17LtSP1Prime",
+      "typeFingerprint": "1823690378"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Math.SP1Field",
       "name": "SP1Clean.instFactPow25LtSP1Prime",
       "typeFingerprint": "1853504208"
     },
@@ -99672,6 +99763,13 @@
       "module": "SP1Clean.Semantics.Sail.SailRun",
       "name": "SP1Clean.runSail",
       "typeFingerprint": "2154538674"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1CleanTest.Alignment.Core.FixedRamCapacity",
+      "name": "SP1CleanTest.FixedRamCapacity.empty_large_ram_provider_height",
+      "typeFingerprint": "2042813410"
     },
     {
       "bodyFingerprint": null,
@@ -100631,6 +100729,13 @@
       "module": "Init.Prelude",
       "name": "UInt64.size",
       "typeFingerprint": "421340980"
+    },
+    {
+      "bodyFingerprint": "3698799469",
+      "local": false,
+      "module": "Init.Core",
+      "name": "Union.union",
+      "typeFingerprint": "3882215297"
     },
     {
       "bodyFingerprint": "434561845",
@@ -102901,32 +103006,25 @@
       "typeFingerprint": "260843149"
     },
     {
-      "bodyFingerprint": "1325355323",
+      "bodyFingerprint": "2740195991",
       "local": true,
       "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.intervalRows",
-      "typeFingerprint": "3146333399"
+      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.runRows",
+      "typeFingerprint": "1952190880"
     },
     {
-      "bodyFingerprint": "879846507",
+      "bodyFingerprint": "2489901839",
       "local": true,
       "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.intervalRows._f",
-      "typeFingerprint": "1392094083"
+      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.runRows._f",
+      "typeFingerprint": "511634476"
     },
     {
-      "bodyFingerprint": "3444946534",
+      "bodyFingerprint": "3809820392",
       "local": true,
       "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.intervalRows.match_1",
-      "typeFingerprint": "606992630"
-    },
-    {
-      "bodyFingerprint": "1390410118",
-      "local": true,
-      "module": "SP1Clean.Semantics.Memory.MemoryIntervals",
-      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.rawIntervals",
-      "typeFingerprint": "421177069"
+      "name": "_private.SP1Clean.Semantics.Memory.MemoryIntervals.0.SP1Clean.Semantics.ByteMemory.runRows.match_1",
+      "typeFingerprint": "171869156"
     },
     {
       "bodyFingerprint": "2868232087",
@@ -104201,7 +104299,18 @@
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
-    "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
+    "SP1Clean.Export.InstalledAssembly.target_ram_changes_of_statement",
+    "SP1Clean.Semantics.ByteMemory.intervals_length_minimal",
+    "SP1Clean.Semantics.ByteMemory.intervals_congr",
+    "SP1Clean.Export.fixedProgram_occurrences",
+    "SP1Clean.Export.fixedPermission_occurrences",
+    "SP1Clean.Export.fixed_hint_occurrences",
+    "SP1Clean.FormalModel.Shard.AdmissibleExecution.fixed_hint_capacity",
+    "SP1Clean.Semantics.HintReadDemand.writeBytes",
+    "SP1Clean.TraceGen.HintReadCapacity.table_counts",
+    "SP1Clean.TraceGen.HintReadCapacity.padded_counts_le",
+    "SP1Clean.FormalModel.Shard.AdmissibleExecution.fixed_image_capacity",
+    "SP1CleanTest.FixedRamCapacity.empty_large_ram_provider_height",
     "SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity",
     "SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement",
     "SP1Clean.FormalModel.Shard.Executes",
