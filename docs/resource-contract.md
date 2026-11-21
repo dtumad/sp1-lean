@@ -143,6 +143,13 @@ permission provider by $2^{29}$ rows at the same ceiling. The whole-assembly pre
 the remaining physical providers, consumers, public operations and padding on each channel.
 [Fixed image capacity](../SP1Clean/Export/FixedImageCapacity.lean)
 
+The source boundary pays an eight-byte length prefix and the actual payload of every initial
+hint. That covers a node and every mandatory padded word in its fixed inventory, including the
+extra word for aligned buffers. For any boundary ceiling at most $p-1$, each source provider has
+at most $2^{28}$ physical rows. Its channel retains exactly one occurrence per row. Fresh nodes
+allocated during the shard have a separate inventory and cost.
+[Fixed hint providers](../SP1Clean/Export/FixedHintCapacity.lean)
+
 ## Representation and retirement
 
 The only complete execution model is `ExecutionPath` over Sail/host/clock, with paired replay and

@@ -4,6 +4,8 @@ import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Export.ShortShardChain
 import SP1CleanTest.Alignment.Core.FixedRamCapacity
 import SP1Clean.Export.FixedImageCapacity
+import SP1Clean.Export.FixedHintCapacity
+import SP1Clean.Proofs.Completeness.HintReadCapacity
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Proofs.Completeness.HintInventory
@@ -152,6 +154,14 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
   ``SP1Clean.Export.InstalledAssembly.target_ram_changes_of_statement,
   ``SP1Clean.Semantics.ByteMemory.intervals_length_minimal,
+  ``SP1Clean.Semantics.ByteMemory.intervals_congr,
+  ``SP1Clean.Export.fixedProgram_occurrences,
+  ``SP1Clean.Export.fixedPermission_occurrences,
+  ``SP1Clean.Export.fixed_hint_occurrences,
+  ``SP1Clean.FormalModel.Shard.AdmissibleExecution.fixed_hint_capacity,
+  ``SP1Clean.Semantics.HintReadDemand.writeBytes,
+  ``SP1Clean.TraceGen.HintReadCapacity.table_counts,
+  ``SP1Clean.TraceGen.HintReadCapacity.padded_counts_le,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution.fixed_image_capacity,
   ``SP1CleanTest.FixedRamCapacity.empty_large_ram_provider_height,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity,
