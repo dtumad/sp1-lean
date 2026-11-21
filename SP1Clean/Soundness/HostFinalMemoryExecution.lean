@@ -36,10 +36,6 @@ abbrev Installed (image : ProgramImage) (source target : ExecutionSnapshot)
     (source_unique_names image source target.sail.memorySnapshot)
     (source_registration image source target.sail.memorySnapshot)
 
-/-- Channels supplied above the complete-memory host proof view. -/
-def externalChannels : List (RawChannel (ZMod p)) :=
-  [CommitmentDeclaration.channel.toRaw, InstructionReceipt.channel.toRaw, OrdinaryObservation.stateChannel.toRaw]
-
 /-- The host and memory proofs consume all except the declaration and ordinary observation protocols. -/
 def ExternallyBalanced (witness : EnsembleWitness (Installed image source target final)) : Prop :=
   ∀ channel ∈ (Installed image source target final).channels,
@@ -57,15 +53,14 @@ theorem baseWitness_hostBalanced (witness : EnsembleWitness (Installed image sou
   intro channel registered visible
   have receipt (ram : Bool) : channel ≠ (FinalMemoryValue.channel ram).toRaw := by
     rintro rfl
-    exact visible (by cases ram <;> simp [HostHintQueueBoundary.hiddenChannels])
+    exact visible (by cases ram <;> simp [HostHintQueueBoundary.hiddenChannels, receiptChannels])
   apply baseWitness_balancedChannel witness channel registered (receipt false) (receipt true)
-    (by rintro rfl; exact visible (by simp [HostHintQueueBoundary.hiddenChannels]))
+    (by rintro rfl; exact visible (by simp [HostHintQueueBoundary.hiddenChannels, receiptChannels]))
   apply balanced
   · exact List.mem_append_left _ registered
   · intro external
     apply visible
-    change channel ∈ _ :: _ :: _ :: externalChannels
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ external))
+    exact List.mem_append_right receiptChannels external
 
 /-- The installed target comparison needs Byte closure and its private Memory channels only. -/
 theorem checkFinal_of_externalBalance

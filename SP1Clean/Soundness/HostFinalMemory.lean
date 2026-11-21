@@ -96,7 +96,7 @@ private theorem base_ram_component :
   FinalReceiptEnsemble.install (base image source target final bankFinal others resources channels names registration)
     false OrderedFinalProvider.registerCircuit
     ⟨⟨3, by rw [base_tables_length]; omega⟩, base_register_component⟩
-    (List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels (by simp))))
+    (List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels (by simp [receiptChannels]))))
 
 private theorem withRegisters_ram_component :
     (withRegisters image source target final bankFinal others resources channels names registration).tables[4]'(by
@@ -125,7 +125,7 @@ private theorem withRegisters_ram_component :
       simp only [withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         List.length_set, base_tables_length]
       omega⟩, withRegisters_ram_component⟩
-    (List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels (by simp))))
+    (List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels (by simp [receiptChannels]))))
 
 /-- The source-to-target change inventory is fixed by the supplied complete snapshots. -/
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
@@ -144,7 +144,7 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (target : Memor
         rcases used with ⟨_, same⟩ | same
         · exact same.symm
         · exact same
-      simp [same])
+      simp [same, receiptChannels])
 
 /-- The original host table block before the target consumers and fixed membership providers, prior to the padding wrapper. -/
 def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)

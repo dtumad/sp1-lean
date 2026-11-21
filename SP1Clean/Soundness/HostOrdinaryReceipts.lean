@@ -49,7 +49,10 @@ class ReceiptRegistered (image : ProgramImage) (source : ExecutionSnapshot)
 instance source_receiptRegistered (image : ProgramImage) (source : ExecutionSnapshot)
     (target : MemorySnapshot) :
     ReceiptRegistered (p := p) image source (HostFinalMemory.sourceChannels target) where
-  registered := by simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
+  registered := by
+    have receipt := HostFinalMemory.external_registered target
+      (show InstructionReceipt.channel.toRaw ∈ HostFinalMemory.externalChannels (p := p) by simp [HostFinalMemory.externalChannels])
+    simp [HostLocalCore.registry, receipt]
 
 private theorem base_length :
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length =

@@ -262,7 +262,7 @@ theorem ordered_history (deferred : Bool)
         (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary).channels := by
     exact List.mem_append_left _ (List.mem_append_left _ (sourceRegistration.boundary (by cases deferred <;> simp)))
   have bank := BalancedInteractions.of_perm (balanced _ member (HostHintQueueBoundary.visible_of_name _ (by
-    cases deferred <;> simp [HostCommitChip.stateChannel, Channel.toRaw]))) (interactions deferred witness)
+    cases deferred <;> exact of_decide_eq_true rfl))) (interactions deferred witness)
   have history := HostCommitBank.ordered_history deferred (bankTables deferred witness)
     (HostCommitEnsemble.sourceValues deferred source.host) (HostCommitEnsemble.sourceValues deferred bankFinal)
     (tables_aligned deferred witness) (fun table member => checked table (physical table member))

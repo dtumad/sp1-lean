@@ -98,15 +98,7 @@ theorem selected_terminal (witness : EnsembleWitness (ensemble image source targ
   have valid := consumer_spec witness checked funded
   have balanced : witness.BalancedChannel SP1Clean.OrdinaryObservation.stateChannel.toRaw := by
     apply funded
-    · change _ ∈ (producers image source target final).channels
-      change _ ∈ (_ ++ [_])
-      apply List.mem_append_left
-      change _ ∈ ((_ ++ [_]) ++ [_])
-      apply List.mem_append_left
-      apply List.mem_append_left
-      change _ ∈ (_ ++ [_])
-      apply List.mem_append_left
-      exact List.mem_append_right _ (List.mem_cons_of_mem _ (by simp [HostFinalMemory.sourceChannels]))
+    · exact external_registered (by simp [HostFinalMemory.externalChannels])
     · simp [SP1Clean.OrdinaryObservation.stateChannel, CommitmentDeclaration.channel, Channel.toRaw]
   let table := observationTable witness 0
   let ordinary := OrdinaryObservation.rows table witness.data

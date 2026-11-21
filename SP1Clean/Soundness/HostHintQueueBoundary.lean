@@ -40,13 +40,11 @@ abbrev BoundaryRegistered (image : ProgramImage) (source : ExecutionSnapshot)
     (channels : List (RawChannel (ZMod p))) : Prop :=
   boundaryChannels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)
 
-private theorem boundary_registered {image : ProgramImage} {source : ExecutionSnapshot}
-    {final : State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-    (registered : BoundaryRegistered image source channels) :
-    (boundary source final bankFinal).circuit.channels ⊆
-      HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels) := by
+omit [Fact (2 ^ 25 < p)] in
+/-- The verifier emits only on the four registered host endpoint protocols. -/
+theorem boundary_channels_subset (source : ExecutionSnapshot) (final : State (ZMod p)) (bankFinal : HostState) :
+    (boundary source final bankFinal).circuit.channels ⊆ boundaryChannels := by
   intro channel used
-  apply registered
   simp only [boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm,
     boundaryChannels, List.mem_cons, List.not_mem_nil, or_false] at used ⊢
   tauto
@@ -66,7 +64,7 @@ private theorem installation_registered (image : ProgramImage) (source : Executi
     (registered : BoundaryRegistered image source channels) :
     (boundary source final bankFinal).circuit.channels ⊆
       (HostHintReadLocal.ensemble image source others resources channels names channelNames tableChannels).channels :=
-  fun _ used => List.mem_append_left _ (boundary_registered registered used)
+  fun _ used => List.mem_append_left _ (registered (boundary_channels_subset source final bankFinal used))
 
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (final : State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
@@ -134,9 +132,7 @@ are installed above the host inventory. The host grounding proofs assume no bala
 comparison (`HostFinalMemory.checkFinal_of_channels`) and statement authentication
 (`CommitmentEnsemble.declared_member`) use their balance, which complete acceptance supplies. -/
 def hiddenChannels : List (RawChannel (ZMod p)) :=
-  [(FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
-    FinalMemoryChange.channel.toRaw, CommitmentDeclaration.channel.toRaw,
-    InstructionReceipt.channel.toRaw, OrdinaryObservation.stateChannel.toRaw]
+  HostFinalMemory.receiptChannels ++ HostFinalMemory.externalChannels
 
 /-- Balance on every registered channel except the hidden ones: the host grounding premise. -/
 def Balanced (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
@@ -150,27 +146,12 @@ theorem Balanced.of_balancedChannels
     (balanced : witness.BalancedChannels) : Balanced witness :=
   fun channel member _ => balanced channel member
 
-/-- The hidden channels' names. -/
-private def hiddenNames : List String :=
-  ["SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange",
-    "sp1.native.commitment_declaration", "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"]
-
 omit [Fact (2 ^ 25 < p)] in
-private theorem hidden_name {hidden : RawChannel (ZMod p)} (member : hidden ∈ hiddenChannels (p := p)) :
-    hidden.name ∈ hiddenNames := by
-  simp only [hiddenChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp [hiddenNames, FinalMemoryValue.channel, FinalMemoryChange.channel,
-      CommitmentDeclaration.channel, InstructionReceipt.channel, OrdinaryObservation.stateChannel,
-      Channel.toRaw]
-
-omit [Fact (2 ^ 25 < p)] in
-/-- No fresh verifier channel of the installed checkers is hidden: no hidden name starts with a
-checker's stem. -/
-private theorem fresh_visible (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
-    (unprefixed : ∀ name ∈ hiddenNames, ¬ stem.toList <+: name.toList) :
-    VerifierChannel.channel stem ens ∉ hiddenChannels (p := p) := fun member =>
-  VerifierChannel.channel_ne_of_not_prefix stem ens (unprefixed _ (hidden_name member)) rfl
+/-- Verifier assertions carry one field element. Every hidden protocol carries a larger message. -/
+private theorem verifier_visible (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO) :
+    VerifierChannel.channel stem ens ∉ hiddenChannels (p := p) := by
+  have absent : 1 ∉ (hiddenChannels (p := p)).map RawChannel.arity := of_decide_eq_true rfl
+  exact fun member => absent (List.mem_map_of_mem (f := RawChannel.arity) member)
 
 theorem projected_constraints
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
@@ -197,8 +178,7 @@ theorem boundary_checks
   have checked := ((boundary source final bankFinal).check_balanced_iff (underlying witness)).mp
     (HaltPadding.balancedChannel witness _ (balanced _ (by simp [ensemble, HaltPadding.install,
       Ensemble.replaceComponent, ClosedVerifier.install])
-      (fresh_visible _ _ (by
-        rw [show (boundary source final bankFinal).name = "host-boundary" from rfl]; decide))))
+      (verifier_visible _ _)))
   simpa only [underlying_data] using checked
 
 theorem source_binding
@@ -224,17 +204,11 @@ theorem boundary_silent (channel : RawChannel (ZMod p)) (different : channel ≠
     List.mem_cons, List.not_mem_nil, different, commit, deferred, terminal, or_self, not_false_eq_true]
 
 omit [Fact (2 ^ 25 < p)] in
-/-- A channel whose name differs from every hidden name is not hidden. -/
+/-- Visibility follows from the names of the actual hidden channels. -/
 theorem visible_of_name (channel : RawChannel (ZMod p))
-    (named : channel.name ∉ ["SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange",
-      "sp1.native.commitment_declaration", "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"]) :
-    channel ∉ hiddenChannels (p := p) := by
-  intro member
-  apply named
-  simp only [hiddenChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp [FinalMemoryValue.channel, FinalMemoryChange.channel, CommitmentDeclaration.channel,
-      InstructionReceipt.channel, OrdinaryObservation.stateChannel, Channel.toRaw]
+    (visible : channel.name ∉ (hiddenChannels (p := p)).map RawChannel.name) :
+    channel ∉ hiddenChannels (p := p) :=
+  fun member => visible (List.mem_map_of_mem (f := RawChannel.name) member)
 
 /-- The complete HostCall handoff is unchanged by the queue, bank and exit endpoints. -/
 theorem projected_hostCall_balancedChannel
@@ -248,7 +222,7 @@ theorem projected_hostCall_balancedChannel
       (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [HostCallChip.channel, HostExitBoundary.channel, Channel.toRaw])
-  · exact visible_of_name _ (by simp [HostCallChip.channel, Channel.toRaw])
+  · exact visible_of_name _ (of_decide_eq_true rfl)
 
 /-- Per-call word cursors have no traffic in the queue, bank or terminal boundary. -/
 theorem projected_cursor_balancedChannel
@@ -263,7 +237,7 @@ theorem projected_cursor_balancedChannel
       (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [HintReadWordChip.stateChannel, HostExitBoundary.channel, Channel.toRaw])
-  · exact visible_of_name _ (by simp [HintReadWordChip.stateChannel, Channel.toRaw])
+  · exact visible_of_name _ (of_decide_eq_true rfl)
 
 /-- Write permissions are untouched by queue, bank and terminal endpoint traffic. -/
 theorem projected_permission_balancedChannel
@@ -278,7 +252,7 @@ theorem projected_permission_balancedChannel
       (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [WritePermissionProvider.channel, HostExitBoundary.channel, Channel.toRaw])
-  · exact visible_of_name _ (by simp [WritePermissionProvider.channel, Channel.toRaw])
+  · exact visible_of_name _ (of_decide_eq_true rfl)
 
 /-- Queue, bank and terminal endpoints retain the fixed writable-interval ledger unchanged. -/
 theorem projected_permission_membership_balancedChannel
@@ -291,8 +265,9 @@ theorem projected_permission_membership_balancedChannel
   · apply boundary_silent
     all_goals simp [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows,
       stateChannel, HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
-  · exact visible_of_name _ (by simp [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows,
-      Channel.toRaw])
+  · apply visible_of_name
+    simp only [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw_name]
+    exact of_decide_eq_true rfl
 
 private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
@@ -345,7 +320,7 @@ theorem record_channels
       (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [Channels.byteChannel, HostExitBoundary.channel, Channel.toRaw])
-  · exact visible_of_name _ (by simp [Channels.byteChannel, Channel.toRaw])
+  · exact visible_of_name _ (of_decide_eq_true rfl)
   · apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
       (by simp [receiver])
     simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
@@ -353,7 +328,7 @@ theorem record_channels
       (by simp [nodeChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [nodeChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [nodeChannel, HostExitBoundary.channel, Channel.toRaw])
-  · exact visible_of_name _ (by simp [nodeChannel, Channel.toRaw])
+  · exact visible_of_name _ (of_decide_eq_true rfl)
   · apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
       (by simp [receiver])
     simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
@@ -361,16 +336,15 @@ theorem record_channels
       (by simp [wordChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [wordChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [wordChannel, HostExitBoundary.channel, Channel.toRaw])
-  · exact visible_of_name _ (by simp [wordChannel, Channel.toRaw])
+  · exact visible_of_name _ (of_decide_eq_true rfl)
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem boundary_checker_silent (base : Ensemble (ZMod p) SP1PublicIO) :
     (LocalSourceBoundary.checker image source).channel base ∉
       (boundary source final bankFinal).circuit.channels := by
-  apply boundary_silent
-  all_goals exact VerifierChannel.channel_ne_of_not_prefix "sp1.local.source" _ (by
-    simp only [stateChannel, HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
-    decide)
+  have absent : 1 ∉ (boundaryChannels (p := p)).map RawChannel.arity := of_decide_eq_true rfl
+  exact fun used => absent (List.mem_map_of_mem (f := RawChannel.arity)
+    (boundary_channels_subset source final bankFinal used))
 
 /-- Source authentication and CPU chronology survive removal of the host-only endpoints. -/
 theorem projected_orderingChannels
@@ -384,8 +358,7 @@ theorem projected_orderingChannels
   · apply projected_balancedChannel witness balanced
     · exact List.mem_append_right _ (List.mem_singleton_self _)
     · exact boundary_checker_silent _
-    · exact fresh_visible _ _ (by
-        rw [show (LocalSourceBoundary.checker image source).name = "sp1.local.source" from rfl]; decide)
+    · exact verifier_visible _ _
   · exact projected_core_balancedChannel witness balanced _
       (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
 
@@ -433,7 +406,7 @@ theorem queue_balanced
     (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
   have ledger := BalancedInteractions.of_perm
     (balanced stateChannel.toRaw (List.mem_append_left _ registered)
-      (visible_of_name _ (by simp [stateChannel, Channel.toRaw])))
+      (visible_of_name _ (of_decide_eq_true rfl)))
     (interactions_split witness stateChannel.toRaw registered)
   have extra : (extraTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr

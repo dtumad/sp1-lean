@@ -340,7 +340,7 @@ theorem receipts
       (if source.host.exitCode = none then bankFinal.exitCode.toList.map HostExitBoundary.encode else []) := by
   apply balanced_receipts
   apply BalancedInteractions.of_perm (balanced HostExitBoundary.channel.toRaw ?_
-    (HostHintQueueBoundary.visible_of_name _ (by simp [HostExitBoundary.channel, Channel.toRaw])))
+    (HostHintQueueBoundary.visible_of_name _ (of_decide_eq_true rfl)))
     (interactions witness constraints balanced)
   exact List.mem_append_left _ (List.mem_append_left _ (sourceRegistration.boundary (by simp)))
 

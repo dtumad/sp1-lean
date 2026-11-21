@@ -170,11 +170,8 @@ theorem base_verifier_private (channel : RawChannel (ZMod p))
       (List.mem_append_right _ (List.mem_append_right _ (List.mem_append_right _ member))) used
   have registered : channel ∈ original.channels := List.mem_append_left _ declared
   have boundaryRegistered : (HostHintQueueBoundary.boundary source final bankFinal).circuit.channels ⊆ original.channels := by
-    intro selected used
-    apply List.mem_append_left _ (registration.boundary ?_)
-    by_contra absent
-    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at absent
-    exact HostHintQueueBoundary.boundary_silent selected absent.1 absent.2.1 absent.2.2.1 absent.2.2.2 used
+    exact fun _ used => List.mem_append_left _ (registration.boundary
+      (HostHintQueueBoundary.boundary_channels_subset source final bankFinal used))
   change ((HostHintQueueBoundary.boundary source final bankFinal).install original boundaryRegistered).verifierOperations.interactionValuesWith
     channel env = []
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ original boundaryRegistered env channel registered]
