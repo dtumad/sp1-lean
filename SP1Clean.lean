@@ -9,6 +9,7 @@ import SP1Clean.Export.InstalledOrdinaryPreset
 import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
+import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Export.OrdinaryRowCapacity
 import SP1Clean.Export.InstalledVerifierCapacity
 import SP1Clean.Export.InstalledHintAssembly
@@ -105,6 +106,7 @@ import SP1Clean.Soundness.WriteObservationHistory
 import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
+import SP1Clean.Proofs.Completeness.WriteProbeDemand
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Proofs.Sail.Advance
