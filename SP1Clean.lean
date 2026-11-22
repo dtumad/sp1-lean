@@ -1,9 +1,12 @@
 import SP1Clean.Core
+import SP1Clean.Export.CompiledOrdinaryPreset
 import SP1Clean.Export.FixedHintAssembly
 import SP1Clean.Export.InstalledAssembly
 import SP1Clean.Export.InstalledCapacity
 import SP1Clean.Export.InstalledFixedInventory
 import SP1Clean.Export.InstalledFixedPreset
+import SP1Clean.Export.InstalledOrdinaryPreset
+import SP1Clean.Export.OrdinaryRowCapacity
 import SP1Clean.Export.InstalledVerifierCapacity
 import SP1Clean.Export.InstalledHintAssembly
 import SP1Clean.Export.FixedHintCapacity
@@ -84,7 +87,13 @@ import SP1Clean.Proofs.Completeness.HintReadLedger
 import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.Proofs.Completeness.ReleaseInstructionRows
+import SP1Clean.Proofs.Completeness.InstalledInstructionTables
+import SP1Clean.Proofs.Completeness.MixedInstructionTables
+import SP1Clean.Proofs.Completeness.OrdinaryBucketCapacity
 import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
+import SP1Clean.Soundness.WriteObservationHistory
+import SP1Clean.Proofs.Completeness.WriteObservationCuts
+import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory
