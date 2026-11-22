@@ -70,4 +70,37 @@ theorem routeMixedRows?_at {host : HostPolicy} {program : GuestProgram} {frontie
         exact ⟨s, f, next, by simpa [mixedAccessStep, emitMixedAccessStep?, step] using reached, replay,
           by cases event <;> exact atRow⟩
 
+private theorem routeMixedRows_of_fold {host : HostPolicy} {program : GuestProgram}
+    {events : List ExecutionEvent} {current : ExecutionState} {frontier : AccessFrontier}
+    {final : ExecutionState × AccessFrontier}
+    (done : events.foldlM (mixedAccessStep host program) (current, frontier) = some final) :
+    ∃ rows, routeMixedRows? host program frontier current events = some rows ∧ rows.length = events.length := by
+  induction events generalizing current frontier with
+  | nil => exact ⟨[], rfl, rfl⟩
+  | cons event later ih =>
+    simp only [List.foldlM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff] at done
+    obtain ⟨⟨next, outgoing⟩, step, finished⟩ := done
+    obtain ⟨tail, routed, length⟩ := ih finished
+    simp only [mixedAccessStep, emitMixedAccessStep?, Option.bind_eq_bind, Option.bind_eq_some_iff] at step
+    obtain ⟨middle, replay, built⟩ := step
+    cases event with
+    | ordinary =>
+      simp only [Option.bind_eq_some_iff, Option.some.injEq, Prod.mk.injEq] at built
+      obtain ⟨view, seen, row, made, rfl, rfl⟩ := built
+      exact ⟨.ordinary row :: tail, by simp [routeMixedRows?, emitMixedAccessStep?, replay, seen, made, routed],
+        by simp [length]⟩
+    | syscall call =>
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj built)
+      exact ⟨.syscall frontier current.clock call :: tail,
+        by simp [routeMixedRows?, emitMixedAccessStep?, replay, routed], by simp [length]⟩
+
+/-- A genuine mixed execution compiles to one entry for every event in chronological order. -/
+theorem admissibleExecution_routeMixedRows {limits : ResourceLimits} {p : ℕ}
+    {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (execution : AdmissibleExecution limits p image source target events) :
+    ∃ rows, routeMixedRows? (policy p image) image.program AccessFrontier.initial source.realize events = some rows ∧
+      rows.length = events.length := by
+  obtain ⟨_, _, _, ran, _⟩ := admissibleExecution_mixedAccessPrefix execution events.length
+  exact routeMixedRows_of_fold (by simpa only [mixedAccessPrefix, List.take_length] using ran)
+
 end SP1Clean.TraceGen
