@@ -218,13 +218,27 @@ ceiling to `2^29 + 124` bytes and cumulative write ceiling to `2^24` bytes. On a
 mixed path within that preset, the full verifier, all ten fixed providers and all three
 demand-padded HINT_READ tables fit together. The verifier emits one pull per changed native
 location, whose count is bounded by 32 register locations plus the two actual RAM supports.
-These 13 tables leave at least 822,082,528 occurrences on every registered channel.
-The same preset also pays for all 25 ordinary instruction tables with their protected store
-requests and successor receipts. Each event enters exactly one chronological bucket. The sum
-of the 25 independently rounded heights is at most twice the ordinary event count. The actual
-verifier and 38 tables together leave at least 293,600,224 occurrences on every channel.
-Capacity for the remaining tables depends on their simultaneous use of that allowance.
-[Installed verifier capacity](../SP1Clean/Export/InstalledVerifierCapacity.lean) · [38-table bound](../SP1Clean/Export/InstalledOrdinaryPreset.lean) · [Constructed physical heights](../SP1Clean/Export/CompiledOrdinaryPreset.lean)
+Each ordinary event enters one of 25 chronological instruction buckets. Their independently
+padded heights sum to at most twice the ordinary count. The observation consumer has one
+active row per ordinary event, and the authenticated endpoints select one row across its three
+terminal tables. [Constructed ordinary heights](../SP1Clean/Export/CompiledOrdinaryPreset.lean) · [Observation tables](../SP1Clean/Export/InstalledObservationPreset.lean)
+
+| Installed tables covered alongside the verifier | Total tables covered | Minimum remaining occurrences per channel |
+|---|---:|---:|
+| Ten fixed providers and three HINT_READ tables | 13 | 822,082,528 |
+| Also the protected ordinary instruction tables | 38 | 293,600,224 |
+| Also the observation consumer and three terminal modes | 42 | 285,211,616 |
+| Also MemoryBump and StateBump | 44 | 222,297,056 |
+
+The mixed compiler records the raw CPU-state push and ordered register refreshes at each tape
+position. A register access can refresh its preceding timestamp once, with at most three
+refreshes per instruction or ECALL. A StateBump is selected exactly when the clock low limb
+reaches `2^24` or either of the two lower PC limbs reaches `2^16`. A maximal upper clock or PC limb admits a lower-limb carry that
+stops before reaching it. A carry into an already maximal upper limb exceeds 48 bits. At the preset the two
+physical table heights are at most `2^23` for MemoryBump and `2^21` for StateBump. Both emit
+six Byte occurrences per physical row, including padding. Each emits two occurrences on its
+own Memory or State channel. Their constructed rows satisfy both circuits on shared prover data.
+Capacity for the other 56 tables depends on their combined channel use. [Carry boundary examples](../SP1CleanTest/Alignment/Core/MixedStateBumpEdges.lean) · [Mixed bump inventory](../SP1Clean/Proofs/Completeness/MixedBumpInventory.lean) · [Physical tables](../SP1Clean/Export/InstalledBumpTables.lean) · [44-table bound](../SP1Clean/Export/InstalledBumpPreset.lean)
 
 At the native field, each released mixed execution supplies the 25 physical ordinary tables.
 Their active rows carry the displaced values and timestamps from the mixed execution prefix.
