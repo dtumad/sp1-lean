@@ -192,6 +192,40 @@ theorem wordTable_permissions (last : Bool) (entries : List Entry) (data : Prove
   rw [row_activity] at eq
   exact eq
 
+private theorem eval_ram_message (env : Environment F) (input : Var Inputs F) :
+    Eval.eval env input.ram.message = (Eval.eval env input).ram.message := by
+  rcases input with ⟨⟨⟨_, _⟩, _, _, _, _, _, _, _⟩, _, _, _, _⟩
+  simp only [HostRamAccessChip.Inputs.message, HostRamAccessChip.Inputs.clockLow, circuit_norm]
+
+/-- The local host-RAM channel has the matching push and pull of the identical record for every
+physical transfer, even when the row is disabled. -/
+theorem wordTable_hostRam (last : Bool) (entries : List Entry) (data : ProverData F) (height) :
+    (wordTable last entries data height).interactionsWith HostRamAccessChip.channel.toRaw =
+      (physicalInputs last entries).flatMap fun row =>
+        [HostRamAccessChip.channel.pushedIfValue row.2 row.1.ram.message,
+          HostRamAccessChip.channel.pulledIfValue row.2 row.1.ram.message] := by
+  apply table_ledger
+  intro env
+  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change (((circuit last).main (varFromOffset RowInput 0)).operations (size RowInput)).interactionValuesWith
+    HostRamAccessChip.channel.toRaw env = _
+  rw [guarded_access_values, eval_ram_message, Guarded.eval_activity, eval_varFromOffset_valueFromOffset]
+  exact congrArg (fun input : Inputs F => [HostRamAccessChip.channel.pushedIfValue
+    (valueFromOffset RowInput 0 env).2 input.ram.message, HostRamAccessChip.channel.pulledIfValue
+      (valueFromOffset RowInput 0 env).2 input.ram.message]) (HintReadCoverage.eval_rowInput (last, env))
+
+/-- The complete generated host-RAM transfer ledger is locally balanced for every key. -/
+theorem wordTable_hostRam_closed (last : Bool) (entries : List Entry) (data : ProverData F) (height) :
+    LogUpBalanced ((wordTable last entries data height).interactionsWith HostRamAccessChip.channel.toRaw) := by
+  rw [wordTable_hostRam]
+  intro msg
+  induction physicalInputs last entries with
+  | nil => rfl
+  | cons row rows ih =>
+    rw [List.flatMap_cons, balanceOf_append, ih, add_zero]
+    by_cases selected : (toElements row.1.ram.message).toArray = msg <;>
+      simp [balanceOf, Channel.pulledIfValue, Channel.pushedIfValue, Interaction.signedMult, selected]
+
 /-- Both variants have kernel-checked constraints and guarantees for the actual full tape and
 their exact independently rounded heights, with no supplied row evidence or height bound. -/
 theorem tables_of_admissibleExecution {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
