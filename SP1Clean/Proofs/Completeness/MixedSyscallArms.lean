@@ -72,7 +72,8 @@ private theorem word_fieldBound {n : ℕ} (bounded : n < SP1Prime) :
     rfl
   · rw [wordOfNat_one, Nat.mod_eq_of_lt limb, ZMod.val_natCast_of_lt (limb.trans (by decide)), wordOfNat_zero]
     change _ < 32512 ∨ _ = 32512 ∧ _ = 0
-    change n < 2130706433 at bounded
+    rw [show SP1Prime = fieldLimbBound * 2 ^ 16 + 1 from rfl] at bounded
+    unfold fieldLimbBound at bounded
     by_cases lt : n / 2 ^ 16 < 32512
     · exact Or.inl lt
     · refine Or.inr ⟨by omega, ?_⟩
