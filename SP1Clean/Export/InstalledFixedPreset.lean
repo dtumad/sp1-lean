@@ -160,7 +160,8 @@ theorem hintRead_occurrences_le (ctx : Context) {events : List ExecutionEvent}
 def verifierOccurrences (ctx : Context) (name : String) : ℕ :=
   (assembly ctx).verifierOperations.interactions.countP (·.channel.name == name)
 
-private theorem total_count (ctx : Context) (rows : Component Fp → ℕ) (name : String) :
+/-- Each channel pays its verifier cost plus its actual weighted table heights. -/
+theorem total_count (ctx : Context) (rows : Component Fp → ℕ) (name : String) :
     (assembly ctx).interactionCount name (physicalHeights ctx rows) =
       verifierOccurrences ctx name + additionalOccurrences ctx rows name := by
   simp only [Ensemble.interactionCount, physicalHeights, verifierOccurrences, additionalOccurrences, rowOccurrences]
