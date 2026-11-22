@@ -1,3 +1,4 @@
+import SP1Clean.Export.InstalledBoundaryGrowth
 import Lean
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.WriteProbeCapacity
@@ -191,6 +192,9 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.syscallInstruction_stateMessages,
   ``SP1Clean.TraceGen.admissibleExecution_mixedBumpInventory,
   ``SP1Clean.Export.InstalledAssembly.bump_constructed_tables,
+  ``SP1Clean.Export.InstalledAssembly.ExecutionFacts.prefix_boundary_growth,
+  ``SP1Clean.Export.InstalledAssembly.fixedProvider_native_soundnessTarget,
+  ``SP1Clean.Export.InstalledAssembly.native_soundnessTarget_of_boundary_budget,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_bump_base_fits,
   ``SP1CleanTest.MixedStateBumpEdges.low_pc_carry_at_full_upper_limbs,
   ``SP1CleanTest.MixedStateBumpEdges.clock_carry_into_last_window,

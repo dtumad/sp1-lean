@@ -35330,6 +35330,13 @@
       "typeFingerprint": "722827036"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.InstalledBoundaryGrowth",
+      "name": "SP1Clean.Export.InstalledAssembly.ExecutionFacts.prefix_boundary_growth",
+      "typeFingerprint": "101948070"
+    },
+    {
       "bodyFingerprint": "746068900",
       "local": true,
       "module": "SP1Clean.Export.InstalledHintAssembly",
@@ -35598,6 +35605,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.InstalledBoundaryGrowth",
+      "name": "SP1Clean.Export.InstalledAssembly.fixedProvider_native_soundnessTarget",
+      "typeFingerprint": "2859888554"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.header_of_statement",
       "typeFingerprint": "1462121111"
@@ -35650,6 +35664,13 @@
       "module": "SP1Clean.Export.ShortShard",
       "name": "SP1Clean.Export.InstalledAssembly.native_short_soundnessTarget",
       "typeFingerprint": "2713520275"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.InstalledBoundaryGrowth",
+      "name": "SP1Clean.Export.InstalledAssembly.native_soundnessTarget_of_boundary_budget",
+      "typeFingerprint": "721674686"
     },
     {
       "bodyFingerprint": "3079730973",
@@ -110022,6 +110043,9 @@
     "SP1Clean.TraceGen.syscallInstruction_stateMessages",
     "SP1Clean.TraceGen.admissibleExecution_mixedBumpInventory",
     "SP1Clean.Export.InstalledAssembly.bump_constructed_tables",
+    "SP1Clean.Export.InstalledAssembly.ExecutionFacts.prefix_boundary_growth",
+    "SP1Clean.Export.InstalledAssembly.fixedProvider_native_soundnessTarget",
+    "SP1Clean.Export.InstalledAssembly.native_soundnessTarget_of_boundary_budget",
     "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_bump_base_fits",
     "SP1CleanTest.MixedStateBumpEdges.low_pc_carry_at_full_upper_limbs",
     "SP1CleanTest.MixedStateBumpEdges.clock_carry_into_last_window",

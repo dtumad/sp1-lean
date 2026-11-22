@@ -76,6 +76,9 @@ EXPECTED_ROOTS = {
     "SP1Clean.TraceGen.syscallInstruction_stateMessages",
     "SP1Clean.TraceGen.admissibleExecution_mixedBumpInventory",
     "SP1Clean.Export.InstalledAssembly.bump_constructed_tables",
+    "SP1Clean.Export.InstalledAssembly.ExecutionFacts.prefix_boundary_growth",
+    "SP1Clean.Export.InstalledAssembly.fixedProvider_native_soundnessTarget",
+    "SP1Clean.Export.InstalledAssembly.native_soundnessTarget_of_boundary_budget",
     "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_bump_base_fits",
     "SP1CleanTest.MixedStateBumpEdges.low_pc_carry_at_full_upper_limbs",
     "SP1CleanTest.MixedStateBumpEdges.clock_carry_into_last_window",
@@ -136,7 +139,7 @@ def main() -> int:
     if not args.no_build:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
-             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShortShardChain",
+             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShortShardChain", "SP1Clean.Export.InstalledBoundaryGrowth",
              "SP1Clean.Export.InstalledHintCompleteness", "SP1Clean.Soundness.HostRegisteredCalls",
              "SP1Clean.Proofs.Completeness.PublicHeader", "SP1Clean.Proofs.Completeness.MixedInstructionBuckets",
              "SP1Clean.Proofs.Completeness.MixedInstructionTables", "SP1Clean.Proofs.Completeness.WriteObservationCuts",
