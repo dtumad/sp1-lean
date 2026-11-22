@@ -191,7 +191,8 @@ contains one ordinary instruction. Its complete release statement follows from t
 endpoints. A running-to-stopped shard with fewer than 272 elapsed ticks contains exactly one
 HALT, whose argument yields the public exit code. A chain of the shorter ordinary shards
 retains each local release statement and concatenates their tapes across the complete
-boundaries. Each shard keeps its own resource limits.
+boundaries. These two endpoint clock conditions give instances of the public capstone
+`SoundnessTarget` at any accepted header and table heights. Each shard keeps its own resource limits.
 [Short-shard and HALT theorems](../SP1Clean/Export/ShortShard.lean) ·
 [Chain theorem](../SP1Clean/Export/ShortShardChain.lean)
 
@@ -211,6 +212,15 @@ these three tables, permission occurrences cost at most twice the charged write 
 ledger at most half, and Byte at most six times. Other producers and the providers also use
 these shared channels. Whole-assembly capacity still requires their combined physical counts.
 [Semantic charge](../SP1Clean/Semantics/Resources/HintReadDemand.lean) · [Physical bounds](../SP1Clean/Proofs/Completeness/HintReadCapacity.lean)
+
+`fixedProviderPreset` retains the native event and tick ceilings and sets the boundary payload
+ceiling to `2^29 + 124` bytes and cumulative write ceiling to `2^24` bytes. On any admissible
+mixed path within that preset, the full verifier, all ten fixed providers and all three
+demand-padded HINT_READ tables fit together. The verifier emits one pull per changed native
+location, whose count is bounded by 32 register locations plus the two actual RAM supports.
+At least 822,082,528 further occurrences per registered channel remain available to the other
+tables. Their simultaneous use of that space must still be derived from their constructors.
+[Installed verifier and table capacity](../SP1Clean/Export/InstalledVerifierCapacity.lean)
 
 The physical `tableRows` and
 `channelOccurrences` ceilings have actual witness consumers through `PhysicalFits`; they are
@@ -239,8 +249,11 @@ access projection at every ordinary position. `Proofs/Completeness/SemanticAcces
 then derives event extraction, role ordering, valid refreshes and the outgoing frontier invariant
 for all 25 routed families. The family lemmas inspect the existing router and constructors;
 `instructionAccessSlots` only erases values from the canonical plan. No second instruction model
-or path is introduced. The old readiness wrappers remain for legacy consumers; extraction
-readiness is now derived, while per-chip event validity and all-table mixed assembly remain A6.
+or path is introduced. The release execution supplies the registered event validity for all
+25 ordinary families at every cut, using the preceding mixed access frontier. Each active
+link takes its bound from the release statement and each memory instruction obtains span and
+alignment from the decoded access. The complete mixed table construction and its joint ledgers
+remain A6. [Mixed instruction rows](../SP1Clean/Proofs/Completeness/ReleaseInstructionRows.lean)
 
 Native range/resource strengthening does not by itself establish agreement with released SP1.
 The native proofs and Rust comparison tests have separate scopes.

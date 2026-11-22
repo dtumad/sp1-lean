@@ -2,6 +2,9 @@ import Lean
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Proofs.Completeness.PublicHeader
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
+import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
+import SP1Clean.Proofs.Completeness.WriteObservations
+import SP1Clean.Export.InstalledVerifierCapacity
 import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Export.ShortShardChain
@@ -134,6 +137,7 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
   ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
   ``SP1Clean.Export.InstalledAssembly.header_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.native_short_soundnessTarget,
   ``SP1Clean.Export.InstalledAssembly.native_resources_of_statement,
   ``SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement,
   ``SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak,
@@ -144,10 +148,17 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
   ``SP1Clean.TraceGen.statementExecution_headerChecks,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_base_fits,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_capacity,
+  ``SP1Clean.Export.InstalledAssembly.interactionsFit_grow_iff,
+  ``SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff,
+  ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
+  ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets,
   ``SP1Clean.FormalModel.Shard.Executes.header_halt,
   ``SP1Clean.TraceGen.HintReadTransfers.of_admissibleExecution,
   ``SP1Clean.TraceGen.HintReadTransfers.tables_cursor_closed,
   ``SP1Clean.TraceGen.admissibleExecution_compile_from_prefix,
+  ``SP1Clean.TraceGen.releaseAdmissibleExecution_compile_from_prefix,
   ``SP1Clean.TraceGen.admissibleExecution_historicalHintCapacity,
   ``SP1Clean.TraceGen.admissibleExecution_observationWitness,
   ``SP1Clean.TraceGen.admissibleExecution_observationData,

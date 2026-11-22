@@ -1,6 +1,10 @@
 import SP1Clean.Core
 import SP1Clean.Export.FixedHintAssembly
 import SP1Clean.Export.InstalledAssembly
+import SP1Clean.Export.InstalledCapacity
+import SP1Clean.Export.InstalledFixedInventory
+import SP1Clean.Export.InstalledFixedPreset
+import SP1Clean.Export.InstalledVerifierCapacity
 import SP1Clean.Export.InstalledHintAssembly
 import SP1Clean.Export.FixedHintCapacity
 import SP1Clean.Export.FixedImageCapacity
@@ -79,6 +83,9 @@ import SP1Clean.Proofs.Completeness.HintReadTables
 import SP1Clean.Proofs.Completeness.HintReadLedger
 import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
+import SP1Clean.Proofs.Completeness.ReleaseInstructionRows
+import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
+import SP1Clean.Proofs.Completeness.WriteObservations
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Proofs.Sail.Advance
