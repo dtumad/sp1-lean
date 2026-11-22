@@ -1,5 +1,6 @@
 import Lean
 import SP1Clean.Export.InstalledBumpTables
+import SP1Clean.Export.WriteProbeCapacity
 import SP1CleanTest.Alignment.Core.MixedStateBumpEdges
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Proofs.Completeness.PublicHeader
@@ -21,6 +22,7 @@ import SP1Clean.Proofs.Completeness.HintInventory
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Completeness.ObservationData
 import SP1Clean.Proofs.Completeness.MixedInstructionTables
+import SP1Clean.Proofs.Completeness.MixedSyscallRows
 import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Export.CompiledOrdinaryPreset
 
@@ -158,6 +160,8 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.interactionsFit_grow_iff,
   ``SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff,
   ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
+  ``SP1Clean.TraceGen.WriteObservations.packets_at,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_probe_bound,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionTables,
   ``SP1Clean.TraceGen.InstalledInstructionTables.generation_padding,
@@ -173,6 +177,11 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.admissibleExecution_ordinaryPushedState,
   ``SP1Clean.TraceGen.MixedBumpInput.stateBump?_eq_none_iff,
   ``SP1Clean.TraceGen.routeBumpInputs?_at,
+  ``SP1Clean.TraceGen.admissibleExecution_routeMixedRows,
+  ``SP1Clean.TraceGen.routeMixedRows?_at,
+  ``SP1Clean.TraceGen.admissibleExecution_syscallInstruction,
+  ``SP1Clean.TraceGen.admissibleExecution_syscallInputs,
+  ``SP1Clean.TraceGen.syscallInstruction_stateMessages,
   ``SP1Clean.TraceGen.admissibleExecution_mixedBumpInventory,
   ``SP1Clean.Export.InstalledAssembly.bump_constructed_tables,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_bump_base_fits,

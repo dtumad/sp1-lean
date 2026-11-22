@@ -17,6 +17,8 @@ mod execution;
 #[allow(dead_code)]
 #[path = "support/export.rs"]
 mod export_support;
+#[path = "support/host.rs"]
+mod host;
 
 use clean_backend::witness_generation::{generate, Program};
 use clean_backend::GeneratedAirSpec;
@@ -42,15 +44,7 @@ fn commitment_execution<P: Program<F> + GeneratedAirSpec>(
     deferred: bool,
     stopped: bool,
 ) {
-    use slop_air::Air;
-    use slop_algebra::AbstractField;
-    use slop_matrix::Matrix as _;
-    use sp1_core_executor::{
-        ExecutionRecord, Instruction, Opcode, Program as Sp1Program, SyscallCode,
-    };
-    use sp1_core_machine::{syscall::instructions::SyscallInstrsChip, SupervisorMode};
-    use sp1_hypercube::air::MachineAir;
-    use sp1_primitives::SP1Field as S;
+    use sp1_core_executor::{Instruction, Opcode, Program as Sp1Program, SyscallCode};
 
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
@@ -202,20 +196,12 @@ fn commitment_execution<P: Program<F> + GeneratedAirSpec>(
     if stopped {
         assert_eq!(executor.registers()[5], 0);
     }
-    // Check the released AIR on real released rows and its own shard public values.
-    let chip = SyscallInstrsChip::<SupervisorMode>::default();
-    let trace = chip.generate_trace(record, &mut ExecutionRecord::default());
-    for row in trace.values.chunks(trace.width()) {
-        let mut check = export_support::Sp1Evaluation {
-            row: row.to_vec(),
-            preprocessed: vec![],
-            constraints: vec![],
-            ledger: vec![],
-            public: record.public_values.to_vec::<S>(),
-        };
-        chip.eval(&mut check);
-        assert!(check.constraints.iter().all(|value| *value == S::zero()));
-    }
+    host::check_host_instructions(
+        record,
+        (first, 9),
+        count + usize::from(stopped),
+        &native.tables[58],
+    );
 }
 
 #[test]

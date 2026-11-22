@@ -1,3 +1,4 @@
+import SP1Clean.Proofs.Completeness.MixedCompiledRows
 import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
 import SP1Clean.Proofs.Completeness.MixedStateSchedule
 
@@ -146,19 +147,20 @@ private theorem compiled_memoryBumps_length_le {view : SP1TransitionView} {front
   simp only [List.length_map] at len
   exact (schedule_refresh_count row.schedule).trans len.le
 
-/-- Collect both bump projections in one pass over the same compiler and timestamp frontier
-used for ordinary routing. The index in the output is the original tape cut. -/
-noncomputable def routeBumpInputs? (host : HostPolicy) (program : GuestProgram) :
-    AccessFrontier → ExecutionState → List ExecutionEvent → Option (List MixedBumpInput)
-  | _, _, [] => some []
-  | frontier, current, event :: later =>
-    emitMixedAccessStep? host program (current, frontier) event
-      (fun next row => do
-        let tail ← routeBumpInputs? host program row.nextFrontier next later
-        return .ofOrdinary row :: tail)
-      (fun next call => do
-        let tail ← routeBumpInputs? host program (syscallFrontier frontier current.clock call) next later
-        return .ofSyscall frontier current.clock call :: tail)
+namespace MixedCompiledRow
+
+/-- Project the raw State send and ordered memory refreshes from one compiled event. -/
+def bumpInput : MixedCompiledRow → MixedBumpInput
+  | .ordinary row => .ofOrdinary row
+  | .syscall frontier base call => .ofSyscall frontier base call
+
+end MixedCompiledRow
+
+/-- Project both bump inventories from the compiled tape before bucketing or padding. -/
+noncomputable def routeBumpInputs? (host : HostPolicy) (program : GuestProgram)
+    (frontier : AccessFrontier) (current : ExecutionState) (events : List ExecutionEvent) :
+    Option (List MixedBumpInput) :=
+  (routeMixedRows? host program frontier current events).map (List.map MixedCompiledRow.bumpInput)
 
 /-- Every collected position uses the frontier of its exact prefix and the row of its official
 semantic successor. An ECALL retains its actual released register plan and raw state projection. -/
@@ -173,88 +175,56 @@ theorem routeBumpInputs?_at {host : HostPolicy} {program : GuestProgram} {fronti
       | .ordinary => ∃ view row, projectSP1Transition? program ⟨before.sail, ⟨.ordinary, next.sail⟩⟩ = some view ∧
           compileInstructionEvent? view incoming before.clock = some row ∧ inputs[cut]? = some (.ofOrdinary row)
       | .syscall call => inputs[cut]? = some (.ofSyscall incoming before.clock call) := by
-  induction events generalizing current frontier inputs cut with
-  | nil => simp at present
-  | cons head tail ih =>
-    simp only [routeBumpInputs?, emitMixedAccessStep?, Option.bind_eq_bind, Option.bind_eq_some_iff] at routed
-    obtain ⟨middle, step, built⟩ := routed
-    cases head with
-    | ordinary =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at built
-      obtain ⟨view, seen, row, made, later, rest, rfl⟩ := built
-      cases cut with
-      | zero =>
-        cases present
-        exact ⟨current, frontier, middle, rfl, step, view, row, seen, made, rfl⟩
-      | succ cut =>
-        obtain ⟨s, f, next, reached, replay, atRow⟩ := ih rest present
-        exact ⟨s, f, next, by simpa [mixedAccessStep, emitMixedAccessStep?, step, seen, made] using reached, replay,
-          by cases event <;> exact atRow⟩
-    | syscall call =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at built
-      obtain ⟨later, rest, rfl⟩ := built
-      cases cut with
-      | zero =>
-        cases present
-        exact ⟨current, frontier, middle, rfl, step, rfl⟩
-      | succ cut =>
-        obtain ⟨s, f, next, reached, replay, atRow⟩ := ih rest present
-        exact ⟨s, f, next, by simpa [mixedAccessStep, emitMixedAccessStep?, step] using reached, replay,
-          by cases event <;> exact atRow⟩
+  obtain ⟨rows, built, rfl⟩ := Option.map_eq_some_iff.mp routed
+  obtain ⟨before, incoming, next, reached, replay, entry⟩ := routeMixedRows?_at built present
+  refine ⟨before, incoming, next, reached, replay, ?_⟩
+  cases event with
+  | ordinary =>
+    obtain ⟨view, row, seen, made, atRow⟩ := entry
+    exact ⟨view, row, seen, made, by simp [List.getElem?_map, atRow, MixedCompiledRow.bumpInput]⟩
+  | syscall call =>
+    simp [List.getElem?_map, entry, MixedCompiledRow.bumpInput]
 
-private theorem routeBumps_from {limits : ResourceLimits} {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+private theorem compiledBumps_valid {limits : ResourceLimits} {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
     {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (execution : AdmissibleExecution limits p image source target events) {ordinary : List RoutedEvent}
     (observed : routeObservations? (policy p image) image.program AccessFrontier.initial source.realize events = some ordinary)
-    {current last : ExecutionState} {later : List ExecutionEvent}
-    (path : ExecutionPath (policy p image) image.program current later last)
-    (before : List ExecutionEvent) (part : events = before ++ later) (frontier : AccessFrontier)
-    (incoming : mixedAccessPrefix (policy p image) image.program source.realize events before.length = some (current, frontier)) :
-    ∃ inputs, routeBumpInputs? (policy p image) image.program frontier current later = some inputs ∧
-      inputs.length = later.length ∧ ∀ input ∈ inputs, input.refreshes.length ≤ 3 ∧
-        input.raw.toBumpEvent.WellFormed ∧ ∀ row ∈ input.refreshes, row.WellFormed := by
-  induction path generalizing before frontier with
-  | nil => exact ⟨[], rfl, rfl, by simp⟩
-  | @cons current middle last event later step tail ih =>
-    have present : events[before.length]? = some event := by simp [part]
-    have part' : events = (before ++ [event]) ++ later := by simpa only [List.append_assoc, List.singleton_append] using part
-    have after (outgoing : AccessFrontier) (ran : mixedAccessStep (policy p image) image.program (current, frontier) event = some (middle, outgoing)) :
-        mixedAccessPrefix (policy p image) image.program source.realize events (before.length + 1) = some (middle, outgoing) := by
-      simpa [mixedAccessPrefix_succ _ _ _ _ present, incoming] using ran
-    cases event with
-    | syscall call =>
-      obtain ⟨s, f, next, _, same, _, _, _, _, _, _, _, valid⟩ := admissibleExecution_syscall_from_prefix execution present
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj (incoming.symm.trans same))
-      let entries := scheduleAccessPlan frontier current.clock (syscallRegisterPlan call)
-      have len : entries.memoryBumps.length ≤ 3 :=
-        (schedule_refresh_count entries).trans (le_of_eq (scheduleAccessPlan_stamped_length ..))
-      have nextCut := after (syscallFrontier frontier current.clock call) (by simp [mixedAccessStep, emitMixedAccessStep?, step.replay])
-      obtain ⟨inputs, routed, tailLen, good⟩ := ih _ part' _ (by simpa using nextCut)
-      refine ⟨.ofSyscall frontier current.clock call :: inputs, ?_, by simp [tailLen], ?_⟩
-      · simp [routeBumpInputs?, emitMixedAccessStep?, step.replay, routed]
-      · intro input mem
-        rcases List.mem_cons.mp mem with rfl | mem
-        · exact ⟨len, (admissibleExecution_syscallPushedState execution present).1, valid⟩
-        · exact good _ mem
-    | ordinary =>
-      obtain ⟨s, f, replay, same, bounded⟩ := admissibleExecution_mixedAccessPrefix execution before.length
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj (incoming.symm.trans same))
-      obtain ⟨s, next, view, row, replay', actual, seen, made, _, len, invariants⟩ :=
-        admissibleExecution_compile_at execution present frontier
-      obtain rfl := Option.some.inj (replay'.symm.trans replay)
-      obtain rfl := Option.some.inj (actual.replay.symm.trans step.replay)
-      have size := (compiled_memoryBumps_length_le made).trans len
-      have nextCut := after row.nextFrontier (by simp [mixedAccessStep, emitMixedAccessStep?, step.replay, seen, made])
-      obtain ⟨inputs, routed, tailLen, good⟩ := ih _ part' _ (by simpa using nextCut)
-      obtain ⟨chosen, _, _, rank, _, _, raw, _⟩ := admissibleExecution_ordinaryPushedState execution observed present
-      have position := compiled_mem_at_rank observed present incoming seen made nextCut
-      obtain rfl := Option.some.inj (position.symm.trans rank)
-      refine ⟨.ofOrdinary row :: inputs, ?_, by simp [tailLen], ?_⟩
-      · simp [routeBumpInputs?, emitMixedAccessStep?, step.replay, seen, made, routed]
-      · intro input mem
-        rcases List.mem_cons.mp mem with rfl | mem
-        · exact ⟨size, raw, (invariants bounded).2.1⟩
-        · exact good _ mem
+    {rows : List MixedCompiledRow}
+    (built : routeMixedRows? (policy p image) image.program AccessFrontier.initial source.realize events = some rows)
+    (size : rows.length = events.length) {entry : MixedCompiledRow} (member : entry ∈ rows) :
+    entry.bumpInput.refreshes.length ≤ 3 ∧ entry.bumpInput.raw.toBumpEvent.WellFormed ∧
+      ∀ bump ∈ entry.bumpInput.refreshes, bump.WellFormed := by
+  obtain ⟨cut, atRow⟩ := List.mem_iff_getElem?.mp member
+  have inside : cut < events.length := size ▸ (List.getElem?_eq_some_iff.mp atRow).1
+  have present := List.getElem?_eq_getElem inside
+  generalize events[cut] = event at present
+  obtain ⟨current, frontier, next, incoming, replay, found⟩ := routeMixedRows?_at built present
+  change mixedAccessPrefix (policy p image) image.program source.realize events cut = some (current, frontier) at incoming
+  cases event with
+  | syscall call =>
+    obtain rfl := Option.some.inj (atRow.symm.trans found)
+    obtain ⟨s, f, _, _, same, _, _, _, _, _, _, _, valid⟩ := admissibleExecution_syscall_from_prefix execution present
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj (incoming.symm.trans same))
+    let entries := scheduleAccessPlan frontier current.clock (syscallRegisterPlan call)
+    have len : entries.memoryBumps.length ≤ 3 :=
+      (schedule_refresh_count entries).trans (le_of_eq (scheduleAccessPlan_stamped_length ..))
+    exact ⟨len, (admissibleExecution_syscallPushedState execution present).1, valid⟩
+  | ordinary =>
+    obtain ⟨view, seenRow, projected, made, found⟩ := found
+    obtain rfl := Option.some.inj (atRow.symm.trans found)
+    obtain ⟨s, f, traj, same, bounded⟩ := admissibleExecution_mixedAccessPrefix execution cut
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj (incoming.symm.trans same))
+    obtain ⟨s, next', v, row, traj', step, proj', made', _, len, invariants⟩ := admissibleExecution_compile_at execution present frontier
+    obtain rfl := Option.some.inj (traj'.symm.trans traj)
+    obtain rfl := Option.some.inj (step.replay.symm.trans replay)
+    obtain rfl := Option.some.inj (proj'.symm.trans projected)
+    obtain rfl := Option.some.inj (made'.symm.trans made)
+    have after : mixedAccessPrefix (policy p image) image.program source.realize events (cut + 1) = some (next', row.nextFrontier) := by
+      simp [mixedAccessPrefix_succ _ _ _ _ present, incoming, mixedAccessStep, emitMixedAccessStep?, replay, projected, made]
+    obtain ⟨chosen, _, _, rank, _, _, raw, _⟩ := admissibleExecution_ordinaryPushedState execution observed present
+    have position := compiled_mem_at_rank observed present incoming projected made after
+    obtain rfl := Option.some.inj (position.symm.trans rank)
+    exact ⟨(compiled_memoryBumps_length_le made).trans len, raw, (invariants bounded).2.1⟩
 
 /-- Every mixed execution yields the exact two chronological inventories. Both consist solely
 of valid normalization inputs and are bounded using the same semantic event count. -/
@@ -267,9 +237,16 @@ theorem admissibleExecution_mixedBumpInventory {limits : ResourceLimits} {p : �
       (∀ bump ∈ MixedBumpInput.memoryRows inputs, bump.WellFormed) ∧
       ∀ bump ∈ MixedBumpInput.stateRows inputs, bump.WellFormed := by
   obtain ⟨ordinary, observed, _⟩ := admissibleExecution_routeObservations execution
-  obtain ⟨inputs, routed, length, valid⟩ := routeBumps_from execution observed execution.1.2 [] rfl AccessFrontier.initial rfl
-  refine ⟨inputs, routed, length, (MixedBumpInput.memoryRows_length_le inputs (fun input mem => (valid _ mem).1)).trans
-    (by rw [length]), (MixedBumpInput.stateRows_length_le inputs).trans length.le, ?_, ?_⟩
+  obtain ⟨rows, routed, size⟩ := admissibleExecution_routeMixedRows execution
+  let inputs := rows.map MixedCompiledRow.bumpInput
+  have length : inputs.length = events.length := by simpa [inputs] using size
+  have valid (input : MixedBumpInput) (mem : input ∈ inputs) :
+      input.refreshes.length ≤ 3 ∧ input.raw.toBumpEvent.WellFormed ∧ ∀ bump ∈ input.refreshes, bump.WellFormed := by
+    obtain ⟨row, present, rfl⟩ := List.mem_map.mp mem
+    exact compiledBumps_valid execution observed routed size present
+  refine ⟨inputs, by simp [routeBumpInputs?, routed, inputs], length,
+    (MixedBumpInput.memoryRows_length_le inputs (fun input mem => (valid _ mem).1)).trans (by rw [length]),
+    (MixedBumpInput.stateRows_length_le inputs).trans length.le, ?_, ?_⟩
   · intro bump member
     obtain ⟨input, mem, pos⟩ := List.mem_flatMap.mp member
     exact (valid input mem).2.2 bump pos

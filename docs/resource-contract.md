@@ -239,6 +239,12 @@ six Byte occurrences per physical row, including padding. Each emits two occurre
 own Memory or State channel. Their constructed rows satisfy both circuits on shared prover data.
 Capacity for the other 56 tables depends on their combined channel use. [Carry boundary examples](../SP1CleanTest/Alignment/Core/MixedStateBumpEdges.lean) · [Mixed bump inventory](../SP1Clean/Proofs/Completeness/MixedBumpInventory.lean) · [Physical tables](../SP1Clean/Export/InstalledBumpTables.lean) · [44-table bound](../SP1Clean/Export/InstalledBumpPreset.lean)
 
+The compiler also projects active ECALL instruction inputs in chronological order. Lean proves
+that the full-word code guard and all 65 instruction columns satisfy the bundled circuit's
+prover assumptions, and that decoding each row recovers its complete syscall event. This
+covers all eight host calls, including WRITE. Host-effect receipts and their physical tables
+have separate construction and balance obligations. [ECALL trace theorem](../SP1Clean/Proofs/Completeness/MixedSyscallRows.lean)
+
 At the native field, each released mixed execution supplies the 25 physical ordinary tables.
 Their active rows carry the displaced values and timestamps from the mixed execution prefix.
 Empty buckets have height zero. Each nonempty bucket receives its registered padding to the

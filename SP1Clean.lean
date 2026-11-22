@@ -9,6 +9,7 @@ import SP1Clean.Export.InstalledOrdinaryPreset
 import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
+import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Export.OrdinaryRowCapacity
 import SP1Clean.Export.InstalledVerifierCapacity
 import SP1Clean.Export.InstalledHintAssembly
@@ -89,6 +90,11 @@ import SP1Clean.Proofs.Completeness.HintReadTables
 import SP1Clean.Proofs.Completeness.HintReadLedger
 import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
+import SP1Clean.Proofs.Completeness.MixedCompiledRows
+import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
+import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
+import SP1Clean.Proofs.Completeness.MixedSyscallArms
+import SP1Clean.Proofs.Completeness.MixedSyscallRows
 import SP1Clean.Proofs.Completeness.ReleaseInstructionRows
 import SP1Clean.Proofs.Completeness.InstalledInstructionTables
 import SP1Clean.Proofs.Completeness.MixedInstructionTables
@@ -100,6 +106,7 @@ import SP1Clean.Soundness.WriteObservationHistory
 import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
+import SP1Clean.Proofs.Completeness.WriteProbeDemand
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Proofs.Sail.Advance

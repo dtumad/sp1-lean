@@ -13,3 +13,27 @@ The `WriteObservations.of_admissibleExecution` theorem constructs the released r
 At a physical cut, `wordAt` starts with the supplied snapshot and scans only preceding active rows in State-channel order. It takes the value of a push at the architectural effect slot for the queried key. When no such push exists, the row’s grounded read-backs and frame proof preserve the held value. The proof uses the original messages of active guest events, including HINT_READ RAM effects. All padding occurrences and weights stay in the canonical ledger. Multiple probes can use the same preceding write, including at the same cut. [Physical prefix proof](../SP1Clean/Soundness/WriteObservationHistory.lean)
 
 The native `checkWriteInputs` procedure compares the proposed code, descriptor, and address with x5, x10, and x11. It compares the four proposed x12 limbs and every aligned word with the same prefix. `makePacket?` computes the length and word limbs from that history. `installed_cuts` derives the predecessor state for each cut of the currently supported host assembly from its constraints and balanced channels. State-channel ordering is proof-derived. The packet procedure runs on supplied ordered rows. Installing WRITE in the eight-call AIR still requires wiring the read-only observations to an active ECALL, constraining the descriptor effects and hook boundary, and discharging the extended row and ledger proofs. [Packet checker and constructor](../SP1Clean/Proofs/Completeness/WriteObservationPacket.lean) · [Installed-prefix theorem](../SP1Clean/Proofs/Completeness/WriteObservationCuts.lean)
+
+## Committed public values and complete host effects
+
+The guest library hashes the bytes passed to the public-values descriptor after issuing WRITE.
+At HALT it emits eight COMMIT words. The released instruction AIR binds each selected digest
+word to x11, and the SDK checks the hash of the supplied public-value bytes against that digest.
+This is the release-facing public output contract. A guest can also issue ECALL directly.
+The stronger native host contract tracks the actual buffer at each WRITE, raw stdout/stderr
+bytes, queued hints and matched requests and replies. Values enqueued by WRITE can affect a
+later HINT_READ even when the caller only inspects the final guest state.
+[Guest WRITE wrapper](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/io.rs#L13-L31) · [Guest HALT](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/halt.rs#L24-L42) · [COMMIT AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/syscall/instructions/air.rs#L350-L367) · [SDK verification](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/sdk/src/prover.rs#L172-L220)
+
+## Read-only probe demand
+
+Along a successful execution, let `C` count WRITE packets, `W` count the aligned words
+in those packets and `B` count the bytes requested through x12. The packet lengths sum
+to the existing `readBytes` charge. Each ECALL consumes 264 ticks and rounding the two
+buffer endpoints gives `8W ≤ B + 14C`. These bounds cover ignored descriptors as well as
+callbacks and ordinary outputs.
+
+At `fixedProviderPreset`, `C ≤ 63,550` and `W ≤ 266,449,516`. Together at most
+266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` if a table uses one
+row per probe. Shared-channel capacity for a physical observer depends on the interactions
+emitted by its actual rows. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)

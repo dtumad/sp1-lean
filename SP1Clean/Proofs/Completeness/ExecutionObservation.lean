@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Completeness.MixedAccessFrontier
+import SP1Clean.Proofs.Completeness.MixedCompiledRows
 import SP1Clean.Proofs.Completeness.OrdinaryObservationPadding
 import ToClean.Air.DemandPadding
 
@@ -12,20 +12,15 @@ uses the ordinary rows' State receipts and does not produce the mixed Memory led
 namespace SP1Clean.TraceGen
 open Semantics Machine FormalModel.Shard Soundness.Target
 
-/-- Replay the tape once and compile each ordinary transition against its actual source clock.
-The same prefix frontier supplies the ordinary rows' displaced timestamps across ECALLs. -/
-noncomputable def routeObservations? (host : HostPolicy) (program : GuestProgram) :
-    AccessFrontier → ExecutionState → List ExecutionEvent → Option (List RoutedEvent)
-  | _, _, [] => some []
-  | frontier, current, event :: later => do
-    let next ← replayStep? host program current event
-    match event with
-    | .syscall call => routeObservations? host program (syscallFrontier frontier current.clock call) next later
-    | .ordinary =>
-      let view ← projectSP1Transition? program ⟨current.sail, ⟨.ordinary, next.sail⟩⟩
-      let result ← compileInstructionEvent? view frontier current.clock
-      let routed ← routeObservations? host program result.nextFrontier next later
-      return result.routed :: routed
+/-- The ordinary observation receipt carried by a mixed compiler entry. -/
+def MixedCompiledRow.ordinaryObservation? : MixedCompiledRow → Option RoutedEvent
+  | .ordinary row => some row.routed
+  | .syscall .. => none
+
+/-- Select ordinary observations from the same chronological compiler output used by the other tables. -/
+noncomputable def routeObservations? (host : HostPolicy) (program : GuestProgram)
+    (frontier : AccessFrontier) (current : ExecutionState) (events : List ExecutionEvent) : Option (List RoutedEvent) :=
+  (routeMixedRows? host program frontier current events).map (List.filterMap MixedCompiledRow.ordinaryObservation?)
 
 /-- Successful compilation exposes the exact projection, frontier and row at every ordinary
 position. A position counts earlier ordinary instructions, regardless of intervening calls. -/
@@ -40,30 +35,35 @@ theorem routeObservations?_at {host : HostPolicy} {program : GuestProgram} {curr
       projectSP1Transition? program ⟨before.sail, ⟨.ordinary, after.sail⟩⟩ = some view ∧
       compileInstructionEvent? view incoming before.clock = some result ∧
       rows[((events.take cut).countP ExecutionEvent.isOrdinary)]? = some result.routed := by
-  induction events generalizing current frontier rows cut with
+  unfold routeObservations? at routed
+  obtain ⟨spine, built, rfl⟩ := Option.map_eq_some_iff.mp routed
+  clear routed
+  induction events generalizing current frontier spine cut with
   | nil => simp at present
   | cons event later ih =>
-    simp only [routeObservations?, Option.bind_eq_bind, Option.bind_eq_some_iff] at routed
-    obtain ⟨middle, first, generated⟩ := routed
+    simp only [routeMixedRows?, emitMixedAccessStep?, Option.bind_eq_bind, Option.bind_eq_some_iff] at built
+    obtain ⟨middle, first, generated⟩ := built
     cases event with
     | syscall call =>
+      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at generated
+      obtain ⟨tail, rest, rfl⟩ := generated
       cases cut with
       | zero => simp at present
       | succ n =>
-        obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, compiled, rank⟩ := ih generated present
+        obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, compiled, rank⟩ := ih present tail rest
         exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, emitMixedAccessStep?, first] using prefixState,
           by simpa [executionTrajectory, replayEvents?, first] using reached,
-          ran, facts, compiled, by simpa [List.countP_cons] using rank⟩
+          ran, facts, compiled, by simpa [List.countP_cons, List.filterMap_cons, MixedCompiledRow.ordinaryObservation?] using rank⟩
     | ordinary =>
       simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at generated
       obtain ⟨view, projected, result, compiled, tail, rest, rfl⟩ := generated
       cases cut with
       | zero => exact ⟨current, middle, view, result, frontier, rfl, rfl, first, projected, compiled, rfl⟩
       | succ n =>
-        obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, other, rank⟩ := ih rest present
+        obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, other, rank⟩ := ih present tail rest
         exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, emitMixedAccessStep?, first, projected, compiled] using prefixState,
           by simpa [executionTrajectory, replayEvents?, first] using reached,
-          ran, facts, other, by simpa [List.countP_cons] using rank⟩
+          ran, facts, other, by simpa [List.countP_cons, List.filterMap_cons, MixedCompiledRow.ordinaryObservation?] using rank⟩
 
 /-- Every ordinary tape position has exactly its compiler row at the rank of that position.
 Both the clock and the program counter are read from its actual incoming complete state. -/
@@ -81,13 +81,16 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
     (path : ExecutionPath (policy p image) image.program current later last)
     (before : List ExecutionEvent) (part : events = before ++ later)
     (reached : replayEvents? (policy p image) image.program source.realize before = some current)
-    (frontier : AccessFrontier) :
-    ∃ rows, routeObservations? (policy p image) image.program frontier current later = some rows ∧
-      rows.length = later.countP ExecutionEvent.isOrdinary ∧
+    (frontier : AccessFrontier) {spine : List MixedCompiledRow}
+    (route : routeMixedRows? (policy p image) image.program frontier current later = some spine) :
+    let rows := spine.filterMap MixedCompiledRow.ordinaryObservation?
+    rows.length = later.countP ExecutionEvent.isOrdinary ∧
       (∀ row ∈ rows, current.clock ≤ row.clock ∧ 0 < row.clock ∧ row.clock < last.clock) ∧
       rows.Pairwise (fun a b => a.clock < b.clock) := by
-  induction path generalizing before frontier with
-  | nil => exact ⟨[], rfl, rfl, by simp, .nil⟩
+  induction path generalizing before frontier spine with
+  | nil =>
+    cases route
+    exact ⟨rfl, by simp, .nil⟩
   | @cons current middle last event later step tail ih =>
     have present : events[before.length]? = some event := by simp [part]
     have atCut : executionTrajectory (policy p image) image.program source.realize events before.length =
@@ -96,26 +99,25 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
     have reached' : replayEvents? (policy p image) image.program source.realize (before ++ [event]) = some middle := by
       simp only [replayEvents?_append, reached, Option.bind_some, replayEvents?, step.replay]
     have advance := step.clock_lt
+    simp only [routeMixedRows?, emitMixedAccessStep?, step.replay, Option.bind_some, Option.bind_eq_bind] at route
     cases event with
     | syscall call =>
-      obtain ⟨rows, route, len, bounds, sorted⟩ := ih _ part' reached' (syscallFrontier frontier current.clock call)
-      refine ⟨rows, ?_, by simpa using len, ?_, sorted⟩
-      · simp [routeObservations?, step.replay, route]
+      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at route
+      obtain ⟨rows, route, rfl⟩ := route
+      obtain ⟨len, bounds, sorted⟩ := ih _ part' reached' (syscallFrontier frontier current.clock call) route
+      refine ⟨by simpa [List.filterMap_cons, MixedCompiledRow.ordinaryObservation?] using len, ?_, sorted⟩
       · intro row member
         have b := bounds row member
         exact ⟨advance.le.trans b.1, b.2⟩
     | ordinary =>
-      obtain ⟨atState, successor, view, result, sameCut, ran, projected, generated, _⟩ :=
-        admissibleExecution_compile_at execution present frontier
-      obtain rfl := Option.some.inj (atCut.symm.trans sameCut)
-      obtain rfl := Option.some.inj (step.replay.symm.trans ran.replay)
-      obtain ⟨rows, route, len, bounds, sorted⟩ := ih _ part' reached' result.nextFrontier
+      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at route
+      obtain ⟨view, _, result, generated, rows, route, rfl⟩ := route
+      obtain ⟨len, bounds, sorted⟩ := ih _ part' reached' result.nextFrontier route
       have time := (compileInstructionEvent?_coordinates generated).1
       have phase := (execution.2.1 _ _ _ present atCut).1
       change _ % 8 = 1 at phase
       have tailClock := tail.clock
-      refine ⟨result.routed :: rows, ?_, by simp [List.countP_cons, len], ?_, .cons ?_ sorted⟩
-      · simp [routeObservations?, step.replay, projected, generated, route]
+      refine ⟨by simp [List.countP_cons, len, MixedCompiledRow.ordinaryObservation?], ?_, .cons ?_ sorted⟩
       · intro row member
         rcases List.mem_cons.mp member with rfl | rest
         · rw [time]
@@ -134,7 +136,11 @@ theorem admissibleExecution_routeObservations {limits : ResourceLimits} {p : ℕ
       (∀ row ∈ rows, 0 < row.clock ∧ row.clock < 2 ^ 48) ∧
       rows.Pairwise (fun a b => a.clock < b.clock) ∧
       ObservesOrdinary (policy p image) image.program source.realize events rows := by
-  obtain ⟨rows, route, length, bounds, sorted⟩ := route_from execution execution.1.2 [] rfl rfl (fun _ => 0)
+  obtain ⟨spine, built, _⟩ := admissibleExecution_routeMixedRows execution
+  let rows := spine.filterMap MixedCompiledRow.ordinaryObservation?
+  have route : routeObservations? (policy p image) image.program AccessFrontier.initial source.realize events = some rows := by
+    simp [routeObservations?, built, rows]
+  obtain ⟨length, bounds, sorted⟩ := route_from execution execution.1.2 [] rfl rfl AccessFrontier.initial built
   refine ⟨rows, route, length, ?_, sorted, ?_⟩
   · intro row member
     have b := bounds row member
