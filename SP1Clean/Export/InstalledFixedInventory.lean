@@ -54,6 +54,42 @@ private theorem reordered (ctx : Context) : ((originalTables ctx).mapIdx HostOrd
       simpa only [List.get_eq_getElem, atIdx] using relevant.symm
     · simp only [HostOrdinaryReceipts.replace, dite_eq_right inside]
 
+/-- The registered handler and both padded word components survive ordinary-receipt replacement. -/
+theorem hint_read_slots (ctx : Context) :
+    (assembly ctx).tables[63]? = some HostHintReadCoverage.handler ∧
+    (assembly ctx).tables[84]? = some (HintReadCoverage.component false) ∧
+    (assembly ctx).tables[85]? = some (HintReadCoverage.component true) := by
+  let original := originalTables ctx
+  have length : original.length = 98 := by
+    have total := tables_length ctx
+    rw [observed, List.length_append, List.length_mapIdx] at total
+    change (originalTables ctx).length + 2 = 100 at total
+    change (originalTables ctx).length = 98
+    omega
+  have atIndex (i : ℕ) (lower : 63 ≤ i) (upper : i ≤ 85) :
+      (assembly ctx).tables[i]? =
+        (((HostHintReadHandoff.receiver :: HostCallReceivers.available (p := SP1Prime)).map (·.component)) ++
+          (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources ctx.source.host.io.hints))[i - 63]? := by
+    rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; change i < original.length; omega),
+      List.getElem?_mapIdx]
+    have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
+      funext table
+      simp [HostOrdinaryReceipts.replace, show ¬ (7 ≤ i ∧ i < 32) by omega]
+    rw [untouched, Option.map_id_fun]
+    simp only [originalTables, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
+      List.getElem?_set_ne (show 4 ≠ i by omega), List.getElem?_set_ne (show 3 ≠ i by omega),
+      List.getElem?_set_ne (show 57 ≠ i by omega)]
+    rw [List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; change i < 66 + 20 + 8; omega),
+      HostFinalMemory.beforeChecks, HostLocalCore.tables,
+      List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; omega),
+      List.length_set, ProtectedLocalCore.tables_length]
+    rfl
+  constructor
+  · rw [atIndex 63 (by decide) (by decide)]; rfl
+  constructor
+  · rw [atIndex 84 (by decide) (by decide)]; rfl
+  · rw [atIndex 85 (by decide) (by decide)]; rfl
+
 /-- The ten preallocated components in physical order. -/
 def fixedTables (ctx : Context) : List (Component Fp) := fixedOld ctx ++
   [CommitmentDeclaration.source ctx.commitments, HostHintQueueTerminal.component (publicCursor ctx)]

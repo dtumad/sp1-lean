@@ -45,6 +45,16 @@ theorem interactionsFit_add_iff (context : Context) (base extra : Component Fp �
   simp only [Balance.logUp, decide_eq_true_eq, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n, interactionCount_add]
   constructor <;> intro checks ch member <;> specialize checks ch member <;> omega
 
+/-- Count simultaneous row increments additively before applying the verifier bound. -/
+theorem additionalOccurrences_add (context : Context) (left right : Component Fp → ℕ) (channel : String) :
+    additionalOccurrences context (fun t => left t + right t) channel =
+      additionalOccurrences context left channel + additionalOccurrences context right channel := by
+  simp only [additionalOccurrences]
+  generalize (assembly context).tables = tables
+  induction tables with
+  | nil => rfl
+  | cons t ts ih => rw [List.map_cons, List.sum_cons, ih]; simp only [List.map_cons, List.sum_cons, Nat.add_mul]; omega
+
 private theorem single_cost (tables : List (Component Fp)) (slot : Component Fp) (extra : ℕ) (channel : String)
     (unique : (tables.map (·.circuit.name)).Nodup) (installed : slot ∈ tables) :
     (tables.map fun table => (if table.circuit.name = slot.circuit.name then extra else 0) * rowOccurrences table channel).sum =
@@ -64,6 +74,16 @@ private theorem single_cost (tables : List (Component Fp)) (slot : Component Fp)
         unique.1 (same ▸ List.mem_map_of_mem (f := fun c : Component Fp => c.circuit.name) later)
       simp only [List.map_cons, List.sum_cons, ite_eq_right different, Nat.zero_mul, Nat.zero_add]
       exact ih unique.2 later
+
+/-- Add physical rows to the uniquely named installed slot. -/
+def slotRows (slot : Component Fp) (height : ℕ) (table : Component Fp) : ℕ :=
+  if table.circuit.name = slot.circuit.name then height else 0
+
+/-- An increment to a registered slot contributes its actual row width times its added height. -/
+theorem additionalOccurrences_slot (context : Context) (slot : Component Fp)
+    (installed : slot ∈ (assembly context).tables) (height : ℕ) (channel : String) :
+    additionalOccurrences context (slotRows slot height) channel = height * rowOccurrences slot channel :=
+  single_cost _ slot height channel (assembly context).unique_names installed
 
 /-- Exact extra physical rows that one installed component can add while all other heights
 stay fixed. Channels with zero width impose only the base count test. -/
