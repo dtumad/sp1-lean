@@ -51,7 +51,7 @@ theorem routeObservations?_at {host : HostPolicy} {program : GuestProgram} {curr
       | zero => simp at present
       | succ n =>
         obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, compiled, rank⟩ := ih generated present
-        exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, first] using prefixState,
+        exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, emitMixedAccessStep?, first] using prefixState,
           by simpa [executionTrajectory, replayEvents?, first] using reached,
           ran, facts, compiled, by simpa [List.countP_cons] using rank⟩
     | ordinary =>
@@ -61,7 +61,7 @@ theorem routeObservations?_at {host : HostPolicy} {program : GuestProgram} {curr
       | zero => exact ⟨current, middle, view, result, frontier, rfl, rfl, first, projected, compiled, rfl⟩
       | succ n =>
         obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, other, rank⟩ := ih rest present
-        exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, first, projected, compiled] using prefixState,
+        exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, emitMixedAccessStep?, first, projected, compiled] using prefixState,
           by simpa [executionTrajectory, replayEvents?, first] using reached,
           ran, facts, other, by simpa [List.countP_cons] using rank⟩
 

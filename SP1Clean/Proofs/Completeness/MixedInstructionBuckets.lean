@@ -42,7 +42,7 @@ theorem compiled_mem_at_rank {host : HostPolicy} {program : GuestProgram} {sourc
   obtain ⟨s, t, v, r, f, incoming, _, ran, seen, built, rank⟩ := routeObservations?_at route ordinary
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj (incoming.symm.trans before))
   rw [mixedAccessPrefix_succ _ _ _ _ ordinary, before] at after
-  simp only [Option.bind_some, mixedAccessStep, ran, seen, built, Option.bind_eq_bind, Option.pure_def] at after
+  simp only [Option.bind_some, mixedAccessStep, emitMixedAccessStep?, ran, seen, built, Option.bind_eq_bind] at after
   obtain rfl := (Prod.mk.inj (Option.some.inj after)).1
   obtain rfl := Option.some.inj (seen.symm.trans projected)
   obtain rfl := Option.some.inj (built.symm.trans made)

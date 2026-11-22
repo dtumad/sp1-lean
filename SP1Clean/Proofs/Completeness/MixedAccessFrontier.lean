@@ -79,17 +79,27 @@ private theorem syscallFrontier_bounded (event : CoreSyscallEvent) {frontier : A
     simp only [syscallFrontier, AccessSlot.recordOffset_ram]
     split_ifs <;> omega
 
-/-- One compiler pass threads the actual semantic state and the timestamps posted on Memory. -/
-noncomputable def mixedAccessStep (policy : HostPolicy) (program : GuestProgram)
-    (cursor : ExecutionState × AccessFrontier) (event : ExecutionEvent) :
-    Option (ExecutionState × AccessFrontier) := do
+/-- Consume a mixed tape position with the existing successor replay and ordinary compiler.
+The emitter gets the actual compiled register schedule or the released syscall record. -/
+noncomputable def emitMixedAccessStep? {α : Type} (policy : HostPolicy) (program : GuestProgram)
+    (cursor : ExecutionState × AccessFrontier) (event : ExecutionEvent)
+    (ordinary : ExecutionState → CompiledInstructionEvent → Option α)
+    (syscall : ExecutionState → CoreSyscallEvent → Option α) : Option α := do
   let next ← replayStep? policy program cursor.1 event
   match event with
   | .ordinary =>
     let view ← projectSP1Transition? program ⟨cursor.1.sail, ⟨.ordinary, next.sail⟩⟩
     let row ← compileInstructionEvent? view cursor.2 cursor.1.clock
-    return (next, row.nextFrontier)
-  | .syscall call => return (next, syscallFrontier cursor.2 cursor.1.clock call)
+    ordinary next row
+  | .syscall call => syscall next call
+
+/-- One compiler pass threads the actual semantic state and the timestamps posted on Memory. -/
+noncomputable def mixedAccessStep (policy : HostPolicy) (program : GuestProgram)
+    (cursor : ExecutionState × AccessFrontier) (event : ExecutionEvent) :
+    Option (ExecutionState × AccessFrontier) :=
+  emitMixedAccessStep? policy program cursor event
+    (fun next row => some (next, row.nextFrontier))
+    (fun next call => some (next, syscallFrontier cursor.2 cursor.1.clock call))
 
 /-- The concrete frontier for a chronological prefix of a local statement. -/
 noncomputable def mixedAccessPrefix (policy : HostPolicy) (program : GuestProgram)
@@ -146,11 +156,11 @@ theorem admissibleExecution_mixedAccessPrefix {limits : ResourceLimits} {p : ℕ
         have eq' : t = next := Option.some.inj (actual.replay.symm.trans step.replay)
         subst t
         exact ⟨next, row.nextFrontier, rfl,
-          by simp [mixedAccessStep, step.replay, projected, compiled],
+          by simp [mixedAccessStep, emitMixedAccessStep?, step.replay, projected, compiled],
           by rw [step.clock]; exact compileInstructionEvent?_frontier_bounded_next compiled bounded⟩
       | syscall call =>
         exact ⟨next, syscallFrontier frontier current.clock call, rfl,
-          by simp [mixedAccessStep, step.replay],
+          by simp [mixedAccessStep, emitMixedAccessStep?, step.replay],
           by rw [step.clock]; exact syscallFrontier_bounded call bounded⟩
 
 /-- An actual syscall's incoming timestamps, including those consumed by HINT_READ, follow
@@ -184,7 +194,7 @@ theorem admissibleExecution_syscall_from_prefix {limits : ResourceLimits} {p : �
     scheduleAccessPlan_previous_lt (syscallRegisterPlan_wellFormed call) bounded,
     scheduleAccessPlan_memoryBumps_wellFormed (syscallRegisterPlan_wellFormed call) bounded phase small⟩
   · rw [mixedAccessPrefix_succ _ _ _ _ present, built]
-    simp [mixedAccessStep, step.replay]
+    simp [mixedAccessStep, emitMixedAccessStep?, step.replay]
   · intro index
     rw [scheduleAccessPlan_outgoing]
     rfl
@@ -214,7 +224,7 @@ theorem admissibleExecution_compile_from_prefix {limits : ResourceLimits} {p : �
   subst s
   have phase := (execution.2.1 cut current .ordinary ordinary replay).1
   refine ⟨current, frontier, next, view, row, built, projected, compiled,
-    by rw [mixedAccessPrefix_succ _ _ _ _ ordinary, built]; simp [mixedAccessStep, step.replay, projected, compiled],
+    by rw [mixedAccessPrefix_succ _ _ _ _ ordinary, built]; simp [mixedAccessStep, emitMixedAccessStep?, step.replay, projected, compiled],
     (invariants bounded).1, (invariants bounded).2.1,
     ?_⟩
   intro family
