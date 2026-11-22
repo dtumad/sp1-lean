@@ -121,9 +121,21 @@ Providers may still require external witness data under their own contracts.
 
 The instruction-event registry lives with semantic trace contracts, below physical assembly.
 The [shard bookkeeping contract](../SP1Clean/FormalModel/ShardDynamic.lean) describes nextPC, retirement, interrupts and event-index observations for a finite execution. Soundness reads this contract from physical tables. The [semantic execution proof](../SP1Clean/FormalModel/ShardRetirement.lean) derives it from the Sail and host steps, and the observation constructor uses it to populate the outgoing terminal.
-Chronological State/Memory inventories and the provider-closure builders in `Proofs/Completeness`
-are starting material for the mixed compiler; capacity, exact channel accounting and fixed-table
-padding remain its obligations (#12 C9/C10).
+The complete snapshots and the immutable commitment statement determine the public header.
+A running-to-stopped segment publishes the actual HALT argument. Identity segments publish zero
+and preserve the incoming optional exit status in the complete host state. The execution proves
+the public source, resource, Sail and commitment assertions for this header. Conversely, every
+accepted 100-table witness determines exactly this header at arbitrary table heights. Its Exit
+balance connects a nonzero public code to a physical syscall and the Sail step that parked the PC.
+The checked
+Sail frame covers the simulator counter, output and every register outside the native write footprint.
+
+The mixed compiler replays the ordered event prefix to obtain each operand's previous Memory
+timestamp. ECALL updates x5, x10 and x11. HINT_READ also posts every padded destination cell,
+including the terminal word for empty and word-aligned hints. The same queue node and prior
+frontier supply each word row and its actual pre- and post-write Sail values. The transfer and
+RAM-write tables have independent padding and a closed signed transfer ledger. Constructing and
+balancing all tables together and installing all eight handlers remain compiler obligations (#12).
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

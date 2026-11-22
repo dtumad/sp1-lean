@@ -138,21 +138,6 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
     rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput] at emitted
     exact emitted
 
-private theorem halt_bounds {policy : HostPolicy} {program : Target.GuestProgram}
-    {before after : ExecutionState} {call : Machine.CoreSyscallEvent}
-    (step : ExecutionStep policy program before (.syscall call) after) (zero : call.rawCode = 0) :
-    call.arg1.toNat < policy.characteristic ∧ call.arg1.toNat < 2 ^ 32 := by
-  cases step with
-  | syscall success =>
-    obtain ⟨pc, execution, _, _, ran, _, _, rfl⟩ := HostState.step_observations success
-    have kind : execution.kind = .halt := SyscallKind.code_injective zero
-    have executed := ((before.host.run_eq_some_iff policy (.ofSail before.sail) execution).mp ran).2.2.2.2.2
-    rw [kind] at executed
-    simp only [HostState.executeKind] at executed
-    split at executed
-    · assumption
-    · contradiction
-
 /-- Every newly halted endpoint has exactly the public Exit value, with no modular alias.
 A stopped source instead admits only the existing identity path and preserves its prior status. -/
 theorem GroundingCarrier.final_exit (valid : image.Valid)
@@ -168,7 +153,7 @@ theorem GroundingCarrier.final_exit (valid : image.Valid)
     rw [tape]
     exact List.mem_append_right _ (List.mem_singleton_self _)
   have field := carrier.halt_field valid constraints balanced member zero
-  have bounds := halt_bounds step zero
+  have bounds := step.halt_bounds zero
   rw [← exit, ← field, ZMod.val_natCast_of_lt bounds.1,
     BitVec.toNat_setWidth, Nat.mod_eq_of_lt bounds.2]
 

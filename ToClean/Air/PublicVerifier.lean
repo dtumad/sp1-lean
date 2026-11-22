@@ -60,6 +60,24 @@ def Checks (input : PublicIO F) (data : ProverData F) : Prop :=
   ((check.circuit.main (varFromOffset PublicIO 0)).operations (size PublicIO)).ConstraintsHold
     (Environment.fromInput input data)
 
+/-- A public assertion has no private cells. Its bundled completeness proof therefore
+establishes the literal checks in any public environment satisfying its prover assumptions. -/
+theorem checks_of_proverAssumptions (input : PublicIO F) (data : ProverData F) (hint : ProverHint F)
+    (assumptions : check.circuit.ProverAssumptions input data hint) : check.Checks input data := by
+  let vars := varFromOffset (F := F) PublicIO 0
+  let env : ProverEnvironment F := ⟨Environment.fromInput input data, hint⟩
+  let ops := (check.circuit.main vars).operations (size PublicIO)
+  have length : FlatOperation.localLength ops.toFlat = 0 :=
+    FlatOperation.localLength_toFlat.trans ((check.circuit.localLength_eq vars _).trans (check.length_zero vars))
+  have uses : env.UsesLocalWitnesses (size PublicIO) ops := by
+    rw [ProverEnvironment.usesLocalWitnesses_iff_flat, ProverEnvironment.usesLocalWitnessesFlat_iff_extends]
+    intro i
+    exact (Nat.not_lt_zero i.val (lt_of_lt_of_eq i.isLt length)).elim
+  apply (check.circuit.original_full_completeness (size PublicIO) env vars uses ?_).1
+  rw [CircuitType.eval_var_prover_to_verifier]
+  change check.circuit.ProverAssumptions (eval (Environment.fromInput input data) vars) data hint
+  rwa [ProvableType.eval_fromInput_varFromOffset_zero]
+
 /-- Exact count bound for the added pull/push pairs, including repeated zero checks. -/
 def CountBound : Prop :=
   2 * (check.assertions (varFromOffset PublicIO 0)).length < ringChar F

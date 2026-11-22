@@ -1,4 +1,5 @@
 import SP1Clean.Export.FixedHintAssembly
+import SP1Clean.FormalModel.Contracts.ShardHeader
 import SP1Clean.Native.Operations.HostHintQueueTerminal
 import ToClean.Air.EnsembleCheck
 import ToClean.Air.ProverInputStatement
@@ -30,6 +31,10 @@ structure Context where
   commitments : CommitmentStatement
   /-- Inclusive resource ceilings for this local segment. -/
   limits : ResourceLimits := ResourceLimits.native SP1Prime
+
+/-- The public input determined by the authenticated snapshots and commitment statement. -/
+def Context.header (context : Context) : SP1PublicIO Fp :=
+  SP1StateBoundary.ofExecution context.source context.target context.commitments
 
 /-- Internal interpretation for the existing fixed-clock host proof. -/
 def Context.withClock (context : Context) (clock : BitVec 48) : FixedHintAssembly.Context where

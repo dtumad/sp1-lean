@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Sail.SailPlatform
+public import SP1Clean.Semantics.Sail.ExecutionFootprint
 
 /-! # Sail retirement registers across the execute stage
 
@@ -47,6 +48,15 @@ theorem retirementEnabled_of_run {state : SailState} {enabled : Bool}
 def PreservesRetirementRegisters (source target : SailState) : Prop :=
   ∀ reg, reg ∈ [Register.mcountinhibit, .minstretcfg, .minstret_increment, .minstret, .misa, .hvip, .mip] →
     target.regs.get? reg = source.regs.get? reg
+
+/-- The instruction's write footprint frames all seven retirement-control reads. -/
+theorem ExecuteFrame.retirementRegisters {source target : SailState} (frame : ExecuteFrame source target) :
+    PreservesRetirementRegisters source target := by
+  intro reg member
+  apply frame.registers
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    exact ⟨by decide, fun index _ => by unfold reg_idx_to_Register; split <;> decide⟩
 
 /-- The official update_mip and minstret prelude followed by the staged sequential nextPC. -/
 def retirementPrelude (source : SailState) (increment : Bool) (nextPC : BitVec 64) : SailState :=

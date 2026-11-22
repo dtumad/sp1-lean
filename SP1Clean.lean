@@ -73,6 +73,12 @@ import SP1Clean.Proofs.Completeness.MemoryHistory
 import SP1Clean.Proofs.Completeness.ProviderInteractions
 import SP1Clean.Proofs.Completeness.ProviderTables
 import SP1Clean.Proofs.Completeness.Providers
+import SP1Clean.Proofs.Completeness.PublicHeader
+import SP1Clean.Proofs.Completeness.HintReadTransfers
+import SP1Clean.Proofs.Completeness.HintReadTables
+import SP1Clean.Proofs.Completeness.HintReadLedger
+import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
+import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Proofs.Sail.Advance
@@ -117,6 +123,7 @@ import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.HostFinalMemory
 import SP1Clean.Soundness.HostFinalMemoryByte
 import SP1Clean.Soundness.HostFinalMemoryExecution
+import SP1Clean.Soundness.HostFinalMemoryExit
 import SP1Clean.Soundness.HostFinalMemoryEncoding
 import SP1Clean.Soundness.HostFinalMemoryDeclarations
 import SP1Clean.Soundness.HostFinalMemoryLookups
@@ -241,6 +248,7 @@ import SP1Clean.Soundness.LocalCoreEnsemble
 import SP1Clean.Soundness.LocalCoreLookups
 import SP1Clean.Soundness.LocalCoreEventUniqueness
 import SP1Clean.Soundness.LocalCoreExit
+import SP1Clean.Soundness.LocalCoreExitEvent
 import SP1Clean.Soundness.LocalCoreFinalBoundary
 import SP1Clean.Soundness.LocalCoreHaltExecution
 import SP1Clean.Soundness.LocalCoreMemory

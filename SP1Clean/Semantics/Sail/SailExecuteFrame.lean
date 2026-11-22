@@ -39,25 +39,22 @@ theorem SailConfigured.writeNextPC {source : SailState} (configured : SailConfig
 
 /-- Arithmetic or load writeback preserves every retirement-control register; this includes
 discarded GPR writes to x0. -/
-theorem writeGPR_retirementRegisters (state : SailState) (rd : BitVec 5) (value : BitVec 64) :
-    Semantics.PreservesRetirementRegisters state
+theorem writeGPR_frame (state : SailState) (rd : BitVec 5) (value : BitVec 64) :
+    Semantics.ExecuteFrame state
       (if rd = 0#5 then state else {state with regs := (state.regs.insert (reg_idx_to_Register rd)
         (bitVecToRegidxVal rd value))}) := by
-  intro reg member
-  split_ifs
-  · rfl
-  · rw [Std.ExtDHashMap.get?_insert, dite_eq_right]
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-      unfold reg_idx_to_Register <;> split <;> decide
+  split_ifs with zero
+  · exact .refl _
+  · refine ⟨fun reg fixed => ?_, rfl, rfl⟩
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right]
+    simpa only [beq_iff_eq] using Ne.symm (fixed.2 rd zero)
 
-/-- Staging a jump destination leaves the actual retirement-control registers intact. -/
-theorem writeNextPC_retirementRegisters (state : SailState) (pc : BitVec 64) :
-    Semantics.PreservesRetirementRegisters state {state with regs := state.regs.insert .nextPC pc} := by
-  intro reg member
+/-- Staging a jump destination writes only nextPC. -/
+theorem writeNextPC_frame (state : SailState) (pc : BitVec 64) :
+    Semantics.ExecuteFrame state {state with regs := state.regs.insert .nextPC pc} := by
+  refine ⟨fun reg fixed => ?_, rfl, rfl⟩
   rw [Std.ExtDHashMap.get?_insert, dite_eq_right]
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  simpa only [beq_iff_eq] using Ne.symm fixed.1
 
 /-- A GPR write, or a discarded x0 write, preserves the platform configuration. -/
 theorem SailConfigured.writeGPR {source : SailState} (configured : SailConfigured source)
@@ -227,7 +224,8 @@ theorem normal_observed_direct_execute {program : GuestProgram} {source target :
       target.regs.get? Register.nextPC = target.regs.get? Register.PC ∧ pcProperty (target.regs.get? Register.PC) ∧
       ((∀ state, SailConfigured state → (∀ index, state.get_reg? index = source.get_reg? index) → ∀ next,
         (runSail (execute decoded)) state = .ok (.Retire_Success ()) next →
-          Semantics.PreservesRetirementRegisters state next) → Semantics.OrdinaryBookkeeping source target) := by
+          Semantics.ExecuteFrame state next) → Semantics.OrdinaryBookkeeping source target ∧
+            Semantics.ExecutionFrame source target) := by
   obtain ⟨intermediate, preparedRun, increment, bits, post, incrementRun, hartRun, targetRun⟩ := normal
   let pending := refreshedMip source
   have refresh := run_update_mip source configured.init
@@ -277,7 +275,7 @@ theorem normal_observed_direct_execute {program : GuestProgram} {source target :
       cases rest
     all_goals exact ⟨rfl, rfl⟩
   obtain ⟨rfl, rfl⟩ := returned
-  obtain ⟨actual, tailRun, pcTail, _, memoryTail, registers, initialized, _, _, counter, cleared⟩ := tail_bookkeeping _ afterCfg.init
+  obtain ⟨actual, tailRun, pcTail, _, memoryTail, registers, initialized, cycles, output, counter, cleared⟩ := tail_bookkeeping _ afterCfg.init
   rw [tryStep_eq_of_hart_active source prepared 0 increment bits afterExecute refresh markedCfg.active incrementRun
     (by rw [Sail.run_readReg, preparedCfg.priv]) hartRun afterCfg.active, tailRun] at targetRun
   cases targetRun
@@ -293,7 +291,14 @@ theorem normal_observed_direct_execute {program : GuestProgram} {source target :
     have same : Semantics.retirementEnabled source = increment := by
       simpa only [Semantics.retirementEnabled, Std.ExtDHashMap.get?_insert,
         beq_iff_eq, reduceCtorEq, ↓reduceDIte] using decision
-    exact Semantics.OrdinaryBookkeeping.of_tail same held afterCfg.init registers counter cleared
+    refine ⟨Semantics.OrdinaryBookkeeping.of_tail same held.retirementRegisters afterCfg.init registers counter cleared,
+      fun reg frozen => ?_, cycles.trans held.cycles, output.trans held.output⟩
+    simp only [Semantics.SailSnapshot.executionRegister, decide_eq_false_iff_not, not_or,
+      not_exists, not_and] at frozen
+    obtain ⟨pc, npc, retired, inc, mip, event, gprs⟩ := frozen
+    rw [registers reg pc retired event, held.registers reg ⟨npc, gprs⟩]
+    simp only [staged, marked, prepared, Std.ExtDHashMap.get?_insert, beq_iff_eq,
+      Ne.symm npc, Ne.symm inc, Ne.symm mip, ↓reduceDIte]
 
 /-- Recover actual incoming GPR observations and a direct execute result, then transport an
 arbitrary memory predicate through official normal-retirement bookkeeping. -/

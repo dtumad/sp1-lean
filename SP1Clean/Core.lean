@@ -92,6 +92,8 @@ import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.FormalModel.Contracts.RegisterRead
 import SP1Clean.FormalModel.Contracts.ResourceBoundary
 import SP1Clean.FormalModel.Contracts.SailBoundary
+import SP1Clean.FormalModel.Contracts.ShardHeader
+import SP1Clean.FormalModel.Contracts.ShardHeaderEquality
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.FormalModel.Contracts.SystemChips
@@ -101,6 +103,7 @@ import SP1Clean.FormalModel.ShardMachine
 import SP1Clean.FormalModel.ShardPreservation
 import SP1Clean.FormalModel.ShardNextPC
 import SP1Clean.FormalModel.ShardDynamic
+import SP1Clean.FormalModel.ShardHeader
 import SP1Clean.FormalModel.ShardRetirement
 import SP1Clean.FormalModel.ShardAccess
 import SP1Clean.FormalModel.ShardResources
@@ -143,8 +146,10 @@ import SP1Clean.Semantics.Execution.ExecutionMemory
 import SP1Clean.Semantics.Execution.ExecutionAccess
 import SP1Clean.Semantics.Execution.ExecutionFrame
 import SP1Clean.Semantics.Execution.ExecutionPath
+import SP1Clean.Semantics.Execution.ParkedSyscall
 import SP1Clean.Semantics.Execution.ExecutionReplay
 import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Semantics.Resources.HistoricalHintWords
 import SP1Clean.Semantics.Resources.HintAllocations
 import SP1Clean.Semantics.Resources.HintReadDemand
 import SP1Clean.Semantics.Resources.SixCallResources
@@ -250,6 +255,7 @@ import SP1Clean.Semantics.Sail.SailMemorySplit
 import SP1Clean.Semantics.Sail.SailMemoryWrite
 import SP1Clean.Semantics.Sail.SailReadOnly
 import SP1Clean.Semantics.Sail.SailRetirement
+import SP1Clean.Semantics.Sail.ExecutionFootprint
 import SP1Clean.Semantics.Sail.RetirementRegisters
 import SP1Clean.Semantics.Sail.SailStepReduction
 import SP1Clean.Semantics.Sail.SailStoreFrame

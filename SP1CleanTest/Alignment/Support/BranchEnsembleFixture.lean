@@ -37,34 +37,9 @@ def context (target : ExecutionSnapshot) : Context where
   target := target
   commitments := default
 /-- Public ordinary-step endpoints, not a HALT endpoint claim. -/
-def header : SP1PublicIO Fp where
-  init_clk_0_16 := 1
-  init_clk_16_24 := 0
-  init_clk_24_32 := 0
-  init_clk_32_48 := 0
-  init_pc0 := 0
-  init_pc1 := 1
-  init_pc2 := 0
-  final_clk_0_16 := 9
-  final_clk_16_24 := 0
-  final_clk_24_32 := 0
-  final_clk_32_48 := 0
-  final_pc0 := 4092
-  final_pc1 := 1
-  final_pc2 := 0
-  exit_code := 0
-  is_execution_shard := 1
-  committed_value_digest := Vector.replicate 32 0
-  deferredProofsDigest := Vector.replicate 8 0
-  commitSyscall := 0
-  commitDeferredSyscall := 0
+def header : SP1PublicIO Fp := (context target).header
 /-- Empty execution preserves the complete source clock and PC. -/
-def identityHeader : SP1PublicIO Fp :=
-  { header with
-    final_clk_0_16 := header.init_clk_0_16,
-    final_clk_16_24 := header.init_clk_16_24, final_clk_24_32 := header.init_clk_24_32,
-    final_clk_32_48 := header.init_clk_32_48, final_pc0 := header.init_pc0,
-    final_pc1 := header.init_pc1, final_pc2 := header.init_pc2, is_execution_shard := 0 }
+def identityHeader : SP1PublicIO Fp := (context source).header
 /-- Empty generation input; semantic data is derived from the committed physical rows. -/
 def data : ProverData Fp := BranchCompilerRoundTrip.data
 /-- Evaluate a field word from a natural boundary key. -/

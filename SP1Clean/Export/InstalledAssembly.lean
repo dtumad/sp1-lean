@@ -1,5 +1,6 @@
 import SP1Clean.Export.InstalledHintProjection
 import SP1Clean.Export.InstalledHintVerifier
+import SP1Clean.FormalModel.Contracts.ShardHeaderEquality
 import ToClean.Air.MessageFilter
 
 /-! # Soundness with a private queue timestamp -/
@@ -120,7 +121,7 @@ theorem trace_of_statement (context : Context) {header : SP1PublicIO Fp} {height
   refine ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, encoded, links, dynamic, ?_⟩,
     ⟨checks.host, checks.resources⟩⟩
   exact ⟨endpoint.clock, endpoint.pc, endpoint.nextPC, endpoint.increment, endpoint.retired, endpoint.interrupts,
-    endpoint.eventIndex, endpoint.preserved, endpoint.runtime, endpoint.registers, endpoint.ram, endpoint.host, endpoint.exit⟩
+    endpoint.eventIndex, endpoint.preserved, endpoint.runtime, endpoint.registers, endpoint.ram, endpoint.host, endpoint.limbs, endpoint.exit⟩
 
 /-- Public observations of the six-handler execution between both complete snapshots, including
 the native clock phase, complete memory access spans and released jump-link checks at replayed sources. -/
@@ -163,6 +164,15 @@ theorem execution_of_statement (context : Context) {header : SP1PublicIO Fp} {he
     have identity := ExecutionPath.nil_iff.mp execution
     exact same ((congrArg ExecutionState.clock identity).symm.trans clock)
 
+
+/-- Raw acceptance determines every cell of the public header, including its numeric Exit
+on a continuing segment, a newly halted segment, and an already stopped identity. -/
+theorem header_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    (accepted : (assembly context).Statement .logUp header heights) : header = context.header := by
+  obtain ⟨valid, incoming, sail, commitments, _, facts⟩ := execution_of_statement context accepted
+  apply SP1StateBoundary.eq_of_bindings facts.endpoint.limbs valid.2.2.1 sail.ranges.1
+    incoming sail.2.1 sail.2.2 commitments
+  rw [← facts.endpoint.exit, ZMod.natCast_zmod_val]
 
 /-- Raw acceptance of the exported assembly implies a six-handler SP1 trace between the
 complete supplied Sail, host and clock states, with one immutable commitment statement. -/
@@ -231,7 +241,8 @@ theorem ExecutionFacts.halted {context : Context} {header : SP1PublicIO Fp}
       code.toNat = header.exit_code.val ∧ (ReleasePolicy.acceptsExit code = true ↔ header.exit_code = 0) := by
   obtain ⟨beforeEvents, _, call, last, _, _, halt, operand⟩ :=
     (FormalModel.Shard.trace_iff_executionPath.mp facts.path).ends_in_halt running stopped
-  have exitCode := facts.endpoint.exit code running stopped
+  have exitCode : code.toNat = header.exit_code.val := by
+    simpa only [SP1StateBoundary.haltCode, running, ↓reduceIte, stopped, Option.getD_some] using facts.endpoint.exit.symm
   refine ⟨⟨beforeEvents, call, last, halt, operand⟩, exitCode, ?_⟩
   rw [ReleasePolicy.acceptsExit_iff, ← BitVec.toNat_inj, ← ZMod.val_eq_zero, ← exitCode]
   rfl

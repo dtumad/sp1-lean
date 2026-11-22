@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostObservedDynamic
+import SP1Clean.Soundness.HostFinalMemoryExit
 import SP1Clean.Soundness.HostFinalMemoryEncoding
 import SP1Clean.FormalModel.ShardMachine
 
@@ -83,8 +84,8 @@ structure Endpoint (source target : ExecutionSnapshot) (final : HostHintQueue.St
       committed := target.host.committed
       deferred := target.host.deferred
       exitCode := target.host.exitCode }
-  exit : ∀ code : BitVec 32, source.host.exitCode = none → actual.host.exitCode = some code →
-    code.toNat = header.exit_code.val
+  limbs : header.LimbBounds
+  exit : header.exit_code.val = ((SP1StateBoundary.haltCode source target).getD 0).toNat
 
 variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)}
@@ -129,7 +130,9 @@ theorem trace_of_witness
   exact ⟨contract.2.1, contract.2.2.1, events, actual, trace_iff_executionPath.mpr (by rwa [image.program_eq valid]),
     { clock, pc, nextPC, increment, retired, interrupts, eventIndex, preserved, runtime, registers, ram
       host := ⟨hints, decoded, host⟩
-      exit }, profile, order, declared⟩
+      limbs := contract.1
+      exit := HostFinalMemory.publicExit witness constraints balanced valid path order
+        (by have status := congrArg HostState.exitCode host; exact status) exit }, profile, order, declared⟩
 
 attribute [local irreducible] HostObserved.ensemble in
 /-- **The exported native circuit proves a Sail trace.** Over any prime field with `2 ^ 25 < p`,

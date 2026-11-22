@@ -118,7 +118,7 @@ theorem load_execute_successor (source : SailState) (cfg : SailConfigured source
     (ran : (runSail (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))) source =
       .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧
-      target.regs.get? Register.nextPC = source.regs.get? Register.nextPC ∧ Semantics.PreservesRetirementRegisters source target := by
+      target.regs.get? Register.nextPC = source.regs.get? Register.nextPC ∧ Semantics.ExecuteFrame source target := by
   simp only [SailExecute.dispatch_LOAD, execute_LOAD, PreSail.sail_assert] at ran
   split at ran
   · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran
@@ -130,10 +130,10 @@ theorem load_execute_successor (source : SailState) (cfg : SailConfigured source
       rw [run_bind_of_run' source _ _ () (run_wX_bits (.Regidx rd) (extend_value unsigned bytes))] at rest
       cases rest
       exact ⟨(fun _ h => nomatch h), SailConfigured.writeGPR cfg rd _, by
-        by_cases zero : rd = 0#5 <;> simp only [zero, ↓reduceIte], writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+        by_cases zero : rd = 0#5 <;> simp only [zero, ↓reduceIte], writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
     | Err error =>
       cases rest
-      exact ⟨fun other same => direct other (congrArg Result.Err same), cfg, rfl, rfl, fun _ _ => rfl⟩
+      exact ⟨fun other same => direct other (congrArg Result.Err same), cfg, rfl, rfl, .refl _⟩
   · cases ran
 
 /-- Loads preserve configuration and memory for every actual execute result, including x0. -/

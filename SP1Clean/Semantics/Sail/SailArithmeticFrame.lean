@@ -41,7 +41,7 @@ theorem arithmetic_execute_successor (state : SailState) (cfg : SailConfigured s
     (decoded : instruction) (arithmetic : ArithmeticInstruction decoded) : ∃ next,
       (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧
         SailConfigured next ∧ next.mem = state.mem ∧ next.regs.get? Register.nextPC = state.regs.get? Register.nextPC ∧
-          Semantics.PreservesRetirementRegisters state next := by
+          Semantics.ExecuteFrame state next := by
   unfold ArithmeticInstruction at arithmetic
   split at arithmetic
   next =>
@@ -50,85 +50,85 @@ theorem arithmetic_execute_successor (state : SailState) (cfg : SailConfigured s
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, rtype_execute_reaches rs2 rs1 rd op left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩, op⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, rtypew_execute_reaches rs2 rs1 rd op left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨imm, ⟨rs1⟩, ⟨rd⟩, op⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     exact ⟨_, itype_execute_reaches imm rs1 rd op left state leftRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨shamt, ⟨rs1⟩, ⟨rd⟩, op⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     exact ⟨_, shiftitype_execute_reaches shamt rs1 rd op left state leftRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨shamt, ⟨rs1⟩, ⟨rd⟩, op⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     exact ⟨_, shiftiwtype_execute_reaches shamt rs1 rd op left state leftRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨imm, ⟨rs1⟩, ⟨rd⟩⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     exact ⟨_, execute_ADDIW_reaches imm rs1 rd left state leftRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨imm, ⟨rd⟩, op⟩
     exact ⟨_, execute_UTYPE_reaches imm rd op _ state (Std.ExtDHashMap.get?_eq_some_get (cfg.init _)),
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩, isU⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, execute_DIV_reaches rs2 rs1 rd isU left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩, isU⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, execute_REM_reaches rs2 rs1 rd isU left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩, isU⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, execute_DIVW_reaches rs2 rs1 rd isU left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩, isU⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, execute_REMW_reaches rs2 rs1 rd isU left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩, op⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, execute_MUL_reaches rs2 rs1 rd op left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next =>
     rename_i operands
     rcases operands with ⟨⟨rs2⟩, ⟨rs1⟩, ⟨rd⟩⟩
     obtain ⟨left, leftRead⟩ := initialized_gpr state cfg.init rs1
     obtain ⟨right, rightRead⟩ := initialized_gpr state cfg.init rs2
     exact ⟨_, execute_MULW_reaches rs2 rs1 rd left right state leftRead rightRead,
-      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
+      SailConfigured.writeGPR cfg rd _, by split_ifs <;> rfl, writeGPR_nextPC _ _ _, writeGPR_frame _ _ _⟩
   next => contradiction
 
 /-- Every arithmetic execute stage preserves the platform configuration and complete memory,

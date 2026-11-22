@@ -83,6 +83,23 @@ theorem ExecutionStep.frame {policy : HostPolicy} {program : GuestProgram}
     have frame := (ExecutionStep.syscall success).syscall_sail_frame
     exact ⟨frame.2.2.1 configured, frame.2.2.2⟩
 
+/-- The complete official step preserves every register outside the execution footprint
+and both simulator fields, for ordinary instructions and all host calls. -/
+theorem ExecutionStep.sailFrame {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {event : ExecutionEvent}
+    (step : ExecutionStep policy program source event target)
+    (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail) :
+    ExecutionFrame source.sail target.sail := by
+  cases step with
+  | ordinary _ _ normal permitted => exact (Advance.ordinary_normal_bookkeeping configured loaded permitted normal).2.2
+  | syscall success =>
+    obtain ⟨pc, execution, _, _, _, _, moved, _⟩ := HostState.step_observations success
+    rw [moved]
+    refine ⟨fun reg frozen => ?_, rfl, rfl⟩
+    simp only [SailSnapshot.executionRegister, decide_eq_false_iff_not, not_or, not_exists, not_and] at frozen
+    obtain ⟨notPC, _, _, _, _, _, gprs⟩ := frozen
+    exact execution.other_register_frame source.sail pc reg notPC (gprs 5 (by decide))
+
 /-- Each actual event authenticates a committed instruction and its official Sail fetch. -/
 theorem ExecutionStep.fetch_eq {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {event : ExecutionEvent}
@@ -122,6 +139,19 @@ theorem frame (path : ExecutionPath policy (image.toGuestProgram valid) source e
     obtain ⟨cfg, loaded, preserved⟩ := ih next.1 rom
     exact ⟨cfg, loaded, fun address selected =>
       (preserved address selected).trans (next.2 address selected)⟩
+
+/-- Invariant Sail fields compose along the same mixed path that preserves instruction fetch. -/
+theorem sailFrame (path : ExecutionPath policy (image.toGuestProgram valid) source events target)
+    (protectsRom : ∀ address, image.readOnly address = true → policy.memory.readOnly address = true)
+    (configured : SailConfigured source.sail) (loaded : RomLoaded (image.toGuestProgram valid) source.sail) :
+    ExecutionFrame source.sail target.sail := by
+  induction path with
+  | nil => exact .refl _
+  | cons step _ ih =>
+    have next := step.frame configured loaded
+    have rom := image.romLoaded_of_readOnly valid
+      (fun address selected => next.2 address (protectsRom address selected)) loaded
+    exact (step.sailFrame configured loaded).trans (ih next.1 rom)
 
 /-- Every replayed prefix, including endpoint extension, inherits the same independent invariant. -/
 theorem frame_prefix (path : ExecutionPath policy (image.toGuestProgram valid) source events target)
