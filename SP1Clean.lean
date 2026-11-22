@@ -89,6 +89,11 @@ import SP1Clean.Proofs.Completeness.HintReadTables
 import SP1Clean.Proofs.Completeness.HintReadLedger
 import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
+import SP1Clean.Proofs.Completeness.MixedCompiledRows
+import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
+import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
+import SP1Clean.Proofs.Completeness.MixedSyscallArms
+import SP1Clean.Proofs.Completeness.MixedSyscallRows
 import SP1Clean.Proofs.Completeness.ReleaseInstructionRows
 import SP1Clean.Proofs.Completeness.InstalledInstructionTables
 import SP1Clean.Proofs.Completeness.MixedInstructionTables
