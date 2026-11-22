@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Completeness.HintInventory
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
+import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.FormalModel.ShardPreservation
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Semantics.Execution.ExecutionAccess
@@ -21,13 +22,19 @@ private abbrev F := ZMod SP1Prime
 
 /-- The data common to the next-word and last-word rows of one host operation. -/
 structure Request where
+  /-- Timestamp of the executing ECALL. -/
   clock : ℕ
+  /-- Pointer to the popped immutable hint node. -/
   pointer : ℕ
+  /-- First destination byte in guest RAM. -/
   address : ℕ
+  /-- Complete contents of the popped node, before padding. -/
   bytes : Bytes
 
+/-- Aligned guest byte address of one transfer. -/
 def Request.destination (request : Request) (index : ℕ) : ℕ := request.address + index * 8
 
+/-- Select the last-word consumer at the unique final index. -/
 def Request.last (request : Request) (index : ℕ) : Bool := decide (index + 1 = wordCount request.bytes)
 
 /-- Prior Memory message with the actual cell address, prior timestamp and overwritten value. -/
@@ -35,6 +42,7 @@ private def previous (time address : ℕ) (word : BitVec 64) : Channels.MemoryMs
   let key := Address.ofNat (p := SP1Prime) address
   ⟨(time / 2 ^ 24 : ℕ), (time % 2 ^ 24 : ℕ), key[0], key[1], key[2], bitVecToWord word⟩
 
+/-- Populate the active physical consumer, including both sides of its RAM transfer. -/
 def Request.wordRow (request : Request) (index time : ℕ) (old : BitVec 64) : RowInput F :=
   let cpu := cpuStateCols (p := SP1Prime) request.clock 0
   let address := request.destination index
@@ -42,6 +50,7 @@ def Request.wordRow (request : Request) (index time : ℕ) (old : BitVec 64) : R
     cpu.clk_16_24 (bitVecToWord (wordValue request.bytes index))
   HintReadWordChip.populate (request.last index) ram (Address.ofNat request.pointer) (Address.ofNat index)
 
+/-- The canonical Memory-bus location displaced by this transfer. -/
 def Request.cell (request : Request) (index : ℕ) : RamCell :=
   ramCellOfByteAddress (BitVec.ofNat 64 (request.destination index))
 
@@ -101,6 +110,47 @@ theorem Request.link (request : Request) (index firstTime nextTime : ℕ) (old n
   rw [last, Address.toNat_ofNat _ indexFits, Address.toNat_ofNat _ fits]
   simp [destination, Nat.add_mul, Nat.add_assoc]
   exact ⟨rfl, rfl, rfl⟩
+
+/-- The two ends of the generated chain coincide with the exact cursor messages installed in
+the HINT_READ handler. The previous queue clock affects neither word endpoint. -/
+theorem handler_endpoints (store : Store) (head previousClock clock : ℕ) (exec : HostExecution)
+    (bytes : Bytes) (length : bytes.length = exec.arg2.toNat)
+    (span : HintReadSpan.Domain exec.arg1.toNat bytes.length)
+    (firstTime finalTime : ℕ) (firstOld finalOld : BitVec 64) :
+    let request : Request := ⟨clock, head, exec.arg1.toNat, bytes⟩
+    let handler := HostHintReadChip.populate (p := SP1Prime) store head previousClock clock exec
+    (request.wordRow 0 firstTime firstOld).1.previous = handler.first ∧
+      (request.wordRow (bytes.length / 8) finalTime finalOld).1.next = handler.final := by
+  let cpu := cpuStateCols (p := SP1Prime) clock 0
+  have high : cpu.clk_high = ((clock / 2 ^ 24 : ℕ) : F) := by
+    rw [show cpu.clk_high = _ from cpuStateCols_clk_high clock 0, Nat.shiftRight_eq_div_pow]
+  have low := clkLow_eq (p := SP1Prime) clock 0
+  have natural : Word.toNat (bitVecToWord (p := SP1Prime) exec.arg2) = bytes.length := by
+    rw [← Word.toBitVec64_toNat (isU64_bitVecToWord _), toBitVec64_bitVecToWord, length]
+  have start := Address.toNat_ofNat (p := SP1Prime) exec.arg1.toNat span.bounds.1
+  have indexBound : bytes.length / 8 < 2 ^ 48 := by have := span.bounds.2.2.2; omega
+  constructor
+  · change HintReadWordChip.State.mk cpu.clk_high _ _ _ _ = HintReadWordChip.State.mk _ _ _ _ _
+    rw [high]
+    change HintReadWordChip.State.mk _ ((cpuStateCols (p := SP1Prime) clock 0).clk_0_16 +
+      (cpuStateCols (p := SP1Prime) clock 0).clk_16_24 * 65536) _ _ _ = _
+    rw [low]
+    change HintReadWordChip.State.mk _ _ (Address.ofNat head) (Address.ofNat 0)
+      (Address.ofNat (exec.arg1.toNat + 0 * 8)) = _
+    rw [Nat.zero_mul, Nat.add_zero]
+    rfl
+  · let i := bytes.length / 8
+    have last : (Request.mk clock head exec.arg1.toNat bytes).last i = true := by simp [Request.last, wordCount, i]
+    change HintReadWordChip.State.mk cpu.clk_high
+      ((cpuStateCols (p := SP1Prime) clock 0).clk_0_16 + (cpuStateCols (p := SP1Prime) clock 0).clk_16_24 * 65536)
+      (Address.ofNat head) (Address.ofNat (Address.toNat (Address.ofNat i) + 1))
+      (if (Request.mk clock head exec.arg1.toNat bytes).last i then Address.ofNat (exec.arg1.toNat + i * 8) else _) =
+      HintReadWordChip.State.mk _ _ (Address.ofNat head)
+        (Address.ofNat (Word.toNat (bitVecToWord (p := SP1Prime) exec.arg2) / 8 + 1))
+        (Address.ofNat (Address.toNat (Address.ofNat exec.arg1.toNat) +
+          Word.toNat (bitVecToWord (p := SP1Prime) exec.arg2) / 8 * 8))
+    rw [high, low, last, Address.toNat_ofNat i indexBound, start, natural]
+    rfl
 
 private theorem val_small {n : ℕ} (small : n < 2 ^ 24) : (n : F).val = n :=
   ZMod.val_natCast_of_lt (small.trans pow24_lt_sp1Prime)
