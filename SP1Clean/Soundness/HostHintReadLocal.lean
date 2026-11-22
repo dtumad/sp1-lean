@@ -73,7 +73,7 @@ theorem ExtensionInterface.appendResources
     · exact cursor component added
 
 /-- The currently implemented control, commitment, and HINT_LEN handlers need no cursor premise. -/
-theorem availableInterface (includeVerify : Bool := false) : ExtensionInterface (HostCallReceivers.availableFor (p := p) includeVerify) [] := by
+theorem availableInterface (includeVerify : Bool := true) : ExtensionInterface (HostCallReceivers.availableFor (p := p) includeVerify) [] := by
   refine ⟨?_, by simp, ?_⟩
   · simpa only [List.append_nil] using HostCallReceivers.auxiliaryInterface (p := p) includeVerify
   · have checked : ((HostCallReceivers.availableFor (p := p) includeVerify).map (·.component)).all (fun component =>

@@ -103,7 +103,7 @@ interpreter or scheduler.
   and their count bounds. Rust tests accept arbitrary disabled cells and reject non-Boolean
   activity, missing real checks/transfers and activated padding. Repeated queue observations and overlapping reads also compare intermediate transfers with
   released execution, so the final RAM state cannot mask a bad earlier write. General generation
-  completeness and WRITE/VERIFY installation remain open.
+  completeness and WRITE installation remain open.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and

@@ -12,18 +12,17 @@ contains the execution model, authenticated memory/host boundaries, and whole-ma
 infrastructure needed to assemble those chips.
 
 **Soundness.** Raw acceptance of the 100-table assembly yields a trace between the supplied
-complete Sail, host and clock states for all 25 ordinary instruction families and six host calls.
+complete Sail, host and clock states for all 25 ordinary instruction families and seven host calls.
 On the native preset, every clause of the released execution statement follows for a shard
 whose public clock advances by fewer than 16 ticks. For an arbitrary-length accepted shard,
 the remaining comparison is the peak boundary payload on that same trace.
-[Installed theorem](SP1Clean/Export/InstalledAssembly.lean) · [Short shards](SP1Clean/Export/ShortShard.lean) · [General release criterion](SP1Clean/Export/SixCallResources.lean)
+[Installed theorem](SP1Clean/Export/InstalledAssembly.lean) · [Short shards](SP1Clean/Export/ShortShard.lean) · [General release criterion](SP1Clean/Export/InstalledExecutionResources.lean)
 
 **Constructive completeness.** A bounded execution of the eight-call Sail model supplies the
 four observation tables and a persistent hint inventory, including every node and padded word
 after a pop. The local chip proofs construct witnesses for each supported ordinary instruction.
 Whole-assembly completeness still requires the joint instruction, Memory, host and provider
-witness, its channel balance and its physical capacity. WRITE and VERIFY also need complete
-eight-call installation. [Observation tables](SP1Clean/Proofs/Completeness/ObservationData.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
+witness, its channel balance and its physical capacity. Installing WRITE completes the eight-call handler inventory. [Observation tables](SP1Clean/Proofs/Completeness/ObservationData.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
 
 The fixed RAM providers use one row per maximal constant-byte run before padding. An empty
 shard with $2^{29}$ identical live bytes needs four rows for each endpoint RAM provider.

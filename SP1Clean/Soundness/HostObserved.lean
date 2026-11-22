@@ -18,7 +18,7 @@ open SP1Clean.OrdinaryObservation (startFor finalFor endpoint)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-/-- Protected instruction producers in the six-call assembly with its static Sail target check. -/
+/-- Protected instruction producers in the seven-call assembly with its static Sail target check. -/
 abbrev producers (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) :=
   HostOrdinaryReceipts.ensemble image source target final HostCallReceivers.available

@@ -90,6 +90,8 @@ EXPECTED_ROOTS = {
     "SP1Clean.Soundness.HostRegisteredCalls.noopTable_component",
     "SP1Clean.Soundness.HostRegisteredCalls.receipt_heights",
     "SP1Clean.Soundness.HostRegisteredCalls.classified",
+    "SP1Clean.Semantics.HostReceiptProfile.installed_code_iff",
+    "SP1Clean.Export.InstalledAssembly.enter_verify_slot",
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
