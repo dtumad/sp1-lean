@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Proofs.Completeness.MixedBumpInventory
+import SP1Clean.Proofs.Completeness.MixedCompiledRows
 
 /-! # Constructing a complete syscall instruction row at every mixed execution cut
 
