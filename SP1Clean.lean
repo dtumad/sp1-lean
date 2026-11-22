@@ -82,6 +82,7 @@ import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
+import SP1Clean.Proofs.Completeness.MemoryVersionHistory
 import SP1Clean.Proofs.Completeness.ProviderInteractions
 import SP1Clean.Proofs.Completeness.ProviderTables
 import SP1Clean.Proofs.Completeness.Providers
@@ -104,6 +105,7 @@ import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
 import SP1Clean.Proofs.Completeness.MixedStateSchedule
 import SP1Clean.Proofs.Completeness.MixedBumpInventory
 import SP1Clean.Soundness.WriteObservationHistory
+import SP1Clean.Soundness.WriteVersionIntervals
 import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations

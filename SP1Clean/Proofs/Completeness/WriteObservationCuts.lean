@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
+import SP1Clean.Soundness.WriteVersionIntervals
 import SP1Clean.Soundness.HostHintReadExecutionPath
 
 /-! # The WRITE operand observer on installed physical prefixes
@@ -32,18 +33,14 @@ noncomputable def physicalRows {witness : HostHintQueueBoundary.SourceWitness im
   carrier.ordered.map (eventFacts witness.data (TransitionView.readIndexedActiveRows
     HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))))
 
-/-- Raw constraints and ledger closure suffice for every possible probe at every actual cut of
-the installed host prefix. Every accepted packet is checked against the same paired replay. -/
-theorem installed_cuts (witness : HostHintQueueBoundary.SourceWitness image source final
+private theorem installed_held (witness : HostHintQueueBoundary.SourceWitness image source final
     bankFinal extra channels sourceNames) (checked : witness.Constraints)
     (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ (valid : image.Valid) (carrier : GroundingCarrier witness), ∀ cut ≤ carrier.ordered.length,
       ∃ current, carrier.pairedTrajectory valid cut = some current ∧
-        ∀ (call : CoreSyscallEvent) (length : Word (ZMod p)) (buffer : List (Word (ZMod p))),
-          checkWriteInputs source.sail.memorySnapshot (physicalRows carrier) cut call length buffer = true ↔
-            (current.sail.get_reg? 5 = some call.rawCode ∧ current.sail.get_reg? 10 = some call.arg1 ∧
-              current.sail.get_reg? 11 = some call.arg2) ∧ length.isU64 ∧ (∀ word ∈ buffer, word.isU64) ∧
-              read? current.sail call = some (length.toBitVec64, buffer.map Word.toBitVec64) := by
+        ∀ (loc : MemLoc), loc.busAddress < 2 ^ 48 →
+          let word := wordAt source.sail.memorySnapshot (physicalRows carrier) cut loc
+          word.isU64 ∧ locContent current.sail loc = some word.toBitVec64 := by
   have ordering := HostHintQueueBoundary.SourceWitness.orderingChannels witness checked balanced
   have sourceValid := (LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte).2.1
   have valid := sourceValid.1.1
@@ -64,7 +61,7 @@ theorem installed_cuts (witness : HostHintQueueBoundary.SourceWitness image sour
   intro cut within
   obtain ⟨current, atCut, _⟩ := path.replay_split cut
   have before : carrier.trajectory valid cut = some current.sail := congrArg (Option.map ExecutionState.sail) atCut
-  refine ⟨current, atCut, fun call length buffer => checkWriteInputs_iff (fun loc bound => ?_) call length buffer⟩
+  refine ⟨current, atCut, fun loc bound => ?_⟩
   have held := wordAt_carrier carrier (carrier.trajectory_zero valid) sourceValid.memory initialState initialMemory
     (fun event member => by
       cases event with
@@ -72,5 +69,48 @@ theorem installed_cuts (witness : HostHintQueueBoundary.SourceWitness image sour
       | syscall row => exact carrier.syscall_engineFacts valid checked balanced member
       | halt row => exact carrier.halt_engineFacts valid checked balanced member) within loc bound
   exact ⟨held.1, (localValueAt_stepStart_iff before).mp held.2⟩
+
+/-- Every probe on the physical host assembly selects one genuine version defined by its
+original Memory pushes. Its four limbs reproduce the paired replay on that cut, including
+untouched snapshot cells and versions surviving through the final cut. -/
+theorem installed_versions (witness : HostHintQueueBoundary.SourceWitness image source final
+    bankFinal extra channels sourceNames) (checked : witness.Constraints)
+    (balanced : HostHintQueueBoundary.Balanced witness) :
+    ∃ (valid : image.Valid) (carrier : GroundingCarrier witness), ∀ cut ≤ carrier.ordered.length,
+      ∃ current, carrier.pairedTrajectory valid cut = some current ∧
+        ∀ (loc : MemLoc), loc.busAddress < 2 ^ 48 →
+          ∃ v, (versionIntervals (physicalRows carrier) loc).filter (·.coversClock (carrier.timeline.start cut)) = [v] ∧
+            let word := v.value (Target.bitVecToWord (source.sail.memorySnapshot.read loc))
+            word.isU64 ∧ locContent current.sail loc = some word.toBitVec64 := by
+  obtain ⟨valid, carrier, all⟩ := installed_held witness checked balanced
+  refine ⟨valid, carrier, fun cut within => ?_⟩
+  obtain ⟨current, reached, held⟩ := all cut within
+  refine ⟨current, reached, fun loc bound => ?_⟩
+  obtain ⟨v, unique, eq⟩ := versionIntervals_at source.sail.memorySnapshot (physicalRows carrier) loc
+    (by simpa [physicalRows] using within)
+  refine ⟨v, ?_, eq.symm ▸ held loc bound⟩
+  rw [versionIntervals_clock _ loc (by simpa [physicalRows] using within)]
+  · exact unique
+  · intro i row present
+    rw [physicalRows, List.getElem?_map, Option.map_eq_some_iff] at present
+    obtain ⟨event, seen, rfl⟩ := present
+    exact carrier.time_of_ordered_at seen
+
+/-- Raw constraints and ledger closure suffice for every possible probe at every actual cut of
+the installed host prefix. Every accepted packet is checked against the same paired replay. -/
+theorem installed_cuts (witness : HostHintQueueBoundary.SourceWitness image source final
+    bankFinal extra channels sourceNames) (checked : witness.Constraints)
+    (balanced : HostHintQueueBoundary.Balanced witness) :
+    ∃ (valid : image.Valid) (carrier : GroundingCarrier witness), ∀ cut ≤ carrier.ordered.length,
+      ∃ current, carrier.pairedTrajectory valid cut = some current ∧
+        ∀ (call : CoreSyscallEvent) (length : Word (ZMod p)) (buffer : List (Word (ZMod p))),
+          checkWriteInputs source.sail.memorySnapshot (physicalRows carrier) cut call length buffer = true ↔
+            (current.sail.get_reg? 5 = some call.rawCode ∧ current.sail.get_reg? 10 = some call.arg1 ∧
+              current.sail.get_reg? 11 = some call.arg2) ∧ length.isU64 ∧ (∀ word ∈ buffer, word.isU64) ∧
+              read? current.sail call = some (length.toBitVec64, buffer.map Word.toBitVec64) := by
+  obtain ⟨valid, carrier, all⟩ := installed_held witness checked balanced
+  refine ⟨valid, carrier, fun cut within => ?_⟩
+  obtain ⟨current, reached, held⟩ := all cut within
+  exact ⟨current, reached, checkWriteInputs_iff held⟩
 
 end SP1Clean.TraceGen.WriteObservations
