@@ -18,9 +18,13 @@ variable {p : ℕ}
 /-- A half-open range of execution cuts between consecutive genuine pushes at one location.
 A missing predecessor denotes genesis. A missing successor denotes the end of the segment. -/
 structure VersionInterval (p : ℕ) where
+  /-- First execution cut that observes this version. -/
   lower : ℕ
+  /-- One past the last execution cut that observes this version. -/
   upper : ℕ
+  /-- Effect-slot push that installed the held word, or genesis. -/
   previous : Option (MemoryMsg (ZMod p))
+  /-- Next effect-slot push at this location, or the segment boundary. -/
   next : Option (MemoryMsg (ZMod p))
 
 /-- The unchanged value throughout the interval, seeded from the incoming complete snapshot. -/

@@ -1,6 +1,7 @@
 import Lean
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.WriteProbeCapacity
+import SP1Clean.Proofs.Completeness.MemoryVersionHistory
 import SP1CleanTest.Alignment.Core.MixedStateBumpEdges
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Proofs.Completeness.PublicHeader
@@ -168,6 +169,12 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.InstalledInstructionTables.table_receipts,
   ``SP1Clean.TraceGen.InstalledInstructionTables.receipt_weights,
   ``SP1Clean.TraceGen.WriteObservations.installed_cuts,
+  ``SP1Clean.Soundness.WriteObservationHistory.versionIntervals_effects,
+  ``SP1Clean.TraceGen.WriteObservations.installed_versions,
+  ``SP1Clean.TraceGen.WriteObservations.checkPacket_iff_versions,
+  ``SP1Clean.TraceGen.MemoryHistoryAccess.matchingValues_of_balance,
+  ``SP1Clean.TraceGen.MemoryLocationHistory.heldAt_interval,
+  ``SP1Clean.TraceGen.MemoryLocationHistory.heldAt_final,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_capacity,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_base_fits,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_compiled_ordinary_fits,
