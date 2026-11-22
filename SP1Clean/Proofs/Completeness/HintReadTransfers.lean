@@ -330,7 +330,7 @@ theorem of_admissibleExecution {image : ProgramImage} {source target : Execution
         some (next, syscallFrontier frontier current.clock call) ∧
       storeAfter? hostPolicy image.program source.realize (events.take cut) (ofList source.host.io.hints) = some cursor ∧
       storeAfter? hostPolicy image.program source.realize events (ofList source.host.io.hints) = some final ∧
-      node? final.1 cursor.2 = some ⟨bytes, tail⟩ ∧ current.host.io.hints = bytes :: rest ∧
+      node? cursor.1 cursor.2 = some ⟨bytes, tail⟩ ∧ node? final.1 cursor.2 = some ⟨bytes, tail⟩ ∧ current.host.io.hints = bytes :: rest ∧
       next.host.io.hints = rest ∧ bytes.length = call.arg2.toNat ∧ current.clock = call.clock ∧
       HintReadSpan.Domain call.arg1.toNat bytes.length ∧
       let request : Request := ⟨call.clock, cursor.2, call.arg1.toNat, bytes⟩
@@ -360,7 +360,7 @@ theorem of_admissibleExecution {image : ProgramImage} {source target : Execution
     obtain ⟨tail, node, desc⟩ := head_of_cons represents
     let request : Request := ⟨current.clock, cursor.2, exec.arg1.toNat, bytes⟩
     refine ⟨current, _, frontier, cursor, final, bytes, rest, tail, built, nextBuilt, queueBuilt, finalBuilt,
-      extend _ _ node, queue, ?_, length, rfl, span, ?_⟩
+      node, extend _ _ node, queue, ?_, length, rfl, span, ?_⟩
     · simp only [hostEq, changeHost]
     change ∀ index < wordCount bytes, request.WordAt index _ _ _ _ _
     intro index pos
