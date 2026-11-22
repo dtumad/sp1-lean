@@ -153,6 +153,14 @@ theorem fixedProviderPreset_observation_capacity (ctx : Context) {events : List 
   have enough : 2 ^ 22 * 126 + 4 * 2 ^ 21 ≤ SP1Prime - 1 - (2 ^ 30 + 1056) - 14 * 2 ^ 24 := by decide
   omega
 
+/-- Uniform lower bound on the channel-specific reserve after the verifier and 42 tables. -/
+theorem observation_reserve (name : String) :
+    285211616 ≤ SP1Prime - 1 - (2 ^ 30 + 1056) - 14 * 2 ^ 24 - 2 ^ 22 * ordinaryRowBound name - observationBudget name := by
+  have maxOrdinary := Nat.mul_le_mul_left (2 ^ 22) (ordinaryRowBound_le name)
+  have maxObservation := observationBudget_le name
+  have enough : 285211616 ≤ SP1Prime - 1 - (2 ^ 30 + 1056) - 14 * 2 ^ 24 - 2 ^ 22 * 126 - 4 * 2 ^ 21 := by decide
+  omega
+
 /-- Every registered channel retains room for at least 285,211,616 further occurrences
 after adding the four actual observation components to the 38-table allocation. -/
 theorem fixedProviderPreset_observation_fit (ctx : Context) {events : List ExecutionEvent}
@@ -165,11 +173,7 @@ theorem fixedProviderPreset_observation_fit (ctx : Context) {events : List Execu
           (observationHeights ctx (events.countP ExecutionEvent.isOrdinary) t + other t))) := by
   apply fixedProviderPreset_observation_capacity ctx execution preset
   intro ch registered
-  apply (remaining ch registered).trans
-  have maxOrdinary := Nat.mul_le_mul_left (2 ^ 22) (ordinaryRowBound_le ch.name)
-  have maxObservation := observationBudget_le ch.name
-  have enough : 285211616 ≤ SP1Prime - 1 - (2 ^ 30 + 1056) - 14 * 2 ^ 24 - 2 ^ 22 * 126 - 4 * 2 ^ 21 := by decide
-  omega
+  exact (remaining ch registered).trans (observation_reserve ch.name)
 
 /-- The verifier and the 42 covered slots fit without further demand or caller-supplied
 terminal choices, row counts or verifier bounds. -/
