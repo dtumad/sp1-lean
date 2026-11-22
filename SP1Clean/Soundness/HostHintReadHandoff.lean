@@ -61,7 +61,7 @@ theorem auxiliaryInterface : HostLocalCore.AuxiliaryInterface
     rcases member with rfl | rfl | rfl <;> change false = true at present <;> contradiction
 
 /-- The implemented handler registry includes the real HINT_READ receiver and all control,
-commitment, and HINT_LEN variants. WRITE and VERIFY handlers are not yet registered. -/
+commitment, and HINT_LEN variants. The installed control receiver accepts ENTER and VERIFY. -/
 def registeredReceivers : List (HostLocalHandoff.Receiver (p := p)) :=
   receiver :: HostCallReceivers.available
 

@@ -34879,7 +34879,7 @@
       "local": true,
       "module": "SP1Clean.Export.ShardChain",
       "name": "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",
-      "typeFingerprint": "3674283567"
+      "typeFingerprint": "3951365803"
     },
     {
       "bodyFingerprint": "3754697569",
@@ -34900,7 +34900,7 @@
       "local": true,
       "module": "SP1Clean.Export.ShardChain",
       "name": "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
-      "typeFingerprint": "2531483871"
+      "typeFingerprint": "887050601"
     },
     {
       "bodyFingerprint": null,
@@ -34977,7 +34977,7 @@
       "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.ExecutionFacts.mk",
-      "typeFingerprint": "89958273"
+      "typeFingerprint": "722827036"
     },
     {
       "bodyFingerprint": "746068900",
@@ -35101,6 +35101,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.InstalledFixedInventory",
+      "name": "SP1Clean.Export.InstalledAssembly.enter_verify_slot",
+      "typeFingerprint": "4285582331"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
       "typeFingerprint": "3503797732"
@@ -35178,14 +35185,14 @@
     {
       "bodyFingerprint": null,
       "local": true,
-      "module": "SP1Clean.Export.SixCallResources",
+      "module": "SP1Clean.Export.InstalledExecutionResources",
       "name": "SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak",
       "typeFingerprint": "2627891380"
     },
     {
       "bodyFingerprint": null,
       "local": true,
-      "module": "SP1Clean.Export.SixCallResources",
+      "module": "SP1Clean.Export.InstalledExecutionResources",
       "name": "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
       "typeFingerprint": "2878849353"
     },
@@ -35227,7 +35234,7 @@
     {
       "bodyFingerprint": null,
       "local": true,
-      "module": "SP1Clean.Export.SixCallResources",
+      "module": "SP1Clean.Export.InstalledExecutionResources",
       "name": "SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement",
       "typeFingerprint": "1528230111"
     },
@@ -35250,7 +35257,7 @@
       "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.soundness",
-      "typeFingerprint": "1194192588"
+      "typeFingerprint": "2300947566"
     },
     {
       "bodyFingerprint": null,
@@ -62854,18 +62861,46 @@
       "typeFingerprint": "3567989751"
     },
     {
-      "bodyFingerprint": "3215724661",
+      "bodyFingerprint": "343817354",
       "local": true,
-      "module": "SP1Clean.Semantics.Host.SixCallProfile",
+      "module": "SP1Clean.Semantics.Host.HostReceiptProfile",
       "name": "SP1Clean.Semantics.HostReceiptProfile.code",
       "typeFingerprint": "1616523472"
     },
     {
-      "bodyFingerprint": "2561094069",
+      "bodyFingerprint": "2114491378",
       "local": true,
-      "module": "SP1Clean.Semantics.Host.SixCallProfile",
-      "name": "SP1Clean.Semantics.HostReceiptProfile.code.match_1",
-      "typeFingerprint": "2561012691"
+      "module": "SP1Clean.Semantics.Host.HostReceiptProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.commonKinds",
+      "typeFingerprint": "63135957"
+    },
+    {
+      "bodyFingerprint": "2333527473",
+      "local": true,
+      "module": "SP1Clean.Semantics.Host.HostReceiptProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.event",
+      "typeFingerprint": "1210875601"
+    },
+    {
+      "bodyFingerprint": "2774585135",
+      "local": true,
+      "module": "SP1Clean.Semantics.Host.HostReceiptProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.event.match_1",
+      "typeFingerprint": "2819375395"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Semantics.Host.HostReceiptProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.installed_code_iff",
+      "typeFingerprint": "3351267195"
+    },
+    {
+      "bodyFingerprint": "2022664912",
+      "local": true,
+      "module": "SP1Clean.Semantics.Host.HostReceiptProfile",
+      "name": "SP1Clean.Semantics.HostReceiptProfile.kinds",
+      "typeFingerprint": "2124019489"
     },
     {
       "bodyFingerprint": null,
@@ -64511,34 +64546,6 @@
       "module": "SP1Clean.Semantics.Transition.AccessSchedule",
       "name": "SP1Clean.Semantics.ScheduledAccess.stamped",
       "typeFingerprint": "1652580921"
-    },
-    {
-      "bodyFingerprint": "4049342726",
-      "local": true,
-      "module": "SP1Clean.Semantics.Host.SixCallProfile",
-      "name": "SP1Clean.Semantics.SixCallProfile.code",
-      "typeFingerprint": "1470934412"
-    },
-    {
-      "bodyFingerprint": "1913925827",
-      "local": true,
-      "module": "SP1Clean.Semantics.Host.SixCallProfile",
-      "name": "SP1Clean.Semantics.SixCallProfile.event",
-      "typeFingerprint": "1109732991"
-    },
-    {
-      "bodyFingerprint": "2774585135",
-      "local": true,
-      "module": "SP1Clean.Semantics.Host.SixCallProfile",
-      "name": "SP1Clean.Semantics.SixCallProfile.event.match_1",
-      "typeFingerprint": "2819375395"
-    },
-    {
-      "bodyFingerprint": "2114491378",
-      "local": true,
-      "module": "SP1Clean.Semantics.Host.SixCallProfile",
-      "name": "SP1Clean.Semantics.SixCallProfile.kinds",
-      "typeFingerprint": "63135957"
     },
     {
       "bodyFingerprint": "2837742142",
@@ -87074,7 +87081,7 @@
       "typeFingerprint": "3257495891"
     },
     {
-      "bodyFingerprint": "2441820251",
+      "bodyFingerprint": "3579174416",
       "local": true,
       "module": "SP1Clean.Soundness.HostCallReceivers",
       "name": "SP1Clean.Soundness.HostCallReceivers.available",
@@ -87610,14 +87617,14 @@
       "local": true,
       "module": "SP1Clean.Soundness.HostObserved",
       "name": "SP1Clean.Soundness.HostObserved.producers._proof_1",
-      "typeFingerprint": "2065095045"
+      "typeFingerprint": "267964657"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.HostObserved",
       "name": "SP1Clean.Soundness.HostObserved.producers._proof_2",
-      "typeFingerprint": "1112954315"
+      "typeFingerprint": "1095941732"
     },
     {
       "bodyFingerprint": null,
@@ -88705,7 +88712,7 @@
       "typeFingerprint": "2229727265"
     },
     {
-      "bodyFingerprint": "3939544863",
+      "bodyFingerprint": "3127288033",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.SailTrace",
@@ -105739,6 +105746,8 @@
     "SP1Clean.Soundness.HostRegisteredCalls.noopTable_component",
     "SP1Clean.Soundness.HostRegisteredCalls.receipt_heights",
     "SP1Clean.Soundness.HostRegisteredCalls.classified",
+    "SP1Clean.Semantics.HostReceiptProfile.installed_code_iff",
+    "SP1Clean.Export.InstalledAssembly.enter_verify_slot",
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",

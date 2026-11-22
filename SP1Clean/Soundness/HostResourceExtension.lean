@@ -15,7 +15,7 @@ open Circuit Air.Flat Channels Semantics
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance extensionLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-/-- Channel names excluded from the resource suffix by the six-handler grounding proof. -/
+/-- Channel names excluded from the resource suffix by the seven-handler grounding proof. -/
 def groundingChannels : List (RawChannel (ZMod p)) :=
   [stateChannel.toRaw, HostCallChip.channel.toRaw, HintReadWordChip.stateChannel.toRaw,
     HostHintQueue.stateChannel.toRaw, HostHintQueue.nodeChannel.toRaw, HostHintQueue.wordChannel.toRaw,
@@ -27,7 +27,7 @@ def groundingChannels : List (RawChannel (ZMod p)) :=
 def ChannelSilent (components : List (Component (ZMod p))) (channel : RawChannel (ZMod p)) : Bool :=
   components.all (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name)
 
-/-- Static operations and channel declarations sufficient to preserve six-handler grounding. -/
+/-- Static operations and channel declarations sufficient to preserve seven-handler grounding. -/
 class GroundingResources (extra : List (Component (ZMod p))) : Prop where
   byte : ∀ component ∈ extra, ∀ env, component.operations.ConstraintsHold env →
     component.operations.ChannelRequirements byteChannel.toRaw env
@@ -61,7 +61,7 @@ theorem GroundingResources.appendInterface (extra : List (Component (ZMod p))) [
 
 /-- The source records and appended block supply the installed host extension interface. -/
 theorem GroundingResources.sourceInterface (hints : List Bytes) (extra : List (Component (ZMod p)))
-    [GroundingResources extra] (includeVerify : Bool := false) :
+    [GroundingResources extra] (includeVerify : Bool := true) :
     HostHintReadLocal.ExtensionInterface (HostCallReceivers.availableFor includeVerify) (HostHintReadLocal.sourceResources hints ++ extra) :=
   GroundingResources.appendInterface extra (HostHintReadLocal.source_interface hints includeVerify)
 

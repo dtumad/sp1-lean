@@ -14,7 +14,7 @@ exactly once, and final PC, clock, and physical Memory-frontier values agree wit
 Empty segments remain identity paths; inactive padding contributes no execution steps.
 
 This is the installed source-hint assembly's soundness theorem. Complete outgoing snapshot and
-Exit-bus binding, WRITE/VERIFY handlers, and constructive completeness remain separate obligations.
+Exit-bus binding, the WRITE handler, and constructive completeness remain separate obligations.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU

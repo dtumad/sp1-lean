@@ -16,7 +16,7 @@ declarations remain executable but are outside the proof statement. Digest-word 
 assumed. An invalid image is rejected, because admissibility requires a valid source.
 
 These target types describe the full eight-call resource-bounded artifact. Raw acceptance
-of the installed six-handler assembly already yields a trace between the two supplied complete
+of the installed seven-handler assembly already yields a trace between the two supplied complete
 states with matching commitment declarations. Extending that proof to all eight calls and
 the full resource profile, and constructing all tables from an admissible trace, remain open.
 The public execution relation consists of the complete boundaries, tape, resources and

@@ -95,7 +95,7 @@ private theorem noop_lookupFree (includeVerify : Bool) :
     simp [HostNoopChip.choiceMain, circuit_norm]
 
 /-- Every implemented control, commitment and HINT_LEN receiver is lookup-free. -/
-theorem available_lookupFree (includeVerify : Bool := false) :
+theorem available_lookupFree (includeVerify : Bool := true) :
     LookupFree ((HostCallReceivers.availableFor (p := p) includeVerify).map (·.component)) := by
   apply LookupFree.map
   intro view member

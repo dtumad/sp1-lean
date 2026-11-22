@@ -54,11 +54,10 @@ private theorem reordered (ctx : Context) : ((originalTables ctx).mapIdx HostOrd
       simpa only [List.get_eq_getElem, atIdx] using relevant.symm
     · simp only [HostOrdinaryReceipts.replace, dite_eq_right inside]
 
-/-- The registered handler and both padded word components survive ordinary-receipt replacement. -/
-theorem hint_read_slots (ctx : Context) :
-    (assembly ctx).tables[63]? = some HostHintReadCoverage.handler ∧
-    (assembly ctx).tables[84]? = some (HintReadCoverage.component false) ∧
-    (assembly ctx).tables[85]? = some (HintReadCoverage.component true) := by
+private theorem host_slot_at (ctx : Context) (i : ℕ) (lower : 63 ≤ i) (upper : i ≤ 85) :
+      (assembly ctx).tables[i]? =
+        (((HostHintReadHandoff.receiver :: HostCallReceivers.available (p := SP1Prime)).map (·.component)) ++
+          (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources ctx.source.host.io.hints))[i - 63]? := by
   let original := originalTables ctx
   have length : original.length = 98 := by
     have total := tables_length ctx
@@ -66,29 +65,47 @@ theorem hint_read_slots (ctx : Context) :
     change (originalTables ctx).length + 2 = 100 at total
     change (originalTables ctx).length = 98
     omega
-  have atIndex (i : ℕ) (lower : 63 ≤ i) (upper : i ≤ 85) :
-      (assembly ctx).tables[i]? =
-        (((HostHintReadHandoff.receiver :: HostCallReceivers.available (p := SP1Prime)).map (·.component)) ++
-          (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources ctx.source.host.io.hints))[i - 63]? := by
-    rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; change i < original.length; omega),
-      List.getElem?_mapIdx]
-    have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
-      funext table
-      simp [HostOrdinaryReceipts.replace, show ¬ (7 ≤ i ∧ i < 32) by omega]
-    rw [untouched, Option.map_id_fun]
-    simp only [originalTables, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
-      List.getElem?_set_ne (show 4 ≠ i by omega), List.getElem?_set_ne (show 3 ≠ i by omega),
-      List.getElem?_set_ne (show 57 ≠ i by omega)]
-    rw [List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; change i < 66 + 20 + 8; omega),
-      HostFinalMemory.beforeChecks, HostLocalCore.tables,
-      List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; omega),
-      List.length_set, ProtectedLocalCore.tables_length]
-    rfl
+  rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; change i < original.length; omega),
+    List.getElem?_mapIdx]
+  have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
+    funext table
+    simp [HostOrdinaryReceipts.replace, show ¬ (7 ≤ i ∧ i < 32) by omega]
+  rw [untouched, Option.map_id_fun]
+  simp only [originalTables, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
+    List.getElem?_set_ne (show 4 ≠ i by omega), List.getElem?_set_ne (show 3 ≠ i by omega),
+    List.getElem?_set_ne (show 57 ≠ i by omega)]
+  rw [List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; change i < 66 + 20 + 8; omega),
+    HostFinalMemory.beforeChecks, HostLocalCore.tables,
+    List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; omega),
+    List.length_set, ProtectedLocalCore.tables_length]
+  rfl
+
+/-- The registered handler and both padded word components survive ordinary-receipt replacement. -/
+theorem hint_read_slots (ctx : Context) :
+    (assembly ctx).tables[63]? = some HostHintReadCoverage.handler ∧
+    (assembly ctx).tables[84]? = some (HintReadCoverage.component false) ∧
+    (assembly ctx).tables[85]? = some (HintReadCoverage.component true) := by
   constructor
-  · rw [atIndex 63 (by decide) (by decide)]; rfl
+  · rw [host_slot_at ctx 63 (by decide) (by decide)]; rfl
   constructor
-  · rw [atIndex 84 (by decide) (by decide)]; rfl
-  · rw [atIndex 85 (by decide) (by decide)]; rfl
+  · rw [host_slot_at ctx 84 (by decide) (by decide)]; rfl
+  · rw [host_slot_at ctx 85 (by decide) (by decide)]; rfl
+
+/-- ENTER and VERIFY occupy the same component in the production export. Each physical row
+consumes one complete HostCall. Both selections have the same 22-field witness layout. -/
+theorem enter_verify_slot (ctx : Context) :
+    (assembly ctx).tables[65]? = some (HostCallReceivers.profileNoop (p := SP1Prime) true).component ∧
+      (HostCallReceivers.profileNoop (p := SP1Prime) true).component.circuit.name = "sp1.native.enter_or_verify" ∧
+      (HostCallReceivers.profileNoop (p := SP1Prime) true).component.width = 22 ∧
+      ((HostCallReceivers.profileNoop (p := SP1Prime) true).component.operations.interactions.map
+        (·.channel.name)) = [(HostCallChip.channel (p := SP1Prime)).toRaw.name] := by
+  rw [host_slot_at ctx 65 (by decide) (by decide)]
+  refine ⟨rfl, rfl, rfl, ?_⟩
+  rw [Component.interactions_eq]
+  change (((HostNoopChip.choiceMain (varFromOffset HostNoopChip.Inputs (F := Fp) 0)).operations
+    (size HostNoopChip.Inputs)).interactions.map (·.channel.name)) = _
+  simp [HostNoopChip.choiceMain, FormalAssertion.toSubcircuit_interactions, Gadgets.Equality.circuit,
+    Gadgets.Equality.main, circuit_norm, HostCallChip.channel]
 
 /-- The ten preallocated components in physical order. -/
 def fixedTables (ctx : Context) : List (Component Fp) := fixedOld ctx ++

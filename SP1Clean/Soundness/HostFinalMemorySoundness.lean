@@ -67,7 +67,7 @@ theorem checkFinal
   · apply List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ ?_))
     simp [HostLocalCore.baseEnsemble, HostLocalCore.registry, LocalCore.baseEnsemble, sp1Ensemble_channels]
 
-/-- The concrete six-call registration needs only raw acceptance, with no caller interface proofs. -/
+/-- The concrete seven-call registration needs only raw acceptance, with no caller interface proofs. -/
 theorem source_checkFinal
     [sourceRegistration : Registration image source (FinalMemoryChecks.checkTables target) HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) channels]

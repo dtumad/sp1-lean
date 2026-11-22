@@ -97,14 +97,14 @@ Adjacent segments use the same statement; cutting a segment preserves declaratio
 | 25 instruction chips | Native soundness/completeness and Sail bridges; exported rows have separate released-Rust comparison tests |
 | Execution model | Complete steps/paths, finite boundaries, split/join, semantic boot/HALT, independent ROM/frame/fetch preservation and PolyFun connections |
 | Construction builders | Every admissible mixed execution determines one routed row per ordinary occurrence at its actual source PC and clock. The observation consumer has valid constraints and balanced receipt and state ledgers at the demand-mode height. Host and mixed Memory tables still need a joint construction. [Observation completeness](../SP1Clean/Proofs/Completeness/ExecutionObservation.lean) |
-| Installed host assembly | Raw acceptance derives a valid source, the public clock, PC and execution flag, and a PolyFun trace covering all 25 ordinary families and the six installed syscalls. Both digests, both flags and each actual declaration agree with the verifier-owned commitment statement. [Trace theorem](../SP1Clean/Soundness/Shard/Trace.lean) |
+| Installed host assembly | Raw acceptance derives a valid source, the public clock, PC and execution flag, and a PolyFun trace covering all 25 ordinary families and the seven installed syscalls. Both digests, both flags and each actual declaration agree with the verifier-owned commitment statement. [Trace theorem](../SP1Clean/Soundness/Shard/Trace.lean) |
 | Outgoing host and clock | The production verifier decodes the ordered target hint suffix in the immutable incoming queue and checks the preserved host fields. The recovered trace reaches the supplied host and clock within the elapsed-tick budget. Every prefix respects the incoming limits on hint count, hint bytes, requests and output bytes. A single fixed terminal row binds the public queue head and allocation frontier to a private 48-bit timestamp. The witness generator recovers that timestamp from the physical HINT_LEN and HINT_READ responses, with zero for an untouched queue. [Installed assembly](../SP1Clean/Export/InstalledAssembly.lean) |
 | Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison, and the accepted execution ends with exactly the supplied integer registers and RAM; the complete Memory ensemble retains its separate public verifier |
-| Sail boundary | For arbitrary accepted six-handler segments, the actual CPU order and physical receipt/terminal ledgers determine the last ordinary successor and the retirement count. The resulting nextPC, counter, increment flag, interrupt refresh and written event index identify the literal complete target. Adjacent accepted segments compose across extensionally equal boundaries. [Production soundness theorem](../SP1Clean/Export/InstalledAssembly.lean) |
+| Sail boundary | For arbitrary accepted seven-handler segments, the actual CPU order and physical receipt/terminal ledgers determine the last ordinary successor and the retirement count. The resulting nextPC, counter, increment flag, interrupt refresh and written event index identify the literal complete target. Adjacent accepted segments compose across extensionally equal boundaries. [Production soundness theorem](../SP1Clean/Export/InstalledAssembly.lean) |
 | Constructive observation history | Routing supplies a chronological raw receipt for each ordinary instruction. The history constructs its counter update and ordered links, including raw clock carries. Guarded consumer rows retain zero-weight padding. A nine-instruction witness occupies sixteen observation rows and one terminal. [History construction](../SP1Clean/Proofs/Completeness/OrdinaryObservationHistory.lean) |
 | Constructive observation endpoint | Every admissible mixed tape yields the demand-padded consumer, one selected terminal row and two empty terminal tables. Their signed ledgers balance against the actual routed receipts and the verifier’s source and target. The construction covers empty tapes, host suffixes, all 25 ordinary families and 64-bit retirement wraparound. [Four-table witness](../SP1Clean/Proofs/Completeness/ExecutionObservationEndpoint.lean) |
 | Concrete examples | Accepted ADD and compiler-derived BEQ assemblies; LoadByte fixed-table replacement with occurrence-preserving transport |
-| Composed execution | Any finite sequence of accepted six-handler shards with agreeing complete boundaries yields a single trace with one commitment statement. From canonical boot to a stopped host, its final HALT carries the supplied exit code. [Shard composition](../SP1Clean/Export/ShardChain.lean) |
+| Composed execution | Any finite sequence of accepted seven-handler shards with agreeing complete boundaries yields a single trace with one commitment statement. From canonical boot to a stopped host, its final HALT carries the supplied exit code. [Shard composition](../SP1Clean/Export/ShardChain.lean) |
 | Released SP1 agreement | Direct Rust comparisons of exported native components; public-addressing and complete active-host assembly gaps remain explicit |
 
 The observation constructor is noncomputable in Lean. It replays the semantic path and uses the
@@ -119,7 +119,7 @@ The broader `AdmissibleExecution` admits `jal x1,0` and `jalr x1,x0,0` from a ch
 one-word boot image at the last instruction slot, `2^48 − 4`. Each writes `2^48` to x1. The
 pinned JAL and JALR AIRs constrain an enabled link to three 16-bit limbs, so these same
 complete source, target and tape triples fall outside `ReleaseAdmissibleExecution`. Raw acceptance of the installed
-six-handler assembly proves this link bound at every ordinary cut. The physical instruction
+seven-handler assembly proves this link bound at every ordinary cut. The physical instruction
 family, Program row and configured Sail decode identify the jump and destination register at
 the replayed source PC.
 Writing x0 disables the addition, and an enabled write from `2^48 − 8` still fits. Host calls
@@ -130,8 +130,8 @@ Current Rust evidence is tied to the single released-SP1 revision in
 [provenance](../scripts/provenance.json). A release upgrade must review loader/host behavior as
 well as AIR equations; it cannot be achieved by changing a version string.
 
-Fresh hint allocation authentication, WRITE/VERIFY installation, complete resource enforcement,
-joint physical capacity and a total mixed compiler remain open. The six-handler soundness theorem
+Fresh hint allocation authentication, WRITE installation, complete resource enforcement,
+joint physical capacity and a total mixed compiler remain open. The seven-handler soundness theorem
 already identifies the complete supplied target and recovers its private hint cursor from the witness. No caller-supplied grounding, provider validity, syscall inactivity or
 compiler-success premise may replace those obligations.
 

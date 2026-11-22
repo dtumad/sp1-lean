@@ -5,8 +5,7 @@ import SP1Clean.Soundness.HostHintReadMemoryEffect
 The physical wrapper inventory and full HostCall balance select either an installed queue row or
 a control call. Queue dispatch uses the authenticated current hint history; control dispatch uses
 the actual host at that prefix. Both feed the same timed step/frame assembly, so no handler case
-or per-call semantic premise escapes the final SyscallInstrs statement. WRITE and VERIFY handlers
-and complete outgoing snapshot authentication remain separate obligations.
+or per-call semantic premise escapes the final SyscallInstrs statement. The WRITE receiver and complete outgoing snapshot authentication are separate obligations.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU

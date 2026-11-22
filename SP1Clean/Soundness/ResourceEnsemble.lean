@@ -10,7 +10,7 @@ theorems remain available. The new clock check bounds actual elapsed work and, f
 preset, actual event count. Arbitrarily tighter event limits need a separate event inventory check.
 
 Endpoint occupancy here concerns the supplied snapshots. Authenticating the complete outgoing
-snapshot and intermediate peaks remains A4; WRITE/VERIFY and their request/allocation ledgers
+snapshot and intermediate peaks remains A4; WRITE and its request/allocation ledgers
 remain A5. This intermediate assembly does not instantiate the full Shard soundness target.
 -/
 

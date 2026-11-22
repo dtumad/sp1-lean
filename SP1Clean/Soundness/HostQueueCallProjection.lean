@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Semantics.Host.QueueReplay
-import SP1Clean.Semantics.Host.SixCallProfile
+import SP1Clean.Semantics.Host.HostReceiptProfile
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
 
@@ -79,18 +79,19 @@ private theorem control_projection (message : HostCallChip.Message (ZMod p))
     | enter =>
       refine ⟨?_, ?_, HostReceiptProfile.of_six includeVerify ?_⟩ <;>
         simp [safe, project, code, HostNoopChip.codeWord, Word.toBitVec64, Word.toNat, three,
-          queueCallEvent?, SixCallProfile.code, SixCallProfile.kinds, or_and_right, exists_or,
+          queueCallEvent?, HostReceiptProfile.code, HostReceiptProfile.kinds, HostReceiptProfile.commonKinds, or_and_right, exists_or,
           SyscallKind.decode?_eq_some_iff, SyscallKind.code]
     | verify =>
       have enabled : includeVerify = true := permitted.resolve_left (by decide)
       have value : (27 : ZMod p).val = 27 := small 27 (by decide)
       simp [safe, project, code, HostNoopChip.codeWord, Word.toBitVec64, Word.toNat, value,
-        queueCallEvent?, enabled, HostReceiptProfile.code, SyscallKind.code]
+        queueCallEvent?, enabled, HostReceiptProfile.code, HostReceiptProfile.kinds, HostReceiptProfile.commonKinds,
+        or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
   all_goals
     refine ⟨?_, ?_, HostReceiptProfile.of_six includeVerify ?_⟩ <;>
       simp [safe, project, code, HostCommitChip.codeWord,
-        Word.toBitVec64, Word.toNat, sixteen, twentySix, queueCallEvent?, SixCallProfile.code,
-        SixCallProfile.kinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
+        Word.toBitVec64, Word.toNat, sixteen, twentySix, queueCallEvent?, HostReceiptProfile.code,
+        HostReceiptProfile.kinds, HostReceiptProfile.commonKinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
 
 /-- Both queue operations have the exact action decoded from their complete call. -/
 theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Spec row.2) :
@@ -303,7 +304,7 @@ private theorem control_calls
     (fun table present => byte_guarantees witness interface constraints balanced table
       (controlTables_mem witness table present))
 
-/-- Every message received by the complete installed handler inventory has a unique six-call code. -/
+/-- Every message received by the selected handler inventory has a unique registered full code. -/
 theorem calls_code
     (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels))
     (interface : ExtensionInterface (HostCallReceivers.availableFor includeVerify) resources)

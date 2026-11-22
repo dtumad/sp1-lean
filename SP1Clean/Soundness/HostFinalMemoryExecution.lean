@@ -26,7 +26,7 @@ local instance executionClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out
 variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)}
 
-/-- The installed complete-memory assembly with the concrete six-call host registry, for a supplied
+/-- The installed complete-memory assembly with the concrete seven-call host registry, for a supplied
 source and target snapshot. The target fixes the outgoing memory snapshot and the final host
 bank. -/
 abbrev Installed (image : ProgramImage) (source target : ExecutionSnapshot)
@@ -134,7 +134,7 @@ theorem source_execution (valid : image.Valid)
         exitCode := target.host.exitCode } ∧
       (∀ code : BitVec 32, source.host.exitCode = none → actual.host.exitCode = some code →
         code.toNat = witness.publicInput.exit_code.val) ∧
-      (∀ event ∈ events, SixCallProfile.event event) ∧ PhysicalEventOrder witness events ∧
+      (∀ event ∈ events, HostReceiptProfile.event true event) ∧ PhysicalEventOrder witness events ∧
       CommitmentEnsemble.Declared witness events := by
   have checked := checkFinal_of_externalBalance witness constraints balanced
   have baseConstraints := baseWitness_constraints witness constraints

@@ -20,7 +20,7 @@ The accepted source boundary establishes image validity. `Endpoint` records the 
 integer registers, clock and host projection. `DynamicMatch` identifies the five remaining mutable
 Sail entries against the ordinary receipts in this same trace. The header binds the well-formed
 commitment statement and every actual COMMIT/COMMIT_DEFERRED declaration agrees with it. Every
-event in the trace belongs to the six-call profile. Every ordinary source in this same trace
+event in the trace belongs to the seven-call profile. Every ordinary source in this same trace
 satisfies the released jump-link encoding and the native load/store span checks. Every active
 source clock has phase one modulo eight.
 
@@ -101,7 +101,7 @@ def SailTrace (commitments : CommitmentStatement) (image : ProgramImage)
     CommitmentBoundary.Spec commitments header ∧
     ∃ (events : List ExecutionEvent) (actual : ExecutionState),
       (sp1Machine p image).Trace source.realize events actual ∧
-      commitments.Matches events ∧ (∀ event ∈ events, SixCallProfile.event event) ∧
+      commitments.Matches events ∧ (∀ event ∈ events, HostReceiptProfile.event true event) ∧
       ExecutionPath.Encoded (policy p image) image.program source.realize events ∧
       ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
       DynamicMatch source target events ∧ Endpoint source target final header events actual
@@ -115,7 +115,7 @@ theorem trace_of_witness
       ∃ (events : List ExecutionEvent) (actual : ExecutionState),
         (sp1Machine p image).Trace source.realize events actual ∧
         Endpoint source target final witness.publicInput events actual ∧
-        (∀ event ∈ events, SixCallProfile.event event) ∧ HostFinalMemory.PhysicalEventOrder witness events ∧ CommitmentEnsemble.Declared witness events := by
+        (∀ event ∈ events, HostReceiptProfile.event true event) ∧ HostFinalMemory.PhysicalEventOrder witness events ∧ CommitmentEnsemble.Declared witness events := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels (HostFinalMemory.baseWitness witness)
     (GroundingResources.sourceInterface source.host.io.hints (FinalMemoryChecks.checkTables target.sail.memorySnapshot))
     (HostFinalMemory.baseWitness_constraints witness constraints)
@@ -143,7 +143,7 @@ statement's fixed provider authenticates every declaration request, so each actu
 COMMIT/COMMIT_DEFERRED call agrees with the well-formed statement. The accepted source boundary
 supplies image validity. Each ordinary replay cut satisfies the released link-write bound.
 The header binds every public commitment field and each recovered
-syscall decodes to one of the six installed kinds. -/
+syscall decodes to one of the seven installed kinds. -/
 theorem sail_trace {image : ProgramImage} {source target : ExecutionSnapshot}
     {final : HostHintQueue.State (ZMod p)}
     {commitments : CommitmentStatement}
