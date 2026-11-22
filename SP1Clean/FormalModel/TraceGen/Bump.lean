@@ -66,16 +66,16 @@ def nextPc2 (e : StateBumpEvent) : ℕ := e.pc2 + e.b1
 
 Each clause is a "drifted by at most one step" bound, which is exactly the invariant SP1 maintains
 by bumping *before* a second carry could accumulate: the clock is `≡ 1 (mod 8)` (it starts at 1 and
-steps by 8 or 264) and has drifted at most one window; the high limb has room for the carry; and
-each pc limb has drifted at most one `2 ^ 16` unit.
+steps by 8 or 264) and has drifted at most one window; the upper clock and PC limbs fit after the actual
+carries; and each lower PC limb can pass at most one carry to its neighbor.
 -/
 structure WellFormed (e : StateBumpEvent) : Prop where
   clkMod : e.clkLow % 8 = 1
   clkLow : e.clkLow < 2 ^ 25
-  clkHigh : e.clkHigh + 1 < 2 ^ 24
+  clkHigh : e.nextClkHigh < 2 ^ 24
   pc0 : e.pc0 < 2 ^ 17
-  pc1 : e.pc1 + 1 < 2 ^ 17
-  pc2 : e.pc2 + 1 < 2 ^ 16
+  pc1 : e.pc1 + e.b0 < 2 ^ 17
+  pc2 : e.nextPc2 < 2 ^ 16
 
 end StateBumpEvent
 
@@ -95,13 +95,39 @@ theorem clk_split (h : e.WellFormed) :
   split <;> omega
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
+/-- Representability depends on the decoded clock and PC and the actual outgoing carries.
+A carry in a low PC limb may coexist with a full upper clock or PC limb. -/
+theorem wellFormed_iff : e.WellFormed ↔
+    e.clkLow % 8 = 1 ∧ e.clkLow < 2 ^ 25 ∧ e.clkHigh * 2 ^ 24 + e.clkLow < 2 ^ 48 ∧
+      e.pc0 < 2 ^ 17 ∧ e.pc1 + e.b0 < 2 ^ 17 ∧
+      e.pc0 + e.pc1 * 2 ^ 16 + e.pc2 * 2 ^ 32 < 2 ^ 48 := by
+  constructor
+  · rintro ⟨phase, low, high, first, mid, top⟩
+    refine ⟨phase, low, ?_, first, mid, ?_⟩
+    · simp only [nextClkHigh, isClk] at high
+      split at high <;> omega
+    · simp only [nextPc2, b1, b0] at mid top
+      split_ifs at * <;> omega
+  · rintro ⟨phase, low, clock, first, mid, address⟩
+    refine ⟨phase, low, ?_, first, mid, ?_⟩
+    · simp only [nextClkHigh, isClk]
+      split <;> omega
+    · simp only [nextPc2, b1, b0] at *
+      split_ifs at * <;> omega
+
+omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 /-- The pushed clock and pc limbs are canonical. -/
 theorem next_bounds (h : e.WellFormed) :
     e.nextClkLow < 2 ^ 24 ∧ e.nextClkHigh < 2 ^ 24 ∧
       e.nextPc0 < 2 ^ 16 ∧ e.nextPc1 < 2 ^ 16 ∧ e.nextPc2 < 2 ^ 16 := by
   obtain ⟨-, hlow, hhigh, hpc0, hpc1, hpc2⟩ := h
-  simp only [nextClkLow, nextClkHigh, isClk, nextPc0, nextPc1, nextPc2, b1, b0]
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> split_ifs <;> omega
+  refine ⟨?_, hhigh, ?_, ?_, hpc2⟩
+  · simp only [nextClkLow, isClk]
+    split <;> omega
+  · simp only [nextPc0, b0]
+    split <;> omega
+  · simp only [nextPc1, b1]
+    split <;> omega
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 /-- The pc borrow cascade, over `ℕ`. -/
@@ -365,10 +391,10 @@ theorem stateBumpEvent_wellFormed_witness :
     StateBumpEvent.WellFormed ⟨0, 2 ^ 24 + 1, 2 ^ 16, 0, 0⟩ where
   clkMod := by norm_num
   clkLow := by norm_num
-  clkHigh := by norm_num
+  clkHigh := by decide
   pc0 := by norm_num
-  pc1 := by norm_num
-  pc2 := by norm_num
+  pc1 := by decide
+  pc2 := by decide
 
 /-- A real cross-window timestamp refresh. -/
 theorem memoryBumpEvent_wellFormed_witness :
