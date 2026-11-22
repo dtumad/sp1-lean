@@ -73,8 +73,7 @@ preserve repeated keys, zero-multiplicity occurrences and count bounds.
 Read the pinned Clean documentation before nontrivial proof work:
 `.lake/packages/Clean/AGENTS.md`, `doc/proving-guide.md`, `doc/performance-problems.md`,
 `doc/witgen-authoring.md` and `Clean/Air/README.md`. Local
-[proof notes](docs/agents/proof-patterns.md) cover SP1-specific pitfalls. The approved API-breaking
-migration supersedes their historical compatibility-preservation guidance.
+[proof notes](docs/agents/proof-patterns.md) cover SP1-specific pitfalls.
 
 ## Build and validation
 
