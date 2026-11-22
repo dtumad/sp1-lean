@@ -73,34 +73,59 @@ theorem ordinary_receipt_registered (ctx : Context) (id : InstructionChipId) :
   rw [List.getElem_mapIdx, HostOrdinaryReceipts.replace, dite_eq_left (show 7 ≤ 7 + i ∧ 7 + i < 32 by omega)] at member
   simpa only [Nat.add_sub_cancel_left, selected] using member
 
+private theorem protocol_at (ctx : Context) (i : ℕ) (lower : 63 ≤ i) (upper : i < 94) :
+    (assembly ctx).tables[i]? =
+      (((HostHintReadHandoff.receiver :: HostCallReceivers.available (p := SP1Prime)).map (·.component)) ++
+        (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources ctx.source.host.io.hints))[i - 63]? := by
+  rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; rw [original_length]; omega),
+    List.getElem?_mapIdx]
+  have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
+    funext table
+    simp [HostOrdinaryReceipts.replace, show ¬ (7 ≤ i ∧ i < 32) by omega]
+  rw [untouched, Option.map_id_fun]
+  simp only [originalTables, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
+    List.getElem?_set_ne (show 4 ≠ i by omega), List.getElem?_set_ne (show 3 ≠ i by omega),
+    List.getElem?_set_ne (show 57 ≠ i by omega)]
+  rw [List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; change i < 66 + 20 + 8; omega),
+    HostFinalMemory.beforeChecks, HostLocalCore.tables,
+    List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; omega),
+    List.length_set, ProtectedLocalCore.tables_length]
+  rfl
+
 /-- The registered handler and both padded word components survive ordinary-receipt replacement. -/
 theorem hint_read_slots (ctx : Context) :
     (assembly ctx).tables[63]? = some HostHintReadCoverage.handler ∧
     (assembly ctx).tables[84]? = some (HintReadCoverage.component false) ∧
     (assembly ctx).tables[85]? = some (HintReadCoverage.component true) := by
-  have atIndex (i : ℕ) (lower : 63 ≤ i) (upper : i ≤ 85) :
-      (assembly ctx).tables[i]? =
-        (((HostHintReadHandoff.receiver :: HostCallReceivers.available (p := SP1Prime)).map (·.component)) ++
-          (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources ctx.source.host.io.hints))[i - 63]? := by
-    rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; rw [original_length]; omega),
-      List.getElem?_mapIdx]
-    have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
-      funext table
-      simp [HostOrdinaryReceipts.replace, show ¬ (7 ≤ i ∧ i < 32) by omega]
-    rw [untouched, Option.map_id_fun]
-    simp only [originalTables, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
-      List.getElem?_set_ne (show 4 ≠ i by omega), List.getElem?_set_ne (show 3 ≠ i by omega),
-      List.getElem?_set_ne (show 57 ≠ i by omega)]
-    rw [List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; change i < 66 + 20 + 8; omega),
-      HostFinalMemory.beforeChecks, HostLocalCore.tables,
-      List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; omega),
-      List.length_set, ProtectedLocalCore.tables_length]
+  constructor
+  · rw [protocol_at ctx 63 (by decide) (by decide)]; rfl
+  constructor
+  · rw [protocol_at ctx 84 (by decide) (by decide)]; rfl
+  · rw [protocol_at ctx 85 (by decide) (by decide)]; rfl
+
+/-- The observation consumer and all three terminal modes are members of the actual
+installed inventory. Their physical order matches the constructed four-table witness. -/
+theorem observation_registered (ctx : Context) :
+    Soundness.OrdinaryObservation.consumer ∈ (assembly ctx).tables ∧
+      ∀ mode, Soundness.OrdinaryObservation.terminalComponent mode ∈ (assembly ctx).tables := by
+  constructor
+  · apply List.mem_of_getElem? (i := 90)
+    rw [protocol_at ctx 90 (by decide) (by decide)]
     rfl
-  constructor
-  · rw [atIndex 63 (by decide) (by decide)]; rfl
-  constructor
-  · rw [atIndex 84 (by decide) (by decide)]; rfl
-  · rw [atIndex 85 (by decide) (by decide)]; rfl
+  · intro mode
+    cases mode with
+    | empty =>
+      apply List.mem_of_getElem? (i := 91)
+      rw [protocol_at ctx 91 (by decide) (by decide)]
+      rfl
+    | nonempty =>
+      apply List.mem_of_getElem? (i := 92)
+      rw [protocol_at ctx 92 (by decide) (by decide)]
+      rfl
+    | any =>
+      apply List.mem_of_getElem? (i := 93)
+      rw [protocol_at ctx 93 (by decide) (by decide)]
+      rfl
 
 /-- The ten preallocated components in physical order. -/
 def fixedTables (ctx : Context) : List (Component Fp) := fixedOld ctx ++
