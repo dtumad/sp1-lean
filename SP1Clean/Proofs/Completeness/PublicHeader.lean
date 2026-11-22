@@ -12,7 +12,7 @@ open Semantics Machine Circuit Soundness FormalModel.Shard
 
 /-- The generated header satisfies the state verifier's prover assumptions and the literal
 assertions of all four public boundary checkers in the supplied prover environment. -/
-theorem statementExecution_headerChecks {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+theorem statementExecution_headerChecks {p : ℕ} [Fact p.Prime]
     {limits : ResourceLimits} {commitments : CommitmentStatement} {image : ProgramImage}
     {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (execution : StatementExecution limits p commitments image source target events)

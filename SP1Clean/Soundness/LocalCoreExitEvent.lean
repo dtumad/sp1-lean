@@ -21,6 +21,7 @@ private theorem real_of_halt (input : Var SyscallInstrsChip.Inputs (ZMod p)) (of
   rw [selected, mul_one] at pad
   exact sub_eq_zero.mp pad
 
+/-- Match the equality used to filter active emissions in the physical Exit inventory. -/
 local instance exitEventDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 variable [Fact (2 ^ 25 < p)]
