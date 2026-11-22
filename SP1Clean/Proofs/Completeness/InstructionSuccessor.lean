@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Completeness.InstructionEvent
 import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Semantics.Sail.SailInstructionFrame
+import SP1Clean.Semantics.Execution.ReleaseLinks
 
 /-! # Ordinary compiled State successors and architectural retirement -/
 
@@ -131,7 +132,14 @@ private theorem branch_taken {e : ITypeEvent} {op : bop} {left right : BitVec 64
     e.branchTaken = true ↔ BranchSail.branchCond op left right := by
   cases op <;> simp [ITypeEvent.branchTaken, code, bopToOpcode, Soundness.Opcode.toNat, rs1, rs2, BranchSail.branchCond]
 
-private theorem compiled_jal_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+/-- The same selected destination determines both the raw State receipt and the jump/branch
+adapter's address conditions. Link representability comes from the released trace contract. -/
+private def ControlSuccessor (program : GuestProgram) (source target : SailState) (row : RoutedEvent) : Prop :=
+  (∀ (p : ℕ) [Fact p.Prime] [Fact (2 ^ 25 < p)],
+    target.regs.get? Register.PC = some (StateMsg.pcBits (row.rawPushState.toMessage (p := p)))) ∧
+  (ReleaseLinkAt program source → row.ControlTargets)
+
+private theorem compiled_jal_successor
     {program : GuestProgram} {source target : SailState} {view : SP1TransitionView}
     {result : CompiledInstructionEvent} {frontier : AccessFrontier} {clk : ℕ} {imm : BitVec 21} {rd : BitVec 5}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
@@ -140,19 +148,29 @@ private theorem compiled_jal_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < 
     (projected : projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view)
     (generated : compileInstructionEvent? view frontier clk = some result)
     (bounded : ∀ dest, target.regs.get? Register.PC = some dest → dest.toNat < 2 ^ 48) :
-    target.regs.get? Register.PC = some (StateMsg.pcBits (result.routed.rawPushState.toMessage (p := p))) := by
+    ControlSuccessor program source target result.routed := by
   have c := projectSP1Transition?_components projected
   have route := projectSP1Transition?_route projected
   rw [decoded] at decode route
   have selected : view.chipId = .jal := Option.some.inj route.symm
-  obtain ⟨e, same, pc, offset⟩ := compileInstructionEvent?_jal_fields decoded selected generated
+  obtain ⟨e, same, pc, offset, dest⟩ := compileInstructionEvent?_jal_fields decoded selected generated
   have arrived := jal_normal_successor configured loaded c.1 c.2.1 decode normal
-  rw [same, RoutedEvent.rawPushState_pcBits]
-  apply emitted_bounded_pc arrived _ bounded
-  simp only [JTypeEvent.jalTarget, pc, offset, BitVec.toNat_add]
-  rfl
+  have selectedPc : e.jalTarget = (view.pc + imm.signExtend 64).toNat := by
+    simp only [JTypeEvent.jalTarget, pc, offset, BitVec.toNat_add]
+  rw [same]
+  constructor
+  · intro p _ _
+    rw [RoutedEvent.rawPushState_pcBits]
+    exact emitted_bounded_pc arrived.1 selectedPc bounded
+  · intro release
+    have fits := release _ _ _ c.1 c.2.1 (decode source configured)
+    change JumpLinkFits view.pc.toNat (rd ≠ 0) at fits
+    change e.JalTargets
+    refine ⟨selectedPc ▸ bounded _ arrived.1, selectedPc ▸ arrived.2, ?_⟩
+    rw [pc, dest]
+    exact fun active => fits (fun zero => active (by rw [zero]; rfl))
 
-private theorem compiled_jalr_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+private theorem compiled_jalr_successor
     {program : GuestProgram} {source target : SailState} {view : SP1TransitionView}
     {result : CompiledInstructionEvent} {frontier : AccessFrontier} {clk : ℕ} {imm : BitVec 12} {rs1 rd : BitVec 5}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
@@ -161,7 +179,7 @@ private theorem compiled_jalr_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 <
     (projected : projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view)
     (generated : compileInstructionEvent? view frontier clk = some result)
     (bounded : ∀ dest, target.regs.get? Register.PC = some dest → dest.toNat < 2 ^ 48) :
-    target.regs.get? Register.PC = some (StateMsg.pcBits (result.routed.rawPushState.toMessage (p := p))) := by
+    ControlSuccessor program source target result.routed := by
   have c := projectSP1Transition?_components projected
   have route := projectSP1Transition?_route projected
   have plan := compileInstructionEvent?_accessPlan_generated projected generated
@@ -170,16 +188,30 @@ private theorem compiled_jalr_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 <
   obtain ⟨base, baseRead⟩ := initialized_gpr source configured.init rs1
   obtain ⟨prior, priorRead⟩ := initialized_gpr source configured.init rd
   have reads := jalrPlan_pulled (rs1 := .Regidx rs1) (rd := .Regidx rd) baseRead priorRead plan
-  obtain ⟨e, same, sourceB, offset⟩ := compileInstructionEvent?_jalr_fields decoded selected generated reads
+  obtain ⟨e, same, sourceB, offset, pc, dest⟩ := compileInstructionEvent?_jalr_fields decoded selected generated reads
   have arrived := jalr_normal_successor configured loaded c.1 c.2.1 baseRead decode normal
-  rw [same, RoutedEvent.rawPushState_pcBits]
-  apply emitted_bounded_pc arrived _ bounded
   have add : e.jalrTarget = (base + imm.signExtend 64).toNat := by
     simp only [ITypeEvent.jalrTarget, sourceB, offset, BitVec.toNat_add]
-  rw [add]
-  exact cleared_target _
+  have selectedPc : e.jalrTarget - e.jalrTarget % 2 = (Sail.BitVec.update (base + imm.signExtend 64) 0 0#1).toNat := by
+    rw [add]
+    exact cleared_target _
+  rw [same]
+  constructor
+  · intro p _ _
+    rw [RoutedEvent.rawPushState_pcBits]
+    exact emitted_bounded_pc arrived.1 selectedPc bounded
+  · intro release
+    have fits := release _ _ _ c.1 c.2.1 (decode source configured)
+    change JumpLinkFits view.pc.toNat (rd ≠ 0) at fits
+    have clearedBound := bounded _ arrived.1
+    change (Sail.BitVec.update (base + imm.signExtend 64) 0 0#1).toNat < 2 ^ 48 at clearedBound
+    rw [← selectedPc] at clearedBound
+    change e.JalrTargets
+    refine ⟨by omega, selectedPc ▸ arrived.2, ?_⟩
+    rw [pc, dest]
+    exact fun active => fits (fun zero => active (by rw [zero]; rfl))
 
-private theorem compiled_branch_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+private theorem compiled_branch_successor
     {program : GuestProgram} {source target : SailState} {view : SP1TransitionView}
     {result : CompiledInstructionEvent} {frontier : AccessFrontier} {clk : ℕ} {imm : BitVec 13} {rs1 rs2 : BitVec 5} {op : bop}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
@@ -188,7 +220,7 @@ private theorem compiled_branch_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25
     (projected : projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view)
     (generated : compileInstructionEvent? view frontier clk = some result)
     (bounded : ∀ dest, target.regs.get? Register.PC = some dest → dest.toNat < 2 ^ 48) :
-    target.regs.get? Register.PC = some (StateMsg.pcBits (result.routed.rawPushState.toMessage (p := p))) := by
+    ControlSuccessor program source target result.routed := by
   have c := projectSP1Transition?_components projected
   have route := projectSP1Transition?_route projected
   have key := c.2.2.2.2.1
@@ -203,16 +235,25 @@ private theorem compiled_branch_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25
   obtain ⟨e, same, pc, rs1Val, rs2Val, offset, opcode⟩ := compileInstructionEvent?_branch_fields decoded selected generated reads
   have decision := branch_taken (opcode.trans (congrArg Soundness.Opcode.toNat opEq)) rs1Val rs2Val
   have next := branch_normal_successor configured loaded c.1 c.2.1 leftRead rightRead decode normal
-  rw [same, RoutedEvent.rawPushState_pcBits]
-  cases hb : e.branchTaken with
-  | true =>
-    apply emitted_bounded_pc (next.1 (decision.mp hb)) _ bounded
-    simp only [ITypeEvent.branchNextPc, hb, ↓reduceIte, ITypeEvent.branchTarget, pc, offset, BitVec.toNat_add]
-    rfl
-  | false =>
-    have untaken : ¬ BranchSail.branchCond op left right := fun h => by simp [hb] at decision; exact decision h
-    apply emitted_bounded_pc (next.2 untaken) _ bounded
-    simp [ITypeEvent.branchNextPc, hb, pc, BitVec.toNat_add]
+  have selectedPc : ∃ dest, AlignedPC (target.regs.get? Register.PC) dest ∧ e.branchNextPc = dest.toNat := by
+    cases hb : e.branchTaken with
+    | true =>
+      refine ⟨_, next.1 (decision.mp hb), ?_⟩
+      simp only [ITypeEvent.branchNextPc, hb, ↓reduceIte, ITypeEvent.branchTarget, pc, offset, BitVec.toNat_add]
+      rfl
+    | false =>
+      have untaken : ¬ BranchSail.branchCond op left right := fun h => by simp [hb] at decision; exact decision h
+      refine ⟨_, next.2 untaken, ?_⟩
+      simp [ITypeEvent.branchNextPc, hb, pc, BitVec.toNat_add]
+  obtain ⟨dest, actual, eq⟩ := selectedPc
+  rw [same]
+  constructor
+  · intro p _ _
+    rw [RoutedEvent.rawPushState_pcBits]
+    exact emitted_bounded_pc actual.1 eq bounded
+  · intro _
+    change e.BranchTargets
+    exact ⟨eq ▸ bounded _ actual.1, eq ▸ actual.2⟩
 
 private def isControlOpcode : Soundness.Opcode → Bool
   | .JAL | .JALR | .BEQ | .BNE | .BLT | .BGE | .BLTU | .BGEU => true
@@ -249,6 +290,49 @@ private theorem control_of_route {decoded : instruction} {key : InstructionRoute
     | rcases op with ⟨part, signed1, signed2⟩
       cases part <;> cases signed1 <;> cases signed2 <;> contradiction
 
+private theorem compiled_control_successor
+    {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
+    {view : SP1TransitionView} {result : CompiledInstructionEvent} {frontier : AccessFrontier} {clk : ℕ}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (permission : InstructionWrite.PermittedAt readOnly program source) (normal : SailRetiresNormally source target)
+    (projected : projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (bounded : ∀ dest, target.regs.get? Register.PC = some dest → dest.toNat < 2 ^ 48)
+    (selected : result.routed.id ∈ [.jal, .jalr, .branch]) : ControlSuccessor program source target result.routed := by
+  have decode := projected_configured_decode configured permission projected
+  have control := control_of_route (projectSP1Transition?_components projected).2.2.2.2.1
+    (projectSP1Transition?_route projected) (compileInstructionEvent?_route generated ▸ selected)
+  unfold ControlFlowInstruction at control
+  split at control
+  next operands eq =>
+    obtain ⟨imm, ⟨rd⟩⟩ := operands
+    exact compiled_jal_successor configured loaded eq decode normal projected generated bounded
+  next operands eq =>
+    obtain ⟨imm, ⟨rs1⟩, ⟨rd⟩⟩ := operands
+    exact compiled_jalr_successor configured loaded eq decode normal projected generated bounded
+  next operands eq =>
+    obtain ⟨imm, ⟨rs2⟩, ⟨rs1⟩, op⟩ := operands
+    exact compiled_branch_successor configured loaded eq decode normal projected generated bounded
+  next => contradiction
+
+/-- A normally retiring selected jump or branch satisfies the pinned target conditions. The
+upper bound is needed only on the actual committed PC. For JALR this also bounds the uncleared
+adder output, because clearing bit zero cannot cross the even 48-bit ceiling. -/
+theorem compileInstructionEvent?_release_targets
+    {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
+    {view : SP1TransitionView} {result : CompiledInstructionEvent} {frontier : AccessFrontier} {clk : ℕ}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (permission : InstructionWrite.PermittedAt readOnly program source) (normal : SailRetiresNormally source target)
+    (projected : projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (bounded : ∀ dest, target.regs.get? Register.PC = some dest → dest.toNat < 2 ^ 48)
+    (release : ReleaseLinkAt program source) : result.routed.ControlTargets := by
+  by_cases control : result.routed.id ∈ [.jal, .jalr, .branch]
+  · exact (compiled_control_successor configured loaded permission normal projected generated bounded control).2 release
+  · rcases eq : result.routed with ⟨id, event⟩
+    rw [eq] at control
+    cases id <;> first | trivial | simp at control
+
 /-- Every ordinary producer's raw State receipt encodes the actual committed architectural
 successor at a representable endpoint. Only the destination the interpreter actually reaches
 must fit; unused fall-through and branch addresses are unrestricted. -/
@@ -262,21 +346,7 @@ theorem compileInstructionEvent?_successor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 2
     (bounded : ∀ dest, target.regs.get? Register.PC = some dest → dest.toNat < 2 ^ 48) :
     target.regs.get? Register.PC = some (StateMsg.pcBits (result.routed.rawPushState.toMessage (p := p))) := by
   by_cases selected : result.routed.id ∈ [.jal, .jalr, .branch]
-  · have decode := projected_configured_decode configured permission projected
-    have control := control_of_route (projectSP1Transition?_components projected).2.2.2.2.1
-      (projectSP1Transition?_route projected) (compileInstructionEvent?_route generated ▸ selected)
-    unfold ControlFlowInstruction at control
-    split at control
-    next operands eq =>
-      obtain ⟨imm, ⟨rd⟩⟩ := operands
-      exact compiled_jal_successor configured loaded eq decode normal projected generated bounded
-    next operands eq =>
-      obtain ⟨imm, ⟨rs1⟩, ⟨rd⟩⟩ := operands
-      exact compiled_jalr_successor configured loaded eq decode normal projected generated bounded
-    next operands eq =>
-      obtain ⟨imm, ⟨rs2⟩, ⟨rs1⟩, op⟩ := operands
-      exact compiled_branch_successor configured loaded eq decode normal projected generated bounded
-    next => contradiction
+  · exact (compiled_control_successor configured loaded permission normal projected generated bounded selected).1 p
   · exact compileInstructionEvent?_straight_successor configured loaded permission normal projected generated selected
 
 end SP1Clean.TraceGen
