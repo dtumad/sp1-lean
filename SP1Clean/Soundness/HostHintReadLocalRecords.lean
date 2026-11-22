@@ -394,7 +394,7 @@ private theorem source_auxiliary_fresh (image : ProgramImage) (source : Executio
   cases includeVerify <;> rfl
 
 /-- The concrete source inventory has distinct physical data keys, including each commit slot. -/
-theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (hints : List Bytes) (includeVerify : Bool := false) :
+theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (hints : List Bytes) (includeVerify : Bool := true) :
     ((HostLocalCore.tables (p := p) image source
       ((receiver :: HostCallReceivers.availableFor includeVerify).map (·.component) ++ (wordResources ++ sourceResources hints))).map
         (·.circuit.name)).Nodup := by
@@ -482,7 +482,7 @@ theorem source_record_authentication {includeVerify : Bool} {extra : List (Compo
   · exact fromComponent ⟨Component.Authenticates.of_silent _ _ _ (silent _ added).1,
       Component.Authenticates.of_silent _ _ _ (silent _ added).2⟩
 
-theorem bank_interface (hints : List Bytes) (includeVerify : Bool := false) :
+theorem bank_interface (hints : List Bytes) (includeVerify : Bool := true) :
     ExtensionInterface (HostCallReceivers.availableFor (p := p) includeVerify) (bankResources hints) := by
   have sourceSilent (component : Component (ZMod p)) (member : component ∈ bankResources hints)
       (channel : RawChannel (ZMod p)) (node : channel ≠ nodeChannel.toRaw) (word : channel ≠ wordChannel.toRaw)
@@ -535,7 +535,7 @@ theorem bank_interface (hints : List Bytes) (includeVerify : Bool := false) :
         (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
 
 /-- The observation tables join the bank resources without changing the host interface. -/
-theorem source_interface (hints : List Bytes) (includeVerify : Bool := false) :
+theorem source_interface (hints : List Bytes) (includeVerify : Bool := true) :
     ExtensionInterface (HostCallReceivers.availableFor (p := p) includeVerify) (sourceResources hints) :=
   (bank_interface hints includeVerify).appendResources tables_interface
     (fun component member => tables_silent component member _

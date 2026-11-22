@@ -133,7 +133,7 @@ theorem padding_private (channel : RawChannel (ZMod p))
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
   rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;> rfl
 
-/-- The currently installed six-call registry and fixed hint/bank resources satisfy receipt privacy. -/
+/-- The currently installed seven-call registry and fixed hint/bank resources satisfy receipt privacy. -/
 theorem source_privacy (target : MemorySnapshot) (hints : List Bytes) :
     PrivateInterface target (HostCallReceivers.available (p := p)) (HostHintReadLocal.sourceResources hints) := by
   intro channel privateChannel component member

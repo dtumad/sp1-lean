@@ -152,7 +152,7 @@ import SP1Clean.Semantics.Resources.ExecutionResources
 import SP1Clean.Semantics.Resources.HistoricalHintWords
 import SP1Clean.Semantics.Resources.HintAllocations
 import SP1Clean.Semantics.Resources.HintReadDemand
-import SP1Clean.Semantics.Resources.SixCallResources
+import SP1Clean.Semantics.Resources.HostReceiptResources
 import SP1Clean.Semantics.Execution.ExecutionSnapshot
 import SP1Clean.Semantics.Host.HintQueue
 import SP1Clean.Semantics.Host.HintQueueSuffix
@@ -170,7 +170,7 @@ import SP1Clean.Semantics.Host.HostReadWords
 import SP1Clean.Semantics.Host.HostReplay
 import SP1Clean.Semantics.Host.HostSail
 import SP1Clean.Semantics.Host.HostSnapshot
-import SP1Clean.Semantics.Host.SixCallProfile
+import SP1Clean.Semantics.Host.HostReceiptProfile
 import SP1Clean.Semantics.Host.HostTerminal
 import SP1Clean.Semantics.ISA.InstructionBytes
 import SP1Clean.Semantics.ISA.JumpLink

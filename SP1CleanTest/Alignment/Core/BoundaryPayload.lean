@@ -4,7 +4,7 @@ import SP1Clean.Semantics.Sail.SailExecuteFrame
 import SP1Clean.FormalModel.ShardPreservation
 import SP1Clean.FormalModel.Contracts.ResourceBoundary
 import SP1Clean.Semantics.Execution.ReleaseLinks
-import SP1Clean.Semantics.Resources.SixCallResources
+import SP1Clean.Semantics.Resources.HostReceiptResources
 import SP1Clean.Math.SP1Field
 
 /-! # Two byte stores can exceed the native boundary payload only at the intermediate cut
@@ -230,7 +230,7 @@ theorem endpoint_checks_miss_peak :
     · exact (congrFun target.resources_realize .boundaryBytes).trans cost2
   · have full : ExecutionPath policy program (source n).realize [.ordinary, .ordinary] target.realize :=
       .cons run.first (.cons run.second (.nil _))
-    have allowed : ∀ e ∈ ([.ordinary, .ordinary] : List ExecutionEvent), SixCallProfile.event e := by
+    have allowed : ∀ e ∈ ([.ordinary, .ordinary] : List ExecutionEvent), HostReceiptProfile.event true e := by
       intro e selected
       simp only [List.mem_cons, List.not_mem_nil, or_false, or_self] at selected
       subst e
@@ -241,7 +241,7 @@ theorem endpoint_checks_miss_peak :
         (ResourceLimits.native SP1Prime).ticks := by
       rw [full.resources_ticks]
       exact (by decide : 16 ≤ NativeLayout.maxShardTicks)
-    have facts := SixCallProfile.resourceFacts full allowed incoming ticks
+    have facts := HostReceiptProfile.resourceFacts full allowed incoming ticks
     exact fun kind checked => (facts.native_bounds kind checked).1
 
 end SP1CleanTest.Core.BoundaryPayload

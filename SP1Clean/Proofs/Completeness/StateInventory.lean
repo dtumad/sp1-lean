@@ -123,74 +123,69 @@ end StateRecord
 
 /-! ## One instruction's State edge -/
 
+/-- Fall-through instructions add four to the low PC limb and their duration to the low
+clock limb. Carries are performed by the subsequent StateBump row. -/
+def StateRecord.fallThrough (clock pc duration : ℕ) : StateRecord :=
+  { StateRecord.canonical clock pc with clkLow := clock % 2 ^ 24 + duration, pc0 := pc % 2 ^ 16 + 4 }
+
+/-- A selected destination supplies all three PC limbs and the clock still carries through StateBump. -/
+def StateRecord.selected (clock target duration : ℕ) : StateRecord :=
+  { StateRecord.canonical clock target with clkLow := clock % 2 ^ 24 + duration }
+
 namespace RoutedEvent
 
 /-- The canonical State record consumed by this instruction occurrence. -/
 def pullState (routed : RoutedEvent) : StateRecord :=
   StateRecord.canonical routed.clock routed.pc
 
-private def straightRawPush (clock pc : ℕ) : StateRecord :=
-  { clkHigh := clock / 2 ^ 24
-    clkLow := clock % 2 ^ 24 + 8
-    pc0 := pc % 2 ^ 16 + 4
-    pc1 := pc / 2 ^ 16 % 2 ^ 16
-    pc2 := pc / 2 ^ 32 % 2 ^ 16 }
-
-private def controlRawPush (clock target : ℕ) : StateRecord :=
-  { clkHigh := clock / 2 ^ 24
-    clkLow := clock % 2 ^ 24 + 8
-    pc0 := target % 2 ^ 16
-    pc1 := target / 2 ^ 16 % 2 ^ 16
-    pc2 := target / 2 ^ 32 % 2 ^ 16 }
-
 /-- The *uncanonicalized* State record emitted by the instruction row.
 
 Straight-line chips add four only to `pc0`; the three control-flow chips emit their already-limbed
 computed target.  Every chip adds eight to the low 24-bit clock without carrying. -/
 def rawPushState : RoutedEvent → StateRecord
-  | ⟨.jal, event⟩ => controlRawPush event.clk event.jalTarget
+  | ⟨.jal, event⟩ => StateRecord.selected event.clk event.jalTarget 8
   | ⟨.jalr, event⟩ =>
-      controlRawPush event.clk (event.jalrTarget - event.jalrTarget % 2)
-  | ⟨.branch, event⟩ => controlRawPush event.clk event.branchNextPc
-  | ⟨.add, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.addi, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.addw, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.sub, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.subw, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.bitwise, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.lt, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.shiftLeft, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.shiftRight, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.uType, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.loadByte, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.loadHalf, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.loadWord, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.loadDouble, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.loadX0, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.storeByte, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.storeHalf, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.storeWord, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.storeDouble, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.mul, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.divRem, event⟩ => straightRawPush event.clk event.pc
-  | ⟨.aluX0, event⟩ => straightRawPush event.clk event.pc
+      StateRecord.selected event.clk (event.jalrTarget - event.jalrTarget % 2) 8
+  | ⟨.branch, event⟩ => StateRecord.selected event.clk event.branchNextPc 8
+  | ⟨.add, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.addi, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.addw, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.sub, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.subw, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.bitwise, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.lt, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.shiftLeft, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.shiftRight, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.uType, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.loadByte, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.loadHalf, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.loadWord, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.loadDouble, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.loadX0, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.storeByte, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.storeHalf, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.storeWord, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.storeDouble, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.mul, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.divRem, event⟩ => StateRecord.fallThrough event.clk event.pc 8
+  | ⟨.aluX0, event⟩ => StateRecord.fallThrough event.clk event.pc 8
 
 private theorem controlRawPush_pc {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (clock target : ℕ) :
-    Semantics.StateMsg.pcBits ((controlRawPush clock target).toMessage (p := p)) = BitVec.ofNat 64 (target % 2 ^ 48) := by
+    Semantics.StateMsg.pcBits ((StateRecord.selected clock target 8).toMessage (p := p)) = BitVec.ofNat 64 (target % 2 ^ 48) := by
   have hp := Fact.out (p := 2 ^ 25 < p)
   have limb (n : ℕ) : n % 2 ^ 16 < p := by omega
-  dsimp only [controlRawPush, StateRecord.toMessage, Semantics.StateMsg.pcBits, Semantics.pcBits]
+  dsimp only [StateRecord.selected, StateRecord.canonical, StateRecord.toMessage, Semantics.StateMsg.pcBits, Semantics.pcBits]
   rw [ZMod.val_natCast_of_lt (limb target), ZMod.val_natCast_of_lt (limb (target / 2 ^ 16)),
     ZMod.val_natCast_of_lt (limb (target / 2 ^ 32))]
   congr 1
   omega
 
 private theorem straightRawPush_pc {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (clock pc : ℕ) :
-    Semantics.StateMsg.pcBits ((straightRawPush clock pc).toMessage (p := p)) = BitVec.ofNat 64 (pc % 2 ^ 48 + 4) := by
+    Semantics.StateMsg.pcBits ((StateRecord.fallThrough clock pc 8).toMessage (p := p)) = BitVec.ofNat 64 (pc % 2 ^ 48 + 4) := by
   have hp := Fact.out (p := 2 ^ 25 < p)
   have limb (n : ℕ) : n % 2 ^ 16 < p := by omega
   have low : pc % 2 ^ 16 + 4 < p := by omega
-  dsimp only [straightRawPush, StateRecord.toMessage, Semantics.StateMsg.pcBits, Semantics.pcBits]
+  dsimp only [StateRecord.fallThrough, StateRecord.canonical, StateRecord.toMessage, Semantics.StateMsg.pcBits, Semantics.pcBits]
   rw [ZMod.val_natCast_of_lt low, ZMod.val_natCast_of_lt (limb (pc / 2 ^ 16)),
     ZMod.val_natCast_of_lt (limb (pc / 2 ^ 32))]
   congr 1

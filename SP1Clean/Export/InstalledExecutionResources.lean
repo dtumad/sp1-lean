@@ -1,7 +1,7 @@
 import SP1Clean.Export.InstalledAssembly
 import SP1Clean.FormalModel.ShardRelease
 
-/-! # Resource bounds of the six-handler execution recovered from raw acceptance
+/-! # Resource bounds of the seven-handler execution recovered from raw acceptance
 
 Every cut uses the actual intermediate state of the accepted execution. The native preset
 covers nine of the ten semantic measures. The transient complete-boundary payload includes
@@ -14,17 +14,17 @@ open Semantics
 variable {context : Context} {header : SP1PublicIO Fp} {events : List Machine.ExecutionEvent}
 
 /-- Exact prefix charges and the four checked host occupancies on the tape recovered by
-`execution_of_statement`. For arbitrary limits, `SixCallProfile.ResourceFacts.fits_iff`
+`execution_of_statement`. For arbitrary limits, `HostReceiptProfile.ResourceFacts.fits_iff`
 retains the declared event and padded-write ceilings as independent comparisons. -/
 theorem ExecutionFacts.prefix_resources (facts : ExecutionFacts context header events) (cut : ℕ) :
     let policy := FormalModel.Shard.policy SP1Prime context.image
     ∃ middle, ExecutionPath policy context.image.program context.source.realize (events.take cut) middle ∧
       ExecutionPath policy context.image.program middle (events.drop cut) context.target.realize ∧
-      SixCallProfile.ResourceFacts context.limits context.source.realize middle (events.take cut)
+      HostReceiptProfile.ResourceFacts context.limits context.source.realize middle (events.take cut)
         (executionResources policy context.image.program context.source.realize (events.take cut)) := by
   have path := FormalModel.Shard.trace_iff_executionPath.mp facts.path
   obtain ⟨middle, left, right⟩ := path.split cut
-  refine ⟨middle, left, right, SixCallProfile.resourceFacts left
+  refine ⟨middle, left, right, HostReceiptProfile.resourceFacts left
     (fun e mem => facts.handlers e ((List.take_sublist cut events).subset mem)) ?_ ?_⟩
   · rw [context.source.resources_realize]
     exact facts.resources.1.1
@@ -48,7 +48,7 @@ theorem ExecutionFacts.native_prefix_resources (facts : ExecutionFacts context h
   rw [native] at charges ⊢
   exact ⟨middle, left, right, charges.native_bounds⟩
 
-/-- Raw acceptance at the native preset supplies one complete six-handler tape satisfying
+/-- Raw acceptance at the native preset supplies one complete seven-handler tape satisfying
 the nine usage bounds at every cut, including the entire segment and the empty prefix. -/
 theorem native_resources_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (native : context.limits = ResourceLimits.native SP1Prime)
@@ -92,7 +92,7 @@ theorem release_statement_iff_of_statement (context : Context) {header : SP1Publ
   obtain ⟨valid, _, _, commitments, events, facts⟩ := execution_of_statement context accepted
   have incoming := facts.resources.1.1
   rw [← context.source.resources_realize] at incoming
-  have charges := SixCallProfile.resourceFacts (trace_iff_executionPath.mp facts.path) facts.handlers incoming facts.ticks
+  have charges := HostReceiptProfile.resourceFacts (trace_iff_executionPath.mp facts.path) facts.handlers incoming facts.ticks
   refine ⟨events, facts, (facts.release_iff_fits valid commitments.1).trans ?_⟩
   constructor
   · intro fits
@@ -103,7 +103,7 @@ theorem release_statement_iff_of_statement (context : Context) {header : SP1Publ
     · exact boundary ▸ peak
     · exact charges.fits_iff.mpr ⟨count, writes⟩ kind boundary
 
-/-- Raw native acceptance recovers a complete six-handler execution. All clauses of the release
+/-- Raw native acceptance recovers a complete seven-handler execution. All clauses of the release
 statement on that tape reduce to one comparison with its measured peak boundary payload. -/
 theorem native_release_statement_iff_peak (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (native : context.limits = ResourceLimits.native SP1Prime)

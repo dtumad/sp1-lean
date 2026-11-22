@@ -6,7 +6,7 @@ import SP1Clean.Soundness.HostHintReadExecutionPath
 Both physical bank histories agree with the same paired replay already constructed from the
 mixed AIR. No bank/CPU order, successful execution, or final-bank equality is a caller premise.
 This strengthens the installed source-hint theorem; complete outgoing snapshot and Exit binding,
-WRITE/VERIFY installation, and constructive completeness remain separate obligations.
+WRITE installation, and constructive completeness remain separate obligations.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU

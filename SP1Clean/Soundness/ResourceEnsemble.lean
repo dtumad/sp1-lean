@@ -10,7 +10,7 @@ theorems remain available. The new clock check bounds actual elapsed work and, f
 preset, actual event count. Arbitrarily tighter event limits need a separate event inventory check.
 
 Endpoint occupancy here concerns the supplied snapshots. Authenticating the complete outgoing
-snapshot and intermediate peaks remains A4; WRITE/VERIFY and their request/allocation ledgers
+snapshot and intermediate peaks remains A4; WRITE and its request/allocation ledgers
 remain A5. This intermediate assembly does not instantiate the full Shard soundness target.
 -/
 
@@ -44,7 +44,7 @@ theorem checks_of_admissible {limits : ResourceLimits} {image : ProgramImage}
 variable [Fact (2 ^ 25 < p)]
 local instance resourceClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-/-- The current six-call complete-memory assembly with actual endpoint-resource enforcement. -/
+/-- The current seven-call complete-memory assembly with actual endpoint-resource enforcement. -/
 def ensemble (limits : ResourceLimits) (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) :
     Ensemble (ZMod p) SP1PublicIO :=

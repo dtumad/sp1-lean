@@ -3,7 +3,7 @@ module
 public import SP1Clean.Semantics.Host.HintQueueSuffix
 public import SP1Clean.Semantics.Host.HostExecution
 
-/-! # Outgoing host state for the six installed handlers
+/-! # Outgoing host state for the installed handlers
 
 The incoming hint store is immutable in this profile. Its terminal pointer identifies the
 remaining ordered bytes. The commitment banks and exit status have their own ledgers. All

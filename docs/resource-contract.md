@@ -56,8 +56,7 @@ ceiling is the named constant `NativeLayout.maxShardTicks`.
 | channelOccurrences | Complete occurrence count in each registered channel | Clean ledger capacity and exact footprint accounting |
 
 Numeric definitions do not close these rows. In particular the existing installed host inventory
-omits WRITE/VERIFY, full target authentication remains open, and no mixed compiler exists
-yet. These installation obligations belong to A4–A6. The resource work must
+covers every supported call except WRITE. Constructing the full mixed witness and proving its capacity remain open. These installation obligations belong to A4–A6. The resource work must
 prove bounds for actual consumers and must not substitute a witness/readiness predicate for usage.
 
 ## Installed endpoint checks and remaining enforcement
@@ -85,7 +84,7 @@ The enforcement obligations remain explicit:
 | Every intermediate live queue/RAM/output/request peak fits | A4/A5 constrained resource accounting at actual prefixes |
 | Arbitrary independent event/read/write/allocation ceilings | A4/A5 exact occurrence/cost accounting, including padded writes and WRITE observations |
 | Fixed pointer/length widths and cumulative persistent allocation | A5 queue/request installation; individual field-count ceilings are insufficient |
-| Preserve `ExecutionPath.Encoded` when adding WRITE and VERIFY | The installed six-handler proof derives the full predicate from each active CPU row and its actual replayed source. The full assembly must retain this grounding. |
+| Preserve `ExecutionPath.Encoded` when adding WRITE | The installed seven-handler proof derives the full predicate from each active CPU row and its actual replayed source. The full assembly must retain this grounding. |
 | Physical height and every channel's occurrence ceiling | Exact inventory accounting below; final A4/A5/A6 construction must prove its full expansion fits, and silent tables need explicit height bounds |
 
 These are unproved implementation obligations, not additional capstone premises. The endpoint
@@ -164,19 +163,19 @@ writes. Both state and tape usage are invariant under equivalent complete snapsh
 The release statement retains the existing `nativeProfile` and adds its separate per-jump
 link encoding condition. [Release statement](../SP1Clean/FormalModel/ShardRelease.lean)
 
-At the native preset, raw acceptance of the six-handler assembly recovers a single tape whose
+At the native preset, raw acceptance of the seven-handler assembly recovers a single tape whose
 every prefix meets nine semantic ceilings. Events are bounded by elapsed ticks. HINT_READ pays
 for the padded writes of the consumed hint prefix. Reads and fresh allocations are zero. The
 four host occupancies are bounded by the incoming host inventory. For arbitrary limits, event
 count and padded writes must each fit their own ceiling. Both endpoint payloads are checked.
 Peak intermediate `boundaryBytes` remains a separate obligation because ordinary stores can
-change the number of nonzero RAM bytes. [Installed six-handler bounds](../SP1Clean/Export/SixCallResources.lean)
+change the number of nonzero RAM bytes. [Installed seven-handler bounds](../SP1Clean/Export/InstalledExecutionResources.lean)
 
 The same tape satisfies `ReleaseStatementExecution` if and only if this peak fits the native
 ceiling. At arbitrary limits the exact criterion also compares event count and padded write bytes
 with their respective ceilings. The row proofs establish the clock phase, the full ordinary
 instruction encoding and the SP1 link-write condition. The raw statement supplies the complete
-endpoints and the commitment declarations. [Release criterion](../SP1Clean/Export/SixCallResources.lean)
+endpoints and the commitment declarations. [Release criterion](../SP1Clean/Export/InstalledExecutionResources.lean)
 
 Two normally retired RV64 byte stores witness the difference between endpoints and the peak.
 The first writes one to a zero byte, and the second clears it. A carried stdout stream puts
@@ -197,7 +196,7 @@ boundaries. These two endpoint clock conditions give instances of the public cap
 [Chain theorem](../SP1Clean/Export/ShortShardChain.lean)
 
 `nativeProfile` bounds the broader Sail execution. It requires width-aligned
-ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. The installed six-handler assembly proves both conditions at every replay cut.
+ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. The installed seven-handler assembly proves both conditions at every replay cut.
 Its load and store rows identify the actual RV64 base and signed offset, including loads to x0.
 Their complete spans lie between the guest-memory endpoints. The clock phase implies
 the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock
@@ -218,13 +217,27 @@ ceiling to `2^29 + 124` bytes and cumulative write ceiling to `2^24` bytes. On a
 mixed path within that preset, the full verifier, all ten fixed providers and all three
 demand-padded HINT_READ tables fit together. The verifier emits one pull per changed native
 location, whose count is bounded by 32 register locations plus the two actual RAM supports.
-These 13 tables leave at least 822,082,528 occurrences on every registered channel.
-The same preset also pays for all 25 ordinary instruction tables with their protected store
-requests and successor receipts. Each event enters exactly one chronological bucket. The sum
-of the 25 independently rounded heights is at most twice the ordinary event count. The actual
-verifier and 38 tables together leave at least 293,600,224 occurrences on every channel.
-Capacity for the remaining tables depends on their simultaneous use of that allowance.
-[Installed verifier capacity](../SP1Clean/Export/InstalledVerifierCapacity.lean) · [38-table bound](../SP1Clean/Export/InstalledOrdinaryPreset.lean) · [Constructed physical heights](../SP1Clean/Export/CompiledOrdinaryPreset.lean)
+Each ordinary event enters one of 25 chronological instruction buckets. Their independently
+padded heights sum to at most twice the ordinary count. The observation consumer has one
+active row per ordinary event, and the authenticated endpoints select one row across its three
+terminal tables. [Constructed ordinary heights](../SP1Clean/Export/CompiledOrdinaryPreset.lean) · [Observation tables](../SP1Clean/Export/InstalledObservationPreset.lean)
+
+| Installed tables covered alongside the verifier | Total tables covered | Minimum remaining occurrences per channel |
+|---|---:|---:|
+| Ten fixed providers and three HINT_READ tables | 13 | 822,082,528 |
+| Also the protected ordinary instruction tables | 38 | 293,600,224 |
+| Also the observation consumer and three terminal modes | 42 | 285,211,616 |
+| Also MemoryBump and StateBump | 44 | 222,297,056 |
+
+The mixed compiler records the raw CPU-state push and ordered register refreshes at each tape
+position. A register access can refresh its preceding timestamp once, with at most three
+refreshes per instruction or ECALL. A StateBump is selected exactly when the clock low limb
+reaches `2^24` or either of the two lower PC limbs reaches `2^16`. A maximal upper clock or PC limb admits a lower-limb carry that
+stops before reaching it. A carry into an already maximal upper limb exceeds 48 bits. At the preset the two
+physical table heights are at most `2^23` for MemoryBump and `2^21` for StateBump. Both emit
+six Byte occurrences per physical row, including padding. Each emits two occurrences on its
+own Memory or State channel. Their constructed rows satisfy both circuits on shared prover data.
+Capacity for the other 56 tables depends on their combined channel use. [Carry boundary examples](../SP1CleanTest/Alignment/Core/MixedStateBumpEdges.lean) · [Mixed bump inventory](../SP1Clean/Proofs/Completeness/MixedBumpInventory.lean) · [Physical tables](../SP1Clean/Export/InstalledBumpTables.lean) · [44-table bound](../SP1Clean/Export/InstalledBumpPreset.lean)
 
 At the native field, each released mixed execution supplies the 25 physical ordinary tables.
 Their active rows carry the displaced values and timestamps from the mixed execution prefix.

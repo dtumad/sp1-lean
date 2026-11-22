@@ -34,7 +34,7 @@ private theorem inventory_calls
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
     (specs : ∀ table ∈ queueTables witness, table.Spec) :
-    ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), SixCallProfile.event row.event := by
+    ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), HostReceiptProfile.event true row.event := by
   have receivedCode := HostQueueCallProjection.calls_code witness interface constraints bytes specs
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface) constraints calls
   intro row member
@@ -45,7 +45,7 @@ private theorem inventory_calls
           (haltRow (HostLocalCore.localWitness witness).data) (·.is_real) := by simpa [LocalCore.executionRows] using member
       have zero := HostQueueCPUReplay.halt_code (HostLocalCore.localWitness witness)
         (HostLocalCore.localWitness_constraints witness constraints) row active
-      change SixCallProfile.code (Word.toBitVec64 row.x5_memory.prev_value)
+      change HostReceiptProfile.code true (Word.toBitVec64 row.x5_memory.prev_value)
       rw [zero]
       exact ⟨.halt, by decide, rfl⟩
   | syscall row =>
@@ -54,7 +54,7 @@ private theorem inventory_calls
       rw [← HostLocalCore.hostCallTable_projection] at active
       obtain ⟨env, envMem, rfl⟩ := List.mem_map.mp active
       have received := handoff.mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) envMem)
-      simpa only [HostReceiptProfile.code, SixCallProfile.event, ExecutionRow.event, rawCode_syscallEventOfRow,
+      simpa only [HostReceiptProfile.code, HostReceiptProfile.event, ExecutionRow.event, rawCode_syscallEventOfRow,
         HostCallLedger.call, HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat]
         using receivedCode _ received
 
@@ -117,12 +117,12 @@ theorem GroundingCarrier.final_hints (valid : image.Valid)
   simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at terminal
   exact terminal carrier.cpuWalk exhaustive walk history _ _ target replay
 
-/-- Every event of the physical CPU inventory belongs to the installed six-call profile. -/
+/-- Every event of the physical CPU inventory belongs to the installed seven-call profile. -/
 theorem installed_events
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ event ∈ (LocalCore.executionRows (HostLocalCore.localWitness
-      (HostHintQueueBoundary.projected witness))).map ExecutionRow.event, SixCallProfile.event event := by
+      (HostHintQueueBoundary.projected witness))).map ExecutionRow.event, HostReceiptProfile.event true event := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
@@ -143,7 +143,7 @@ theorem GroundingCarrier.host_frame_safe
     ((carrier.exhaustive.map ExecutionRow.event).mem_iff.mp member)
   cases event with
   | ordinary => trivial
-  | syscall call => exact SixCallProfile.ne_write admitted
+  | syscall call => exact HostReceiptProfile.ne_write (includeVerify := true) admitted
 
 /-- All host fields are recovered on the same path: authenticated hints and banks, preserved
 external I/O, and the exact optional terminal status from actual events. -/

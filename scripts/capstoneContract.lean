@@ -1,4 +1,6 @@
 import Lean
+import SP1Clean.Export.InstalledBumpTables
+import SP1CleanTest.Alignment.Core.MixedStateBumpEdges
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Proofs.Completeness.PublicHeader
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
@@ -108,7 +110,7 @@ example :
         ∃ (events : List ExecutionEvent) (actual : ExecutionState),
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
-          (∀ event ∈ events, SixCallProfile.event event) ∧
+          (∀ event ∈ events, HostReceiptProfile.event true event) ∧
           ExecutionPath.Encoded (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           ExecutionPath.ReleaseLinks (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           SP1Clean.FormalModel.Shard.DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
@@ -165,6 +167,20 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_capacity,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_base_fits,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_compiled_ordinary_fits,
+  ``SP1Clean.Export.InstalledAssembly.observation_constructed_heights,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_observation_base_fits,
+  ``SP1Clean.TraceGen.admissibleExecution_syscallPushedState,
+  ``SP1Clean.TraceGen.admissibleExecution_ordinaryPushedState,
+  ``SP1Clean.TraceGen.MixedBumpInput.stateBump?_eq_none_iff,
+  ``SP1Clean.TraceGen.routeBumpInputs?_at,
+  ``SP1Clean.TraceGen.admissibleExecution_mixedBumpInventory,
+  ``SP1Clean.Export.InstalledAssembly.bump_constructed_tables,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_bump_base_fits,
+  ``SP1CleanTest.MixedStateBumpEdges.low_pc_carry_at_full_upper_limbs,
+  ``SP1CleanTest.MixedStateBumpEdges.clock_carry_into_last_window,
+  ``SP1CleanTest.MixedStateBumpEdges.pc_carry_into_last_top_limb,
+  ``SP1CleanTest.MixedStateBumpEdges.clock_carry_past_last_window,
+  ``SP1CleanTest.MixedStateBumpEdges.pc_carry_past_last_top_limb,
   ``SP1Clean.FormalModel.Shard.Executes.header_halt,
   ``SP1Clean.TraceGen.HintReadTransfers.of_admissibleExecution,
   ``SP1Clean.TraceGen.HintReadTransfers.tables_cursor_closed,
@@ -181,6 +197,8 @@ def roots : Array Name := #[
   ``SP1Clean.Soundness.HostRegisteredCalls.noopTable_component,
   ``SP1Clean.Soundness.HostRegisteredCalls.receipt_heights,
   ``SP1Clean.Soundness.HostRegisteredCalls.classified,
+  ``SP1Clean.Semantics.HostReceiptProfile.installed_code_iff,
+  ``SP1Clean.Export.InstalledAssembly.enter_verify_slot,
   ``SP1Clean.TraceGen.routed_successor_at,
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
