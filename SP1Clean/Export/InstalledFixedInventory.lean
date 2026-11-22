@@ -189,4 +189,32 @@ theorem fixed_rowChannels (ctx : Context) : (fixedTables ctx).map rowChannelName
   · rfl
   · simp only [range_empty, List.map_nil, List.nil_append]
 
+private theorem core_at_bumps (ctx : Context) (i : ℕ) (lo : 55 ≤ i) (hi : i ≤ 56) :
+    (assembly ctx).tables[i]? = (ProtectedLocalCore.tables (p := SP1Prime) ctx.image ctx.source)[i]? := by
+  rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx, original_length]; omega),
+    List.getElem?_mapIdx]
+  have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
+    funext table
+    simp [HostOrdinaryReceipts.replace, show ¬ (7 ≤ i ∧ i < 32) by omega]
+  rw [untouched, Option.map_id_fun]
+  simp only [originalTables, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
+    List.getElem?_set_ne (show 4 ≠ i by omega), List.getElem?_set_ne (show 3 ≠ i by omega),
+    List.getElem?_set_ne (show 57 ≠ i by omega)]
+  rw [List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; change i < 66 + 20 + 8; omega),
+    HostFinalMemory.beforeChecks, HostLocalCore.tables,
+    List.getElem?_append_left (by rw [List.length_set, ProtectedLocalCore.tables_length]; omega),
+    List.getElem?_set_ne (show 58 ≠ i by omega)]
+  rfl
+
+/-- Both timestamp and CPU-state refresh providers are registered in the final physical inventory. -/
+theorem bump_registered (ctx : Context) :
+    providerTableFor .memoryBump ∈ (assembly ctx).tables ∧ providerTableFor .stateBump ∈ (assembly ctx).tables := by
+  constructor
+  · apply List.mem_of_getElem? (i := 55)
+    rw [core_at_bumps ctx 55 (by decide) (by decide)]
+    rfl
+  · apply List.mem_of_getElem? (i := 56)
+    rw [core_at_bumps ctx 56 (by decide) (by decide)]
+    rfl
+
 end SP1Clean.Export.InstalledAssembly
