@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Congr
 import SP1Clean.Native.Witgen.StateDemand
+import SP1Clean.FormalModel.TraceGen.Inputs
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.DivRemChip.Defs
@@ -737,9 +738,18 @@ theorem lookups_empty :
     U16toU8OperationSafe.circuit, U16toU8OperationSafe.main,
     DivRemChip.assertZeros, Gadgets.Equality.main, circuit_norm]
 
+/-- Released DivRem pads with the inactive DIVU operation zero divided by one. The quotient,
+selectors and timestamps are zero, and the low limb of the divisor is one. -/
+def paddingInputs : Inputs (ZMod p) where
+  is_real := 0
+  state := TraceGen.zeroCPUStateCols
+  adapter := { TraceGen.zeroRTypeReaderCols with op_c_memory :=
+    { TraceGen.zeroAccessCols with prev_value := #v[1, 0, 0, 0] } }
+  selectors := #v[0, 0, 0, 0, 0, 0, 0]
+
 /-- Upstream Clean creates one row per active State request using the shared hint layout. -/
 def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
   Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
-    (fun input => input.is_real)
+    (fun input => input.is_real) paddingInputs
 
 end SP1Clean.DivRemChip
