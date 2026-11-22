@@ -18,6 +18,9 @@ import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Proofs.Completeness.HintInventory
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Completeness.ObservationData
+import SP1Clean.Proofs.Completeness.MixedInstructionTables
+import SP1Clean.Proofs.Completeness.WriteObservationCuts
+import SP1Clean.Export.CompiledOrdinaryPreset
 
 /-! # Compiled native capstone contract audit
 
@@ -154,6 +157,14 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff,
   ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets,
+  ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionTables,
+  ``SP1Clean.TraceGen.InstalledInstructionTables.generation_padding,
+  ``SP1Clean.TraceGen.InstalledInstructionTables.table_receipts,
+  ``SP1Clean.TraceGen.InstalledInstructionTables.receipt_weights,
+  ``SP1Clean.TraceGen.WriteObservations.installed_cuts,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_capacity,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_base_fits,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_compiled_ordinary_fits,
   ``SP1Clean.FormalModel.Shard.Executes.header_halt,
   ``SP1Clean.TraceGen.HintReadTransfers.of_admissibleExecution,
   ``SP1Clean.TraceGen.HintReadTransfers.tables_cursor_closed,
