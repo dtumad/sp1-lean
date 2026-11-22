@@ -98992,7 +98992,7 @@
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.PublicHeader",
       "name": "SP1Clean.TraceGen.statementExecution_headerChecks",
-      "typeFingerprint": "2866259743"
+      "typeFingerprint": "3992831821"
     },
     {
       "bodyFingerprint": "1414527703",
