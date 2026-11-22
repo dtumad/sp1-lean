@@ -57,7 +57,8 @@ pub fn check_host_instructions(
         syscall_events: events,
         ..Default::default()
     };
-    let expected = chip.generate_trace(&segment, &mut ExecutionRecord::default());
+    let expected: slop_matrix::dense::RowMajorMatrix<S> =
+        chip.generate_trace(&segment, &mut ExecutionRecord::default());
     assert_eq!(expected.width(), 65);
     let active: Vec<_> = native.iter().filter(|row| row[64] == F::ONE).collect();
     assert_eq!(active.len(), count);
