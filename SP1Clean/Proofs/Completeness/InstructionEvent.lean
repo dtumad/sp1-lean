@@ -961,20 +961,156 @@ theorem compileInstructionEvent?_frontier_bounded_next {view : SP1TransitionView
   exact scheduleAccessPlan_outgoing_bounded_next accesses bounded
 
 
-private theorem cbaRegisters?_nonzero {decoded : instruction}
+private theorem regidx_decide_x0 (rd : regidx) :
+    decide ((regidxBits rd).toNat = 0) = regidxIsX0 rd := by
+  cases rd with
+  | Regidx idx =>
+    by_cases zero : idx = 0
+    · simp [regidxBits, regidxIsX0, zero]
+    · have nz : idx.toNat ≠ 0 := fun h => zero (BitVec.eq_of_toNat_eq h)
+      simpa [regidxBits, regidxIsX0, nz] using zero
+
+private theorem cbaRegisters?_destination {decoded : instruction}
     {registers : BitVec 5 × BitVec 5 × BitVec 5} {key : InstructionRouteKey}
-    (extracted : cbaRegisters? decoded = some registers)
-    (keyEq : instructionRouteKey decoded = some key) (nonzero : key.opAIsX0 = false) :
-    registers.2.2.toNat ≠ 0 := by
+    (extracted : cbaRegisters? decoded = some registers) (keyEq : instructionRouteKey decoded = some key) :
+    decide (registers.2.2.toNat = 0) = key.opAIsX0 := by
   cases decoded <;> rename_i chunk <;> cases chunk <;> simp only [cbaRegisters?] at extracted
   all_goals try contradiction
   all_goals
     cases Option.some.inj extracted
-    simp only [instructionRouteKey, Option.some.injEq] at keyEq
-    subst key
-    simp only [regidxIsX0, regidxBits] at nonzero ⊢
-    intro zero
-    exact (decide_eq_false_iff_not.mp nonzero) (BitVec.eq_of_toNat_eq zero)
+    cases Option.some.inj keyEq
+    exact regidx_decide_x0 _
+
+/-- Both ALU destinations share operand and timestamp bounds. The routed zero destination
+uses the architectural zero read, while the ordinary destination carries a displaced word. -/
+private def ALUDestinationValid (event : ALUTypeEvent) (key : InstructionRouteKey) : Prop :=
+  event.opcode = key.opcode.toNat ∧
+  (key.opAIsX0 = false → event.WellFormed) ∧
+  (key.opAIsX0 = true → event.opcode < 29 → event.WellFormedX0)
+
+private theorem aluDestinationValid_of_fields {e : ALUTypeEvent} {key : InstructionRouteKey}
+    (opcode : e.opcode = key.opcode.toNat) (phase : e.clk % 8 = 1) (pc : e.pc < 2 ^ 48)
+    (a : e.opA < 32) (b : e.opB < 32) (dst : decide (e.opA = 0) = key.opAIsX0)
+    (imm : e.immC = 0 ∨ e.immC = 1) (c : e.opC < 2 ^ 64) (reg : e.immC = 0 → e.opC < 32)
+    (bVal : e.b < 2 ^ 64) (cVal : e.c < 2 ^ 64) (prior : e.prevA < 2 ^ 64)
+    (x0 : key.opAIsX0 = true → e.prevA = 0) (aTime : e.prevTsA < e.clk + 4)
+    (bTime : e.prevTsB < e.clk + 3) (cTime : e.immC = 0 → e.prevTsC < e.clk + 2) :
+    ALUDestinationValid e key :=
+  ⟨opcode, fun nz => ⟨phase, pc, a, b, decide_eq_false_iff_not.mp (dst.trans nz), imm, c, reg,
+    bVal, cVal, prior, aTime, bTime, cTime⟩,
+   fun z op => ⟨phase, pc, of_decide_eq_true (dst.trans z), b, op, imm, c, reg,
+    bVal, cVal, x0 z, aTime, bTime, cTime⟩⟩
+
+private theorem aluRegisterEvent?_wellFormed {decoded : instruction}
+    {stamped : List StampedTouch} {clk pc : ℕ} {key : InstructionRouteKey} {event : ALUTypeEvent}
+    (keyEq : instructionRouteKey decoded = some key)
+    (prior : key.opAIsX0 = true → ∀ t ∈ stamped, t.touch.slot = .opA → t.touch.pulled = 0)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : aluRegisterEvent? decoded stamped clk pc key.opcode.toNat = some event) :
+    ALUDestinationValid event key := by
+  unfold aluRegisterEvent? at generated
+  cases registersEq : cbaRegisters? decoded with
+  | none => simp [registersEq] at generated
+  | some registers =>
+    simp only [registersEq] at generated
+    split at generated
+    · rename_i original c b a
+      split at generated
+      · rename_i cSlot bSlot aSlot
+        cases Option.some.inj generated
+        have cTime := ordered c (by simp)
+        have bTime := ordered b (by simp)
+        have aTime := ordered a (by simp)
+        simp only [StampedTouch.current, PlannedTouch.recordTime, cSlot, bSlot, aSlot,
+          AccessSlot.recordOffset_opC, AccessSlot.recordOffset_opB, AccessSlot.recordOffset_opA] at cTime bTime aTime
+        exact aluDestinationValid_of_fields rfl phase pcBound registers.2.2.isLt registers.2.1.isLt
+          (cbaRegisters?_destination registersEq keyEq) (Or.inl rfl)
+          (lt_trans registers.1.isLt (by decide)) (fun _ => registers.1.isLt)
+          b.touch.pulled.isLt c.touch.pulled.isLt a.touch.pulled.isLt
+          (fun z => congrArg BitVec.toNat (prior z a (by simp) aSlot)) aTime bTime (fun _ => cTime)
+      · contradiction
+    · contradiction
+
+private theorem aluImmediateEventOf?_wellFormed {stamped : List StampedTouch} {clk pc : ℕ}
+    {key : InstructionRouteKey} {rs1 rd : regidx} {imm : BitVec 64} {event : ALUTypeEvent}
+    (rdKey : regidxIsX0 rd = key.opAIsX0)
+    (prior : key.opAIsX0 = true → ∀ t ∈ stamped, t.touch.slot = .opA → t.touch.pulled = 0)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : aluImmediateEventOf? stamped clk pc key.opcode.toNat rs1 rd imm = some event) :
+    ALUDestinationValid event key := by
+  unfold aluImmediateEventOf? at generated
+  split at generated
+  · rename_i original b a
+    split at generated
+    · rename_i bSlot aSlot
+      cases Option.some.inj generated
+      have bTime := ordered b (by simp)
+      have aTime := ordered a (by simp)
+      simp only [StampedTouch.current, PlannedTouch.recordTime, bSlot, aSlot,
+        AccessSlot.recordOffset_opB, AccessSlot.recordOffset_opA] at bTime aTime
+      have dst := (regidx_decide_x0 rd).trans rdKey
+      exact aluDestinationValid_of_fields rfl phase pcBound (regidxBits rd).isLt (regidxBits rs1).isLt
+        dst (Or.inr rfl) imm.isLt (by simp) b.touch.pulled.isLt (Nat.two_pow_pos _) a.touch.pulled.isLt
+        (fun z => congrArg BitVec.toNat (prior z a (by simp) aSlot)) aTime bTime (by simp)
+    · contradiction
+  · contradiction
+
+private theorem aluTypeEvent?_wellFormed {decoded : instruction}
+    {stamped : List StampedTouch} {clk pc : ℕ} {key : InstructionRouteKey} {event : ALUTypeEvent}
+    (keyEq : instructionRouteKey decoded = some key)
+    (prior : key.opAIsX0 = true → ∀ t ∈ stamped, t.touch.slot = .opA → t.touch.pulled = 0)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : aluTypeEvent? decoded stamped clk pc key.opcode.toNat = some event) :
+    ALUDestinationValid event key := by
+  unfold aluTypeEvent? at generated
+  split at generated
+  all_goals first
+    | exact aluRegisterEvent?_wellFormed keyEq prior phase pcBound ordered generated
+    | cases Option.some.inj keyEq
+      exact aluImmediateEventOf?_wellFormed rfl prior phase pcBound ordered generated
+
+private theorem iWriteEventOf?_wellFormed {stamped : List StampedTouch} {clk pc opcode : ℕ}
+    {rs1 rd : regidx} {imm : BitVec 12} {event : ITypeEvent} (nonzero : regidxIsX0 rd = false)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : iWriteEventOf? stamped clk pc opcode rs1 rd imm = some event) :
+    event.WellFormed := by
+  unfold iWriteEventOf? at generated
+  split at generated
+  · rename_i original b a
+    split at generated
+    · rename_i bSlot aSlot
+      cases Option.some.inj generated
+      have bTime := ordered b (by simp)
+      have aTime := ordered a (by simp)
+      simp only [StampedTouch.current, PlannedTouch.recordTime, bSlot, aSlot,
+        AccessSlot.recordOffset_opB, AccessSlot.recordOffset_opA] at bTime aTime
+      exact ⟨phase, pcBound, (regidxBits rd).isLt, (regidxBits rs1).isLt,
+        decide_eq_false_iff_not.mp ((regidx_decide_x0 rd).trans nonzero), (imm.signExtend 64).isLt, b.touch.pulled.isLt,
+        a.touch.pulled.isLt, aTime, bTime⟩
+    · contradiction
+  · contradiction
+
+private theorem iTypeEvent?_addi_wellFormed {decoded : instruction}
+    {stamped : List StampedTouch} {clk pc : ℕ} {key : InstructionRouteKey} {event : ITypeEvent}
+    (keyEq : instructionRouteKey decoded = some key) (addi : key.opcode = .ADDI)
+    (nonzero : key.opAIsX0 = false) (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : iTypeEvent? decoded stamped clk pc key.opcode.toNat = some event) :
+    event.WellFormed := by
+  unfold iTypeEvent? at generated
+  split at generated
+  · cases Option.some.inj keyEq
+    exact iWriteEventOf?_wellFormed nonzero phase pcBound ordered generated
+  · cases Option.some.inj keyEq
+    contradiction
+  · rename_i imm rs2 rs1 op
+    cases Option.some.inj keyEq
+    cases op <;> contradiction
+  · contradiction
 
 private theorem rTypeEvent?_wellFormed {decoded : instruction}
     {stamped : List StampedTouch} {clk pc : ℕ} {key : InstructionRouteKey} {event : RTypeEvent}
@@ -999,11 +1135,31 @@ private theorem rTypeEvent?_wellFormed {decoded : instruction}
         simp only [StampedTouch.current, PlannedTouch.recordTime, cSlot, bSlot, aSlot,
           AccessSlot.recordOffset_opC, AccessSlot.recordOffset_opB, AccessSlot.recordOffset_opA] at cTime bTime aTime
         exact ⟨⟨phase, pcBound, registers.2.2.isLt, registers.2.1.isLt, registers.1.isLt,
-          cbaRegisters?_nonzero registersEq keyEq nonzero,
+          decide_eq_false_iff_not.mp ((cbaRegisters?_destination registersEq keyEq).trans nonzero),
           b.touch.pulled.isLt, c.touch.pulled.isLt, a.touch.pulled.isLt,
           aTime, bTime, cTime⟩, rfl⟩
       · contradiction
     · contradiction
+private theorem projected_instruction_fields {program : GuestProgram} {located : Machine.LocatedTransition}
+    {view : SP1TransitionView} (projected : projectSP1Transition? program located = some view) :
+    view.pc.toNat < 2 ^ 48 ∧ instructionRouteKey view.decoded = some view.routeKey ∧
+      view.chipId.route.claims view.routeKey.opcode view.routeKey.opAIsX0 = true := by
+  have components := projectSP1Transition?_components projected
+  have pcBound : view.pc.toNat < 2 ^ 48 := by
+    obtain ⟨entry, found, _⟩ := Option.map_eq_some_iff.mp components.2.1
+    have same : entry.1 = view.pc := by simpa only [beq_iff_eq] using List.find?_some found
+    have window := program.rom_in_window entry (List.mem_of_find?_eq_some found)
+    rw [same] at window
+    omega
+  have keyEq := components.2.2.2.2.1
+  have routed := components.2.2.2.2.2.1
+  have claimed : view.chipId.route.claims view.routeKey.opcode view.routeKey.opAIsX0 = true := by
+    rw [instructionRouteId, keyEq, Option.bind_some] at routed
+    change (fun id => id.route.claims view.routeKey.opcode view.routeKey.opAIsX0) view.chipId = true
+    exact List.find?_some (p := fun id : InstructionChipId =>
+      id.route.claims view.routeKey.opcode view.routeKey.opAIsX0) routed
+  exact ⟨pcBound, keyEq, claimed⟩
+
 /-- The five R-type adapter tables obtain their complete event validity from canonical projection
 and the running scheduler invariant. Operand bounds come from the bitvectors themselves; routing
 supplies the destination and opcode conditions. This includes all multiply/divide/remainder values,
@@ -1016,23 +1172,10 @@ theorem compileInstructionEvent?_rtype_valid
     (family : view.chipId ∈ [.add, .sub, .subw, .mul, .divRem])
     (phase : clk % 8 = 1) (bounded : frontier.BoundedAt clk) :
     result.routed.id.Valid result.routed.event := by
-  have components := projectSP1Transition?_components projected
-  have pcBound : view.pc.toNat < 2 ^ 48 := by
-    obtain ⟨entry, found, _⟩ := Option.map_eq_some_iff.mp components.2.1
-    have same : entry.1 = view.pc := by simpa only [beq_iff_eq] using List.find?_some found
-    have window := program.rom_in_window entry (List.mem_of_find?_eq_some found)
-    rw [same] at window
-    omega
-  have keyEq := components.2.2.2.2.1
-  have routed := components.2.2.2.2.2.1
+  obtain ⟨pcBound, keyEq, claimed⟩ := projected_instruction_fields projected
   have wellFormed := instructionAccessPlan_wellFormed
     (compileInstructionEvent?_accessPlan_generated projected generated)
   have ordered := compileInstructionEvent?_timestamps generated wellFormed bounded
-  have claimed : view.chipId.route.claims view.routeKey.opcode view.routeKey.opAIsX0 = true := by
-    rw [instructionRouteId, keyEq, Option.bind_some] at routed
-    change (fun id => id.route.claims view.routeKey.opcode view.routeKey.opAIsX0) view.chipId = true
-    exact List.find?_some (p := fun id : InstructionChipId =>
-      id.route.claims view.routeKey.opcode view.routeKey.opAIsX0) routed
   rcases view with ⟨pc, word, decoded, key, id, plan⟩
   dsimp only at family claimed keyEq pcBound
   simp only [List.mem_cons, List.not_mem_nil, or_false] at family
@@ -1056,6 +1199,55 @@ theorem compileInstructionEvent?_rtype_valid
       Bool.and_eq_true, List.contains_iff_mem, List.mem_cons, List.not_mem_nil, or_false] at claimed
     rcases claimed.1 with h | h | h | h | h | h | h | h <;>
       simp [RTypeEvent.IsDivRem, valid.2, h, Soundness.Opcode.toNat]
+
+private theorem aluX0_opcode_lt {opcode : Soundness.Opcode}
+    (claimed : InstructionChipId.aluX0.route.claims opcode true = true) : opcode.toNat < 29 := by
+  cases opcode <;> first | decide | contradiction
+
+/-- Validity of the immediate-add, word-add, bitwise, comparison, shift, and zero-destination ALU
+rows. The opcode and destination follow from the released instruction routing key, and every
+register timestamp is taken from the scheduled accesses. -/
+theorem compileInstructionEvent?_alu_valid
+    {program : GuestProgram} {located : Machine.LocatedTransition} {view : SP1TransitionView}
+    {frontier : AccessFrontier} {clk : ℕ} {result : CompiledInstructionEvent}
+    (projected : projectSP1Transition? program located = some view)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (family : view.chipId ∈ [.aluX0, .addi, .addw, .bitwise, .lt, .shiftLeft, .shiftRight])
+    (phase : clk % 8 = 1) (bounded : frontier.BoundedAt clk) :
+    result.routed.id.Valid result.routed.event := by
+  obtain ⟨pcBound, keyEq, claimed⟩ := projected_instruction_fields projected
+  have ordered := compileInstructionEvent?_timestamps generated
+    (instructionAccessPlan_wellFormed (compileInstructionEvent?_accessPlan_generated projected generated)) bounded
+  have prior (zero : view.routeKey.opAIsX0 = true) (t : StampedTouch) (member : t ∈ result.stamped)
+      (slot : t.touch.slot = .opA) : t.touch.pulled = 0 := by
+    apply instructionAccessPlan_opA_x0 (compileInstructionEvent?_accessPlan_generated projected generated)
+      keyEq zero _ slot
+    rw [← compileInstructionEvent?_stamped_touches generated]
+    exact List.mem_map_of_mem member
+  rcases view with ⟨pc, word, decoded, key, id, plan⟩
+  dsimp only at family claimed keyEq pcBound
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at family
+  rcases family with rfl | nonzero
+  · obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+    have zero : key.opAIsX0 = true := (Bool.and_eq_true_iff.mp claimed).2
+    have valid := aluTypeEvent?_wellFormed keyEq prior phase pcBound ordered constructed
+    apply valid.2.2 zero
+    rw [valid.1]
+    rw [zero] at claimed
+    exact aluX0_opcode_lt claimed
+  rcases nonzero with rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+    simp only [InstructionChipId.route, InstructionRoute.claims, RdGuard.holds, Bool.and_eq_true,
+      Bool.not_eq_true', List.contains_iff_mem, List.mem_cons, List.not_mem_nil, or_false] at claimed
+  · exact iTypeEvent?_addi_wellFormed keyEq claimed.1 claimed.2 phase pcBound ordered constructed
+  all_goals have valid := aluTypeEvent?_wellFormed keyEq prior phase pcBound ordered constructed
+  · exact valid.2.1 claimed.2
+  all_goals refine ⟨valid.2.1 claimed.2, ?_⟩
+  · rcases claimed.1 with h | h | h <;> simp [ALUTypeEvent.IsBitwise, valid.1, h, Soundness.Opcode.toNat]
+  · rcases claimed.1 with h | h <;> simp [ALUTypeEvent.IsLt, valid.1, h, Soundness.Opcode.toNat]
+  · rcases claimed.1 with h | h <;> simp [ALUTypeEvent.IsShiftLeft, valid.1, h, Soundness.Opcode.toNat]
+  · rcases claimed.1 with h | h | h | h <;> simp [ALUTypeEvent.IsShiftRight, valid.1, h, Soundness.Opcode.toNat]
 
 /-- The branch event keeps the entire signed thirteen-bit Sail immediate. In particular the
 compiler does not coerce it through the twelve-bit I-type immediate representation. -/

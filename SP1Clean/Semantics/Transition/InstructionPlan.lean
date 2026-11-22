@@ -263,6 +263,40 @@ theorem instructionAccessPlan_slots {decoded : instruction} {source target : Sai
     repeat' rcases generated with ⟨_, _, generated⟩
   all_goals rfl
 
+private theorem get_reg?_of_x0 (source : SailState) {rd : regidx}
+    (zero : SP1Clean.Soundness.Target.regidxIsX0 rd = true) :
+    source.get_reg? (regidxBits rd) = some 0 := by
+  cases rd with
+  | Regidx idx =>
+    change decide (idx = 0) = true at zero
+    simp [regidxBits, of_decide_eq_true zero, SailState.get_reg?]
+
+/-- On every canonical adapter shape, the A role named by a zero route key pulls the architectural
+zero. This also applies to the immutable A-role source register of branch and store instructions. -/
+theorem instructionAccessPlan_opA_x0 {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan} {key : SP1Clean.Soundness.Target.InstructionRouteKey}
+    (generated : instructionAccessPlan? decoded source target = some plan)
+    (keyEq : instructionRouteKey decoded = some key) (zero : key.opAIsX0 = true)
+    {touch : PlannedTouch} (member : touch ∈ plan) (slot : touch.slot = .opA) : touch.pulled = 0 := by
+  have byShape : (instructionPlanByShape? source target decoded).map (·.plan) = some plan := by
+    unfold instructionAccessPlan? certifiedInstructionPlan? at generated
+    split at generated
+    · contradiction
+    · exact generated
+  clear generated
+  cases decoded <;> rename_i chunk <;> cases chunk <;> simp only [instructionRouteKey] at keyEq
+  all_goals first | contradiction | cases Option.some.inj keyEq
+  all_goals
+    have read := get_reg?_of_x0 source zero
+    simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?, loadPlan?, storePlan?,
+      read, Option.map_eq_some_iff, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
+      pure, Option.some.injEq] at byShape
+    obtain ⟨cert, generated, rfl⟩ := byShape
+    repeat' obtain ⟨_, _, generated⟩ := generated
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    repeat' rcases member with rfl | member
+    all_goals first | contradiction | rfl
+
 /-- A produced plan is routed by one of the twenty-five canonical instruction-table identities. -/
 theorem instructionRouteId_exists_of_accessPlan {decoded : instruction} {source target : SailState}
     {plan : InstructionAccessPlan}

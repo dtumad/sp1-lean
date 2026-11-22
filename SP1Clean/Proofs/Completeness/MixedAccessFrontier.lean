@@ -190,7 +190,7 @@ theorem admissibleExecution_syscall_from_prefix {limits : ResourceLimits} {p : �
     rfl
 
 /-- A mixed path supplies the predecessor timestamps for each ordinary row, and the row's exact
-outgoing frontier becomes the next prefix. The five R-type families additionally obtain their
+outgoing frontier becomes the next prefix. All twelve arithmetic families, including the x0 adapter, obtain their
 existing table-specific validity predicates without an external frontier or timestamp premise. -/
 theorem admissibleExecution_compile_from_prefix {limits : ResourceLimits} {p : ℕ}
     {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
@@ -204,16 +204,24 @@ theorem admissibleExecution_compile_from_prefix {limits : ResourceLimits} {p : �
         some (next, row.nextFrontier) ∧
       (∀ touch ∈ row.stamped, touch.previous < touch.current current.clock) ∧
       (∀ bump ∈ row.memoryBumps, bump.WellFormed) ∧
-      (view.chipId ∈ [.add, .sub, .subw, .mul, .divRem] → row.routed.id.Valid row.routed.event) := by
+      (view.chipId ∈ [.add, .sub, .subw, .mul, .divRem, .aluX0, .addi, .addw, .bitwise, .lt,
+          .shiftLeft, .shiftRight] →
+        row.routed.id.Valid row.routed.event) := by
   obtain ⟨current, frontier, replay, built, bounded⟩ := admissibleExecution_mixedAccessPrefix execution cut
   obtain ⟨s, next, view, row, same, step, projected, compiled, _, _, invariants⟩ :=
     admissibleExecution_compile_at execution ordinary frontier
   have eq : s = current := Option.some.inj (same.symm.trans replay)
   subst s
   have phase := (execution.2.1 cut current .ordinary ordinary replay).1
-  exact ⟨current, frontier, next, view, row, built, projected, compiled,
+  refine ⟨current, frontier, next, view, row, built, projected, compiled,
     by rw [mixedAccessPrefix_succ _ _ _ _ ordinary, built]; simp [mixedAccessStep, step.replay, projected, compiled],
     (invariants bounded).1, (invariants bounded).2.1,
-    fun family => compileInstructionEvent?_rtype_valid projected compiled family phase bounded⟩
+    ?_⟩
+  intro family
+  change view.chipId ∈ [.add, .sub, .subw, .mul, .divRem] ++
+    [.aluX0, .addi, .addw, .bitwise, .lt, .shiftLeft, .shiftRight] at family
+  rcases List.mem_append.mp family with rtype | alu
+  · exact compileInstructionEvent?_rtype_valid projected compiled rtype phase bounded
+  · exact compileInstructionEvent?_alu_valid projected compiled alu phase bounded
 
 end SP1Clean.TraceGen
