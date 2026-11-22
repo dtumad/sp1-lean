@@ -52,8 +52,10 @@ def syscallInstruction {p : ℕ} [Fact p.Prime] (frontier : AccessFrontier) (cal
           i.val = call.arg1.toNat then 1 else 0
     digest_word := if call.syscallId = SyscallInstrsChip.commitCode then
       Vector.ofFn fun i : Fin 4 => ((call.arg2.toNat / 256 ^ i.val % 256 : ℕ) : ZMod p) else 0
-    op_b_cmp := ⟨U16CompareOperation.populate_bit b[1] SyscallInstrsChip.fieldLimbBound⟩
-    op_c_cmp := ⟨U16CompareOperation.populate_bit c[1] SyscallInstrsChip.fieldLimbBound⟩
+    op_b_cmp := ⟨if call.syscallId = SyscallInstrsChip.haltCode then
+      U16CompareOperation.populate_bit b[1] SyscallInstrsChip.fieldLimbBound else 0⟩
+    op_c_cmp := ⟨if call.syscallId = SyscallInstrsChip.commitDeferredCode then
+      U16CompareOperation.populate_bit c[1] SyscallInstrsChip.fieldLimbBound else 0⟩
     is_real := 1 }
 
 end SP1Clean.TraceGen

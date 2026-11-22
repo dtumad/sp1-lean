@@ -22,7 +22,7 @@ use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 #[path = "support/host.rs"]
 mod host;
-use host::released_host_air;
+use host::check_host_instructions;
 use sp1_core_executor::{Instruction, Opcode, Program as Sp1Program, SyscallCode};
 
 fixture!(hint_empty, installed_hints_empty);
@@ -74,8 +74,13 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     assert_eq!(records.len(), 1);
     let record = &records[0];
     assert_eq!(record.syscall_events.len(), 8);
-    released_host_air(record);
     let first = record.syscall_events[0].0.clk - 8; // first instruction is ADDI x5, x0, 240
+    check_host_instructions(
+        record,
+        (first, 9),
+        record.syscall_events.len(),
+        &witness.tables[58],
+    );
     assert_eq!(record.syscall_events[0].0.pc - 4, 131072);
     check_endpoints(
         &public,

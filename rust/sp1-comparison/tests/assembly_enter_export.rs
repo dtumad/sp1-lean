@@ -21,7 +21,7 @@ use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 #[path = "support/host.rs"]
 mod host;
-use host::released_host_air;
+use host::check_host_instructions;
 use sp1_core_executor::{Instruction, Opcode, Program as Sp1Program, SyscallCode};
 
 fixture!(enter, installed_enter);
@@ -57,7 +57,12 @@ fn enter_uses_the_released_constrained_replay() {
     let (executor, records) = execution::run(Sp1Program::new(code, base, base), &[]);
     assert_eq!(records.len(), 1);
     let record = &records[0];
-    released_host_air(record);
+    check_host_instructions(
+        record,
+        (record.syscall_events[0].0.clk, 9),
+        record.syscall_events.len(),
+        &witness.tables[58],
+    );
     assert_eq!(record.syscall_events.len(), 2);
     assert_eq!(
         record.syscall_events[0].0.syscall_code,

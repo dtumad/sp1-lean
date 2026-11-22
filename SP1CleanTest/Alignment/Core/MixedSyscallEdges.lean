@@ -20,6 +20,9 @@ private def row := syscallInstruction (p := SP1Prime) prior call
 example : row.next_pc = #v[65536, 65535, 0] := by decide
 example : (syscallPushedState call).normalize = StateRecord.canonical (2 * 2 ^ 24 + 257) (2 ^ 32) := by decide
 
+-- Both inactive range checkers keep the default cells written by the released generator.
+example : row.op_b_cmp.bit = 0 ∧ row.op_c_cmp.bit = 0 := by decide
+
 -- The two cross-window operands are refreshed in C/B order and read those exact new timestamps.
 example : ((scheduleAccessPlan prior call.clock (syscallRegisterPlan call)).memoryBumps.map (·.addr)) = [11, 10] := by decide
 example : (row.op_c_memory.access_timestamp.prev_low.val, row.op_b_memory.access_timestamp.prev_low.val,

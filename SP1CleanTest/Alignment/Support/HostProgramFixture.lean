@@ -6,7 +6,8 @@ import SP1Clean.Semantics.Host.HostSnapshot
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import SP1Clean.Proofs.Completeness.InstructionEvent
+import SP1Clean.Proofs.Completeness.MixedBumpInventory
+import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.FormalModel.TraceGen.Inputs
 import SP1Clean.Semantics.Sail.SailArithmeticExecute
@@ -14,8 +15,8 @@ import SP1Clean.Semantics.Sail.SailArithmeticExecute
 /-! # Shared host-program fixture construction
 
 Successful semantic host steps and the existing Sail ADDI execute stage supply observations.
-The production access compiler supplies ordinary timestamps, and the host RAM constructor uses
-its documented event-clock role. Clean owns witness scheduling, fixed providers and padding.
+The production compiler supplies ordinary and ECALL rows, register refreshes, and State carries.
+The host RAM constructor uses its event-clock role. Clean owns witness scheduling, fixed providers and padding.
 This finite constructor does not replace the complete Sail execution relation or its open compiler.
 -/
 
@@ -55,38 +56,10 @@ structure Construction where
   queueHead : ℕ := 0
   queueClock : ℕ := 0
 
-def instruction (current : ExecutionSnapshot) (frontier : AccessFrontier)
-    (next : ExecutionSnapshot) : Except String (HostCallChip.Inputs Fp) := do
-  let some pc := current.sail.registers.get? .PC | throw "absent PC"
-  let some nextPc := next.sail.registers.get? .PC | throw "absent next PC"
-  let some code := current.sail.skeleton.get_reg? 5 | throw "absent syscall code"
-  let some arg1 := current.sail.skeleton.get_reg? 10 | throw "absent syscall index"
-  let some arg2 := current.sail.skeleton.get_reg? 11 | throw "absent syscall word"
-  let some result := next.sail.skeleton.get_reg? 5 | throw "absent syscall result"
-  let clock := current.clock
-  let committed := decide (code.toNat = 16)
-  let deferred := decide (code.toNat = 26)
-  return HostCallChip.populate
-    { state := cpuStateCols clock pc.toNat
-      op_a := 5, op_a_memory := registerAccessCols code.toNat (frontier (.reg 5)) (clock + 4), op_a_0 := 0
-      op_b := 10, op_b_memory := registerAccessCols arg1.toNat (frontier (.reg 10)) (clock + 3)
-      op_c := 11, op_c_memory := registerAccessCols arg2.toNat (frontier (.reg 11)) (clock + 2)
-      next_pc := (cpuStateCols (p := SP1Prime) 0 nextPc.toNat).pc
-      is_halt := if code = 0 then 1 else 0, op_a_value := word result.toNat
-      syscall_id_bytes := U16toU8OperationSafe.populate (word code.toNat)
-      is_enter_unconstrained := IsZeroOperation.populate ((code.toNat : Fp) - 3)
-      is_hint_len := IsZeroOperation.populate ((code.toNat : Fp) - 240)
-      is_halt_zero := IsZeroOperation.populate (code.toNat : Fp)
-      is_commit := IsZeroOperation.populate ((code.toNat : Fp) - 16)
-      is_commit_deferred := IsZeroOperation.populate ((code.toNat : Fp) - 26)
-      digest_index_bits := Vector.ofFn fun index : Fin 8 =>
-        if (committed || deferred) && index.val == arg1.toNat then 1 else 0
-      digest_word := if committed then Vector.ofFn (fun index : Fin 4 =>
-        (arg2.toNat / 256 ^ index.val % 256 : ℕ)) else 0
-      op_b_cmp := ⟨U16CompareOperation.populate_bit (word arg1.toNat)[1] SyscallInstrsChip.fieldLimbBound⟩
-      op_c_cmp := ⟨U16CompareOperation.populate_bit (word arg2.toNat)[1] SyscallInstrsChip.fieldLimbBound⟩
-      is_real := 1 }
-    0 0
+/-- Physical refresh rows from the same instruction input as the production bump tables. -/
+private def bumpSeeds (input : MixedBumpInput) : List Seed :=
+  input.refreshes.map (fun bump => ⟨55, (toElements (memoryBumpCols (p := SP1Prime) bump)).toList⟩) ++
+    input.stateBump?.toList.map (fun bump => ⟨56, (toElements (stateBumpCols (p := SP1Prime) bump)).toList⟩)
 
 def addi (construction : Construction) (destination source : BitVec 5)
     (immediate : BitVec 12) : Except String Construction := do
@@ -105,27 +78,24 @@ def addi (construction : Construction) (destination source : BitVec 5)
     accessPlan? := instructionAccessPlan? decoded before.sail.skeleton after.sail.skeleton }
   let some compiled := compileInstructionEvent? view construction.frontier before.clock
     | throw "ADDI event compiler failed"
-  unless compiled.memoryBumps.isEmpty do throw "short fixture unexpectedly crossed a timestamp window"
   let some event := compiled.routed.forId? .addi | throw "ADDI routed to another family"
   return { construction with
     current := after, frontier := compiled.nextFrontier
     touched := construction.touched ++ [.reg source, .reg destination]
-    consumers := construction.consumers ++ [⟨8, (toElements event.toAddiInputs).toList⟩] }
+    consumers := construction.consumers ++ bumpSeeds (.ofOrdinary compiled) ++ [⟨8, (toElements event.toAddiInputs).toList⟩] }
 
 def ecall (construction : Construction) (policy : HostPolicy) (program : Target.GuestProgram) :
     Except String Construction := do
   let before := construction.current
   let some (after, event) := before.hostStep? policy program | throw "semantic host step failed"
-  let row ← instruction before construction.frontier after
+  let row := HostCallChip.populate (syscallInstruction (p := SP1Prime) construction.frontier event) 0 0
   let message := row.message 0
   let mut next : Construction := { construction with
     current := after
-    frontier := advancePlan construction.frontier before.clock
-      [⟨.opC, .reg 11, event.arg2, event.arg2⟩,
-       ⟨.opB, .reg 10, event.arg1, event.arg1⟩,
-       ⟨.opA, .reg 5, event.rawCode, event.result⟩]
+    frontier := (scheduleAccessPlan construction.frontier event.clock (syscallRegisterPlan event)).outgoing
     touched := construction.touched ++ [.reg 5, .reg 10, .reg 11]
-    consumers := construction.consumers ++ [⟨58, (toElements row).toList⟩] }
+    consumers := construction.consumers ++ bumpSeeds (.ofSyscall construction.frontier event.clock event) ++
+      [⟨58, (toElements row).toList⟩] }
   if event.rawCode = 0 then
     return { next with consumers := next.consumers ++ [⟨64, (toElements (HostHaltChip.populate message)).toList⟩] }
   if event.rawCode = 3 then

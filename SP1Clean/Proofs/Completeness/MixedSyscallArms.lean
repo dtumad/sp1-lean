@@ -79,13 +79,18 @@ private theorem word_fieldBound {n : ℕ} (bounded : n < SP1Prime) :
       rw [show n % 2 ^ 16 = 0 by omega]
       rfl
 
-private theorem field_arm (n : ℕ) (gate : ZMod SP1Prime)
-    (boolean : gate = 0 ∨ gate = 1) (active : gate = 1 → n < SP1Prime) :
+private theorem field_arm (n : ℕ) (selected : Prop) [Decidable selected]
+    (active : selected → n < SP1Prime) :
     let w := wordOfNat (p := SP1Prime) n
-    let input : FieldBoundArm.Inputs (ZMod SP1Prime) := ⟨w, U16CompareOperation.populate_bit w[1] fieldLimbBound, gate⟩
+    let input : FieldBoundArm.Inputs (ZMod SP1Prime) := ⟨w,
+      if selected then U16CompareOperation.populate_bit w[1] fieldLimbBound else 0, if selected then 1 else 0⟩
     FieldBoundArm.Assumptions input ∧ FieldBoundArm.Spec input := by
-  exact ⟨⟨boolean, fun _ => wordOfNat_isU64 n 1⟩, U16CompareOperation.populate_bit_bool ..,
-    fun live => ⟨rfl, word_fieldBound (active live)⟩⟩
+  by_cases live : selected
+  · simp only [ite_eq_left live]
+    exact ⟨⟨Or.inr rfl, fun _ => wordOfNat_isU64 n 1⟩, U16CompareOperation.populate_bit_bool ..,
+      fun _ => ⟨rfl, word_fieldBound (active live)⟩⟩
+  · simp only [ite_eq_right live]
+    exact ⟨⟨Or.inl rfl, fun h => (zero_ne_one h).elim⟩, Or.inl rfl, fun h => (zero_ne_one h).elim⟩
 
 private theorem small_index {i : ℕ} (bound : i < 8) :
     (wordOfNat (p := SP1Prime) i)[0] = (i : ZMod SP1Prime) ∧
@@ -286,14 +291,8 @@ theorem syscallInstruction_arms_of_run {host : HostState} {context : HostReadCon
   have result := (execution.rowLaw ((host.run_eq_some_iff ..).mp ran).2.2.2.2.1 clock pc).2.1
   obtain ⟨gates, writeA, writeS, dispatchA, dispatchS⟩ := register_arms frontier c short result
   obtain ⟨commitA, commitS, bytes⟩ := commit_arm frontier c index primary
-  have h := field_arm c.arg1.toNat (if c.syscallId = haltCode then 1 else 0) (flag_bool _) (by
-    split
-    · exact fun _ => halt ‹c.syscallId = haltCode›
-    · exact fun impossible => (zero_ne_one impossible).elim)
-  have d := field_arm c.arg2.toNat (if c.syscallId = commitDeferredCode then 1 else 0) (flag_bool _) (by
-    split
-    · exact fun _ => deferred ‹c.syscallId = commitDeferredCode›
-    · exact fun impossible => (zero_ne_one impossible).elim)
+  have h := field_arm c.arg1.toNat (c.syscallId = haltCode) halt
+  have d := field_arm c.arg2.toNat (c.syscallId = commitDeferredCode) deferred
   have dflag : (row frontier c).is_commit_deferred.result = (if c.syscallId = commitDeferredCode then 1 else 0) :=
     selector_nat c _ (by decide)
   refine ⟨gates, syscallInstruction_selectors .., writeA, writeS, dispatchA, dispatchS, h.1, h.2, ?_, ?_, commitA, commitS, bytes⟩
