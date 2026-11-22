@@ -1,5 +1,6 @@
 import SP1Clean.Semantics.Transition.TransitionView
 import SP1Clean.Semantics.Transition.AccessSchedule
+import SP1Clean.Semantics.Execution.ExecutionEncoding
 import SP1Clean.Proofs.Completeness.EventBuckets
 
 /-!
@@ -235,6 +236,22 @@ private def jTypeEvent? (decoded : instruction) (stamped : List StampedTouch)
       | _ => none
   | _ => none
 
+/-- The common RAM/B/A adapter fields for loads and stores. -/
+private def memoryOperands (ram b a : StampedTouch) (clk pc opcode : ℕ)
+    (imm : BitVec 12) (rs1 opA : regidx) : MemoryEvent where
+  clk := clk
+  pc := pc
+  opcode := opcode
+  opA := (regidxBits opA).toNat
+  opB := (regidxBits rs1).toNat
+  imm := sextNat imm
+  b := b.touch.pulled.toNat
+  prevA := a.touch.pulled.toNat
+  prevTsA := a.previous
+  prevTsB := b.previous
+  prevMem := ram.touch.pulled.toNat
+  prevTsMem := ram.previous
+
 /-- Build the RAM/B/A memory-family record. -/
 private def memoryEvent? (decoded : instruction) (stamped : List StampedTouch)
     (clk pc opcode : ℕ) : Option MemoryEvent :=
@@ -243,34 +260,8 @@ private def memoryEvent? (decoded : instruction) (stamped : List StampedTouch)
       match ram.touch.slot, b.touch.slot, a.touch.slot with
       | .ram, .opB, .opA =>
           match decoded with
-          | .LOAD (imm, rs1, rd, _, _) =>
-              some
-                { clk := clk
-                  pc := pc
-                  opcode := opcode
-                  opA := (regidxBits rd).toNat
-                  opB := (regidxBits rs1).toNat
-                  imm := sextNat imm
-                  b := b.touch.pulled.toNat
-                  prevA := a.touch.pulled.toNat
-                  prevTsA := a.previous
-                  prevTsB := b.previous
-                  prevMem := ram.touch.pulled.toNat
-                  prevTsMem := ram.previous }
-          | .STORE (imm, rs2, rs1, _) =>
-              some
-                { clk := clk
-                  pc := pc
-                  opcode := opcode
-                  opA := (regidxBits rs2).toNat
-                  opB := (regidxBits rs1).toNat
-                  imm := sextNat imm
-                  b := b.touch.pulled.toNat
-                  prevA := a.touch.pulled.toNat
-                  prevTsA := a.previous
-                  prevTsB := b.previous
-                  prevMem := ram.touch.pulled.toNat
-                  prevTsMem := ram.previous }
+          | .LOAD (imm, rs1, rd, _, _) => some (memoryOperands ram b a clk pc opcode imm rs1 rd)
+          | .STORE (imm, rs2, rs1, _) => some (memoryOperands ram b a clk pc opcode imm rs1 rs2)
           | _ => none
       | _, _, _ => none
   | _ => none
@@ -1320,6 +1311,156 @@ theorem compileInstructionEvent?_control_valid_of_targets
       rcases claimed with h | h <;> simp [JTypeEvent.IsUType, opcode, h, Soundness.Opcode.toNat]
     exact ⟨⟨wf.clk_mod, wf.pc_lt, wf.opA_lt, supported, wf.immB_lt, wf.immC_lt,
       wf.prevA_lt, wf.prevA_eq_zero, wf.prevTsA_lt⟩, imm supported⟩
+
+/-- Byte accesses impose no additional address alignment. The remaining variants require the
+decoded width. Only opcodes from the native load/store image use this projection. -/
+private def memoryAlignment : Soundness.Opcode → ℕ
+  | .LH | .LHU | .SH => 2
+  | .LW | .LWU | .SW => 4
+  | .LD | .SD => 8
+  | _ => 1
+
+private theorem load_alignment {w : word_width} {u : Bool} (image : loadWidthOK w u = true) :
+    0 < w.toNat ∧ memoryAlignment (loadOpcode w u) = w.toNat := by
+  simp only [loadWidthOK, Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq] at image
+  rcases image with ((rfl | rfl) | rfl) | ⟨rfl, _⟩ <;> cases u <;> decide
+
+private theorem store_alignment {w : word_width} (image : storeWidthOK w = true) :
+    0 < w.toNat ∧ memoryAlignment (storeOpcode w) = w.toNat := by
+  simp only [storeWidthOK, Bool.or_eq_true, beq_iff_eq] at image
+  rcases image with ((rfl | rfl) | rfl) | rfl <;> decide
+
+private theorem memoryOperands_fields {key : InstructionRouteKey} {clk pc : ℕ}
+    {ram b a : StampedTouch} {rs1 dst : regidx} {imm : BitVec 12} {width : ℕ}
+    (rd : regidxIsX0 dst = key.opAIsX0)
+    (prior : key.opAIsX0 = true → a.touch.pulled = 0)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48) (clkBound : clk < 2 ^ 48)
+    (positive : 0 < width) (widthEq : memoryAlignment key.opcode = width)
+    (span : NativeLayout.guestMemory.ContainsSpan (memoryEffectiveAddress b.touch.pulled imm).toNat width)
+    (aligned : (memoryEffectiveAddress b.touch.pulled imm).toNat % width = 0)
+    (ramTime : ram.previous < clk + 1) (bTime : b.previous < clk + 3) (aTime : a.previous < clk + 4) :
+    let e := memoryOperands ram b a clk pc key.opcode.toNat imm rs1 dst
+    e.WellFormedStore ∧ decide (e.opA = 0) = key.opAIsX0 ∧ e.opcode = key.opcode.toNat ∧
+      e.Aligned (memoryAlignment key.opcode) := by
+  let e := memoryOperands ram b a clk pc key.opcode.toNat imm rs1 dst
+  have addr : e.addr = (memoryEffectiveAddress b.touch.pulled imm).toNat := by
+    simp only [e, memoryOperands, MemoryEvent.addr, memoryEffectiveAddress, sextNat, BitVec.toNat_add]
+  have addressBound : (memoryEffectiveAddress b.touch.pulled imm).toNat < 2 ^ 48 := by
+    have high : (memoryEffectiveAddress b.touch.pulled imm).toNat + width ≤ 2 ^ 48 := span.2
+    omega
+  have zero := (regidx_decide_x0 dst).trans rd
+  refine ⟨⟨phase, pcBound, (regidxBits dst).isLt, (regidxBits rs1).isLt,
+    (imm.signExtend 64).isLt, b.touch.pulled.isLt, a.touch.pulled.isLt, ?_,
+    aTime, bTime, clkBound, addr ▸ addressBound, addr ▸ span.1, ram.touch.pulled.isLt, ramTime⟩,
+    zero, rfl, ?_⟩
+  · intro z
+    exact congrArg BitVec.toNat (prior (zero.symm.trans (decide_eq_true z)))
+  · change e.addr % memoryAlignment key.opcode = 0
+    rwa [addr, widthEq]
+
+private theorem memoryEvent?_fields {decoded : instruction} {stamped : List StampedTouch}
+    {source : SailState} {clk pc : ℕ} {key : InstructionRouteKey} {event : MemoryEvent}
+    (keyEq : instructionRouteKey decoded = some key) (image : instructionImageOK decoded = true)
+    (encoded : instructionMemoryEncoded source.get_reg? decoded)
+    (baseRead : ∀ t ∈ stamped, t.touch.slot = .opB →
+      match (generalizing := false) decoded with
+      | .LOAD (_, rs1, _, _, _) | .STORE (_, _, rs1, _) => source.get_reg? (regidxBits rs1) = some t.touch.pulled
+      | _ => True)
+    (prior : key.opAIsX0 = true → ∀ t ∈ stamped, t.touch.slot = .opA → t.touch.pulled = 0)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48) (clkBound : clk < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : memoryEvent? decoded stamped clk pc key.opcode.toNat = some event) :
+    event.WellFormedStore ∧ decide (event.opA = 0) = key.opAIsX0 ∧
+      event.opcode = key.opcode.toNat ∧ event.Aligned (memoryAlignment key.opcode) := by
+  unfold memoryEvent? at generated
+  split at generated
+  · rename_i original ram b a
+    split at generated
+    · rename_i ramSlot bSlot aSlot
+      have aTime := ordered a (by simp)
+      have bTime := ordered b (by simp)
+      have ramTime := ordered ram (by simp)
+      simp only [StampedTouch.current, PlannedTouch.recordTime, ramSlot, bSlot, aSlot,
+        AccessSlot.recordOffset_ram, AccessSlot.recordOffset_opB, AccessSlot.recordOffset_opA] at ramTime bTime aTime
+      have read := baseRead b (by simp) bSlot
+      split at generated
+      next imm rs1 dst u width =>
+        obtain ⟨positive, size⟩ := load_alignment (w := width) (u := u) image
+        cases Option.some.inj keyEq
+        cases Option.some.inj generated
+        obtain ⟨base, actual, span, aligned⟩ := encoded
+        cases Option.some.inj (actual.symm.trans read)
+        exact memoryOperands_fields rfl (fun z => prior z a (by simp) aSlot) phase pcBound clkBound
+          positive size span aligned ramTime bTime aTime
+      next imm rs2 rs1 width =>
+        obtain ⟨positive, size⟩ := store_alignment (w := width) image
+        cases Option.some.inj keyEq
+        cases Option.some.inj generated
+        obtain ⟨base, actual, span, aligned⟩ := encoded
+        cases Option.some.inj (actual.symm.trans read)
+        exact memoryOperands_fields rfl (fun z => prior z a (by simp) aSlot) phase pcBound clkBound
+          positive size span aligned ramTime bTime aTime
+      next => contradiction
+    · contradiction
+  · contradiction
+
+private theorem load_wellFormed {e : MemoryEvent} (wf : e.WellFormedStore) (nonzero : e.opA ≠ 0) :
+    e.WellFormed :=
+  ⟨⟨wf.clk_mod, wf.pc_lt, wf.opA_lt, wf.opB_lt, nonzero, wf.imm_lt, wf.b_lt,
+    wf.prevA_lt, wf.prevTsA_lt, wf.prevTsB_lt⟩, wf.clk_lt, wf.addr_lt, wf.addr_ge, wf.prevMem_lt, wf.prevTsMem_lt⟩
+
+private theorem loadX0_wellFormed {e : MemoryEvent} (wf : e.WellFormedStore) (zero : e.opA = 0) :
+    e.WellFormedX0 :=
+  ⟨wf.clk_mod, wf.pc_lt, zero, wf.opB_lt, wf.imm_lt, wf.b_lt, wf.prevA_x0 zero,
+    wf.prevTsA_lt, wf.prevTsB_lt, wf.clk_lt, wf.addr_lt, wf.addr_ge, wf.prevMem_lt, wf.prevTsMem_lt⟩
+
+/-- All nine memory adapters obtain their side conditions from the existing execution encoding
+at the actual base register and the canonical RAM/B/A schedule. Loads to x0 and stores from x0
+preserve their respective routed zero-register behavior. -/
+theorem compileInstructionEvent?_memory_valid
+    {program : GuestProgram} {located : Machine.LocatedTransition} {view : SP1TransitionView}
+    {frontier : AccessFrontier} {clk : ℕ} {result : CompiledInstructionEvent}
+    (projected : projectSP1Transition? program located = some view)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (family : view.chipId ∈ [.loadByte, .loadHalf, .loadWord, .loadDouble, .loadX0,
+      .storeByte, .storeHalf, .storeWord, .storeDouble])
+    (encoded : instructionMemoryEncoded located.source.get_reg? view.decoded)
+    (phase : clk % 8 = 1) (clkBound : clk < 2 ^ 48) (bounded : frontier.BoundedAt clk) :
+    result.routed.id.Valid result.routed.event := by
+  obtain ⟨pcBound, keyEq, claimed⟩ := projected_instruction_fields projected
+  have plan := compileInstructionEvent?_accessPlan_generated projected generated
+  have ordered := compileInstructionEvent?_timestamps generated (instructionAccessPlan_wellFormed plan) bounded
+  have prior := compiled_x0_pulled projected generated
+  have image := (projectSP1Transition?_components projected).2.2.2.1
+  have baseRead := fun (t : StampedTouch) (member : t ∈ result.stamped) (slot : t.touch.slot = .opB) =>
+    instructionAccessPlan_memory_base plan
+      (show t.touch ∈ result.plan by rw [← compileInstructionEvent?_stamped_touches generated]; exact List.mem_map_of_mem member) slot
+  rcases view with ⟨pc, word, decoded, key, id, accessPlan⟩
+  dsimp only at family claimed keyEq pcBound
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at family
+  rcases family with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+    obtain ⟨wf, dest, opcode, aligned⟩ := memoryEvent?_fields keyEq image encoded baseRead prior
+      phase pcBound clkBound ordered constructed
+    simp only [InstructionChipId.route, InstructionRoute.claims, RdGuard.holds, Bool.and_eq_true,
+      Bool.not_eq_true', Bool.and_true, List.contains_iff_mem, List.mem_cons, List.not_mem_nil, or_false] at claimed
+  · refine ⟨load_wellFormed wf (decide_eq_false_iff_not.mp (dest.trans claimed.2)), ?_⟩
+    rcases claimed.1 with h | h <;> simp [opcode, h, Soundness.Opcode.toNat]
+  · refine ⟨load_wellFormed wf (decide_eq_false_iff_not.mp (dest.trans claimed.2)), ?_⟩
+    rcases claimed.1 with h | h <;> simpa only [h, memoryAlignment] using aligned
+  · refine ⟨load_wellFormed wf (decide_eq_false_iff_not.mp (dest.trans claimed.2)), ?_⟩
+    rcases claimed.1 with h | h <;> simpa only [h, memoryAlignment] using aligned
+  · exact ⟨load_wellFormed wf (decide_eq_false_iff_not.mp (dest.trans claimed.2)),
+      by simpa only [claimed.1, memoryAlignment] using aligned⟩
+  · refine ⟨loadX0_wellFormed wf (of_decide_eq_true (dest.trans claimed.2)), ?_⟩
+    rcases claimed.1 with h | h | h | h | h | h | h <;>
+      simp [MemoryEvent.IsLoad, opcode, h, Soundness.Opcode.toNat] <;>
+      simpa only [h, memoryAlignment, MemoryEvent.Aligned] using aligned
+  · exact wf
+  · exact ⟨wf, by simpa only [claimed, memoryAlignment] using aligned⟩
+  · exact ⟨wf, by simpa only [claimed, memoryAlignment] using aligned⟩
+  · exact ⟨wf, by simpa only [claimed, memoryAlignment] using aligned⟩
 
 /-- The branch event keeps the entire signed thirteen-bit Sail immediate. In particular the
 compiler does not coerce it through the twelve-bit I-type immediate representation. -/
