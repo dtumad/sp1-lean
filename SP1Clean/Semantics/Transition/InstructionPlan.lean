@@ -243,16 +243,20 @@ def instructionAccessSlots : instruction → List AccessSlot
   | .LOAD _ | .STORE _ => [.ram, .opB, .opA]
   | _ => []
 
+private theorem byShape_of_extracted {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan} (generated : instructionAccessPlan? decoded source target = some plan) :
+    (instructionPlanByShape? source target decoded).map (·.plan) = some plan := by
+  unfold instructionAccessPlan? certifiedInstructionPlan? at generated
+  split at generated
+  · contradiction
+  · exact generated
+
 /-- Erasing values from a successful canonical extraction yields exactly its instruction roles. -/
 theorem instructionAccessPlan_slots {decoded : instruction} {source target : SailState}
     {plan : InstructionAccessPlan}
     (generated : instructionAccessPlan? decoded source target = some plan) :
     plan.map PlannedTouch.slot = instructionAccessSlots decoded := by
-  have byShape : (instructionPlanByShape? source target decoded).map (·.plan) = some plan := by
-    unfold instructionAccessPlan? certifiedInstructionPlan? at generated
-    split at generated
-    · contradiction
-    · exact generated
+  have byShape := byShape_of_extracted generated
   clear generated
   cases decoded <;> rename_i chunk <;> cases chunk <;>
     simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?,
@@ -262,6 +266,56 @@ theorem instructionAccessPlan_slots {decoded : instruction} {source target : Sai
     rcases byShape with ⟨certified, generated, rfl⟩
     repeat' rcases generated with ⟨_, _, generated⟩
   all_goals rfl
+
+private theorem get_reg?_of_x0 (source : SailState) {rd : regidx}
+    (zero : SP1Clean.Soundness.Target.regidxIsX0 rd = true) :
+    source.get_reg? (regidxBits rd) = some 0 := by
+  cases rd with
+  | Regidx idx =>
+    change decide (idx = 0) = true at zero
+    simp [regidxBits, of_decide_eq_true zero, SailState.get_reg?]
+
+/-- On every canonical adapter shape, the A role named by a zero route key pulls the architectural
+zero. This also applies to the immutable A-role source register of branch and store instructions. -/
+theorem instructionAccessPlan_opA_x0 {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan} {key : SP1Clean.Soundness.Target.InstructionRouteKey}
+    (generated : instructionAccessPlan? decoded source target = some plan)
+    (keyEq : instructionRouteKey decoded = some key) (zero : key.opAIsX0 = true)
+    {touch : PlannedTouch} (member : touch ∈ plan) (slot : touch.slot = .opA) : touch.pulled = 0 := by
+  have byShape := byShape_of_extracted generated
+  clear generated
+  cases decoded <;> rename_i chunk <;> cases chunk <;> simp only [instructionRouteKey] at keyEq
+  all_goals first | contradiction | cases Option.some.inj keyEq
+  all_goals
+    have read := get_reg?_of_x0 source zero
+    simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?, loadPlan?, storePlan?,
+      read, Option.map_eq_some_iff, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
+      pure, Option.some.injEq] at byShape
+    obtain ⟨cert, generated, rfl⟩ := byShape
+    repeat' obtain ⟨_, _, generated⟩ := generated
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    repeat' rcases member with rfl | member
+    all_goals first | contradiction | rfl
+
+/-- The base in the B slot of an extracted load or store comes from its decoded source register.
+This links the effective address used by the adapter to the address checked by native execution. -/
+theorem instructionAccessPlan_memory_base {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan} (generated : instructionAccessPlan? decoded source target = some plan)
+    {touch : PlannedTouch} (member : touch ∈ plan) (slot : touch.slot = .opB) :
+    match (generalizing := false) decoded with
+    | .LOAD (_, rs1, _, _, _) | .STORE (_, _, rs1, _) => source.get_reg? (regidxBits rs1) = some touch.pulled
+    | _ => True := by
+  have byShape := byShape_of_extracted generated
+  clear generated
+  cases decoded <;> rename_i chunk <;> cases chunk <;> try trivial
+  all_goals
+    simp only [instructionPlanByShape?, loadPlan?, storePlan?, Option.map_eq_some_iff, Option.bind_eq_bind,
+      Option.bind_eq_some_iff, pure, Option.some.injEq] at byShape
+    obtain ⟨cert, generated, rfl⟩ := byShape
+    repeat' obtain ⟨_, _, generated⟩ := generated
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    repeat' rcases member with rfl | member
+    all_goals first | contradiction | assumption
 
 /-- A produced plan is routed by one of the twenty-five canonical instruction-table identities. -/
 theorem instructionRouteId_exists_of_accessPlan {decoded : instruction} {source target : SailState}

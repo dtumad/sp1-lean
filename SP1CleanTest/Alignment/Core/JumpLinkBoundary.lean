@@ -175,8 +175,8 @@ theorem admissible_from_boot (inputs : HostInputs) :
     intro target normal
     have decoded := SailDecode.instructionDecode_agrees 0x000000ef (.JAL (0, .Regidx 1)) rfl
     have fetched : (rom.toGuestProgram valid).fetchWord lastPc = some 0x000000ef := rfl
-    exact ⟨Advance.jal_normal_successor rom.initialSailState_configured
-      (rom.initialSailState_romLoaded valid) rom.initialSailState_pc fetched decoded normal,
+    exact ⟨(Advance.jal_normal_successor rom.initialSailState_configured
+      (rom.initialSailState_romLoaded valid) rom.initialSailState_pc fetched decoded normal).1,
       (Advance.control_normal_frame rom.initialSailState_configured (rom.initialSailState_romLoaded valid)
         rom.initialSailState_pc fetched decoded trivial normal).2⟩
   · let rom := image 0x000000e7
@@ -186,9 +186,9 @@ theorem admissible_from_boot (inputs : HostInputs) :
     intro target normal
     have decoded := SailDecode.instructionDecode_agrees 0x000000e7 (.JALR (0, .Regidx 0, .Regidx 1)) rfl
     have fetched : (rom.toGuestProgram valid).fetchWord lastPc = some 0x000000e7 := rfl
-    exact ⟨Advance.jalr_normal_successor (value := 0) rom.initialSailState_configured
+    exact ⟨(Advance.jalr_normal_successor (value := 0) rom.initialSailState_configured
       (rom.initialSailState_romLoaded valid) rom.initialSailState_pc fetched
-      (by simp [SailState.get_reg?]) decoded normal,
+      (by simp [SailState.get_reg?]) decoded normal).1,
       (Advance.control_normal_frame rom.initialSailState_configured (rom.initialSailState_romLoaded valid)
         rom.initialSailState_pc fetched decoded trivial normal).2⟩
 

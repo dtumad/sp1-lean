@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Completeness.SemanticAccess
+import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.Proofs.Completeness.OrdinaryObservationPadding
 import ToClean.Air.DemandPadding
 
@@ -13,14 +13,14 @@ namespace SP1Clean.TraceGen
 open Semantics Machine FormalModel.Shard Soundness.Target
 
 /-- Replay the tape once and compile each ordinary transition against its actual source clock.
-The running frontier is used only to populate the ordinary instruction rows. -/
+The same prefix frontier supplies the ordinary rows' displaced timestamps across ECALLs. -/
 noncomputable def routeObservations? (host : HostPolicy) (program : GuestProgram) :
     AccessFrontier → ExecutionState → List ExecutionEvent → Option (List RoutedEvent)
   | _, _, [] => some []
   | frontier, current, event :: later => do
     let next ← replayStep? host program current event
     match event with
-    | .syscall _ => routeObservations? host program frontier next later
+    | .syscall call => routeObservations? host program (syscallFrontier frontier current.clock call) next later
     | .ordinary =>
       let view ← projectSP1Transition? program ⟨current.sail, ⟨.ordinary, next.sail⟩⟩
       let result ← compileInstructionEvent? view frontier current.clock
@@ -34,6 +34,7 @@ theorem routeObservations?_at {host : HostPolicy} {program : GuestProgram} {curr
     (routed : routeObservations? host program frontier current events = some rows)
     {cut : ℕ} (present : events[cut]? = some .ordinary) :
     ∃ before after view result incoming,
+      (events.take cut).foldlM (mixedAccessStep host program) (current, frontier) = some (before, incoming) ∧
       executionTrajectory host program current events cut = some before ∧
       replayStep? host program before .ordinary = some after ∧
       projectSP1Transition? program ⟨before.sail, ⟨.ordinary, after.sail⟩⟩ = some view ∧
@@ -49,17 +50,19 @@ theorem routeObservations?_at {host : HostPolicy} {program : GuestProgram} {curr
       cases cut with
       | zero => simp at present
       | succ n =>
-        obtain ⟨s, t, v, r, f, reached, ran, facts, compiled, rank⟩ := ih generated present
-        exact ⟨s, t, v, r, f, by simpa [executionTrajectory, replayEvents?, first] using reached,
+        obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, compiled, rank⟩ := ih generated present
+        exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, first] using prefixState,
+          by simpa [executionTrajectory, replayEvents?, first] using reached,
           ran, facts, compiled, by simpa [List.countP_cons] using rank⟩
     | ordinary =>
       simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at generated
       obtain ⟨view, projected, result, compiled, tail, rest, rfl⟩ := generated
       cases cut with
-      | zero => exact ⟨current, middle, view, result, frontier, rfl, first, projected, compiled, rfl⟩
+      | zero => exact ⟨current, middle, view, result, frontier, rfl, rfl, first, projected, compiled, rfl⟩
       | succ n =>
-        obtain ⟨s, t, v, r, f, reached, ran, facts, other, rank⟩ := ih rest present
-        exact ⟨s, t, v, r, f, by simpa [executionTrajectory, replayEvents?, first] using reached,
+        obtain ⟨s, t, v, r, f, prefixState, reached, ran, facts, other, rank⟩ := ih rest present
+        exact ⟨s, t, v, r, f, by simpa [mixedAccessStep, first, projected, compiled] using prefixState,
+          by simpa [executionTrajectory, replayEvents?, first] using reached,
           ran, facts, other, by simpa [List.countP_cons] using rank⟩
 
 /-- Every ordinary tape position has exactly its compiler row at the rank of that position.
@@ -95,7 +98,7 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
     have advance := step.clock_lt
     cases event with
     | syscall call =>
-      obtain ⟨rows, route, len, bounds, sorted⟩ := ih _ part' reached' frontier
+      obtain ⟨rows, route, len, bounds, sorted⟩ := ih _ part' reached' (syscallFrontier frontier current.clock call)
       refine ⟨rows, ?_, by simpa using len, ?_, sorted⟩
       · simp [routeObservations?, step.replay, route]
       · intro row member
@@ -137,7 +140,7 @@ theorem admissibleExecution_routeObservations {limits : ResourceLimits} {p : ℕ
     have b := bounds row member
     exact ⟨b.2.1, b.2.2.trans execution.2.2.2.2.2.1⟩
   · intro cut present
-    obtain ⟨before, _, view, result, _, reached, _, projected, compiled, atRow⟩ := routeObservations?_at route present
+    obtain ⟨before, _, view, result, _, _, reached, _, projected, compiled, atRow⟩ := routeObservations?_at route present
     obtain ⟨clk, pc⟩ := compileInstructionEvent?_coordinates compiled
     exact ⟨result.routed, before, view.pc, atRow, reached, clk, (projectSP1Transition?_components projected).1, pc⟩
 

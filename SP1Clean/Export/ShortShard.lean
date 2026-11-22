@@ -1,4 +1,5 @@
 import SP1Clean.Export.SixCallResources
+import SP1Clean.Soundness.Shard.Contract
 
 /-! # Complete release execution of an accepted short shard
 
@@ -101,5 +102,28 @@ theorem native_release_of_short_halt (context : Context) {header : SP1PublicIO F
   have count := event_count_le_ticks before
   obtain rfl := List.length_eq_zero_iff.mp (show before.length = 0 by omega)
   exact ⟨call, facts, halt, argument, publicExit, facts.release_of_length_le_one native valid committed.1 (by simp)⟩
+
+/-- The complete capstone soundness target for a native short shard. The clock interval
+belongs to the supplied endpoints. A running-to-stopped interval also admits one HALT. -/
+theorem native_short_soundnessTarget (context : Context)
+    (native : context.limits = ResourceLimits.native SP1Prime)
+    (short : context.target.clock - context.source.clock < 16 ∨
+      (context.source.host.exitCode = none ∧ context.target.host.exitCode.isSome ∧
+        context.target.clock - context.source.clock < 272)) :
+    Soundness.Shard.SoundnessTarget (assembly context) context.limits context.commitments
+      context.image context.source context.target := by
+  intro header heights _ accepted
+  obtain ⟨valid, incoming, _, _, events, facts⟩ := execution_of_statement context accepted
+  have duration := congrArg₂ Nat.sub (facts.resources.2.clock facts.resources.1.2.2.2.2.1)
+    (incoming.clock valid.2.2.1)
+  have canonical := header_of_statement context accepted
+  rcases short with ordinary | ⟨running, stopped, halt⟩
+  · obtain ⟨tape, _, _, release⟩ := native_release_of_short_statement context native
+      (duration.trans_lt ordinary) accepted
+    exact ⟨tape, Soundness.Shard.interpretation_iff.mpr ⟨canonical, release⟩⟩
+  · obtain ⟨code, stopped⟩ := Option.isSome_iff_exists.mp stopped
+    obtain ⟨call, _, _, _, _, release⟩ := native_release_of_short_halt context native running
+      stopped (duration.trans_lt halt) accepted
+    exact ⟨[.syscall call], Soundness.Shard.interpretation_iff.mpr ⟨canonical, release⟩⟩
 
 end SP1Clean.Export.InstalledAssembly

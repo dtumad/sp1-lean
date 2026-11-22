@@ -26,7 +26,7 @@ private theorem bookkeeping_at {p : ℕ} {image : ProgramImage}
     have frame := execution.frame_prefix atCut
     have effects : OrdinaryBookkeeping current.sail next.sail := by
       cases step with
-      | ordinary _ _ normal permission => exact (Advance.ordinary_normal_bookkeeping frame.1 frame.2.1 permission normal).2
+      | ordinary _ _ normal permission => exact (Advance.ordinary_normal_bookkeeping frame.1 frame.2.1 permission normal).2.1
     exact ⟨Prod.ext effects.enabled (Prod.ext effects.flag effects.counter),
       Prod.ext effects.refresh (Prod.ext effects.interrupts effects.eventIndex)⟩
   | syscall call =>

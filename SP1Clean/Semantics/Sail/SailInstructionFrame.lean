@@ -66,7 +66,8 @@ theorem ordinary_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram}
   have frame := ordinary_normal_memory_frame configured loaded permission normal
   exact ⟨frame.1, frame.2.1⟩
 
-/-- A permitted official execute stage is direct and preserves the seven retirement registers.
+/-- A permitted official execute stage is direct and preserves the simulator state and
+every register outside its instruction write footprint.
 Store permissions are checked on the original architectural GPRs, including through the prelude. -/
 theorem permitted_execute_frame {readOnly : ℕ → Bool} {decoded : instruction} (source : SailState)
     (checked : Semantics.InstructionWrite.check readOnly source.get_reg? decoded = true)
@@ -74,15 +75,15 @@ theorem permitted_execute_frame {readOnly : ℕ → Bool} {decoded : instruction
     (registers : ∀ index, state.get_reg? index = source.get_reg? index)
     {result : ExecutionResult} {next : SailState}
     (executed : (runSail (LeanRV64D.Functions.execute decoded)) state = .ok result next) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ Semantics.PreservesRetirementRegisters state next := by
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ Semantics.ExecuteFrame state next := by
   have arithmetic (isArithmetic : ArithmeticInstruction decoded) :
-      (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ Semantics.PreservesRetirementRegisters state next := by
+      (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ Semantics.ExecuteFrame state next := by
     obtain ⟨actual, ran, afterCfg, _, _, held⟩ := arithmetic_execute_successor state cfg decoded isArithmetic
     rw [ran] at executed
     cases executed
     exact ⟨(fun _ h => nomatch h), afterCfg, held⟩
   have control (isControl : ControlFlowInstruction decoded) :
-      (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ Semantics.PreservesRetirementRegisters state next := by
+      (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ Semantics.ExecuteFrame state next := by
     obtain ⟨direct, afterCfg, _, held⟩ := control_execute_frame isControl state cfg result next executed
     exact ⟨direct, afterCfg, held⟩
   have supported := (Semantics.InstructionWrite.check_supported readOnly source.get_reg? decoded checked).2
@@ -106,15 +107,15 @@ theorem permitted_execute_frame {readOnly : ℕ → Bool} {decoded : instruction
         rw [funext registers]
         exact checked
       obtain ⟨direct, frame⟩ := store_execute_memory_frame readOnly state cfg imm rs2 rs1 width permitted result next executed
-      exact ⟨direct, frame.configured cfg, fun reg _ => congrArg (fun regs => regs.get? reg) frame.registers⟩
+      exact ⟨direct, frame.configured cfg, ⟨fun reg _ => congrArg (fun regs => regs.get? reg) frame.registers, frame.cycles, frame.output⟩⟩
 
 /-- Specialize direct execute to the successful retirement stage of the actual instruction. -/
-theorem permitted_execute_preserves_retirement {readOnly : ℕ → Bool} {decoded : instruction} (source : SailState)
+theorem permitted_execute_frame_success {readOnly : ℕ → Bool} {decoded : instruction} (source : SailState)
     (checked : Semantics.InstructionWrite.check readOnly source.get_reg? decoded = true)
     (state : SailState) (cfg : SailConfigured state)
     (registers : ∀ index, state.get_reg? index = source.get_reg? index)
     {next : SailState} (ran : (runSail (LeanRV64D.Functions.execute decoded)) state = .ok (.Retire_Success ()) next) :
-    Semantics.PreservesRetirementRegisters state next :=
+    Semantics.ExecuteFrame state next :=
   (permitted_execute_frame source checked state cfg registers ran).2.2
 
 /-- A supported normal retirement commits its staged PC and all seven dynamic bookkeeping
@@ -123,7 +124,8 @@ theorem ordinary_normal_bookkeeping {readOnly : ℕ → Bool} {program : GuestPr
     (configured : SailConfigured source) (loaded : RomLoaded program source)
     (permission : Semantics.InstructionWrite.PermittedAt readOnly program source)
     (normal : SailRetiresNormally source target) :
-    target.regs.get? Register.nextPC = target.regs.get? Register.PC ∧ Semantics.OrdinaryBookkeeping source target := by
+    target.regs.get? Register.nextPC = target.regs.get? Register.PC ∧
+      Semantics.OrdinaryBookkeeping source target ∧ Semantics.ExecutionFrame source target := by
   obtain ⟨pc, word, decoded, atPc, fetched, decode, checked⟩ := permission
   have result := normal_observed_direct_execute configured loaded atPc fetched decode
     (fun _ => True) (fun _ => True) (by
@@ -131,6 +133,6 @@ theorem ordinary_normal_bookkeeping {readOnly : ℕ → Bool} {program : GuestPr
       obtain ⟨direct, finalCfg, _⟩ := permitted_execute_frame source checked state cfg registers executed
       exact ⟨direct, finalCfg, trivial, fun _ => trivial⟩) normal
   exact ⟨result.2.2.1, result.2.2.2.2 (fun state cfg reads _ ran =>
-    permitted_execute_preserves_retirement source checked state cfg reads ran)⟩
+    permitted_execute_frame_success source checked state cfg reads ran)⟩
 
 end SP1Clean.Advance

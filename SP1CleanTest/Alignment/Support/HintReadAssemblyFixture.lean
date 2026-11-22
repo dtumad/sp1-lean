@@ -25,7 +25,7 @@ private def source (length : ℕ) : ExecutionSnapshot where
   clock := 9
 
 /-- Public endpoints of one continuing HINT_READ call at clock nine. -/
-def header : SP1PublicIO Fp := boundaryInputs 9 131072 273 131076
+def header : SP1PublicIO Fp := SP1StateBoundary.ofEndpoints 9 131072 273 131076 0 default
 
 /-- Construct all physical consumers from the shared semantic host-step constructor. -/
 def prepare (length : ℕ) : Except String (Context × List Seed) := do

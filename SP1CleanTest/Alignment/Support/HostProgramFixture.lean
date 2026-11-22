@@ -175,18 +175,18 @@ def finish (image : ProgramImage) (incoming : ExecutionSnapshot) (commitments : 
   let context : Context := {
     image, source := incoming, target := final.current
     commitments }
-  let padding := if final.current.host.exitCode.isSome then [] else
+  let padding := if (SP1StateBoundary.haltCode incoming final.current).isSome then [] else
     (emptyConsumers context).filter (fun seed => seed.table == 57)
   let consumers := final.consumers ++ (← memorySeeds context final.frontier final.touched) ++ padding ++
     [⟨88, (toElements final.committed).toList⟩, ⟨89, (toElements final.deferred).toList⟩]
-  let boundary := boundaryInputs (p := SP1Prime) incoming.clock incoming.pc.toNat final.current.clock final.current.pc.toNat
-  let header := { boundary with
-    exit_code := (final.current.host.exitCode.getD 0).toNat
-    committed_value_digest := CommitmentBoundary.committed commitments
-    deferredProofsDigest := CommitmentBoundary.deferred commitments
-    commitSyscall := if commitments.commit then 1 else 0
-    commitDeferredSyscall := if commitments.commitDeferred then 1 else 0 }
-  return (context, consumers, header)
+  return (context, consumers, context.header)
+
+/-- Begin replay with the source's actual immutable hint store and commitment banks. -/
+def start (incoming : ExecutionSnapshot) : Construction :=
+  let queue := HintQueue.ofList incoming.host.io.hints
+  { current := incoming, store := queue.1, queueHead := queue.2
+    committed := HostCommitBoundary.start (HostCommitEnsemble.sourceValues false incoming.host)
+    deferred := HostCommitBoundary.start (HostCommitEnsemble.sourceValues true incoming.host) }
 
 /-- Build one finite program from its complete source and independently chosen statement. -/
 def prepare (actions : List Action) (incoming : ExecutionSnapshot) (commitments : CommitmentStatement) :
@@ -196,14 +196,9 @@ def prepare (actions : List Action) (incoming : ExecutionSnapshot) (commitments 
   let program := image.toGuestProgram checked.property
   let policy : HostPolicy := ⟨⟨fun address => decide (131072 ≤ address ∧ address < 131072 + 4 * actions.length),
     65536, 2 ^ 48⟩, SP1Prime⟩
-  let queue := HintQueue.ofList incoming.host.io.hints
-  let initial : Construction := {
-    current := incoming, store := queue.1, queueHead := queue.2
-    committed := HostCommitBoundary.start (HostCommitEnsemble.sourceValues false incoming.host)
-    deferred := HostCommitBoundary.start (HostCommitEnsemble.sourceValues true incoming.host) }
   let final ← actions.foldlM (fun state action => match action with
     | .addi destination source immediate => addi state destination source immediate
-    | .ecall => ecall state policy program) initial
+    | .ecall => ecall state policy program) (start incoming)
   finish image incoming commitments final
 
 end SP1CleanTest.Alignment.HostProgram

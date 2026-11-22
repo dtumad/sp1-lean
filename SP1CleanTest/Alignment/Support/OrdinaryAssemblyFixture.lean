@@ -117,9 +117,9 @@ def prepare (start : ℕ := 0) (count : ℕ := 9) : Except String (Context × Li
     commitments := default }
   if selected.isEmpty then
     return (context, emptyConsumers context,
-      boundaryInputs incoming.clock incoming.pc.toNat outgoing.clock outgoing.pc.toNat)
+      context.header)
   consumers := consumers ++ (← memorySeeds context frontier touched) ++
     (emptyConsumers context).filter (fun seed => seed.table == 57 || seed.table == 88 || seed.table == 89)
-  return (context, consumers, boundaryInputs incoming.clock incoming.pc.toNat outgoing.clock outgoing.pc.toNat)
+  return (context, consumers, context.header)
 
 end SP1CleanTest.Alignment.OrdinaryAssembly

@@ -26,18 +26,17 @@ theorem empty_release_without_raw_statement :
     ∃ context : Context, context.source = context.target ∧ context.limits = ResourceLimits.native SP1Prime ∧
       ReleaseStatementExecution context.limits SP1Prime context.commitments context.image
         context.source context.target [] ∧
-      ∀ header : SP1PublicIO Fp, (∀ heights, ¬ (assembly context).Statement .logUp header heights) ∧
+      (∀ (header : SP1PublicIO Fp) heights, ¬ (assembly context).Statement .logUp header heights) ∧
         ¬ Nonempty (Soundness.Shard.CompilerTarget (assembly context) context.limits context.commitments
-          context.image context.source context.target header) := by
+          context.image context.source context.target) := by
   obtain ⟨image, source, commitments, execution, changes⟩ := empty_alternating_ram
   let context : Context := ⟨image, source, source, commitments, .native SP1Prime⟩
-  refine ⟨context, rfl, rfl, execution, fun header => ?_⟩
-  have denied := not_statement_of_target_ram_changes context changes.le header
-  refine ⟨denied, ?_⟩
+  have denied := not_statement_of_target_ram_changes context changes.le
+  refine ⟨context, rfl, rfl, execution, denied, ?_⟩
   rintro ⟨compiler⟩
   have actual := executes_iff.mp execution.1.1.1
-  obtain ⟨heights, _, accepted⟩ := compiler.completeness header
+  obtain ⟨heights, _, accepted⟩ := compiler.completeness (SP1StateBoundary.ofExecution context.source context.target context.commitments)
     ⟨[], actual.2, rfl, actual.1, execution.1.1.2, execution.1.2, execution.2⟩
-  exact denied heights accepted
+  exact denied _ heights accepted
 
 end SP1CleanTest.FixedRamCapacity

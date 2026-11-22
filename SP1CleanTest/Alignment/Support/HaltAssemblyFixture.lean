@@ -22,7 +22,7 @@ private def source (exit : ℕ) : ExecutionSnapshot where
 
 /-- HALT's canonical exit and terminal PC are public. -/
 def header (exit : ℕ) : SP1PublicIO Fp :=
-  { (boundaryInputs 9 131072 273 1) with exit_code := (exit : ℕ) }
+  SP1StateBoundary.ofEndpoints 9 131072 273 1 exit default
 
 /-- One actual semantic HALT with shared physical boundary construction. -/
 def prepare (exit : ℕ) : Except String (Context × List Seed) := do

@@ -101,6 +101,16 @@ Keep one complete Sail/host/clock transition. Finite snapshots, realized Sail st
 physical rows have distinct meanings. Resource bounds must come from the stated semantic
 domain and actual circuit inventory, never an added caller readiness premise.
 
+When constructing a row, replay the prefix to obtain its preceding Memory timestamp. HINT_READ
+posts padded words, including a final word for an empty hint. Released WRITE observes x12 and
+aligned words while preserving their timestamps. The updated frontier is the input to the next
+ordinary instruction. [Mixed access frontier](../../SP1Clean/Proofs/Completeness/MixedAccessFrontier.lean)
+
+Compute the public header from the complete endpoints and immutable statement. A carried exit
+status belongs to the host snapshot. The public Exit field records a HALT in this segment.
+Use the optional HALT receipt when selecting padding, since both a HALT with code zero and a
+continuing execution encode zero. [Shard header](../../SP1Clean/FormalModel/Contracts/ShardHeader.lean)
+
 ## Performance and validation
 
 Keep expensive values opaque, hypothesis types folded and shared expressions shared.

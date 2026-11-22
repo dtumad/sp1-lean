@@ -163,7 +163,8 @@ private def installedCommitReference (context : SP1Clean.Export.InstalledAssembl
 
 private def installedWideReference : IO Json := do
   let context := SP1CleanTest.Alignment.StoppedAssembly.wide
-  let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+  let (context, consumers, header) ← IO.ofExcept <| SP1CleanTest.Alignment.HostProgram.finish
+    context.image context.source context.commitments (SP1CleanTest.Alignment.HostProgram.start context.source)
   let prepared ← match SP1CleanTest.Alignment.InstalledAssemblyExport.prepare context consumers with
     | .ok value => pure value
     | .error message => throw (IO.userError message)
@@ -181,7 +182,6 @@ private def installedWideReference : IO Json := do
     if hint.offset ≤ index.val && index.val < hint.offset + hint.width then 0 else input[index]
   let changedClock := Vector.ofFn fun index : Fin input.size =>
     input[index] + if index.val == committed.offset then 1 else 0
-  let header := SP1CleanTest.Alignment.StoppedAssembly.wideHeader
   -- The immutable statement binds even slots that have no call in this segment.
   let changedDigest := { header with committed_value_digest := header.committed_value_digest.set 0 18 }
   let cases ← [

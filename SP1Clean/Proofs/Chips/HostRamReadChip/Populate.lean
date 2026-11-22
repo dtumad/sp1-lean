@@ -4,9 +4,9 @@ import SP1Clean.Semantics.Memory.MemorySpan
 
 /-! # Constructing host RAM reads
 
-The constructor preserves the prior word and computes every timestamp column. A WRITE span
-uses its distinct physical cells directly; the supplying Memory history remains responsible
-for the prior record at each cell.
+The constructor preserves the prior word and computes every timestamp column for a traced
+read. Its supplied Memory history provides a prior record at each cell. Released WRITE uses
+untraced word observations.
 -/
 
 namespace SP1Clean.HostRamReadChip
@@ -23,7 +23,7 @@ theorem populate_assumptions (prior : MemoryMsg (ZMod p)) (clkHigh clk0 clk1 : Z
     ProverAssumptions (populate prior clkHigh clk0 clk1) :=
   ⟨HostRamAccessChip.populate_assumptions _ _ _ _ _ valid, rfl⟩
 
-/-- Construct one read per physical cell of the requested WRITE buffer. -/
+/-- Construct one timestamp-advancing read per physical cell of a traced span. -/
 def populateSpan (span : MemorySpan) (prior : ℕ → MemoryMsg (ZMod p))
     (clkHigh clk0 clk1 : ZMod p) : List (Inputs (ZMod p)) :=
   span.cells.map fun cell => populate (prior cell) clkHigh clk0 clk1

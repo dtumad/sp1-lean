@@ -18,6 +18,8 @@ open SP1Clean.SailEarlyReturn SP1Clean.Soundness.Target SP1Clean.TryStepReductio
 structure ProtectedMemoryFrame (readOnly : ℕ → Bool) (source target : SailState) : Prop where
   /-- A RAM write does not modify any architectural or platform register. -/
   registers : target.regs = source.regs
+  cycles : target.cycleCount = source.cycleCount
+  output : target.sailOutput = source.sailOutput
   /-- Both the value and presence of every selected byte remain unchanged. -/
   memory : ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address
   /-- Writes may insert or replace bytes, but never remove an existing byte. -/
@@ -25,14 +27,15 @@ structure ProtectedMemoryFrame (readOnly : ℕ → Bool) (source target : SailSt
 
 /-- An unchanged state satisfies every selected-byte frame. -/
 theorem ProtectedMemoryFrame.refl (readOnly : ℕ → Bool) (source : SailState) :
-    ProtectedMemoryFrame readOnly source source := ⟨rfl, fun _ _ => rfl, fun _ present => present⟩
+    ProtectedMemoryFrame readOnly source source := ⟨rfl, rfl, rfl, fun _ _ => rfl, fun _ present => present⟩
 
 /-- Consecutive actual writes compose their selected-byte frames. -/
 theorem ProtectedMemoryFrame.trans {readOnly : ℕ → Bool} {source middle target : SailState}
     (first : ProtectedMemoryFrame readOnly source middle)
     (second : ProtectedMemoryFrame readOnly middle target) :
     ProtectedMemoryFrame readOnly source target :=
-  ⟨second.registers.trans first.registers, fun address selected =>
+  ⟨second.registers.trans first.registers, second.cycles.trans first.cycles, second.output.trans first.output,
+    fun address selected =>
     (second.memory address selected).trans (first.memory address selected),
     fun address present => second.present address (first.present address present)⟩
 
@@ -49,7 +52,7 @@ private theorem run_writeByte_frame (readOnly : ℕ → Bool) (source : SailStat
     (address : ℕ) (value : BitVec 8) (allowed : readOnly address = false) :
     ∃ target, (Sail.ArchSem.writeByte address value : ArchSemSeqM exception PUnit).run source = .ok () target ∧
       ProtectedMemoryFrame readOnly source target := by
-  refine ⟨{ source with mem := source.mem.insert address value }, rfl, rfl, ?_, ?_⟩
+  refine ⟨{ source with mem := source.mem.insert address value }, rfl, rfl, rfl, rfl, ?_, ?_⟩
   · intro query selected
     have different : address ≠ query := by intro same; subst query; simp_all
     simp [Std.ExtHashMap.getElem?_insert, different]

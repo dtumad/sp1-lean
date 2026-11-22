@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Execution.ExecutionSnapshot
+public import SP1Clean.Semantics.Sail.ExecutionFootprint
 
 /-! # Finite checks of invariant Sail fields at the outgoing boundary
 
@@ -16,11 +17,6 @@ native bindings; this check alone does not assert complete outgoing state equali
 namespace SP1Clean.Semantics.SailSnapshot
 
 open LeanRV64D
-
-/-- The registers whose values can change along a supported native execution. -/
-def executionRegister (reg : Register) : Bool :=
-  decide (reg = .PC ∨ reg = .nextPC ∨ reg = .minstret ∨ reg = .minstret_increment ∨ reg = .mip ∨ reg = .written_event_index ∨
-    ∃ index : BitVec 5, index ≠ 0 ∧ reg = reg_idx_to_Register index)
 
 /-- Retain exactly the register-map entries preserved by the supported execution semantics. -/
 def frameRegisters (snapshot : SailSnapshot) : SailRegisterFile.Map :=

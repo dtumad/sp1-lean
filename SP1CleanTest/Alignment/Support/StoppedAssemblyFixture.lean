@@ -34,13 +34,11 @@ def wide : Context :=
     commitments := ⟨host.committed, host.deferred, false, false⟩ }
 
 /-- No instruction retires, so every public clock/PC limb retains its incoming value. -/
-def header : SP1PublicIO Fp := SP1Clean.Audit.BranchEnsemble.identityHeader
+def header : SP1PublicIO Fp := zero.header
 
 /-- Canonical public fields of the independently supplied immutable statement. -/
 def wideHeader : SP1PublicIO Fp :=
-  { header with
-    committed_value_digest := CommitmentBoundary.committed wide.commitments
-    deferredProofsDigest := CommitmentBoundary.deferred wide.commitments }
+  wide.header
 
 /-- Changing a stopped code without execution violates the optional terminal boundary. -/
 def changedCode : Context := { wide with target.host.exitCode := some 0 }

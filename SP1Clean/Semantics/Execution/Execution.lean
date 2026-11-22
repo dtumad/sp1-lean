@@ -148,6 +148,22 @@ theorem halted_iff (step : ExecutionStep policy program source event target) (co
   | ordinary => simp
   | syscall call => by_cases halt : call.rawCode = 0 <;> simp [halt]
 
+/-- A successful HALT exit fits both the field and the unsigned public word. -/
+theorem halt_bounds {policy : HostPolicy} {program : GuestProgram}
+    {before after : ExecutionState} {call : Machine.CoreSyscallEvent}
+    (step : ExecutionStep policy program before (.syscall call) after) (zero : call.rawCode = 0) :
+    call.arg1.toNat < policy.characteristic ∧ call.arg1.toNat < 2 ^ 32 := by
+  cases step with
+  | syscall success =>
+    obtain ⟨pc, execution, _, _, ran, _, _, rfl⟩ := HostState.step_observations success
+    have kind : execution.kind = .halt := SyscallKind.code_injective zero
+    have executed := ((before.host.run_eq_some_iff policy (.ofSail before.sail) execution).mp ran).2.2.2.2.2
+    rw [kind] at executed
+    simp only [HostState.executeKind] at executed
+    split at executed
+    · assumption
+    · contradiction
+
 /-- With the same complete input, neither the next event nor its effects are witness choices. -/
 theorem deterministic {other : ExecutionState} {otherEvent : ExecutionEvent}
     (left : ExecutionStep policy program source event target)

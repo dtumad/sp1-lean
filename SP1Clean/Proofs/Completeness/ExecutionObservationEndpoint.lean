@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Completeness.ExecutionObservationSuccessor
-import SP1Clean.FormalModel.ShardRetirement
+import SP1Clean.FormalModel.ShardHeader
 
 /-! # Constructing the public ordinary-observation endpoint of a mixed execution
 
@@ -33,32 +33,6 @@ private theorem history_word (initial : State (ZMod p)) (rows : List RoutedEvent
     let input := populate initial row.rawPushState.toMessage
     have head := valid input (List.mem_cons_self ..)
     exact ih input.next head.2.2.2.1 (fun later member => valid later (.tail input member))
-
-private theorem enabled_realize (source : SailSnapshot) :
-    retirementEnabled source.realize = retirementEnabled source.skeleton := by
-  unfold retirementEnabled
-  rfl
-
-private theorem refresh_realize (source : SailSnapshot) :
-    TryStepReduction.refreshedMip source.realize = TryStepReduction.refreshedMip source.skeleton := by
-  unfold TryStepReduction.refreshedMip
-  rfl
-
-omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
-private theorem mode_accepts {limits : ResourceLimits} {image : ProgramImage}
-    {source target : ExecutionSnapshot} {events : List ExecutionEvent}
-    (execution : AdmissibleExecution limits p image source target events)
-    (dynamic : DynamicMatch source target events) :
-    (Mode.of source.sail target.sail).AcceptsCount (events.countP ExecutionEvent.isOrdinary) := by
-  apply Mode.of_acceptsCount
-  · intro empty
-    exact (quiet_iff _ _).mpr ⟨by rw [dynamic.increment, ite_eq_left empty],
-      by rw [dynamic.interrupts, ite_eq_left empty], by rw [dynamic.eventIndex, ite_eq_left empty],
-      dynamic.nextPC.trans (nextPcAfter_of_countP_ordinary_eq_zero _ _ empty)⟩
-  · intro active
-    exact (refreshed_iff _ _).mpr ⟨by rw [dynamic.increment, ite_eq_right active, enabled_realize],
-      by rw [dynamic.interrupts, ite_eq_right active, refresh_realize], by rw [dynamic.eventIndex, ite_eq_right active],
-      Executes.nextPC_bounded execution active⟩
 
 private theorem held_counter {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (sourceValid : ExecutionSourceValid image source) (dynamic : DynamicMatch source target events)
@@ -102,7 +76,7 @@ theorem admissibleExecution_observationEndpoint {limits : ResourceLimits} {image
   obtain rfl := Option.some.inj (route.symm.trans routedPC)
   obtain ⟨counter, enabled⟩ := held_counter (p := p) execution.1.1 dynamic rows count
     (history_spec (p := p) source.sail rows (fun r m => (bounds r m).1) (fun r m => (bounds r m).2) sorted)
-  obtain ⟨valid, constraints, guarantees⟩ := (modes (Mode.of source.sail target.sail)).mp (mode_accepts execution dynamic)
+  obtain ⟨valid, constraints, guarantees⟩ := (modes (Mode.of source.sail target.sail)).mp (Mode.of_acceptsCount execution.retirementModes.1 execution.retirementModes.2)
   refine ⟨rows, route, valid, constraints, guarantees, ?_⟩
   rw [counter, pc, enabled]
   rfl

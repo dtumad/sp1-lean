@@ -29,7 +29,7 @@ theorem routed_successor_at {limits : ResourceLimits} {p : ℕ} [Fact p.Prime] [
       executionTrajectory (policy p image) image.program source.realize events (cut + 1) = some next ∧
       next.sail.regs.get? Register.PC = some (StateMsg.pcBits (row.rawPushState.toMessage (p := p))) ∧
       next.sail.regs.get? Register.nextPC = some (StateMsg.pcBits (row.rawPushState.toMessage (p := p))) := by
-  obtain ⟨current, next, view, row, _, atCut, ran, projected, made, atRow⟩ := routeObservations?_at routed atEvent
+  obtain ⟨current, next, view, row, _, _, atCut, ran, projected, made, atRow⟩ := routeObservations?_at routed atEvent
   have nextCut : executionTrajectory (policy p image) image.program source.realize events (cut + 1) = some next := by
     rw [executionTrajectory_succ _ _ _ _ atEvent, atCut, Option.bind_some, ran]
   obtain ⟨s, t, same, step⟩ := execution.1.2.step_at atEvent

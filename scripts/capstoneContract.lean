@@ -1,10 +1,17 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
+import SP1Clean.Proofs.Completeness.PublicHeader
+import SP1Clean.Proofs.Completeness.MixedAccessFrontier
+import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
+import SP1Clean.Proofs.Completeness.WriteObservations
+import SP1Clean.Export.InstalledVerifierCapacity
+import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Export.ShortShardChain
 import SP1CleanTest.Alignment.Core.FixedRamCapacity
 import SP1Clean.Export.FixedImageCapacity
 import SP1Clean.Export.FixedHintCapacity
+import SP1Clean.Proofs.Completeness.HintReadLedger
 import SP1Clean.Proofs.Completeness.HintReadCapacity
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ObservationCapacity
@@ -31,9 +38,8 @@ open SP1Clean SP1Clean.Semantics SP1Clean.Machine SP1Clean.FormalModel.Shard
 section Contract
 
 variable {p : ℕ} [Fact p.Prime]
-variable {PublicIO : TypeMap} [ProvableType PublicIO]
-variable (ensemble : Ensemble (ZMod p) PublicIO) (limits : ResourceLimits)
-  (commitments : CommitmentStatement) (image : ProgramImage) (source target : ExecutionSnapshot) (header : PublicIO (ZMod p))
+variable (ensemble : Ensemble (ZMod p) SP1PublicIO) (limits : ResourceLimits)
+  (commitments : CommitmentStatement) (image : ProgramImage) (source target : ExecutionSnapshot) (header : SP1PublicIO (ZMod p))
 
 example (heights : List ℕ) : ensemble.Statement Balance.logUp header heights ↔
     ensemble.interactionsFit Balance.logUp heights ∧
@@ -41,32 +47,32 @@ example (heights : List ℕ) : ensemble.Statement Balance.logUp header heights �
       witness.publicInput = header ∧ witness.heights = heights ∧
         witness.Constraints ∧ witness.Balanced Balance.logUp := Iff.rfl
 
-example : SoundnessTarget ensemble limits commitments image source target header =
+example : SoundnessTarget ensemble limits commitments image source target =
     (∀ publicInput heights, True → ensemble.Statement Balance.logUp publicInput heights →
       ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
-        publicInput = header ∧ ExecutionSourceValid image source ∧
+        publicInput = SP1StateBoundary.ofExecution source target commitments ∧ ExecutionSourceValid image source ∧
         nativeProfile limits p image source target events ∧
         ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
-example : CompilerTarget ensemble limits commitments image source target header =
+example : CompilerTarget ensemble limits commitments image source target =
     EnsembleCompiler ensemble Balance.logUp (List ExecutionEvent)
       (fun publicInput events => (sp1Machine p image).Trace source.realize events target.realize ∧
-        publicInput = header ∧ ExecutionSourceValid image source ∧
+        publicInput = SP1StateBoundary.ofExecution source target commitments ∧ ExecutionSourceValid image source ∧
         nativeProfile limits p image source target events ∧
         ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 -- Together the targets are exactly a realization of the SP1 machine.
-example (sound : SoundnessTarget ensemble limits commitments image source target header)
-    (compiler : CompilerTarget ensemble limits commitments image source target header) :
+example (sound : SoundnessTarget ensemble limits commitments image source target)
+    (compiler : CompilerTarget ensemble limits commitments image source target) :
     Realizes (sp1Machine p image) ensemble Balance.logUp (boundary source target)
-      (admissible limits commitments image source target header) :=
+      (admissible limits commitments image source target) :=
   ⟨sound, compiler⟩
 
-example (sound : SoundnessTarget ensemble limits commitments image source target header)
-    (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔ ∃ events, ReleaseStatementExecution limits p commitments image source target events :=
+example (sound : SoundnessTarget ensemble limits commitments image source target)
+    (compiler : CompilerTarget ensemble limits commitments image source target) :
+    (∃ heights, ensemble.Statement Balance.logUp (SP1StateBoundary.ofExecution source target commitments) heights) ↔ ∃ events, ReleaseStatementExecution limits p commitments image source target events :=
   SP1Clean.Soundness.Shard.statement_iff sound compiler
 
 end Contract
@@ -130,6 +136,8 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor,
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
   ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.header_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.native_short_soundnessTarget,
   ``SP1Clean.Export.InstalledAssembly.native_resources_of_statement,
   ``SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement,
   ``SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak,
@@ -139,6 +147,19 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
+  ``SP1Clean.TraceGen.statementExecution_headerChecks,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_base_fits,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_capacity,
+  ``SP1Clean.Export.InstalledAssembly.interactionsFit_grow_iff,
+  ``SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff,
+  ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
+  ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets,
+  ``SP1Clean.FormalModel.Shard.Executes.header_halt,
+  ``SP1Clean.TraceGen.HintReadTransfers.of_admissibleExecution,
+  ``SP1Clean.TraceGen.HintReadTransfers.tables_cursor_closed,
+  ``SP1Clean.TraceGen.admissibleExecution_compile_from_prefix,
+  ``SP1Clean.TraceGen.releaseAdmissibleExecution_compile_from_prefix,
+  ``SP1Clean.TraceGen.admissibleExecution_historicalHintCapacity,
   ``SP1Clean.TraceGen.admissibleExecution_observationWitness,
   ``SP1Clean.TraceGen.admissibleExecution_observationData,
   ``SP1Clean.TraceGen.admissibleExecution_observationFits,
