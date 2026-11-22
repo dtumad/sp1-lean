@@ -218,9 +218,22 @@ ceiling to `2^29 + 124` bytes and cumulative write ceiling to `2^24` bytes. On a
 mixed path within that preset, the full verifier, all ten fixed providers and all three
 demand-padded HINT_READ tables fit together. The verifier emits one pull per changed native
 location, whose count is bounded by 32 register locations plus the two actual RAM supports.
-At least 822,082,528 further occurrences per registered channel remain available to the other
-tables. Their simultaneous use of that space must still be derived from their constructors.
-[Installed verifier and table capacity](../SP1Clean/Export/InstalledVerifierCapacity.lean)
+These 13 tables leave at least 822,082,528 occurrences on every registered channel.
+The same preset also pays for all 25 ordinary instruction tables with their protected store
+requests and successor receipts. Each event enters exactly one chronological bucket. The sum
+of the 25 independently rounded heights is at most twice the ordinary event count. The actual
+verifier and 38 tables together leave at least 293,600,224 occurrences on every channel.
+Capacity for the remaining tables depends on their simultaneous use of that allowance.
+[Installed verifier capacity](../SP1Clean/Export/InstalledVerifierCapacity.lean) · [38-table bound](../SP1Clean/Export/InstalledOrdinaryPreset.lean) · [Constructed physical heights](../SP1Clean/Export/CompiledOrdinaryPreset.lean)
+
+At the native field, each released mixed execution supplies the 25 physical ordinary tables.
+Their active rows carry the displaced values and timestamps from the mixed execution prefix.
+Empty buckets have height zero. Each nonempty bucket receives its registered padding to the
+next power of two. DivRem uses the released inactive divisor one. Every physical row issues a
+successor receipt with unit weight on the event prefix and zero weight throughout the suffix.
+Clean's canonicalization of the full inventory preserves their cells, local checks, guarantees
+and all literal channel occurrences. Global balance still requires the matching providers and
+consumers. [Mixed execution and installed tables](../SP1Clean/Proofs/Completeness/MixedInstructionTables.lean)
 
 The physical `tableRows` and
 `channelOccurrences` ceilings have actual witness consumers through `PhysicalFits`; they are
