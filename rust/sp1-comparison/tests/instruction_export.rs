@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use clean_backend::witness_generation::Program;
+use clean_backend::witness_generation::{Mode, Program};
 use clean_backend::GeneratedAirSpec;
 use enum_map::Enum;
 use p3_field::PrimeCharacteristicRing;
@@ -575,6 +575,17 @@ fn generated_div_rem_witness_and_air_match_released_sp1() {
         &trace,
         div_rem_row,
         &DivRemChip::<SupervisorMode>::default(),
+    );
+
+    let modes = <DivRemInstruction as Program<NativeField>>::modes();
+    let [Mode::Demand(mode)] = modes.as_slice() else {
+        panic!("the installed DivRem instruction must use demand padding");
+    };
+    let released_padding = div_rem_row(&trace.row_slice(968));
+    assert_eq!(
+        mode.padding,
+        released_padding[..<DivRemInstruction as Program<NativeField>>::PROVER_INPUTS],
+        "registered padding inputs must match the released inactive DIVU operands"
     );
 
     // Zero division, signed overflow at both widths, negative operands, and nonzero padding.

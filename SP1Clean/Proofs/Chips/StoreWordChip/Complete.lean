@@ -32,8 +32,8 @@ three differences, each of which is where this file's real content is.
 Exactly as for the loads, SP1 pads with literal zero rows. The non-reserved-address premise is now
 real-row-gated in `AddressOperation.Assumptions` and in all nine memory-chip prover contracts, with
 `AddressOperation.assumptions_zero` as the shared address-subcontract regression. The event mapper
-below remains the unpadded core; a full-chip zero-row inhabitance theorem and ensemble-height
-padding construction remain separate work.
+below supplies the active prefix. At the pinned native prime, `TraceGen.InstalledInstructionTables`
+proves the complete store padding contracts and constructs the protected tables at scheduler height.
 -/
 
 namespace SP1Clean.TraceGen
@@ -197,8 +197,7 @@ def component : Air.Flat.Component (ZMod p) where
   Assumptions := circuit.Assumptions
   generation := generation
 
-/-- The event rows of a trace. The current memory-family ensemble API builds exactly this height;
-threading explicit zero padding through that API remains separate work. -/
+/-- The event rows preceding the installed demand-padding suffix. -/
 def traceInputs (events : List MemoryEvent) : List (Inputs (ZMod p)) :=
   events.map MemoryEvent.toStoreWordInputs
 

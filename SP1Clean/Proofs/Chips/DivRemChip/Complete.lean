@@ -45,32 +45,6 @@ def RTypeEvent.toDivRemInputs (e : RTypeEvent) : DivRemChip.Inputs (ZMod p) wher
   adapter := rTypeReaderCols e
   selectors := divRemSelectors e.opcode
 
-/-- The `op_c` access block of a `DivRem` padding row: the **read value** is the word `1` (SP1's
-"0 divided by 1" template — `alu/divrem/mod.rs:561-563`), both timestamp columns zero, as for any
-padded row. -/
-def oneAccessCols : Circuits.Types.RegisterAccessCols (ZMod p) where
-  prev_value := #v[1, 0, 0, 0]
-  access_timestamp := { prev_low := 0, diff_low_limb := 0 }
-
-/-- The R-type adapter block of a `DivRem` padding row: zero everywhere except the `op_c` read
-value, which is the word `1`. This is SP1's padded row verbatim — it zero-initializes the whole
-row and then writes `op_c_memory.prev_value = Word::from(1)`. -/
-def divRemPaddingRTypeReaderCols : Circuits.Types.RTypeReader (ZMod p) where
-  op_a := 0
-  op_a_memory := zeroAccessCols
-  op_a_0 := 0
-  op_b := 0
-  op_b_memory := zeroAccessCols
-  op_c := 0
-  op_c_memory := oneAccessCols
-
-/-- SP1's inactive "0 divided by 1" DIVU padding input. -/
-def divRemPaddingInputs : DivRemChip.Inputs (ZMod p) where
-  is_real := 0
-  state := zeroCPUStateCols
-  adapter := divRemPaddingRTypeReaderCols
-  selectors := #v[0, 0, 0, 0, 0, 0, 0]
-
 variable [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 omit [Fact (2 ^ 24 < p)] in
@@ -86,9 +60,9 @@ omit [Fact (2 ^ 24 < p)] in
 read value `1`, and `is_divu = 1` — and the reason this chip's padding builder is not the shared
 all-zero one. -/
 lemma divRemPadding_isTemplate :
-    (divRemPaddingInputs (p := p)).op_b_val = #v[0, 0, 0, 0] ∧
-      (divRemPaddingInputs (p := p)).op_c_val = #v[1, 0, 0, 0] ∧
-      DivRemChip.selectorFlags (divRemPaddingInputs (p := p)).selectors = #v[0, 1, 0, 0, 0, 0, 0, 0] :=
+    (DivRemChip.paddingInputs (p := p)).op_b_val = #v[0, 0, 0, 0] ∧
+      (DivRemChip.paddingInputs (p := p)).op_c_val = #v[1, 0, 0, 0] ∧
+      DivRemChip.selectorFlags (DivRemChip.paddingInputs (p := p)).selectors = #v[0, 1, 0, 0, 0, 0, 0, 0] :=
   ⟨rfl, rfl, DivRemChip.selectorFlags_zero⟩
 
 omit [Fact (2 ^ 24 < p)] in
@@ -172,11 +146,11 @@ theorem proverAssumptions_of_event {e : RTypeEvent} (h : e.WellFormed) (hop : e.
 
 /-- The padding input satisfies the same contract, including its ungated arithmetic template. -/
 theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ProverAssumptions (divRemPaddingInputs (p := p)) data hint := by
+    ProverAssumptions (DivRemChip.paddingInputs (p := p)) data hint := by
   have hzero : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) :=
     Word.isU64_of_cases (by simp) (by simp) (by simp) (by simp)
   have hne : ¬((0 : ZMod p) = 1) := zero_ne_one
-  have hflags : selectorFlags (divRemPaddingInputs (p := p)).selectors =
+  have hflags : selectorFlags (DivRemChip.paddingInputs (p := p)).selectors =
       #v[0, 1, 0, 0, 0, 0, 0, 0] := selectorFlags_zero
   simp only [ProverAssumptions, hflags]
   refine ⟨hzero, oneWord_isU64, fun hr => absurd hr hne, Or.inl rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
@@ -200,7 +174,7 @@ def component : Air.Flat.Component (ZMod p) where
 
 /-- Real event inputs followed by SP1's DIVU padding template. -/
 def traceInputs (events : List RTypeEvent) (padding : ℕ) : List (Inputs (ZMod p)) :=
-  events.map RTypeEvent.toDivRemInputs ++ List.replicate padding divRemPaddingInputs
+  events.map RTypeEvent.toDivRemInputs ++ List.replicate padding DivRemChip.paddingInputs
 
 /-- Every row of a built trace — event row or padding row — satisfies the chip's honest-prover
 contract provided every event is a divide/remainder instruction. -/

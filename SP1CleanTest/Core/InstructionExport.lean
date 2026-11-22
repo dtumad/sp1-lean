@@ -22,7 +22,7 @@ import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
 import SP1Clean.Proofs.Chips.StoreWordChip.Formal
 import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
 import SP1Clean.Proofs.Chips.MulChip.Formal
-import SP1Clean.Proofs.Chips.DivRemChip.Complete
+import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Proofs.Chips.AluX0Chip.Formal
 
 /-! # Instruction-local Rust export
@@ -37,6 +37,11 @@ namespace SP1CleanTest.Core.InstructionExport
 open Air.Flat SP1Clean
 
 open ComponentExport
+
+private def registeredPadding (component : Component Fp) : Array Fp :=
+  match component.generation with
+  | .demand mode => (toElements mode.padding).toArray
+  | .preallocated _ => #[]
 
 /-- All supported instruction families in release order. DivRem alone selects DIVU on padding;
 the other components generate their padding witnesses from zero inputs. -/
@@ -65,7 +70,7 @@ def rustExports : List (String × Except String String) := [
   ("store_double_instruction.rs", exportRust StoreDoubleChip.circuit),
   ("mul_instruction.rs", exportRust MulChip.circuit),
   ("div_rem_instruction.rs", exportRust DivRemChip.circuit
-    (toElements (TraceGen.divRemPaddingInputs (p := SP1Prime))).toArray),
+    (registeredPadding (Soundness.ProtectedOrdinaryReceipt.component .divRem))),
   ("alu_x0_instruction.rs", exportRust AluX0Chip.circuit)]
 
 end SP1CleanTest.Core.InstructionExport

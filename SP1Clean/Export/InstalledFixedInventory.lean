@@ -54,23 +54,35 @@ private theorem reordered (ctx : Context) : ((originalTables ctx).mapIdx HostOrd
       simpa only [List.get_eq_getElem, atIdx] using relevant.symm
     · simp only [HostOrdinaryReceipts.replace, dite_eq_right inside]
 
+private theorem original_length (ctx : Context) : (originalTables ctx).length = 98 := by
+  have total := tables_length ctx
+  rw [observed, List.length_append, List.length_mapIdx] at total
+  change (originalTables ctx).length + 2 = 100 at total
+  omega
+
+/-- Every family of the typed instruction registry occupies an actual protected receipt slot
+between physical table indices seven and 31. -/
+theorem ordinary_receipt_registered (ctx : Context) (id : InstructionChipId) :
+    ProtectedOrdinaryReceipt.component id ∈ (assembly ctx).tables := by
+  obtain ⟨i, inRange, selected⟩ := List.getElem_of_mem (InstructionChipId.mem_all id)
+  have index : i < 25 := InstructionChipId.all_length ▸ inRange
+  rw [observed]
+  apply List.mem_append_left
+  have member := List.getElem_mem (l := (originalTables ctx).mapIdx HostOrdinaryReceipts.replace)
+    (n := 7 + i) (by rw [List.length_mapIdx, original_length]; omega)
+  rw [List.getElem_mapIdx, HostOrdinaryReceipts.replace, dite_eq_left (show 7 ≤ 7 + i ∧ 7 + i < 32 by omega)] at member
+  simpa only [Nat.add_sub_cancel_left, selected] using member
+
 /-- The registered handler and both padded word components survive ordinary-receipt replacement. -/
 theorem hint_read_slots (ctx : Context) :
     (assembly ctx).tables[63]? = some HostHintReadCoverage.handler ∧
     (assembly ctx).tables[84]? = some (HintReadCoverage.component false) ∧
     (assembly ctx).tables[85]? = some (HintReadCoverage.component true) := by
-  let original := originalTables ctx
-  have length : original.length = 98 := by
-    have total := tables_length ctx
-    rw [observed, List.length_append, List.length_mapIdx] at total
-    change (originalTables ctx).length + 2 = 100 at total
-    change (originalTables ctx).length = 98
-    omega
   have atIndex (i : ℕ) (lower : 63 ≤ i) (upper : i ≤ 85) :
       (assembly ctx).tables[i]? =
         (((HostHintReadHandoff.receiver :: HostCallReceivers.available (p := SP1Prime)).map (·.component)) ++
           (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources ctx.source.host.io.hints))[i - 63]? := by
-    rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; change i < original.length; omega),
+    rw [observed, List.getElem?_append_left (by rw [List.length_mapIdx]; rw [original_length]; omega),
       List.getElem?_mapIdx]
     have untouched : HostOrdinaryReceipts.replace (p := SP1Prime) i = id := by
       funext table
