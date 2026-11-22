@@ -312,3 +312,76 @@ fn default_release_status_policy_rejects_every_sampled_nonzero_exit() {
     assert!(!StatusCode::PANIC.is_accepted_code(1));
     assert!(!StatusCode::INVALID_HINT.is_accepted_code(3));
 }
+
+#[test]
+fn write_observes_unaligned_buffers_without_advancing_ram_or_x12() {
+    use sp1_primitives::consts::fd::{FD_FP_INV, FD_HINT};
+
+    let base = STACK_TOP + 4096;
+    let destination = base + 32;
+    for (descriptor, payload, expected) in [
+        (FD_HINT, &[9, 7, 0, 5, 3, 1][..], &[9, 7, 0, 5, 3, 1][..]),
+        // One-byte field element 2 modulo 5. The actual builtin returns its inverse 3.
+        (FD_FP_INV, &[0, 0, 0, 1, 2, 5][..], &[3][..]),
+        (FD_HINT, &[][..], &[][..]),
+    ] {
+        let mut code = Vec::new();
+        execution::load_constant(&mut code, 12, payload.len() as u64);
+        execution::syscall(
+            &mut code,
+            SyscallCode::WRITE,
+            u64::from(descriptor),
+            base + 7,
+        );
+        execution::syscall(
+            &mut code,
+            SyscallCode::HINT_READ,
+            destination,
+            expected.len() as u64,
+        );
+        execution::syscall(&mut code, SyscallCode::HALT, 0, 0);
+        let mut program = Program::new(code, STACK_TOP, STACK_TOP);
+        let mut input = [0xaa; 16];
+        input[7..7 + payload.len()].copy_from_slice(payload);
+        for (index, word) in input.chunks_exact(8).enumerate() {
+            Arc::make_mut(&mut program.memory_image).insert(
+                base + 8 * index as u64,
+                u64::from_le_bytes(word.try_into().unwrap()),
+            );
+        }
+        let (executor, records) = execution::run(program, &[]);
+        assert_eq!(records.len(), 1);
+        let record = &records[0];
+        let (write, registers) = record.syscall_events[0];
+        assert_eq!(write.syscall_code, SyscallCode::WRITE);
+        assert_eq!((write.arg1, write.arg2), (u64::from(descriptor), base + 7));
+        assert_eq!(
+            (registers.op_a, registers.op_b, registers.op_c),
+            (5, 10, 11)
+        );
+        let x12_assignment = record
+            .addi_events
+            .iter()
+            .find(|(_, access)| access.op_a == 12)
+            .unwrap();
+        let x12 = record
+            .cpu_local_memory_access
+            .iter()
+            .find(|event| event.addr == 12)
+            .unwrap();
+        assert_eq!(x12.final_mem_access, x12_assignment.1.a.current_record());
+        for source_word in [base, base + 8] {
+            assert!(record
+                .cpu_local_memory_access
+                .iter()
+                .all(|event| event.addr != source_word));
+            assert_eq!(executor.get_memory_value(source_word).clk, 0);
+        }
+        let mut result = [0; 8];
+        result[..expected.len()].copy_from_slice(expected);
+        assert_eq!(
+            executor.get_memory_value(destination).value,
+            u64::from_le_bytes(result)
+        );
+    }
+}

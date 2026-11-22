@@ -79,7 +79,9 @@ interpreter or scheduler.
   native execution-to-row generation or whole-ensemble balance.
 - The syscall instruction, full-code guard and installed host-call wrapper export through Clean.
   Rust compares released supervisor rows, shared buses and public-value bindings, including all
-  eight native codes, every commit slot and WRITE's extra register read. The public adapter uses
+  eight native codes and every commit slot. A separate native check covers the wrapper's extra
+  x12 register read for WRITE. The released executor observes x12 without a timestamp update.
+  The public adapter uses
   named SP1 fields; `mprotect`'s additional supervisor trap cell must be zero before projection.
   Public queries retain all eight field coefficients from the selector bitmap. Inactive-row
   comparisons cover empty, unit, multi-hot, non-Boolean and cancelling weights, together with

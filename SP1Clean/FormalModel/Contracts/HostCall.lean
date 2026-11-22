@@ -4,9 +4,10 @@ import SP1Clean.FormalModel.Contracts.RegisterRead
 /-! # Instruction-authenticated native host calls
 
 Each active instruction emits its full syscall word, arguments, return word, and event clock.
-WRITE additionally reads x12 at event time plus one; other calls emit zero in the length field
-and perform no extra register access. This interface binds the host tables to instruction rows;
-the host tables must still establish the returned value and stateful effects.
+The native wrapper additionally posts an x12 Memory read at event time plus one for WRITE.
+Released WRITE observes x12 without advancing its timestamp. The installed restricted host
+profiles disable WRITE. Other calls emit zero in the length field. The host tables establish
+the returned value and stateful effects.
 -/
 
 namespace SP1Clean.HostCallChip
