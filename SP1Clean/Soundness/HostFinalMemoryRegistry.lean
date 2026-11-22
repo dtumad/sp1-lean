@@ -89,7 +89,7 @@ private def sourceChannelIndices : List (List (Fin 30)) :=
   [[8, 8, 15, 8, 8, 16, 0, 17, 14, 16, 15, 0, 17, 14], [8, 0, 0, 18], [0, 0], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [16, 0, 17, 0, 17, 16], [0, 17, 0, 17], [8, 10, 15, 8, 8, 21, 1, 1, 1, 1, 1, 1, 1, 1, 14, 10, 21, 15, 1, 14], [8, 10, 15, 8, 8, 21, 1, 1, 1, 1, 1, 1, 1, 1, 14, 10, 21, 15, 1, 14], [16], [15], [19, 19], [20, 20], [8, 8, 8, 8, 28, 29, 28, 29], [29, 29], [29, 29], [29, 29], [25, 22, 22, 24], [26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 23, 23, 24], [25], [26]]
 
 private theorem source_channel_declarations (image : ProgramImage) (source : ExecutionSnapshot)
-    (target : MemorySnapshot) (includeVerify : Bool := false) :
+    (target : MemorySnapshot) (includeVerify : Bool := true) :
     (((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.availableFor includeVerify).map (fun receiver : HostLocalHandoff.Receiver (p := p) => receiver.component) ++
       (HostHintReadHandoff.wordResources ++ (HostHintReadLocal.sourceResources source.host.io.hints ++
         FinalMemoryChecks.checkTables target))).map (fun component : Component (ZMod p) => component.circuit.channels)) =
@@ -102,7 +102,7 @@ private theorem source_channel_declarations (image : ProgramImage) (source : Exe
     | rfl
 
 /-- The standard source-backed host assembly has complete, unique channel registration. -/
-theorem source_registration (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) (includeVerify : Bool := false) :
+theorem source_registration (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) (includeVerify : Bool := true) :
     Registration (p := p) image source (FinalMemoryChecks.checkTables target) (HostCallReceivers.availableFor includeVerify)
       (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels target) := by
   constructor
@@ -131,7 +131,7 @@ theorem source_registration (image : ProgramImage) (source : ExecutionSnapshot) 
 attribute [instance] source_registration
 
 /-- The concrete host registry and both target validators have distinct canonical names. -/
-theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) (includeVerify : Bool := false) :
+theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) (includeVerify : Bool := true) :
     UniqueNames (p := p) image source (FinalMemoryChecks.checkTables target) (HostCallReceivers.availableFor includeVerify)
       (HostHintReadLocal.sourceResources source.host.io.hints) := by
   let original := HostLocalCore.tables (p := p) image source

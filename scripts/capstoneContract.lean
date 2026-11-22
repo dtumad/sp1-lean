@@ -110,7 +110,7 @@ example :
         ∃ (events : List ExecutionEvent) (actual : ExecutionState),
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
-          (∀ event ∈ events, SixCallProfile.event event) ∧
+          (∀ event ∈ events, HostReceiptProfile.event true event) ∧
           ExecutionPath.Encoded (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           ExecutionPath.ReleaseLinks (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           SP1Clean.FormalModel.Shard.DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
@@ -197,6 +197,8 @@ def roots : Array Name := #[
   ``SP1Clean.Soundness.HostRegisteredCalls.noopTable_component,
   ``SP1Clean.Soundness.HostRegisteredCalls.receipt_heights,
   ``SP1Clean.Soundness.HostRegisteredCalls.classified,
+  ``SP1Clean.Semantics.HostReceiptProfile.installed_code_iff,
+  ``SP1Clean.Export.InstalledAssembly.enter_verify_slot,
   ``SP1Clean.TraceGen.routed_successor_at,
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,

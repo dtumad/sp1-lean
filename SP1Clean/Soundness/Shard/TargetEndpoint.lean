@@ -11,7 +11,7 @@ registers and agreement of the host's hint suffix identify the final state with
 `target.realize`.
 
 `DynamicMatch` describes the ordinary-retirement bookkeeping. The verifier-owned
-`HostHintTarget.Spec` checks the decoded suffix and the host fields preserved by the six-call
+`HostHintTarget.Spec` checks the decoded suffix and the host fields preserved by the seven-call
 profile. The complete shard target asks for literal equality of the realized state.
 -/
 
@@ -111,14 +111,14 @@ theorem Endpoint.empty_of_equal_clock {source target : ExecutionSnapshot} {final
   subst events
   exact ⟨rfl, endpoint.realize_eq boundary (dynamicMatch_nil_of_equal_clock boundary clock) host⟩
 
-/-- With the verifier-checked host suffix, the six-call machine trace reaches the literal supplied
+/-- With the verifier-checked host suffix, the seven-call machine trace reaches the literal supplied
 Sail, host and clock state. The same ordered events bind the commitment statement. -/
 theorem SailTrace.realized {commitments : CommitmentStatement} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {header : SP1PublicIO (ZMod p)}
     (accepted : SailTrace commitments image source target final header)
     (host : HostHintTarget.Spec source.host target.host (Address.toNat final.head)) :
     ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
-      commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+      commitments.Matches events ∧ ∀ event ∈ events, HostReceiptProfile.event true event := by
   obtain ⟨_, _, boundary, _, events, actual, path, commitmentsMatch, calls, _, _, dynamic, endpoint⟩ := accepted
   rw [endpoint.realize_eq boundary dynamic host] at path
   exact ⟨events, path, commitmentsMatch, calls⟩

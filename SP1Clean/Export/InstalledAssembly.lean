@@ -123,13 +123,13 @@ theorem trace_of_statement (context : Context) {header : SP1PublicIO Fp} {height
   exact ⟨endpoint.clock, endpoint.pc, endpoint.nextPC, endpoint.increment, endpoint.retired, endpoint.interrupts,
     endpoint.eventIndex, endpoint.preserved, endpoint.runtime, endpoint.registers, endpoint.ram, endpoint.host, endpoint.limbs, endpoint.exit⟩
 
-/-- Public observations of the six-handler execution between both complete snapshots, including
+/-- Public observations of the seven-handler execution between both complete snapshots, including
 the native clock phase, complete memory access spans and released jump-link checks at replayed sources. -/
 structure ExecutionFacts (context : Context) (header : SP1PublicIO Fp)
     (events : List Machine.ExecutionEvent) : Prop where
   path : (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events context.target.realize
   endpoint : Shard.Endpoint context.source context.target (publicCursor context) header events context.target.realize
-  handlers : ∀ event ∈ events, SixCallProfile.event event
+  handlers : ∀ event ∈ events, HostReceiptProfile.event true event
   commitments : context.commitments.Matches events
   encoded : ExecutionPath.Encoded (FormalModel.Shard.policy SP1Prime context.image)
     context.image.program context.source.realize events
@@ -174,12 +174,12 @@ theorem header_of_statement (context : Context) {header : SP1PublicIO Fp} {heigh
     incoming sail.2.1 sail.2.2 commitments
   rw [← facts.endpoint.exit, ZMod.natCast_zmod_val]
 
-/-- Raw acceptance of the exported assembly implies a six-handler SP1 trace between the
+/-- Raw acceptance of the exported assembly implies a seven-handler SP1 trace between the
 complete supplied Sail, host and clock states, with one immutable commitment statement. -/
 theorem soundness (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (accepted : (assembly context).Statement .logUp header heights) :
     ∃ events : List Machine.ExecutionEvent, (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events context.target.realize ∧
-      context.commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+      context.commitments.Matches events ∧ ∀ event ∈ events, HostReceiptProfile.event true event := by
   obtain ⟨trace, checked⟩ := trace_of_statement context accepted
   exact trace.realized checked.host
 
@@ -217,7 +217,7 @@ theorem ExecutionFacts.prefix_host_bounds {context : Context} {header : SP1Publi
       ∀ kind ∈ [ResourceKind.liveHints, .liveHintBytes, .requests, .outputBytes],
         executionResources policy context.image.program context.source.realize (events.take cut) kind ≤
           context.limits.ceiling kind ∧ middle.resources kind ≤ context.limits.ceiling kind := by
-  obtain ⟨middle, left, right, bounds⟩ := SixCallProfile.prefix_host_bounds
+  obtain ⟨middle, left, right, bounds⟩ := HostReceiptProfile.prefix_host_bounds
     (FormalModel.Shard.trace_iff_executionPath.mp facts.path) facts.handlers cut
   refine ⟨middle, left, right, fun kind member => ?_⟩
   have ceiling := facts.resources.1.1 kind

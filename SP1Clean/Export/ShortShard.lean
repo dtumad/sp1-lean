@@ -1,11 +1,11 @@
-import SP1Clean.Export.SixCallResources
+import SP1Clean.Export.InstalledExecutionResources
 import SP1Clean.Soundness.Shard.Contract
 
 /-! # Complete release execution of an accepted short shard
 
 A shard containing at most one event visits only the two checked endpoint states. Their
 authenticated boundary occupancies therefore bound its peak payload. With the native preset,
-the other nine resource dimensions follow from the recovered six-handler execution.
+the other nine resource dimensions follow from the recovered seven-handler execution.
 A public interval shorter than sixteen ticks admits only an empty tape or one ordinary step.
 -/
 
@@ -34,7 +34,7 @@ private theorem boundaryBytes_of_one {policy : HostPolicy} {program : Soundness.
         noCharge, ResourceUsage.zero, Nat.max_zero, max_le_iff]
       exact ⟨incoming, outgoing⟩
 
-/-- A recovered one-event tape may carry any of the six handlers. Its only observable
+/-- A recovered one-event tape may carry any of the seven handlers. Its only observable
 boundary occupancies belong to the checked source and target. -/
 theorem ExecutionFacts.release_of_length_le_one {context : Context} {header : SP1PublicIO Fp}
     {events : List ExecutionEvent} (facts : ExecutionFacts context header events)

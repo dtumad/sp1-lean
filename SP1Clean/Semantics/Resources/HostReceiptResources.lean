@@ -2,9 +2,9 @@ module
 
 public import SP1Clean.Semantics.Resources.ExecutionResources
 public import SP1Clean.Semantics.Host.HostReplay
-public import SP1Clean.Semantics.Host.SixCallProfile
+public import SP1Clean.Semantics.Host.HostReceiptProfile
 
-/-! # Host work and occupancy on six-call execution segments
+/-! # Host work and occupancy on installed host execution segments
 
 The installed handlers only consume incoming hint buffers. Their complete ordered contents
 determine the padded guest writes. Resource peaks are measured on the original execution
@@ -13,14 +13,15 @@ observer, including both boundaries of a nonempty segment.
 
 @[expose] public section
 
-namespace SP1Clean.Semantics.SixCallProfile
+namespace SP1Clean.Semantics.HostReceiptProfile
 
 open Machine Soundness.Target
 
+variable {includeVerify : Bool}
 variable {policy : HostPolicy} {program : GuestProgram}
   {source target : ExecutionState} {events : List ExecutionEvent}
 
-private theorem hostFrameSafe {e : ExecutionEvent} (allowed : event e) : HostFrameSafe e := by
+private theorem hostFrameSafe {e : ExecutionEvent} (allowed : event includeVerify e) : HostFrameSafe e := by
   cases e with
   | ordinary => trivial
   | syscall call => exact ne_write allowed
@@ -53,7 +54,7 @@ private theorem run_cost {host : HostState} {context : HostReadContext} {executi
         HostExecution.writeSpans, eq, kind]⟩
 
 private theorem step_cost {e : ExecutionEvent} (step : ExecutionStep policy program source e target)
-    (allowed : event e) :
+    (allowed : event includeVerify e) :
     ∃ consumed, source.host.io.hints = consumed ++ target.host.io.hints ∧
       source.eventResources policy e .readBytes = 0 ∧ source.eventResources policy e .allocatedHints = 0 ∧
       source.eventResources policy e .writeBytes = (consumed.map fun bytes => (hintWriteBytes bytes).length).sum := by
@@ -64,10 +65,10 @@ private theorem step_cost {e : ExecutionEvent} (step : ExecutionStep policy prog
     have safe : execution.kind ≠ .write := fun eq => ne_write allowed (congrArg SyscallKind.code eq)
     simpa only [ExecutionState.eventResources, HostState.eventResources, ran] using run_cost ran safe
 
-/-- A six-handler segment pops exactly an incoming prefix, writes each buffer with its full
+/-- A registered host segment pops exactly an incoming prefix, writes each buffer with its full
 mandatory padding, and accumulates zero host guest-read bytes and zero newly allocated hints. -/
 theorem queue_work (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) :
+    (allowed : ∀ e ∈ events, event includeVerify e) :
     ∃ consumed, source.host.io.hints = consumed ++ target.host.io.hints ∧
       executionResources policy program source events .readBytes = 0 ∧
       executionResources policy program source events .allocatedHints = 0 ∧
@@ -85,7 +86,7 @@ theorem queue_work (path : ExecutionPath policy program source events target)
 
 /-- The ordered hook requests and replies and the three output streams are unchanged. -/
 theorem streams (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) :
+    (allowed : ∀ e ∈ events, event includeVerify e) :
     target.host.requests = source.host.requests ∧ target.host.replies = source.host.replies ∧
       target.host.io.publicOutput = source.host.io.publicOutput ∧ target.host.stdout = source.host.stdout ∧
       target.host.stderr = source.host.stderr := by
@@ -96,7 +97,7 @@ theorem streams (path : ExecutionPath policy program source events target)
 /-- Consuming an incoming buffer pays for its mandatory padded write from that buffer's
 length-prefixed boundary payload. Empty buffers pay the full eight-byte word as well. -/
 theorem writes_add_hostPayload_le (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) :
+    (allowed : ∀ e ∈ events, event includeVerify e) :
     executionResources policy program source events .writeBytes + target.host.payloadCost ≤ source.host.payloadCost := by
   obtain ⟨consumed, queue, _, _, writes⟩ := queue_work path allowed
   obtain ⟨requests, replies, publicOutput, stdout, stderr⟩ := streams path allowed
@@ -114,7 +115,7 @@ theorem writes_add_hostPayload_le (path : ExecutionPath policy program source ev
 
 /-- All four host occupancy observations at any later boundary are bounded by the incoming state. -/
 theorem occupancy_le (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) (kind : ResourceKind)
+    (allowed : ∀ e ∈ events, event includeVerify e) (kind : ResourceKind)
     (hostKind : kind ∈ [.liveHints, .liveHintBytes, .requests, .outputBytes]) :
     target.resources kind ≤ source.resources kind := by
   obtain ⟨consumed, hints, _⟩ := queue_work path allowed
@@ -131,10 +132,10 @@ private theorem event_occupancy (before : ExecutionState) (e : ExecutionEvent) (
     simp only [ExecutionState.eventResources, HostState.eventResources]
   all_goals split <;> rfl
 
-/-- Nonempty six-handler segments attain their host occupancy peaks at entry.
+/-- Nonempty installed host segments attain their host occupancy peaks at entry.
 The empty tape has zero event usage; its source occupancy is checked separately. -/
 theorem peak (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) (kind : ResourceKind)
+    (allowed : ∀ e ∈ events, event includeVerify e) (kind : ResourceKind)
     (hostKind : kind ∈ [.liveHints, .liveHintBytes, .requests, .outputBytes]) :
     executionResources policy program source events kind = if events.isEmpty then 0 else source.resources kind := by
   induction path with
@@ -155,7 +156,7 @@ theorem peak (path : ExecutionPath policy program source events target)
 /-- At every authenticated cut, the host occupancy peaks of the prefix and the actual
 intermediate state's live occupancy satisfy the same incoming ceilings. -/
 theorem prefix_host_bounds (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) (cut : ℕ) :
+    (allowed : ∀ e ∈ events, event includeVerify e) (cut : ℕ) :
     ∃ middle, ExecutionPath policy program source (events.take cut) middle ∧
       ExecutionPath policy program middle (events.drop cut) target ∧
       ∀ kind ∈ [ResourceKind.liveHints, .liveHintBytes, .requests, .outputBytes],
@@ -169,7 +170,7 @@ theorem prefix_host_bounds (path : ExecutionPath policy program source events ta
   rw [peak left admitted kind included]
   split <;> omega
 
-/-- Charges of a six-handler segment under the incoming occupancy and elapsed-tick checks.
+/-- Charges of a registered host segment under the incoming occupancy and elapsed-tick checks.
 The event and write ceilings can be chosen independently in an arbitrary limit record. -/
 structure ResourceFacts (limits : ResourceLimits) (source target : ExecutionState)
     (events : List ExecutionEvent) (usage : ResourceUsage) : Prop where
@@ -198,7 +199,7 @@ structure ResourceFacts (limits : ResourceLimits) (source target : ExecutionStat
 
 /-- Derive the independent charges from the actual tape, checked source and elapsed ticks. -/
 theorem resourceFacts {limits : ResourceLimits} (path : ExecutionPath policy program source events target)
-    (allowed : ∀ e ∈ events, event e) (incoming : source.resources.Fits limits)
+    (allowed : ∀ e ∈ events, event includeVerify e) (incoming : source.resources.Fits limits)
     (ticks : executionResources policy program source events .ticks ≤ limits.ticks) :
     ResourceFacts limits source target events (executionResources policy program source events) := by
   have clock := path.clock
@@ -251,4 +252,4 @@ theorem ResourceFacts.native_bounds {characteristic : ℕ}
     | liveHints | liveHintBytes | requests | outputBytes => exact (facts.occupancy _ (by simp)).2
     | boundaryBytes => exact (checked rfl).elim
 
-end SP1Clean.Semantics.SixCallProfile
+end SP1Clean.Semantics.HostReceiptProfile

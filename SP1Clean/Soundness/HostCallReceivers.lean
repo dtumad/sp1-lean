@@ -144,11 +144,11 @@ def availableFor (includeVerify : Bool) : List (ReceiverView (HostCallChip.chann
   [halt, profileNoop includeVerify] ++ (List.ofFn fun slot => commit false slot) ++
     (List.ofFn fun slot => commit true slot) ++ [hintLength false, hintLength true]
 
-/-- The receivers in the original six-call assembly retain their original physical positions. -/
-abbrev available := availableFor (p := p) false
+/-- The installed seven-call assembly shares one receiver for ENTER and VERIFY. -/
+abbrev available := availableFor (p := p) true
 
 /-- All available handlers satisfy the CPU chronology interface by their static channel metadata. -/
-theorem auxiliaryInterface (includeVerify : Bool := false) : HostLocalCore.AuxiliaryInterface ((availableFor (p := p) includeVerify).map (·.component)) := by
+theorem auxiliaryInterface (includeVerify : Bool := true) : HostLocalCore.AuxiliaryInterface ((availableFor (p := p) includeVerify).map (·.component)) := by
   apply HostLocalCore.AuxiliaryInterface.of_channels
   · have checked : ((availableFor (p := p) includeVerify).map (·.component)).all (fun component =>
         !(component.circuit.channelsWithRequirements.map RawChannel.name).contains (Channels.byteChannel (p := p)).toRaw.name) = true := by cases includeVerify <;> rfl

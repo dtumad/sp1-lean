@@ -88,7 +88,7 @@ private theorem commit_projection (deferred selected : Bool) (slot : Fin 8)
   cases deferred <;> cases selected <;> simp [bankKind, SyscallKind.code, label]
 
 private theorem quiet_projection (deferred : Bool) (receiver : HostLocalHandoff.Receiver (p := p))
-    (member : receiver ∈ [HostCallReceivers.halt, HostCallReceivers.noop .enter]) (env : Environment (ZMod p))
+    (member : receiver ∈ [HostCallReceivers.halt, HostCallReceivers.profileNoop true]) (env : Environment (ZMod p))
     (constraints : receiver.component.operations.ConstraintsHold env)
     (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
     stamped deferred (receiver.message env) = none := by
@@ -100,13 +100,14 @@ private theorem quiet_projection (deferred : Bool) (receiver : HostLocalHandoff.
     cases deferred <;> simp [stamped, bankCall?, spec.1, bankKind, SyscallKind.code, Word.toBitVec64, Word.toNat]
   · have same := List.mem_singleton.mp member
     subst receiver
-    have spec := HostNoopChip.row_spec_of_constraints .enter env ((Component.constraintsHold_iff env).mp constraints)
-    change HostNoopChip.Spec .enter (valueFromOffset HostNoopChip.Inputs 0 env) at spec
+    obtain ⟨kind, _, spec⟩ := HostCallReceivers.profileNoop_spec true env constraints
     have three : (3 : ZMod p).val = 3 := ZMod.val_natCast_of_lt
       (lt_trans (by decide : 3 < 2 ^ 17) (Fact.out (p := 2 ^ 17 < p)))
-    rw [HostCallReceivers.noop_message .enter]
-    cases deferred <;> simp [stamped, bankCall?, spec.1, HostNoopChip.codeWord,
-      bankKind, SyscallKind.code, Word.toBitVec64, Word.toNat, three]
+    rw [HostCallReceivers.profileNoop_message true]
+    have twentySeven : (27 : ZMod p).val = 27 := ZMod.val_natCast_of_lt
+      (lt_trans (by decide : 27 < 2 ^ 17) (Fact.out (p := 2 ^ 17 < p)))
+    cases kind <;> cases deferred <;> simp [stamped, bankCall?, spec.1, HostNoopChip.codeWord,
+      bankKind, SyscallKind.code, Word.toBitVec64, Word.toNat, three, twentySeven]
 
 private theorem queue_silent (deferred : Bool) (row : HostQueueOrder.Row (p := p))
     (valid : (HostQueueOrder.view row.1).component.Spec row.2) :

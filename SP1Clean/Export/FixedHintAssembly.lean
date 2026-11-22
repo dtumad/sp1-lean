@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Semantics.ReleasePolicy
-import SP1Clean.Semantics.Resources.SixCallResources
+import SP1Clean.Semantics.Resources.HostReceiptResources
 import SP1Clean.Native.Operations.HostHintTarget
 import SP1Clean.Soundness.Shard.TargetEndpoint
 import SP1Clean.Soundness.ResourceEnsemble
@@ -34,7 +34,7 @@ structure Context where
   limits : ResourceLimits := ResourceLimits.native SP1Prime
 
 /-- Each suffix of the immutable source queue has a head equal to its remaining length.
-The allocation frontier stays at the size of the incoming queue throughout the six-call profile. -/
+The allocation frontier stays at the size of the incoming queue throughout the seven-call profile. -/
 def Context.finalHints (context : Context) : HostHintQueue.State Fp :=
   HostHintQueue.State.encode context.cursorClock.toNat context.target.host.io.hints.length
     context.source.host.io.hints.length
@@ -64,7 +64,7 @@ private theorem declarationFresh (context : Context) :
     StaticTable.payloadProvider]
   exact of_decide_eq_true rfl
 
-/-- The six-call assembly with its verifier-owned commitment statement. -/
+/-- The seven-call assembly with its verifier-owned commitment statement. -/
 def committedAssembly (context : Context) : Ensemble Fp SP1PublicIO :=
   CommitmentEnsemble.install context.commitments (withoutCommitments context) (declarationFresh context)
     (Shard.declarationsRegistered context.image context.source context.target context.finalHints)

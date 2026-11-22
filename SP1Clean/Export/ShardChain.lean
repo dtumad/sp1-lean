@@ -37,7 +37,7 @@ theorem AcceptedChain.soundness {image : ProgramImage} {commitments : Commitment
     {source target : ExecutionSnapshot} {shards : List LocalStatement}
     (accepted : AcceptedChain image commitments source shards target) :
     ∃ events : List ExecutionEvent, (sp1Machine SP1Prime image).Trace source.realize events target.realize ∧
-      commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+      commitments.Matches events ∧ ∀ event ∈ events, HostReceiptProfile.event true event := by
   induction shards generalizing source with
   | nil =>
     have same := (ExecutionSnapshot.equivalent_iff source target).mp accepted
@@ -65,7 +65,7 @@ theorem AcceptedChain.boot_to_halt {image : ProgramImage} {commitments : Commitm
       BootToHalt (policy SP1Prime image) image valid input events.length target.realize exit ∧
         (sp1Machine SP1Prime image).Trace (image.executionBoot input) events target.realize ∧
         halt.rawCode = 0 ∧ halt.arg1.setWidth 32 = exit ∧ commitments.Matches events ∧
-        ∀ event ∈ events, SixCallProfile.event event := by
+        ∀ event ∈ events, HostReceiptProfile.event true event := by
   obtain ⟨events, trace, declared, handlers⟩ := accepted.soundness
   have path := trace_iff_executionPath.mp trace
   rw [image.executionBootSnapshot_realize] at path

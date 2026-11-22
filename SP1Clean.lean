@@ -19,7 +19,7 @@ import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Export.InstalledHintProjection
 import SP1Clean.Export.InstalledHintVerifier
 import SP1Clean.Export.ShardChain
-import SP1Clean.Export.SixCallResources
+import SP1Clean.Export.InstalledExecutionResources
 import SP1Clean.Export.ShortShard
 import SP1Clean.Export.ShortShardChain
 import SP1Clean.Alignment.Chips.AddChip.Bridge
