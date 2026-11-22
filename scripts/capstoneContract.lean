@@ -1,5 +1,6 @@
 import Lean
 import SP1Clean.Export.InstalledBumpTables
+import SP1Clean.Export.WriteProbeCapacity
 import SP1CleanTest.Alignment.Core.MixedStateBumpEdges
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Proofs.Completeness.PublicHeader
@@ -159,6 +160,8 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.interactionsFit_grow_iff,
   ``SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff,
   ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
+  ``SP1Clean.TraceGen.WriteObservations.packets_at,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_probe_bound,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionTables,
   ``SP1Clean.TraceGen.InstalledInstructionTables.generation_padding,

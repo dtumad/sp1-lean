@@ -35563,6 +35563,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.WriteProbeCapacity",
+      "name": "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_probe_bound",
+      "typeFingerprint": "2309717702"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.header_of_statement",
       "typeFingerprint": "1462121111"
@@ -101501,6 +101508,13 @@
       "typeFingerprint": "880877005"
     },
     {
+      "bodyFingerprint": "2771373312",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.Packet",
+      "typeFingerprint": "3931117990"
+    },
+    {
       "bodyFingerprint": "1382081640",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteObservations",
@@ -101529,11 +101543,53 @@
       "typeFingerprint": "2459492071"
     },
     {
+      "bodyFingerprint": "794700569",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.isWriteCall",
+      "typeFingerprint": "2898619917"
+    },
+    {
+      "bodyFingerprint": "2774585135",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.isWriteCall.match_1",
+      "typeFingerprint": "2819375395"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteObservations",
       "name": "SP1Clean.TraceGen.WriteObservations.of_admissibleExecution",
       "typeFingerprint": "411759966"
+    },
+    {
+      "bodyFingerprint": "2038291160",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.packets?",
+      "typeFingerprint": "2349893012"
+    },
+    {
+      "bodyFingerprint": "3137614038",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.packets?._f",
+      "typeFingerprint": "91555190"
+    },
+    {
+      "bodyFingerprint": "358270418",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.packets?.match_1",
+      "typeFingerprint": "3490660483"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.packets_at",
+      "typeFingerprint": "1979497956"
     },
     {
       "bodyFingerprint": "1744629974",
@@ -101564,11 +101620,25 @@
       "typeFingerprint": "1270345793"
     },
     {
+      "bodyFingerprint": "7031199",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.requestedBytes",
+      "typeFingerprint": "2145114416"
+    },
+    {
       "bodyFingerprint": "1818365668",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteObservations",
       "name": "SP1Clean.TraceGen.WriteObservations.wordCount",
       "typeFingerprint": "9906956"
+    },
+    {
+      "bodyFingerprint": "3512011911",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.wordProbes",
+      "typeFingerprint": "2145114416"
     },
     {
       "bodyFingerprint": "3628571546",
@@ -107822,6 +107892,13 @@
       "typeFingerprint": "1680465446"
     },
     {
+      "bodyFingerprint": "4194334525",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteProbeDemand.0.SP1Clean.TraceGen.WriteObservations.packetAt?",
+      "typeFingerprint": "3041314318"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Operations.DivRemOperation.Core",
@@ -109257,6 +109334,8 @@
     "SP1Clean.Export.InstalledAssembly.interactionsFit_grow_iff",
     "SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff",
     "SP1Clean.TraceGen.WriteObservations.of_admissibleExecution",
+    "SP1Clean.TraceGen.WriteObservations.packets_at",
+    "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_probe_bound",
     "SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets",
     "SP1Clean.TraceGen.releaseAdmissibleExecution_instructionTables",
     "SP1Clean.TraceGen.InstalledInstructionTables.generation_padding",
