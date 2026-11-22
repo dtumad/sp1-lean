@@ -33,9 +33,9 @@ chip's AIR is satisfied on such a row — the reserved-page inverse gate is
 The honest-prover contract now matches that gate: only a real row owes
 `2 ^ 16 ≤ (op_b_val + op_c_imm) mod 2^48`; the shared
 `AddressOperation.assumptions_zero` theorem exhibits the zero case for that address subcontract.
-The event-level table API below is intentionally still the unpadded core, and this file does not
-claim a full-chip zero-row inhabitance theorem. A future ensemble-height builder must construct and
-prove the complete chip padding row while choosing its table height.
+The event mapper below supplies the active prefix. At the pinned native prime,
+`TraceGen.InstalledInstructionTables` proves the complete memory-chip padding contracts and
+constructs all nine registered memory tables at their scheduler heights.
 -/
 
 namespace SP1Clean.TraceGen
@@ -251,8 +251,7 @@ def component : Air.Flat.Component (ZMod p) where
   Assumptions := circuit.Assumptions
   generation := generation
 
-/-- The event rows of a trace. The current memory-family ensemble API builds exactly this height;
-threading explicit zero padding through that API remains separate work. -/
+/-- The event rows preceding the installed demand-padding suffix. -/
 def traceInputs (events : List MemoryEvent) : List (Inputs (ZMod p)) :=
   events.map MemoryEvent.toLoadWordInputs
 
