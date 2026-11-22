@@ -156,23 +156,49 @@ def read? (source : SailState) (call : CoreSyscallEvent) : Option (BitVec 64 × 
     return (length, buffer)
   else none
 
-private theorem read_success {source : SailState} {call : CoreSyscallEvent} {length : BitVec 64}
-    (code : call.rawCode = SyscallKind.write.code) (x12 : source.get_reg? 12 = some length)
-    (lower : 2 ^ 16 ≤ call.arg2.toNat) (upper : call.arg2.toNat + length.toNat ≤ 2 ^ 48)
-    (read : ∀ i, i < wordCount call.arg2.toNat length.toNat →
-      ramWord64? source (cell call.arg2.toNat i).baseAddr = (words source call.arg2.toNat length.toNat)[i]?) :
-    read? source call = some (length, words source call.arg2.toNat length.toNat) := by
-  let count := wordCount call.arg2.toNat length.toNat
-  let buffer := words source call.arg2.toNat length.toNat
-  have full : (List.range count).mapM (fun i => ramWord64? source (cell call.arg2.toNat i).baseAddr) = some buffer := by
-    rw [List.mapM_option_eq_some_iff, List.forall₂_iff_get]
-    refine ⟨by simp [count, buffer, words_length], ?_⟩
-    intro i inRange inBuffer
-    have seen := read i (by simpa only [List.length_range] using inRange)
-    rw [List.getElem?_eq_getElem inBuffer] at seen
-    simpa only [List.get_eq_getElem, List.getElem_range] using seen
-  dsimp only [count, buffer] at full
-  simp only [read?, code, ne_eq, not_true_eq_false, ↓reduceIte, x12, bind, Option.bind_some, lower, upper, and_self, full, pure]
+private theorem map_words_iff {source : SailState} {address length : ℕ} {buffer : List (BitVec 64)} :
+    (List.range (wordCount address length)).mapM (fun i => ramWord64? source (cell address i).baseAddr) = some buffer ↔
+      buffer.length = wordCount address length ∧
+        ∀ i, i < buffer.length → ramWord64? source (cell address i).baseAddr = buffer[i]? := by
+  rw [List.mapM_option_eq_some_iff, List.forall₂_iff_get]
+  constructor
+  · rintro ⟨same, each⟩
+    have size : buffer.length = wordCount address length := by simpa using same.symm
+    refine ⟨size, ?_⟩
+    intro i inside
+    rw [List.getElem?_eq_getElem inside]
+    simpa only [List.get_eq_getElem, List.getElem_range] using each i (by simpa only [same] using inside) inside
+  · rintro ⟨size, each⟩
+    refine ⟨by simp [size], ?_⟩
+    intro i _ inside
+    simpa only [List.get_eq_getElem, List.getElem_range, List.getElem?_eq_getElem inside] using each i inside
+
+/-- The observer succeeds exactly on the released WRITE code, actual x12 value, bounded span
+and complete ordered words of the given Sail state. Any replacement length or word fails. -/
+theorem read?_eq_some_iff {source : SailState} {call : CoreSyscallEvent} {length : BitVec 64}
+    {buffer : List (BitVec 64)} :
+    read? source call = some (length, buffer) ↔ call.rawCode = SyscallKind.write.code ∧
+      source.get_reg? 12 = some length ∧ 2 ^ 16 ≤ call.arg2.toNat ∧ call.arg2.toNat + length.toNat ≤ 2 ^ 48 ∧
+      buffer.length = wordCount call.arg2.toNat length.toNat ∧
+        ∀ i, i < buffer.length → ramWord64? source (cell call.arg2.toNat i).baseAddr = buffer[i]? := by
+  constructor
+  · intro ran
+    unfold read? at ran
+    split at ran
+    · contradiction
+    rename_i sameCode
+    simp only [bind, Option.bind_eq_some_iff] at ran
+    obtain ⟨actual, x12, rest⟩ := ran
+    split at rest
+    · rename_i bounds
+      simp only [Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at rest
+      obtain ⟨observed, packet, rfl, rfl⟩ := rest
+      exact ⟨of_not_not sameCode, x12, bounds.1, bounds.2, map_words_iff.mp packet⟩
+    · contradiction
+  · rintro ⟨code, x12, lower, upper, words⟩
+    have full := map_words_iff.mpr words
+    simp only [read?, code, ne_eq, not_true_eq_false, ↓reduceIte, x12, bind, Option.bind_some,
+      lower, upper, and_self, full, pure]
 
 /-- Consequences of direct hint and hook dispatch. The hook clause consumes precisely one
 authenticated request/reply pair from the declared host input and preserves reply order. -/
@@ -240,8 +266,10 @@ theorem of_admissibleExecution {limits : ResourceLimits} {p : ℕ} {image : Prog
     let buffer := words current.sail exec.arg2.toNat length.toNat
     have bufferSize : buffer.length = wordCount exec.arg2.toNat length.toNat := words_length ..
     have nextHost := hostEq.trans (congrArg HostEffect.state hostChange)
-    refine ⟨current, _, frontier, length, buffer, built, nextBuilt, x12, read_success code x12 lower upper reads, bufferSize,
-      fun i bound => reads i (bufferSize ▸ bound), ?_, sameRegister, sameMemory, ?_⟩
+    have dataRead (i : ℕ) (inside : i < buffer.length) := reads i (bufferSize ▸ inside)
+    have packet := read?_eq_some_iff.mpr ⟨code, x12, lower, upper, bufferSize, dataRead⟩
+    refine ⟨current, _, frontier, length, buffer, built, nextBuilt, x12, packet, bufferSize,
+      dataRead, ?_, sameRegister, sameMemory, ?_⟩
     · simp only [sailEq, HostExecution.apply, HostEffect.applyMemory, hostChange]
     · change current.host.writeOutput exec.arg1 (payload buffer exec.arg2.toNat length.toNat) = _ ∧ _
       have both : current.host.writeOutput exec.arg1 (payload buffer exec.arg2.toNat length.toNat) = some _ :=
