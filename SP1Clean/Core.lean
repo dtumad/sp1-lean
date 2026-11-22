@@ -148,6 +148,7 @@ import SP1Clean.Semantics.Execution.ExecutionFrame
 import SP1Clean.Semantics.Execution.ExecutionPath
 import SP1Clean.Semantics.Execution.ParkedSyscall
 import SP1Clean.Semantics.Execution.ExecutionReplay
+import SP1Clean.Semantics.Resources.BoundaryGrowth
 import SP1Clean.Semantics.Resources.ExecutionResources
 import SP1Clean.Semantics.Resources.HistoricalHintWords
 import SP1Clean.Semantics.Resources.HintAllocations
