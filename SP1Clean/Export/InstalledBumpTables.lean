@@ -51,6 +51,16 @@ def bumpTables (registers : List MemoryBumpEvent) (pushes : List StateBumpEvent)
     ((state_height pushes).trans_le sh) (by trivial)
     (state.inputData_consistent _ data))
 
+/-- Exact committed register refresh rows, including the scheduler's disabled suffix. -/
+theorem bumpTables_registerRows (registers : List MemoryBumpEvent) (states : List StateBumpEvent)
+    (data : ProverData Fp) (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
+    (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) :
+    let source := (bumpTables registers states data mh sh).1
+    source.table = ((memoryBumpTraceInputs registers) ++
+      List.replicate (WitnessGeneration.demandPadding registers.length) MemoryBumpChip.paddingInputs).map
+        (fun input => memory.buildRow input source.data (ProverHint.empty _)) := by
+  simp only [bumpTables, Table.build, padded, memoryBumpTraceInputs, List.length_map]
+
 private theorem padded_valid {α : Type} (rows : List α) (padding : α) (P : α → Prop)
     (live : ∀ r ∈ rows, P r) (disabled : P padding) : ∀ r ∈ padded rows padding, P r := by
   intro r member

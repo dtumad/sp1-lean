@@ -64,6 +64,27 @@ the checked result with the held Sail word at the same cut. The enclosing host a
 authenticate every version supply and balance both private channels.
 [Interval encoding and replay](../SP1Clean/Proofs/Completeness/WriteProbeInputs.lean) · [Table generation](../SP1Clean/Proofs/Completeness/WriteProbeTables.lean)
 
+## Physical sources
+
+The two verifier-fixed x12 rows bind the first and last CPU cuts to the actual snapshot
+register. For a register refreshed within the segment, the MemoryBump wrapper publishes the
+same address, both timestamps and the unchanged word as its original Memory pull and push.
+Both ordered finalizers can publish a suffix from their actual last Memory timestamp through
+the largest 48-bit clock. A finalized query at timestamp zero covers the entire segment.
+For an untouched key the sparse compiler must include that key at both boundaries when WRITE
+requests it. Equality of the source and target words alone allows an intervening store.
+[Fixed x12 rows](../SP1Clean/Native/Operations/WriteProbeRegisterBoundary.lean) · [Actual physical sources](../SP1Clean/Soundness/WriteReadbackSources.lean) · [Closed and untouched intervals](../SP1Clean/Proofs/Completeness/MemoryReadbackIntervals.lean)
+
+A counted supply row consumes one genuine receipt, checks the conversion between two 24-bit
+Memory timestamp limbs and three 16-bit probe limbs, and distributes the version with its
+selected query count. An inactive row forces the count to zero. Register refresh and finalizer
+wrappers retain their original guest ledgers and publish one extra occurrence for every
+physical row. Mixed execution constructs the protected register refreshes and the matching
+supply rows with all padding. A complete installed host still needs the original ordinary,
+ECALL and HINT_READ access sources, queried sparse genesis/final pairs and balance over that full
+inventory.
+[Raw supplier authentication](../SP1Clean/Soundness/WriteReadbackSupply.lean) · [Physical mixed refresh construction](../SP1Clean/Export/WriteRefreshTables.lean)
+
 ## Read-only probe demand
 
 Along a successful execution, let `C` count WRITE packets, `W` count the aligned words
