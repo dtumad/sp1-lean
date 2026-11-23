@@ -29,13 +29,50 @@ abbrev Request (n : ℕ) (F : Type) := Fin n × fields 3 F
 /-- Each original occurrence receives the precise number of probes that chose it. -/
 def count {n : ℕ} (requests : List (Request n (ZMod p))) (i : Fin n) : ℕ := requests.countP (fun r => r.1 = i)
 
+/-- Count every selected position in a single traversal of the original request sequence. -/
+def counts {n : ℕ} (requests : List (Request n (ZMod p))) : Vector ℕ n :=
+  requests.foldl (fun totals r => totals.set r.1.val (totals[r.1] + 1)) (Vector.replicate n 0)
+
+omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
+private theorem counts_from {n : ℕ} (requests : List (Request n (ZMod p))) (start : Vector ℕ n) (i : Fin n) :
+    (requests.foldl (fun (totals : Vector ℕ n) r => totals.set r.1.val (totals[r.1] + 1)) start)[i] =
+      start[i] + count requests i := by
+  induction requests generalizing start with
+  | nil => simp [count]
+  | cons r rest ih =>
+    rw [List.foldl_cons, ih]
+    by_cases same : r.1 = i
+    · simp [count, same, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+    · have different : r.1.val ≠ i.val := fun eq => same (Fin.ext eq)
+      simp [count, same, Vector.getElem_set_ne _ _ different]
+
+omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
+theorem counts_at {n : ℕ} (requests : List (Request n (ZMod p))) (i : Fin n) : (counts requests)[i] = count requests i := by
+  have zero : (Vector.replicate n (0 : ℕ))[i] = 0 := Vector.getElem_replicate i.isLt
+  simpa only [counts, zero, Nat.zero_add] using counts_from requests (Vector.replicate n 0) i
+
 /-- All live supply rows, with no deduplication by address or encoded version. -/
 def allocated (records : List (Readback (ZMod p))) (requests : List (Request records.length (ZMod p))) :=
-  List.ofFn fun i : Fin records.length => ReadbackSupply.populate records[i] (count requests i)
+  let sourceArray := records.toArray
+  let totals := counts requests
+  List.ofFn fun i : Fin records.length => ReadbackSupply.populate (sourceArray[i.val]'(by simp [sourceArray])) totals[i]
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem allocated_eq (records : List (Readback (ZMod p))) (requests : List (Request records.length (ZMod p))) :
+    allocated records requests = List.ofFn (fun i : Fin records.length => ReadbackSupply.populate records[i] (count requests i)) := by
+  simp only [allocated, List.getElem_toArray, counts_at]
+  rfl
 
 /-- Restore the probes in original WRITE header and packet-word order, regardless of source order. -/
 def probes (records : List (Readback (ZMod p))) (requests : List (Request records.length (ZMod p))) :=
-  requests.map fun r => populate (ReadbackSupply.populate records[r.1] 0).version r.2
+  let sourceArray := records.toArray
+  requests.map fun r => populate (ReadbackSupply.populate (sourceArray[r.1.val]'(by simp [sourceArray])) 0).version r.2
+
+omit [Fact (2 ^ 25 < p)] in
+theorem probes_eq (records : List (Readback (ZMod p))) (requests : List (Request records.length (ZMod p))) :
+    probes records requests = requests.map (fun r => populate (ReadbackSupply.populate records[r.1] 0).version r.2) := by
+  simp only [probes, List.getElem_toArray]
+  rfl
 
 /-- The installed supply demand scheduler pads with all-zero inputs. -/
 def padding : ReadbackSupply.Inputs (ZMod p) :=
@@ -134,12 +171,12 @@ theorem version_balanced (records : List (Readback (ZMod p))) (requests : List (
   rw [balance_disabled _ _ (by rfl), balance_disabled _ _ (by simp [Channel.pulledIfValue, Interaction.signedMult]), add_zero, add_zero]
   have pushed : balanceOf ((allocated records requests).map (fun r => versionChannel.emittedValue r.count r.version)) msg =
       ((requests.countP fun r => encode r.1 = msg : ℕ) : ZMod p) := by
-    rw [balance_map, allocated, List.map_ofFn, List.sum_ofFn]
+    rw [balance_map, allocated_eq, List.map_ofFn, List.sum_ofFn]
     exact counted requests encode msg
   rw [pushed]
   have pulled := FieldClosure.balanceOf_unitPulls (fun r : Request records.length (ZMod p) => encode r.1)
     (fun r => versionChannel.pulledIfValue 1 (version r.1)) (fun _ => rfl) (fun _ => rfl) requests msg
-  simp only [probes, List.map_map, Function.comp_def]
+  simp only [probes_eq, List.map_map, Function.comp_def]
   change _ + balanceOf (requests.map (fun r => versionChannel.pulledIfValue 1 (version r.1))) msg = _
   rw [show balanceOf (requests.map (fun r => versionChannel.pulledIfValue 1 (version r.1))) msg = _ from pulled]
   exact add_neg_cancel _
@@ -158,9 +195,10 @@ private theorem allocated_inputs (records : List (Readback (ZMod p))) (requests 
     exact ReadbackSupply.populate_valid records[i] (count requests i) ph pl ch cl
   constructor
   · intro input member
+    rw [allocated_eq] at member
     obtain ⟨i, rfl⟩ := List.mem_ofFn.mp member
     exact (full i).1
-  · rw [allocated, List.map_ofFn, ← List.ofFn_getElem (xs := records.map _)]
+  · rw [allocated_eq, List.map_ofFn, ← List.ofFn_getElem (xs := records.map _)]
     apply List.ext_getElem
     · simp
     · intro i h h'

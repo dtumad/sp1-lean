@@ -43,6 +43,7 @@ theorem route?_spec (records : List (Readback (ZMod p))) (reads : List (Read (ZM
     have one := of_decide_eq_true (List.findFinIdx?_eq_some_iff.mp selected).1
     obtain ⟨spec, projects⟩ := one
     obtain ⟨valid, ordered⟩ := ih tail
+    simp only [probes_eq, List.map_cons] at valid ordered ⊢
     refine ⟨?_, ?_⟩
     · intro input member
       rcases List.mem_cons.mp member with rfl | after
