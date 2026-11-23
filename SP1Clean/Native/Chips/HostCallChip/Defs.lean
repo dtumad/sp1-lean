@@ -39,4 +39,10 @@ attribute [local circuit_norm] channel
 instance elaborated : ElaboratedCircuit (ZMod p) SyscallInstrsChip.Inputs unit main := by
   elaborate_circuit
 
+/-- Only the existing guarded instruction supplies lookup guarantees. -/
+@[circuit_norm] theorem channelsWithGuarantees_eq :
+    (elaborated (p := p)).channelsWithGuarantees =
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+        exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] := rfl
+
 end SP1Clean.HostCallChip

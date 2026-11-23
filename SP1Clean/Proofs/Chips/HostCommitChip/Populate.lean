@@ -26,7 +26,7 @@ theorem populate_assumptions (deferred : Bool) (slot : Fin 8) (call : HostCallCh
     (previous : State (ZMod p)) (valid : Domain deferred slot call previous) :
     ProverAssumptions deferred slot (populate deferred call previous) := by
   refine ⟨⟨valid.1, valid.2, ?_⟩, rfl⟩
-  have word : Word.isU64 call.arg2 := valid.1.2.2.2.2.1
+  have word : Word.isU64 call.arg2 := valid.1.2.2.2.1
   exact U16toU8OperationSafe.spec_populate (word 0) (word 1) (word 2) (word 3) (1 : ZMod p) rfl
 
 end SP1Clean.HostCommitChip

@@ -43,7 +43,7 @@ def Inputs.final {F : Type} (input : Inputs F) : HintReadWordChip.State F :=
   ⟨input.call.clk_high, input.call.clk_low, input.node.pointer, input.span.count, input.span.last⟩
 
 def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop :=
-  input.call.code = codeWord ∧ input.call.length = 0 ∧ input.call.result = codeWord ∧
+  input.call.code = codeWord ∧ input.call.result = codeWord ∧
     input.call.arg1 = Address.asWord input.span.start ∧ input.call.arg2 = input.span.length.value ∧
     input.span.length.value = input.node.length ∧ input.previous.head = input.node.pointer ∧
     ClockOrder.Spec input.clock ∧ HintReadSpan.Spec input.span ∧

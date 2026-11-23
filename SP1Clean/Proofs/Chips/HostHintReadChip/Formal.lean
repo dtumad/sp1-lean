@@ -67,8 +67,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       HintReadWordChip.stateChannel, Inputs.clock, Inputs.next, Inputs.first, Inputs.final,
       Vector.map_id', eval_asWord, eval_endStep]
     obtain ⟨span, valid⟩ := h_assumptions
-    exact ⟨valid.1, valid.2.1, valid.2.2.1, valid.2.2.2.1, valid.2.2.2.2.1,
-      valid.2.2.2.2.2.1, valid.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.1, span,
-      valid.2.2.2.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.2.2.2⟩
+    obtain ⟨code, result, start, arg, node, head, clock, _, last, header⟩ := valid
+    exact ⟨code, result, start, arg, node, head, clock, span, last, header⟩
 
 end SP1Clean.HostHintReadChip

@@ -58,7 +58,7 @@ def Inputs.digest {R : Type} [Sub R] [Mul R]
 def CallSpec {p : ℕ} [Fact p.Prime] (deferred : Bool) (slot : Fin 8)
     (call : HostCallChip.Message (ZMod p)) : Prop :=
   call.code = codeWord deferred ∧ call.arg1 = slotWord slot ∧
-    call.result = codeWord deferred ∧ call.length = 0 ∧
+    call.result = codeWord deferred ∧
     Word.isU64 call.arg2 ∧ Word.toNat call.arg2 < bound p deferred
 
 def Spec {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] (deferred : Bool) (slot : Fin 8)

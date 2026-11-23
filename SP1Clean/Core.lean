@@ -458,7 +458,6 @@ import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
 import SP1Clean.Proofs.Chips.HostCallChip.Formal
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
 import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
 import SP1Clean.Proofs.Chips.HostCommitChip.Formal

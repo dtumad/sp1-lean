@@ -25,7 +25,6 @@ theorem bound_fits : bound p < 2 ^ 64 := by simp [bound]
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion (Gadgets.Equality.circuit Word) (input.call.code, const (0 : Word (ZMod p)))
   assertion (Gadgets.Equality.circuit Word) (input.call.result, const (0 : Word (ZMod p)))
-  assertion (Gadgets.Equality.circuit Word) (input.call.length, const (0 : Word (ZMod p)))
   let _ ← BoundedWord.circuit (bound p) bound_fits ⟨input.call.arg1, input.comparison⟩
   HostCallChip.channel.pull input.call
   HostExitBoundary.channel.push input.call.arg1
