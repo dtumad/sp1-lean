@@ -80,7 +80,9 @@ fn halt_matches_released<P: Program<F>>(reference: &serde_json::Value, exit: u64
         &handler[10..14],
         &[F::from_u64(17), F::ZERO, F::ZERO, F::ZERO]
     );
-    assert_eq!(&handler[14..22], &[F::ZERO; 8]);
+    let returned =
+        core::array::from_fn::<_, 4, _>(|limb| F::from_u64((result.value >> (16 * limb)) & 65535));
+    assert_eq!(&handler[14..18], &returned);
     assert_eq!(
         public[14],
         F::from_u64(u64::from(records[0].public_values.exit_code))
