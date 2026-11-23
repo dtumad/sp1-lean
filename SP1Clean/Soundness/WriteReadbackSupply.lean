@@ -18,7 +18,7 @@ private theorem occurrences (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactions =
       [(readbackChannel.pulledIf input.active input.receipt).toRaw,
        (versionChannel.emitted input.count input.version).toRaw] := by
-  simp [main, checkClock, circuit_norm, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits,
+  simp [main, ClockParts.circuit, ClockParts.main, circuit_norm, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits,
     Gadgets.ToBits.main, Gadgets.Equality.main, Operations.interactions, FormalAssertion.toSubcircuit_interactions,
     GeneralFormalCircuit.toSubcircuit_interactions]
 
