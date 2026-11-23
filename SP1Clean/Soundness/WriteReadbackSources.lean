@@ -124,4 +124,43 @@ theorem installedFinal_slots (witness : EnsembleWitness (FinalMemoryReceipts.ens
 
 end Installed
 
+open Soundness in
+/-- The original ordered Memory pull and the published suffix share every row field. -/
+theorem original_final_memory_values (ram : Bool) (env : Environment (ZMod p)) :
+    let gate := (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2
+    (originalFinal ram).operations.interactionValuesWith memoryChannel.toRaw env =
+      [memoryChannel.pulledIfValue gate (finalRecordAt ram env)] := by
+  let id := if ram then FinalMemoryEnsemble.TableId.ram else .registers
+  have same : (originalFinal (p := p) ram).operations.interactionsWith memoryChannel.toRaw =
+      (FinalMemoryEnsemble.viewFor id).component.operations.interactionsWith memoryChannel.toRaw := by
+    cases ram
+    · exact FinalMemoryReceipt.interactions false OrderedFinalProvider.registerCircuit _ (by
+      intro equal
+      exact (by decide : "SP1Memory" ≠ "SP1FinalRegisterValue") (congrArg RawChannel.name equal))
+    · exact FinalMemoryReceipt.interactions true OrderedFinalProvider.ramCircuit _ (by
+      intro equal
+      exact (by decide : "SP1Memory" ≠ "SP1FinalRamValue") (congrArg RawChannel.name equal))
+  have ledger := FinalMemoryEnsemble.recordFor_interactions id env
+  rw [Operations.interactionValuesWith, same, ← Operations.interactionValuesWith]
+  rw [finalRecordAt_eq]
+  have gate : env (varFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0).2 =
+      (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 := by
+    rw [← eval_varFromOffset_valueFromOffset, eval_pair (α := OrderedMemoryProvider.Inputs MemoryMsg) (β := field)]
+    simp only [ProvableType.eval_field]
+  have active : env (FinalMemoryEnsemble.viewFor (p := p) id).activity =
+      (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 := by
+    cases ram <;> simpa only [id, Bool.false_eq_true, ↓reduceIte, FinalMemoryEnsemble.viewFor,
+      FinalMemoryEnsemble.registerView_activity, FinalMemoryEnsemble.ramView_activity,
+      FinalMemoryEnsemble.activity, varFromOffset_pair, ProvableType.varFromOffset_field, Nat.zero_add] using gate
+  rw [active] at ledger
+  cases ram <;> exact ledger
+
+/-- Publishing the suffix leaves each finalizer's original Memory pull unchanged. -/
+theorem final_memory_values (ram : Bool) (env : Environment (ZMod p)) :
+    (finalComponent ram).operations.interactionValuesWith memoryChannel.toRaw env =
+      [memoryChannel.pulledIfValue (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 (finalRecordAt ram env)] := by
+  rw [Operations.interactionValuesWith, final_original_interactions ram memoryChannel.toRaw (by
+    intro equal; exact (by decide : "SP1Memory" ≠ "sp1.native.write_readback") (congrArg RawChannel.name equal)), ← Operations.interactionValuesWith]
+  exact original_final_memory_values ram env
+
 end SP1Clean.WriteProbe

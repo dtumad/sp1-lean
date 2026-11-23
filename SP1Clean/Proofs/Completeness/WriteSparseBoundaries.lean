@@ -169,34 +169,6 @@ private theorem ramSource (snapshot : MemorySnapshot) (previous key : ℕ) (orde
   simpa only [← Word.toBitVec64_toNat (Target.isU64_bitVecToWord _), Target.toBitVec64_bitVecToWord,
     BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound] using same
 
-private theorem final_memory (ram : Bool) (env : Environment (ZMod p)) :
-    let gate := (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2
-    (finalComponent ram).operations.interactionValuesWith memoryChannel.toRaw env =
-      [memoryChannel.pulledIfValue gate (finalRecordAt ram env)] := by
-  let id := if ram then FinalMemoryEnsemble.TableId.ram else .registers
-  have same : (finalComponent (p := p) ram).operations.interactionsWith memoryChannel.toRaw =
-      (FinalMemoryEnsemble.viewFor id).component.operations.interactionsWith memoryChannel.toRaw := by
-    refine (final_original_interactions ram memoryChannel.toRaw (by
-      intro equal
-      exact (by decide : "SP1Memory" ≠ "sp1.native.write_readback") (congrArg RawChannel.name equal))).trans ?_
-    cases ram
-    · exact FinalMemoryReceipt.interactions false OrderedFinalProvider.registerCircuit _ (by
-      intro equal
-      exact (by decide : "SP1Memory" ≠ "SP1FinalRegisterValue") (congrArg RawChannel.name equal))
-    · exact FinalMemoryReceipt.interactions true OrderedFinalProvider.ramCircuit _ (by
-      intro equal
-      exact (by decide : "SP1Memory" ≠ "SP1FinalRamValue") (congrArg RawChannel.name equal))
-  have ledger := FinalMemoryEnsemble.recordFor_interactions id env
-  rw [Operations.interactionValuesWith, same, ← Operations.interactionValuesWith]
-  rw [finalRecordAt_eq]
-  have gate := eval_gate (Payload := MemoryMsg) env
-  have active : env (FinalMemoryEnsemble.viewFor (p := p) id).activity =
-      (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 := by
-    cases ram <;> simpa only [id, Bool.false_eq_true, ↓reduceIte, FinalMemoryEnsemble.viewFor,
-      FinalMemoryEnsemble.registerView_activity, FinalMemoryEnsemble.ramView_activity,
-      FinalMemoryEnsemble.activity, varFromOffset_pair, ProvableType.varFromOffset_field, Nat.zero_add] using gate
-  rw [active] at ledger
-  cases ram <;> exact ledger
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem registerDomain {snapshot : MemorySnapshot} {record : MemoryMsg (ZMod p)}
@@ -260,7 +232,7 @@ private theorem finalPair (ram : Bool) (snapshot : MemorySnapshot) (previous key
   have active : (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 = 1 :=
     congrArg (fun r : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p) => r.2) decoded
   refine ⟨(c.buildRow_constraintsHold input data hint valid).1, ?_, ?_⟩
-  · have ledger := final_memory ram env
+  · have ledger := final_memory_values ram env
     rw [out, active] at ledger
     exact ledger
   · have ledger := final_row_receipt ram env
