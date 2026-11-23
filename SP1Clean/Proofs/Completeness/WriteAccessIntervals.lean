@@ -105,4 +105,59 @@ theorem nextAccess?_covers (history : MemoryLocationHistory) (chain : history.Is
         exact selected_previous first rest links (zero ▸ Nat.zero_le _) found
     exact ⟨member, before, after, history.heldAt_interval chain strict member ⟨before, after⟩⟩
 
+private theorem cursor_chain (a : MemoryHistoryAccess) (rest : List MemoryHistoryAccess)
+    (linked : List.IsChain MemoryHistoryAccess.Continues (a :: rest))
+    (strict : ∀ item ∈ a :: rest, item.previous < item.current) :
+    List.IsChain (· < ·) ((a :: rest).map (·.previous) ++ [((a :: rest).getLast (by simp)).current]) := by
+  induction rest generalizing a with
+  | nil => simpa using strict a List.mem_cons_self
+  | cons b rest ih =>
+    have next := (List.isChain_cons.mp linked).1 b (by simp)
+    have tail := ih b (List.isChain_cons.mp linked).2 (fun item inside => strict item (List.mem_cons_of_mem a inside))
+    have before : a.previous < b.previous := next.2.1 ▸ strict a List.mem_cons_self
+    exact List.isChain_cons_cons.mpr ⟨before, tail⟩
+
+/-- Within a genuine location history every active predecessor has a distinct starting
+timestamp, and the finalizer's starting timestamp is distinct from all of them. A count
+index keyed by the full source receipt consequently has only one entry at each such epoch. -/
+theorem sourceStarts_sorted (history : MemoryLocationHistory) (chain : history.IsRecordChain)
+    (strict : ∀ a ∈ history.accesses, a.previous < a.current) :
+    (history.accesses.map (·.previous) ++ [history.last.current]).SortedLT := by
+  obtain ⟨first, rest, same⟩ := List.exists_cons_of_ne_nil history.nonempty
+  have links := chain.adjacent
+  rw [same] at links strict
+  simpa only [MemoryLocationHistory.last, same] using (cursor_chain first rest links strict).sortedLT
+
+/-- Repeated probes can share a single count for the corresponding genuine predecessor or suffix. -/
+theorem sourceStarts_nodup (history : MemoryLocationHistory) (chain : history.IsRecordChain)
+    (strict : ∀ a ∈ history.accesses, a.previous < a.current) :
+    (history.accesses.map (·.previous) ++ [history.last.current]).Nodup :=
+  (history.sourceStarts_sorted chain strict).pairwise.imp (fun earlier => Nat.ne_of_lt earlier)
+
+/-- Address and starting timestamp of each original predecessor followed by the finalizer. -/
+def sourceKeys (history : MemoryLocationHistory) : List (ℕ × ℕ) :=
+  (history.accesses.map (·.previous) ++ [history.last.current]).map (history.loc.busAddress, ·)
+
+/-- Across all touched locations, source keys remain unique even when instructions alias
+their register operands or several queries select the same interval. -/
+theorem sourceKeys_nodup (stream : List MemoryHistoryAccess) (canonical : MemoryAddressesCanonical stream)
+    (chains : MemoryRecordChains stream)
+    (strict : ∀ a ∈ stream, a.previous < a.current) :
+    ((memoryLocationHistories stream).flatMap sourceKeys).Nodup := by
+  apply List.nodup_flatMap.mpr
+  constructor
+  · intro h member
+    apply List.Nodup.map (f := (h.loc.busAddress, ·)) (fun _ _ same => congrArg Prod.snd same)
+    apply h.sourceStarts_nodup (chains h member)
+    obtain ⟨item, _, rfl⟩ := List.mem_map.mp member
+    exact fun access occurs => strict access (List.mem_filter.mp occurs).1
+  · have different := memoryInitialEntries_addresses_nodup canonical
+    rw [memoryInitialEntries_addresses, ← memoryLocationHistories_map_loc, List.map_map] at different
+    have ordered := List.pairwise_map.mp (show List.Pairwise (· ≠ ·) _ from different)
+    apply ordered.imp
+    intro left right distinct pair atLeft atRight
+    obtain ⟨lt, _, lh⟩ := List.mem_map.mp atLeft
+    obtain ⟨rt, _, rh⟩ := List.mem_map.mp atRight
+    exact distinct (congrArg Prod.fst (lh.trans rh.symm))
+
 end SP1Clean.TraceGen.MemoryLocationHistory

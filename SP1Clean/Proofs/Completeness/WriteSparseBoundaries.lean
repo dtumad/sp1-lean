@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.WriteReadbackSources
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
-import SP1Clean.Proofs.Completeness.MemoryReadbackIntervals
+import SP1Clean.Proofs.Completeness.WriteAccessIntervals
 import ToClean.Air.TableBuild
 import Mathlib.Data.Finset.Sort
 import Std.Data.HashSet.Lemmas
@@ -396,6 +396,67 @@ theorem mem_buildAll_iff (snapshot : MemorySnapshot) (touched requested : List �
     · rw [positions_length]
       exact i.isLt
     · simpa only [ks, Std.HashSet.contains_ofList, List.contains_iff_mem, unused, ↓reduceIte] using built
+
+private theorem filter_unused (used : ℕ → Bool) (positions : List (ℕ × ℕ)) :
+    positions.filterMap (fun pair => if used pair.1 then none else some pair.1) =
+      (positions.map Prod.fst).filter (fun key => !(used key)) := by
+  induction positions with
+  | nil => rfl
+  | cons pair rest ih => cases h : used pair.1 <;> simp [h, ih]
+
+/-- Exact ordered addresses returned by the concrete batch, including deduplication of
+repeated requests and exclusion of keys already supplied by the genuine access stream. -/
+theorem buildAll_keys (snapshot : MemorySnapshot) (touched requested : List ℕ) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (buildAll snapshot touched requested data hint).map Rows.key =
+      (keys touched requested).filter (fun key => !touched.contains key) := by
+  let ks := keys touched requested
+  have addresses : (positions ks).map Prod.fst = ks := List.map_fst_zip (by simp)
+  change _ = ks.filter _
+  rw [← addresses, ← filter_unused]
+  simp only [buildAll, List.map_filterMap]
+  apply List.filterMap_congr
+  rintro ⟨key, previous⟩ member
+  simp only [Std.HashSet.contains_ofList]
+  by_cases used : key ∈ touched
+  · simp [used]
+  obtain ⟨n, inside, same⟩ := List.mem_iff_getElem.mp member
+  let i : Fin ks.length := ⟨n, by rw [positions_length] at inside; exact inside⟩
+  have agree := (position_eq ks i).symm.trans same
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj agree
+  obtain ⟨rows, built, address, _⟩ := build?_checked snapshot touched requested i used data hint
+  have present : build? snapshot (previousKey ks i) ks[i.val] data hint = some rows := built
+  simpa only [List.contains_iff_mem, used, ↓reduceIte, present, Option.map_some, Option.some.injEq] using address
+
+/-- Across genuine accesses, finalizers and the actual sparse batch there is at most one
+positive source per address/start timestamp. The count-hint index can represent repeated
+probes by one entry per source version. -/
+theorem sourceKeys_nodup (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+    (canonical : MemoryAddressesCanonical stream) (chains : MemoryRecordChains stream)
+    (strict : ∀ a ∈ stream, a.previous < a.current) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    let touched := (memoryInitialEntries stream).map MemRecordEntry.addr
+    (((memoryLocationHistories stream).flatMap MemoryLocationHistory.sourceKeys) ++
+      (buildAll snapshot touched requested data hint).map (fun rows : Rows (ZMod p) => (rows.key, (0 : ℕ)))).Nodup := by
+  let touched := (memoryInitialEntries stream).map MemRecordEntry.addr
+  have order := (ordered_keys touched requested).nodup.filter (fun key => !touched.contains key)
+  have batch := buildAll_keys snapshot touched requested data hint
+  refine List.nodup_append.mpr ⟨MemoryLocationHistory.sourceKeys_nodup stream canonical chains strict, ?_, ?_⟩
+  · rw [show (buildAll snapshot touched requested data hint).map (fun rows : Rows (ZMod p) => (rows.key, (0 : ℕ))) =
+        (((buildAll snapshot touched requested data hint).map Rows.key).map fun key => (key, (0 : ℕ))) from by simp only [List.map_map, Function.comp_def]]
+    rw [batch]
+    exact order.map (fun _ _ same => congrArg Prod.fst same)
+  · intro pair original other sparse samePair
+    subst other
+    obtain ⟨history, atHistory, epoch⟩ := List.mem_flatMap.mp original
+    obtain ⟨time, _, rfl⟩ := List.mem_map.mp epoch
+    obtain ⟨rows, occurred, same⟩ := List.mem_map.mp sparse
+    have generatedKey := List.mem_map_of_mem (f := Rows.key) occurred
+    rw [batch] at generatedKey
+    have address : rows.key = history.loc.busAddress := congrArg Prod.fst same
+    have used : history.loc.busAddress ∈ touched := by
+      change _ ∈ (memoryInitialEntries stream).map MemRecordEntry.addr
+      rw [memoryInitialEntries_addresses, ← memoryLocationHistories_map_loc]
+      exact List.mem_map_of_mem (List.mem_map_of_mem atHistory)
+    exact (by simpa using (List.mem_filter.mp generatedKey).2 : rows.key ∉ touched) (by rw [address]; exact used)
 
 /-- Each previously untouched valid request occurs in the actual generated batch with its
 authentic word, exact original Memory cancellation and finalizer publication. -/
