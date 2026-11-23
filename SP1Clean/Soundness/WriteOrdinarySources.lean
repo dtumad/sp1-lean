@@ -246,11 +246,9 @@ private theorem protected_pull (id : InstructionChipId) (env : Environment (ZMod
 /-- The private source must arise in the same row as an actual positive predecessor on the original
 Memory channel. Its upper clock comes from that row's authenticated incoming State projection. -/
 def FromPull (id : InstructionChipId) (table : Table (ZMod p)) (record : Readback (ZMod p)) : Prop :=
-  ∃ physical ∈ table.table,
-    let env := table.environment physical
-    ∃ (gate : ZMod p) (prior : MemoryMsg (ZMod p)), gate ≠ 0 ∧
-      memoryChannel.pulledIfValue gate prior ∈ table.component.operations.interactionValuesWith memoryChannel.toRaw env ∧
-      record = readback (eval env ((layout (p := p) id).incoming (varFromOffset _ 0))) prior
+  FromPredecessor table (fun env =>
+    let state := eval env ((layout (p := p) id).incoming (varFromOffset _ 0))
+    (state.clk_high, state.clk_low)) record
 
 /-- Reuse a full physical table, preserving original rows, data, generation and all fixed cells. -/
 def publish (id : InstructionChipId) (table : Table (ZMod p)) (registered : table.component = ProtectedOrdinaryReceipt.component id) :

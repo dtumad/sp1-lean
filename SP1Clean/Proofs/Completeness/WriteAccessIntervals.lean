@@ -49,4 +49,60 @@ theorem incoming_covers_cut (history : MemoryLocationHistory) (chain : history.I
   have order := timeline.start_le_of_le before
   exact ⟨order, history.heldAt_incoming chain strict shape member within.1 order⟩
 
+/-- Pick the first genuine access strictly after the requested clock. A missing selection uses
+the finalized suffix, including when the clock equals the last push. -/
+def nextAccess? (history : MemoryLocationHistory) (time : ℕ) : Option MemoryHistoryAccess :=
+  history.accesses.find? fun a => time < a.current
+
+private theorem selected_previous {time : ℕ} (first : MemoryHistoryAccess) (rest : List MemoryHistoryAccess)
+    {selected : MemoryHistoryAccess} (links : List.IsChain MemoryHistoryAccess.Continues (first :: rest))
+    (entered : first.previous ≤ time)
+    (found : (first :: rest).find? (fun a => time < a.current) = some selected) : selected.previous ≤ time := by
+  induction rest generalizing first with
+  | nil =>
+    by_cases later : time < first.current
+    · have same : first = selected := by simpa [List.find?, later] using found
+      exact same ▸ entered
+    · simp [List.find?, later] at found
+  | cons second rest ih =>
+    by_cases later : time < first.current
+    · have eq : first = selected := by simpa [List.find?, later] using found
+      exact eq ▸ entered
+    · have next := (List.isChain_cons.mp links).1 second (by simp)
+      apply ih second (List.isChain_cons.mp links).2
+      · rw [next.2.1]
+        omega
+      · simpa [List.find?_cons, later] using found
+
+/-- The deterministic query selector is total on each genuine location history. Its selected
+predecessor or terminal suffix always carries the exact held word. -/
+theorem nextAccess?_covers (history : MemoryLocationHistory) (chain : history.IsRecordChain)
+    (strict : ∀ a ∈ history.accesses, a.previous < a.current) (time : ℕ) :
+    match history.nextAccess? time with
+    | some a => a ∈ history.accesses ∧ a.previous ≤ time ∧ time < a.current ∧
+        MemoryHistoryAccess.heldAt history.first.pulled time history.accesses = a.pulled
+    | none => history.last.current ≤ time ∧
+        MemoryHistoryAccess.heldAt history.first.pulled time history.accesses = history.last.pushed := by
+  cases found : history.nextAccess? time with
+  | none =>
+    have bound : history.last.current ≤ time := by
+      have absent := List.find?_eq_none.mp found history.last (List.getLast_mem history.nonempty)
+      simpa using absent
+    exact ⟨bound, history.heldAt_final chain strict bound⟩
+  | some a =>
+    have member := List.mem_of_find?_eq_some found
+    have eligible := List.find?_some (p := fun x : MemoryHistoryAccess => decide (time < x.current)) found
+    have after : time < a.current := of_decide_eq_true eligible
+    have before : a.previous ≤ time := by
+      have links := chain.adjacent
+      have start := chain.genesis
+      unfold nextAccess? at found
+      cases eq : history.accesses with
+      | nil => exact False.elim (history.nonempty eq)
+      | cons first rest =>
+        rw [eq] at links found
+        have zero : first.previous = 0 := by simpa [MemoryLocationHistory.first, eq] using start
+        exact selected_previous first rest links (zero ▸ Nat.zero_le _) found
+    exact ⟨member, before, after, history.heldAt_interval chain strict member ⟨before, after⟩⟩
+
 end SP1Clean.TraceGen.MemoryLocationHistory

@@ -13,18 +13,38 @@ namespace SP1Clean.WriteProbe.AccessSupply
 
 open Circuit Air.Flat Channels
 
-/-- Project the old record, including its original timestamp and every address and value limb. -/
+/-- Attach the original address, predecessor time and word to the accessing row's released bus clock. -/
+def atClock {F : Type} (time : F × F) (prior : MemoryMsg F) : Readback F :=
+  ⟨#v[prior.addr0, prior.addr1, prior.addr2], prior.clk_high, prior.clk_low, time.1, time.2, prior.value⟩
+
+/-- Instruction predecessors use the original incoming State clock. -/
 def readback {F : Type} (incoming : StateMsg F) (prior : MemoryMsg F) : Readback F :=
-  ⟨#v[prior.addr0, prior.addr1, prior.addr2], prior.clk_high, prior.clk_low,
-    incoming.clk_high, incoming.clk_low, prior.value⟩
+  atClock (incoming.clk_high, incoming.clk_low) prior
 
 variable {p : ℕ} [Fact p.Prime] {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
+
+theorem eval_atClock (env : Environment (ZMod p)) (time : Expression (ZMod p) × Expression (ZMod p))
+    (prior : Var MemoryMsg (ZMod p)) : eval env (atClock time prior) =
+      atClock (env time.1, env time.2) (eval env prior) := by
+  cases time
+  cases prior
+  simp only [atClock, circuit_norm]
+
+/-- A positive private source comes from an actual positive original Memory pull in the same
+physical row, with its upper bound fixed by that row's own clock. -/
+def FromPredecessor (table : Table (ZMod p)) (upper : Environment (ZMod p) → ZMod p × ZMod p)
+    (record : Readback (ZMod p)) : Prop :=
+  ∃ physical ∈ table.table,
+    let env := table.environment physical
+    ∃ (gate : ZMod p) (prior : MemoryMsg (ZMod p)), gate ≠ 0 ∧
+      memoryChannel.pulledIfValue gate prior ∈ table.component.operations.interactionValuesWith memoryChannel.toRaw env ∧
+      record = atClock (upper env) prior
 
 theorem eval_readback (env : Environment (ZMod p)) (incoming : Var StateMsg (ZMod p))
     (prior : Var MemoryMsg (ZMod p)) : eval env (readback incoming prior) = readback (eval env incoming) (eval env prior) := by
   cases incoming
   cases prior
-  simp only [readback, circuit_norm]
+  simp only [readback, atClock, circuit_norm]
 
 /-- Existing symbolic Memory emissions and the incoming State of their physical row. -/
 structure Layout (p : ℕ) [Fact p.Prime] (Input : TypeMap) [ProvableType Input] where

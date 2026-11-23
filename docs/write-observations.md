@@ -67,23 +67,29 @@ authenticate every version supply and balance both private channels.
 ## Physical sources
 
 The two verifier-fixed x12 rows bind the first and last CPU cuts to the actual snapshot
-register. For a register refreshed within the segment, the MemoryBump wrapper publishes the
-same address, both timestamps and the unchanged word as its original Memory pull and push.
-Both ordered finalizers can publish a suffix from their actual last Memory timestamp through
-the largest 48-bit clock. A finalized query at timestamp zero covers the entire segment.
-For an untouched key the sparse compiler must include that key at both boundaries when WRITE
-requests it. Equality of the source and target words alone allows an intervening store.
-[Fixed x12 rows](../SP1Clean/Native/Operations/WriteProbeRegisterBoundary.lean) · [Actual physical sources](../SP1Clean/Soundness/WriteReadbackSources.lean) · [Closed and untouched intervals](../SP1Clean/Proofs/Completeness/MemoryReadbackIntervals.lean)
+register. Register refreshes retain both original bus timestamps and the unchanged word.
+The ordinary, ECALL and HINT_READ components publish each original Memory predecessor from
+its previous timestamp through the incoming CPU clock. A genuine push at the incoming
+clock is value-preserving. The eight-tick gap between CPU cuts ensures that truncating a
+mutating access's predecessor interval at its incoming clock retains every eligible probe.
+The chronological selector picks the first later push, or the final suffix when none exists.
+[Incoming-cut proof and selector](../SP1Clean/Proofs/Completeness/WriteAccessIntervals.lean)
 
-A counted supply row consumes one genuine receipt, checks the conversion between two 24-bit
-Memory timestamp limbs and three 16-bit probe limbs, and distributes the version with its
-selected query count. An inactive row forces the count to zero. Register refresh and finalizer
-wrappers retain their original guest ledgers and publish one extra occurrence for every
-physical row. Mixed execution constructs the protected register refreshes and the matching
-supply rows with all padding. A complete installed host still needs the original ordinary,
-ECALL and HINT_READ access sources, queried sparse genesis/final pairs and balance over that full
-inventory.
-[Raw supplier authentication](../SP1Clean/Soundness/WriteReadbackSupply.lean) · [Physical mixed refresh construction](../SP1Clean/Export/WriteRefreshTables.lean)
+Both ordered finalizers publish the actual last Memory record through the largest 48-bit
+clock. Valid queries outside the touched inventory enter both sorted boundaries. The original
+source snapshot circuit supplies the authentic zero-timestamp word. Its unit Memory push
+cancels the finalizer's unit pull, and the suffix covers every representable clock.
+[Sparse boundary construction](../SP1Clean/Proofs/Completeness/WriteSparseBoundaries.lean) · [Fixed x12 rows](../SP1Clean/Native/Operations/WriteProbeRegisterBoundary.lean)
+
+The 25 protected ordinary families, ECALL, both HINT_READ word variants, the register refresh
+and both ordered finalizers form a 31-component source group. Raw receipt balance and the
+counted supplier's physical constraints trace each positive version to a specific original
+source. All original guest Memory multiplicities and padding are preserved. At canonical
+ordinary-block data, mixed execution constructs each protected ordinary table with one to
+three predecessor occurrences on every physical row. ECALL contributes three and each
+HINT_READ word contributes one. Installing the whole group alongside the packet, span and
+probe components still requires closing their combined ledgers at assembly data.
+[Source inventory](../SP1Clean/Soundness/WriteAccessInventory.lean) · [Mixed ordinary construction](../SP1Clean/Proofs/Completeness/WriteOrdinaryTables.lean) · [Mixed refresh construction](../SP1Clean/Export/WriteRefreshTables.lean)
 
 ## Read-only probe demand
 
@@ -97,7 +103,3 @@ At `fixedProviderPreset`, `C ≤ 63,550` and `W ≤ 266,449,516`. Together at mo
 266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` for the native table's
 one row per probe. Each physical row contributes one occurrence to each of its two private
 channels, including zero-weight padding. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
-
-The sparse boundary construction sorts the union of real Memory keys and admissible probe keys. Each previously untouched key gets an ordered source row and an ordered finalizer row. The emitted zero-time word comes directly from the source snapshot circuit. Its unit Memory push cancels the finalizer’s unit pull, and the finalizer publishes that same word through the last representable clock.
-
-Each protected ordinary table can publish one predecessor receipt per original Memory pull using the instruction’s incoming CPU clock and the old record’s timestamp. The 25 compiled tables retain their exact original rows, pre-existing ledgers and power-of-two heights. Each physical row, including padding, has one to three such occurrences. The chronological Memory proof covers every incoming CPU cut in a genuine predecessor interval, including a value-preserving push at the cut itself.
