@@ -304,7 +304,7 @@ import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
 import SP1Clean.Native.Chips.UTypeChip.Defs
 import SP1Clean.Native.Operations.AddOperation.Defs
 import SP1Clean.Native.Operations.AddOperation.Populate
-import SP1Clean.Native.Operations.AddOperation.RawSpec
+import SP1Clean.Native.Operations.AddOperation.Carries
 import SP1Clean.Native.Operations.AddrAddOperation.Defs
 import SP1Clean.Native.Operations.AddrAddOperation.Populate
 import SP1Clean.Native.Operations.AddrAddOperation.RawSpec

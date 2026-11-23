@@ -8,9 +8,8 @@ import Clean.Utils.Tactics.CircuitProofStart
 
 /-! # Field zero-test gadget
 
-Witness generation, arithmetic lemmas and the bundled `FormalAssertion` live together.
-`Semantics/Specs/IsZero` owns the semantic contract. `AssertSpec` records intermediate
-algebraic evidence used to prove that contract.
+The bundled assertion implements `IsZeroOperation::eval_is_zero` from the pinned SP1
+`crates/core/machine/src/operations/is_zero.rs`. Its public contract lives in `Semantics/Specs/IsZero`.
 -/
 
 @[expose] public section
@@ -49,39 +48,6 @@ theorem populateFE_congr (env env' : ProverEnvironment (ZMod p)) (x : Witgen.FEx
 
 end FE
 
-/-- **Assertion half** — the literal meaning of SP1's `IsZeroOperation` `asserts` list at
-`is_real = 1`, stated against the result columns: `result = 1 - inverse*a`, `result` boolean, and
-`result * a = 0`. (`IsZero` has no bus interactions, so this is the whole structural spec.) -/
-def AssertSpec (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) : Prop :=
-  ((1 - cols.inverse * a) - cols.result = 0) ∧
-  (cols.result = 0 ∨ cols.result = 1) ∧
-  (cols.result * a = 0)
-
-/-- Soundness core: `AssertSpec` forces `result` to be the zero indicator of `a`. On `a = 0` the
-defining equation gives `result = 1`; on `a ≠ 0` the `result * a = 0` constraint forces `result = 0`
-(via `mul_inv_cancel₀`, since `mul_eq_zero` won't fire on `ZMod p`). -/
-theorem isZero_of_assert {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZMod p)}
-    (h_assert : AssertSpec a cols) :
-    cols.result = if a = 0 then 1 else 0 := by
-  obtain ⟨h_eq, _, h_mul⟩ := h_assert
-  by_cases ha : a = 0
-  · subst ha
-    rw [ite_eq_left rfl]
-    linear_combination -h_eq
-  · rw [ite_eq_right ha]
-    calc cols.result = cols.result * (a * a⁻¹) := by rw [mul_inv_cancel₀ ha, mul_one]
-      _ = cols.result * a * a⁻¹ := by ring
-      _ = 0 := by rw [h_mul, zero_mul]
-
-/-- On `a ≠ 0`, `AssertSpec` pins `inverse` to `a⁻¹` (the defining equation with `result = 0`). The
-composing word-level completeness needs this to reconstruct the gated inverse column. -/
-theorem inverse_of_assert {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZMod p)}
-    (h_assert : AssertSpec a cols) (ha : a ≠ 0) : cols.inverse * a = 1 := by
-  have hr : cols.result = 0 := by
-    have := isZero_of_assert h_assert; rwa [ite_eq_right ha] at this
-  obtain ⟨h_eq, _, _⟩ := h_assert
-  rw [hr] at h_eq
-  linear_combination -h_eq
 /-- Assert the inverse relation, binary result and zero product, gated by the activity flag. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   let a := input.a
@@ -115,11 +81,15 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   circuit_proof_start
   intro hr1
   simp only [circuit_norm, hr1, one_mul] at h_holds
-  obtain ⟨h_eq, h_bool, h_mul⟩ := h_holds
-  have hA : AssertSpec input_a ⟨input_cols_inverse, input_cols_result⟩ :=
-    ⟨by simpa [sub_eq_add_neg] using h_eq,
-      bool_of_mul_pred (by simpa only [sub_eq_add_neg] using h_bool), h_mul⟩
-  exact ⟨isZero_of_assert hA, inverse_of_assert hA⟩
+  obtain ⟨relation, _, zeroProduct⟩ := h_holds
+  by_cases zero : input_a = 0
+  · subst input_a
+    simp at relation ⊢
+    exact (sub_eq_zero.mp relation).symm
+  · have result := (mul_eq_zero.mp zeroProduct).resolve_right zero
+    simp only [ite_eq_right zero, result, true_and]
+    intro _
+    linear_combination -relation - result
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start

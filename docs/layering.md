@@ -41,7 +41,8 @@ explicitly. Directory cleanup should preserve the ordering while improving the n
 Full Sail/host/clock execution and finite snapshots live in `Semantics/Execution/`, with memory,
 host and resource state in `Semantics/{Memory,Host,Resources}/`; the shard contract uses those
 same objects. PolyFun traces, access schedules and physical row inventories are
-derived views, not independent execution semantics. Retired exact-Core views remain historical.
+derived views of those objects. The installed assembly connects its physical rows to the same
+complete execution through the public shard contract.
 
 Instruction identity/order and routing have one owner, `Semantics/ISA/`. Use the canonical Clean ledger and
 retain physical occurrences when projecting it: repeated keys, disabled interactions and count
