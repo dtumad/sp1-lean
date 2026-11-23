@@ -21,7 +21,7 @@ structure Version (F : Type) where
   upper : fields 3 F
   /-- Held four-limb word. -/
   value : Word F
-deriving ProvableStruct
+deriving ProvableStruct, DecidableEq
 provable_struct_eval_lemmas Version
 
 /-- The host-facing receipt for one non-mutating probe. -/
@@ -32,7 +32,7 @@ structure Read (F : Type) where
   clock : fields 3 F
   /-- Complete returned word. -/
   value : Word F
-deriving ProvableStruct
+deriving ProvableStruct, DecidableEq
 provable_struct_eval_lemmas Read
 
 /-- Active observer columns. The key division witness is computed from the selected key. -/
