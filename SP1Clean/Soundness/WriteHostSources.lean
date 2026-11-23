@@ -93,7 +93,8 @@ private theorem eval_pulled (env : Environment (ZMod p)) (gate : Expression (ZMo
   exact ((Channel.eval_pulledIf (channel := memoryChannel) (enabled := gate) (msg := msg) (env := env)).trans
     (congrArg (fun weight => memoryChannel.pulledIfValue weight (eval env msg)) (ProvableType.eval_field env gate))).symm
 
-private theorem actual_pull (family : Family) (env : Environment (ZMod p))
+/-- Every host publication site is a genuine pull on its registered original Memory ledger. -/
+theorem actual_pull (family : Family) (env : Environment (ZMod p))
     (site : Receipt.Projection (ZMod p) (original (p := p) family).Input MemoryMsg) (member : site ∈ sites family) :
     let input := varFromOffset (original (p := p) family).Input 0
     let offset := size (original (p := p) family).Input

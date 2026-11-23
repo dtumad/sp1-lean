@@ -71,7 +71,7 @@ their checked constraints, and both balanced private ledgers. The host sees exac
 chronological reads. The two height bounds are for the actual padded tables. -/
 theorem physical_tables (raw : AccessInventory.Source → Table (ZMod p))
     (registered : ∀ id, (raw id).component = AccessInventory.original id)
-    (binary : ∀ r ∈ AccessInventory.records raw, r.1 = 0 ∨ r.1 = 1)
+    (sourceChecked : ∀ id, (raw id).Constraints)
     (bounded : ∀ r ∈ live (AccessInventory.records raw), Bounded r)
     (reads : List (Read (ZMod p))) {requests : List (Request (live (AccessInventory.records raw)).length (ZMod p))}
     (routed : route? (live (AccessInventory.records raw)) reads = some requests)
@@ -85,7 +85,7 @@ theorem physical_tables (raw : AccessInventory.Source → Table (ZMod p))
       LogUpBalanced (supply.interactionsWith versionChannel.toRaw ++ observer.interactionsWith versionChannel.toRaw) ∧
       inputs.map Inputs.read = reads ∧ inputs.length = reads.length := by
   obtain ⟨valid, emitted⟩ := route?_spec _ _ routed
-  obtain ⟨localSupply, guarantees, incoming⟩ := readback_balanced raw registered requests binary bounded data supplyFits
+  obtain ⟨localSupply, guarantees, incoming⟩ := readback_balanced raw registered requests sourceChecked bounded data supplyFits
   obtain ⟨localReads, readGuarantees⟩ := WriteProbe.table_complete valid data probeFits
   exact ⟨localSupply, guarantees, localReads, readGuarantees, incoming, version_balanced _ requests data data _ _,
     emitted, by simpa only [List.length_map] using congrArg List.length emitted⟩

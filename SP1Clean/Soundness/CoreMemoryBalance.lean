@@ -35,7 +35,8 @@ theorem memoryBinary_of_silent (component : Component (ZMod p))
   rw [InteractionRecovery.interactionsWith_main_eq_nil component.circuit.base _ _ _ silent] at member
   contradiction
 
-private theorem instruction_memoryBinary (component : Component (ZMod p))
+/-- Every original instruction Memory occurrence has a Boolean gate under its local constraints. -/
+theorem instruction_memoryBinary (component : Component (ZMod p))
     (member : component ∈ sp1Tables (p := p)) : MemoryBinary component := by
   obtain ⟨chip, chipMem, rfl⟩ := List.mem_map.mp member
   intro data physical constraints interaction emitted

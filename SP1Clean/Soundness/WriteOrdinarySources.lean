@@ -213,7 +213,8 @@ theorem row_receipts (id : InstructionChipId) (env : Environment (ZMod p)) :
   simp only [List.map_map, Function.comp_def, Channel.eval_pushedIf, ProvableType.eval_field, eval_readback, input, offset]
 
 omit [Fact (2 ^ 24 < p)] in
-private theorem evaluated_pull (env : Environment (ZMod p)) (i : ChannelInteraction (memoryChannel (p := p)))
+/-- Evaluation of a typed Memory pull preserves its original gate and complete message. -/
+theorem evaluated_pull (env : Environment (ZMod p)) (i : ChannelInteraction (memoryChannel (p := p)))
     (direction : i.direction = .pull) :
     i.toRaw.eval env = memoryChannel.pulledIfValue (env i.mult) (eval env i.msg) := by
   obtain ⟨direction', mult, msg⟩ := i
@@ -222,7 +223,8 @@ private theorem evaluated_pull (env : Environment (ZMod p)) (i : ChannelInteract
   exact (Channel.eval_pulledIf (channel := memoryChannel) (enabled := mult) (msg := msg) (env := env)).trans
     (congrArg (fun gate => memoryChannel.pulledIfValue gate (eval env msg)) (ProvableType.eval_field env mult))
 
-private theorem protected_pull (id : InstructionChipId) (env : Environment (ZMod p))
+/-- The private publication site is a genuine pull on the original protected Memory ledger. -/
+theorem protected_pull (id : InstructionChipId) (env : Environment (ZMod p))
     (i : ChannelInteraction (memoryChannel (p := p)))
     (occurs : i ∈ (layout id).pulls (varFromOffset _ 0) (size (supportedChipFor (p := p) id).kind.Inputs)) :
     memoryChannel.pulledIfValue (env i.mult) (eval env i.msg) ∈

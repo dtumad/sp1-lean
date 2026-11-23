@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.WriteSourceRows
+import SP1Clean.Soundness.WriteSourceActivity
 import SP1Clean.Proofs.Completeness.WriteProbeTables
 import SP1Clean.Proofs.Completeness.FieldClosure
 import ToClean.Air.MessageFilter
@@ -186,7 +186,7 @@ in the physical count, while only live rows cause the scheduler to allocate a su
 theorem readback_balanced (raw : AccessInventory.Source → Table (ZMod p))
     (registered : ∀ id, (raw id).component = AccessInventory.original id)
     (requests : List (Request (live (AccessInventory.records raw)).length (ZMod p)))
-    (binary : ∀ r ∈ AccessInventory.records raw, r.1 = 0 ∨ r.1 = 1)
+    (sourceChecked : ∀ id, (raw id).Constraints)
     (bounded : ∀ r ∈ live (AccessInventory.records raw), Bounded r)
     (data : ProverData (ZMod p)) (fits) :
     let supply := table (allocated (live (AccessInventory.records raw)) requests) data fits
@@ -197,6 +197,6 @@ theorem readback_balanced (raw : AccessInventory.Source → Table (ZMod p))
     rw [AccessInventory.ledger_records, balanceOf_append, receipts]
     simp only [physical, List.map_append, List.map_replicate, balanceOf_append, preserved]
     rw [balance_disabled _ _ (by simp [padding, Channel.pulledIfValue, Interaction.signedMult]), add_zero]
-    exact receipt_tally _ binary msg⟩
+    exact receipt_tally _ (AccessInventory.records_binary raw registered sourceChecked) msg⟩
 
 end SP1Clean.WriteProbe.Counted
