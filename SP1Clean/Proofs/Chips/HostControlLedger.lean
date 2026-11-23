@@ -136,7 +136,7 @@ theorem choice_host_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : E
       [HostCallChip.channel.pulledValue (Eval.eval env input)] := by
   have raw : ((choiceMain input).operations offset).interactionsWith HostCallChip.channel.toRaw =
       [(HostCallChip.channel.pulled input).toRaw] := by
-    simp only [choiceMain, circuit_norm, control_equality_empty, List.nil_append]
+    simp only [choiceMain, circuit_norm, List.nil_append]
   simp only [Operations.interactionValuesWith, raw, List.map_cons, List.map_nil, Channel.eval_pulled]
 
 /-- Raw constraints of the shared physical row select one complete call contract. -/

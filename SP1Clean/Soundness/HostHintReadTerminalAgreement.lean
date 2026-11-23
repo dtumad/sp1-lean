@@ -18,13 +18,13 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance terminalAgreementLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-private theorem wrapper_receipt (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p) :
-    hostExitAfter none (ExecutionRow.syscall input.instruction).event =
-      (HostTerminalLedger.receipt? (input.message flag)).map (fun word => (Word.toBitVec64 word).setWidth 32) := by
+private theorem wrapper_receipt (input : SyscallInstrsChip.Inputs (ZMod p)) :
+    hostExitAfter none (ExecutionRow.syscall input).event =
+      (HostTerminalLedger.receipt? (HostCallChip.message input)).map (fun word => (Word.toBitVec64 word).setWidth 32) := by
   simp only [hostExitAfter, ExecutionRow.event, rawCode_syscallEventOfRow,
-    arg1_syscallEventOfRow, HostTerminalLedger.receipt?, HostCallChip.Inputs.message, SyscallKind.code]
+    arg1_syscallEventOfRow, HostTerminalLedger.receipt?, HostCallChip.message, SyscallKind.code]
   -- Both `if`s decide the same halt test, spelled folded on the right and unfolded on the left.
-  by_cases h : Word.toBitVec64 input.instruction.op_a_memory.prev_value = 0
+  by_cases h : Word.toBitVec64 input.op_a_memory.prev_value = 0
   · have h' := h
     simp only [Word.toBitVec64, Word.toNat] at h'
     simp only [h, h', ite_true, Option.map_some]
@@ -36,15 +36,15 @@ private theorem wrapper_receipt (input : HostCallChip.Inputs (ZMod p)) (flag : Z
 private theorem inventory_receipts (instructions : List (DecodedInstructionRow p))
     (wrappers : List (Environment (ZMod p))) :
     ((instructions.map ExecutionRow.instruction ++
-      (wrappers.map fun env => ExecutionRow.syscall (HostCallLedger.input env).instruction)).filterMap
+      (wrappers.map fun env => ExecutionRow.syscall (HostCallLedger.input env))).filterMap
         (fun row => hostExitAfter none row.event)) =
       ((wrappers.map HostCallLedger.call).filterMap HostTerminalLedger.receipt?).map
         (fun word => (Word.toBitVec64 word).setWidth 32) := by
   have selected := HostQueueCPUReplay.filterMap_inventory
-    ExecutionRow.instruction ExecutionRow.halt (fun env => ExecutionRow.syscall (HostCallLedger.input env).instruction)
+    ExecutionRow.instruction ExecutionRow.halt (fun env => ExecutionRow.syscall (HostCallLedger.input env))
     HostCallLedger.call (fun row => hostExitAfter none row.event)
     (fun message => (HostTerminalLedger.receipt? message).map (fun word => (Word.toBitVec64 word).setWidth 32))
-    instructions [] wrappers (fun _ _ => rfl) (by simp) (fun env => wrapper_receipt (HostCallLedger.input env) _)
+    instructions [] wrappers (fun _ _ => rfl) (by simp) (fun env => wrapper_receipt (HostCallLedger.input env))
   simpa only [List.map_nil, List.append_nil, List.map_filterMap] using selected
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}

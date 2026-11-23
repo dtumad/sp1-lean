@@ -55,7 +55,7 @@ private def balance (ledger : Ledger) : Bool :=
 
 private def calls (deferred : Bool) (slot : Fin 8) : List (Inputs Fp) := Id.run do
   let make (clock value : ℕ) (previous : State Fp) := HostCommitChip.populate deferred
-    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred, 0⟩ previous
+    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred⟩ previous
   let first := make 1 65537 HostCommitBoundary.initial
   let second := make 265 131075 (first.next slot)
   return [first, second]
@@ -129,7 +129,7 @@ theorem boundaryTampering : [false, true].all (fun deferred =>
 
 private def interleaved (deferred : Bool) : List (Fin 8 × Inputs Fp) × State Fp := Id.run do
   let make (slot : Fin 8) (clock value : ℕ) (previous : State Fp) := HostCommitChip.populate deferred
-    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred, 0⟩ previous
+    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred⟩ previous
   let first := make 7 1 11 HostCommitBoundary.initial
   let second := make 0 265 22 (first.next 7)
   let third := make 7 529 33 (second.next 0)
@@ -183,7 +183,7 @@ private def continuationSource : Semantics.HostState :=
 
 private def continuation (deferred : Bool) : List (Fin 8 × Inputs Fp) × State Fp := Id.run do
   let make (slot : Fin 8) (clock value : ℕ) (previous : State Fp) := HostCommitChip.populate deferred
-    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred, 0⟩ previous
+    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred⟩ previous
   let seed := HostCommitBoundary.start (HostCommitEnsemble.sourceValues deferred continuationSource)
   let first := make 7 1048577 11 seed
   let second := make 0 1048841 22 (first.next 7)

@@ -67,6 +67,6 @@ def HeadSpec {p : ℕ} [Fact p.Prime] (empty : Bool) (input : Inputs (ZMod p)) :
   else input.previous.head = input.node.pointer ∧ input.call.result = input.node.length ∧ input.node.Valid
 
 def Spec {p : ℕ} [Fact p.Prime] (empty : Bool) (input : Inputs (ZMod p)) : Prop :=
-  input.call.code = codeWord ∧ input.call.length = 0 ∧ ClockOrder.Spec input.clock ∧ HeadSpec empty input
+  input.call.code = codeWord ∧ ClockOrder.Spec input.clock ∧ HeadSpec empty input
 
 end SP1Clean.HostHintLengthChip

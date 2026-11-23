@@ -172,7 +172,7 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
     simpa only [Table.environment, shared, handlerTable_component witness] using
       handlerSpecs physical present
   have bound : Address.toNat (input env).node.pointer ≤ store.size := by
-    have head : (input env).previous.head = (input env).node.pointer := valid.2.2.2.2.2.2.1
+    have head : (input env).previous.head = (input env).node.pointer := valid.2.2.2.2.2.1
     rw [← head]
     exact current.2.2.2.bound
   have node := (node_authenticated witness finalStore authenticated records.node (input env).node

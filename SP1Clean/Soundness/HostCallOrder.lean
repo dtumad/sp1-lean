@@ -24,7 +24,7 @@ theorem hostCalls_clocks_nodup_of_orderingChannels {image : ProgramImage} {sourc
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (channels : OrderingChannels witness)
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (projected : ((HostCallLedger.activeRows table data).map fun env => (HostCallLedger.input env).instruction) =
+    (projected : ((HostCallLedger.activeRows table data).map fun env => (HostCallLedger.input env)) =
       activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     ((HostCallLedger.calls table data).map HostCallLedger.clock).Nodup := by
   have unique := executionRows_clocks_nodup_of_orderingChannels witness constraints channels
@@ -33,14 +33,14 @@ theorem hostCalls_clocks_nodup_of_orderingChannels {image : ProgramImage} {sourc
   rw [← projected] at syscalls
   simpa only [HostCallLedger.calls, List.map_map, Function.comp_def, ExecutionRow.edge,
     SyscallInstrsChip.statePulledMessage, HostCallLedger.clock, HostCallLedger.call,
-    HostCallChip.Inputs.message] using syscalls
+    HostCallChip.message] using syscalls
 
 /-- Complete channel balance supplies the smaller ordering interface. -/
 theorem hostCalls_clocks_nodup {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (projected : ((HostCallLedger.activeRows table data).map fun env => (HostCallLedger.input env).instruction) =
+    (projected : ((HostCallLedger.activeRows table data).map fun env => (HostCallLedger.input env)) =
       activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     ((HostCallLedger.calls table data).map HostCallLedger.clock).Nodup :=
   hostCalls_clocks_nodup_of_orderingChannels witness constraints

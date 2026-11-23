@@ -1,3 +1,4 @@
+import SP1Clean.Semantics.Transition.MicroTime
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
 import SP1Clean.Semantics.Host.HostExecutionLaws
@@ -21,7 +22,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 /-- Canonical control-call fields; neither control call uses WRITE's length register. -/
 def message (clock : ℕ) (execution : HostExecution) : HostCallChip.Message (ZMod p) :=
   ⟨(clock / 2 ^ 24 : ℕ), (clock % 2 ^ 24 : ℕ), bitVecToWord execution.kind.code,
-    bitVecToWord execution.arg1, bitVecToWord execution.arg2, bitVecToWord execution.result, 0⟩
+    bitVecToWord execution.arg1, bitVecToWord execution.arg2, bitVecToWord execution.result⟩
 
 theorem message_clock (clock : ℕ) (execution : HostExecution) (fits : clock < 2 ^ 48) :
     Semantics.clkNat (message (p := p) clock execution).clk_high (message clock execution).clk_low = clock := by
@@ -61,7 +62,7 @@ theorem halt_assumptions_of_run (clock : ℕ) (execution : HostExecution) (kind 
     split_ifs at effect with permitted
     exact permitted
   apply HostHaltChip.populate_assumptions
-  refine ⟨?_, ?_, rfl, isU64_bitVecToWord _, ?_⟩
+  refine ⟨?_, ?_, isU64_bitVecToWord _, ?_⟩
   · simp [message, kind, SyscallKind.code, encode_zero]
   · simp [message, result, encode_zero]
   · change Word.toNat (bitVecToWord execution.arg1) < HostHaltChip.bound p

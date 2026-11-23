@@ -29,12 +29,11 @@ theorem soundness (deferred : Bool) (slot : Fin 8) :
     codeWord, slotWord, Inputs.clock, HostCallChip.channel, stateChannel, publicValuesChannel, CommitmentDeclaration.channel]
   cases deferred <;> simp only [Bool.false_eq_true, ↓reduceIte, circuit_norm] at h_holds ⊢
   all_goals
-    obtain ⟨code, index, result, length, clock, value, bytes⟩ := h_holds
-    refine ⟨⟨?_, ?_, ?_, ?_, value⟩, clock, bytes⟩
+    obtain ⟨code, index, result, clock, value, bytes⟩ := h_holds
+    refine ⟨⟨?_, ?_, ?_, value⟩, clock, bytes⟩
     · simpa only [codeWord, circuit_norm] using code
     · simpa only [slotWord, circuit_norm] using index
     · simpa only [codeWord, circuit_norm] using result
-    · simpa only [Vector.map_id'] using length
 
 theorem completeness (deferred : Bool) (slot : Fin 8) :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) (main deferred slot)
@@ -44,12 +43,11 @@ theorem completeness (deferred : Bool) (slot : Fin 8) :
     codeWord, slotWord, Inputs.clock, HostCallChip.channel, stateChannel, publicValuesChannel, CommitmentDeclaration.channel]
   cases deferred <;> simp only [Bool.false_eq_true, ↓reduceIte, circuit_norm] at h_assumptions ⊢
   all_goals
-    obtain ⟨⟨⟨code, index, result, length, value⟩, clock, bytes⟩, comparison⟩ := h_assumptions
-    refine ⟨?_, ?_, ?_, ?_, clock, ⟨value, comparison⟩, bytes⟩
+    obtain ⟨⟨⟨code, index, result, value⟩, clock, bytes⟩, comparison⟩ := h_assumptions
+    refine ⟨?_, ?_, ?_, clock, ⟨value, comparison⟩, bytes⟩
     · simpa only [codeWord, circuit_norm] using code
     · simpa only [slotWord, circuit_norm] using index
     · simpa only [codeWord, circuit_norm] using result
-    · simpa only [Vector.map_id'] using length
 
 /-- The semantic transition performed by an active commitment row. -/
 def activeCircuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) Inputs unit where

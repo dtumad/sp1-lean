@@ -47,8 +47,8 @@ theorem program_pull_committed (valid : image.Valid)
 private theorem wrapper_program_values (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (physical : Array (ZMod p)) :
     HostCallLedger.producer.operations.interactionValuesWith programChannel.toRaw (Environment.fromArray physical witness.data) =
-      [programChannel.pulledIfValue (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real
-        (SyscallInstrsChip.programMessage (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction)] := by
+      [programChannel.pulledIfValue (HostCallLedger.input (Environment.fromArray physical witness.data)).is_real
+        (SyscallInstrsChip.programMessage (HostCallLedger.input (Environment.fromArray physical witness.data)))] := by
   have typed := syscallInstrsRow_typedProgram_of_component
     (LocalCore.systemTable (localWitness witness) 3) witness.data
     (LocalCore.systemTable_component (localWitness witness) 3) physical
@@ -58,8 +58,6 @@ private theorem wrapper_program_values (witness : EnsembleWitness (ensemble imag
   rw [HostCallProjection.input_original]
   change HostCallLedger.producer.operations.interactionValuesWith programChannel.toRaw (Environment.fromArray physical witness.data) = _
   rw [Operations.interactionValuesWith, ← HostCallProjection.other_interactions programChannel.toRaw
-    (by simp [programChannel, byteChannel, Channel.toRaw])
-    (by simp [programChannel, memoryChannel, Channel.toRaw])
     (by simp [programChannel, HostCallChip.channel, Channel.toRaw])]
   exact raw
 
@@ -70,13 +68,13 @@ theorem hostCall_program_committed (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg (SyscallInstrsChip.programMessage (HostCallLedger.input env).instruction)) := by
+      (rowOfMsg (SyscallInstrsChip.programMessage (HostCallLedger.input env))) := by
   have real := HostCallLedger.activeRows_is_real _ _ _ member
   obtain ⟨mapped, _⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   apply program_pull_committed valid witness silent constraints balanced _
-    (programChannel.pulledIfValue (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real
-      (SyscallInstrsChip.programMessage (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction))
+    (programChannel.pulledIfValue (HostCallLedger.input (Environment.fromArray physical witness.data)).is_real
+      (SyscallInstrsChip.programMessage (HostCallLedger.input (Environment.fromArray physical witness.data))))
   · apply EnsembleWitness.mem_interactionsWith.mpr
     refine Or.inr ⟨hostCallTable witness, hostCallTable_mem witness, List.mem_flatMap.mpr ⟨physical, physicalMem, ?_⟩⟩
     have shared : (hostCallTable witness).data = witness.data :=
@@ -162,8 +160,8 @@ theorem hostCall_registers (valid : image.Valid)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
     (trajectory : Trajectory) (initial current : SailState) (timeline : Timeline) (n : ℕ)
     (atState : trajectory n = some current)
-    (atTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env).instruction) = timeline.start n)
-    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
+    (atTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env)) = timeline.start n)
+    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env)).memPulls,
       LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     (HostReadContext.ofSail current).register 5 = some (Word.toBitVec64 (HostCallLedger.call env).code) ∧
       (HostReadContext.ofSail current).register 10 = some (Word.toBitVec64 (HostCallLedger.call env).arg1) ∧
@@ -181,11 +179,11 @@ theorem hostCall_contract
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (bytes : witness.BalancedChannel byteChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
-    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
+    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env)).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
-    SyscallInstrsChip.Spec (HostCallLedger.input env).instruction ∧
-      SyscallInstrsChip.PulledFacts (HostCallLedger.input env).instruction := by
-  have active : (HostCallLedger.input env).instruction ∈
+    SyscallInstrsChip.Spec (HostCallLedger.input env) ∧
+      SyscallInstrsChip.PulledFacts (HostCallLedger.input env) := by
+  have active : (HostCallLedger.input env) ∈
       activeSystemRows (LocalCore.systemTable (localWitness witness) 3) (syscallInstrsRow (localWitness witness).data) (·.is_real) := by
     rw [← hostCallTable_projection witness]
     exact List.mem_map_of_mem member
@@ -214,11 +212,11 @@ theorem hostCall_eventLaw
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (bytes : witness.BalancedChannel byteChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
-    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
+    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env)).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
-    (syscallEventOfRow (HostCallLedger.input env).instruction).RowLaw ∧
-      (syscallEventOfRow (HostCallLedger.input env).instruction).clock =
-        StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env).instruction) := by
+    (syscallEventOfRow (HostCallLedger.input env)).RowLaw ∧
+      (syscallEventOfRow (HostCallLedger.input env)).clock =
+        StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env)) := by
   have contract := hostCall_contract witness interface silent constraints balanced bytes env member currency
   have real := HostCallLedger.activeRows_is_real _ _ _ member
   exact ⟨rowLaw_of_spec_and_pulledFacts _ contract.1 contract.1.selectorsValid contract.2 real,

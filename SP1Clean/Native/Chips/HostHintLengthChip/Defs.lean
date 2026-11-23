@@ -17,7 +17,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 def main (empty : Bool) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion (Gadgets.Equality.circuit Word) (input.call.code, const codeWord)
-  assertion (Gadgets.Equality.circuit Word) (input.call.length, const (0 : Word (ZMod p)))
   let _ ← ClockOrder.circuit input.clock
   -- A `match` rather than `if empty`: `elaborate_circuit` reduces the literal-`Bool` match in each
   -- `cases` branch, while an `ite` on `false = true` stays stuck in the explicit metadata.

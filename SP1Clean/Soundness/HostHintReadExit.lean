@@ -49,8 +49,6 @@ theorem source_exit_balance
   change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
   rw [HostLocalCore.localWitness_other _ exitChannel.toRaw
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-    (by simp [exitChannel, byteChannel, Channel.toRaw])
-    (by simp [exitChannel, memoryChannel, Channel.toRaw])
     (by simp [exitChannel, HostCallChip.channel, Channel.toRaw])
     (by simp [exitChannel, WritePermissionProvider.channel, Channel.toRaw]) source_exit_silent]
   exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _

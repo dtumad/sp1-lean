@@ -22,8 +22,6 @@ use sp1_core_executor::{
     ExecutionRecord, RTypeRecord, SyscallCode, HALT_PC,
 };
 use sp1_core_machine::{
-    air::MemoryAirBuilder,
-    memory::RegisterAccessCols,
     syscall::instructions::{columns::SyscallInstrColumns, SyscallInstrsChip},
     SupervisorMode,
 };
@@ -538,11 +536,11 @@ fn inactive_commit_preserves_arbitrary_weighted_public_selection() {
 }
 
 #[test]
-fn installed_host_call_preserves_the_instruction_and_authenticates_write_length() {
+fn installed_host_call_preserves_the_released_instruction_and_publishes_its_event() {
     assert_eq!(Core::WIDTHS, &[71]);
     assert_eq!(<Core as Program<F>>::PROVER_INPUTS, 65);
-    assert_eq!(Host::WIDTHS, &[85]);
-    assert_eq!(<Host as Program<F>>::PROVER_INPUTS, 71);
+    assert_eq!(Host::WIDTHS, Core::WIDTHS);
+    assert_eq!(<Host as Program<F>>::PROVER_INPUTS, 65);
     for case in samples() {
         let record = ExecutionRecord {
             syscall_events: vec![case],
@@ -557,57 +555,24 @@ fn installed_host_call_preserves_the_instruction_and_authenticates_write_length(
         let in_profile = codes().contains(&case.0.syscall_code);
         assert_eq!(valid::<Core>(&core), in_profile);
         assert_eq!(ledger::<Core>(&core), ledger::<Base>(&native(&sp1)));
-        for length in [0, 1, 65536, u64::MAX] {
-            let mut input = sp1.to_vec();
-            let mut extra = [S::zero(); 6];
-            let access: &mut RegisterAccessCols<S> = extra.as_mut_slice().borrow_mut();
-            access.populate(read(length, case.0.clk + 1, case.0.clk - 1), &mut vec![]);
-            let access = *access;
-            input.extend(extra);
-            let host = witness::<Host>(&input);
-            assert_eq!(&host[..71], native(&input));
-            assert_eq!(&host[71..77], &core[65..]);
-            assert_eq!(valid::<Host>(&host), in_profile);
-            let flag = S::from_bool(case.0.syscall_code == SyscallCode::WRITE);
-            let mut extra_air = evaluation(&sp1, &public_for(&case.0));
-            extra_air.eval_register_access_read(
-                cols.state.clk_high,
-                S::from_canonical_u64(case.0.clk & 0xff_ffff) + S::one(),
-                [S::from_canonical_u32(12), S::zero(), S::zero()],
-                access,
-                flag,
-            );
-            assert!(extra_air.constraints.iter().all(|x| *x == S::zero()));
-            let mut expected = ledger::<Core>(&core);
-            expected.extend(extra_air.ledger);
-            let mut message = vec![
-                cols.state.clk_high.as_canonical_u64(),
-                case.0.clk & 0xff_ffff,
-            ];
-            for word in [
-                cols.adapter.prev_a(),
-                cols.adapter.b(),
-                cols.adapter.c(),
-                &cols.op_a_value,
-            ] {
-                message.extend(word.0.iter().map(Sp1PrimeField64::as_canonical_u64));
-            }
-            message.extend(
-                access
-                    .prev_value
-                    .0
-                    .iter()
-                    .map(|x| (*x * flag).as_canonical_u64()),
-            );
-            expected.push(("sp1.native.host_call".to_owned(), 1, message));
-            let mut actual = ledger::<Host>(&host);
-            expected.sort();
-            actual.sort();
-            assert_eq!(
-                actual, expected,
-                "host handoff and all extra read occurrences"
-            );
+        let host = witness::<Host>(&sp1);
+        assert_eq!(host, core);
+        assert_eq!(valid::<Host>(&host), in_profile);
+        let mut expected = ledger::<Core>(&core);
+        let mut message = vec![
+            cols.state.clk_high.as_canonical_u64(),
+            case.0.clk & 0xff_ffff,
+        ];
+        for word in [
+            cols.adapter.prev_a(),
+            cols.adapter.b(),
+            cols.adapter.c(),
+            &cols.op_a_value,
+        ] {
+            message.extend(word.0.iter().map(Sp1PrimeField64::as_canonical_u64));
         }
+        expected.push(("sp1.native.host_call".to_owned(), 1, message));
+        assert_eq!(ledger::<Host>(&host), expected, "ordered ECALL handoff");
     }
 }
 
@@ -635,9 +600,7 @@ fn full_register_aliases_are_rejected_by_the_composed_profile() {
             let row = trace.row_slice(0);
             assert!(compare(&row, &public_for(&case.0), "upper-register alias"));
             assert!(!valid::<Core>(&witness::<Core>(&row)));
-            let mut input = row.to_vec();
-            input.extend([S::zero(); 6]);
-            assert!(!valid::<Host>(&witness::<Host>(&input)));
+            assert!(!valid::<Host>(&witness::<Host>(&row)));
         }
     }
 }
@@ -646,18 +609,20 @@ fn full_register_aliases_are_rejected_by_the_composed_profile() {
 fn generated_padding_and_private_inputs_do_not_claim_closed_execution() {
     let zero = vec![S::zero(); 65];
     let core = witness::<Core>(&zero);
-    let host = witness::<Host>(&vec![S::zero(); 71]);
+    let host = witness::<Host>(&zero);
     assert!(valid::<Core>(&core) && valid::<Host>(&host));
     assert!(ledger::<Core>(&core).iter().all(|entry| entry.1 == 0));
     assert!(ledger::<Host>(&host).iter().all(|entry| entry.1 == 0));
-    assert_eq!(ledger::<Host>(&host).len(), ledger::<Core>(&core).len() + 5);
+    let mut expected = ledger::<Core>(&core);
+    expected.push(("sp1.native.host_call".to_owned(), 0, vec![0; 18]));
+    assert_eq!(ledger::<Host>(&host), expected);
     for column in 65..71 {
         for delta in [1, 65536, F::ORDER_U64 - 1] {
             let mut changed = core.clone();
             changed[column] += F::from_u64(delta);
             assert!(!valid::<Core>(&changed));
             let mut changed = host.clone();
-            changed[column + 6] += F::from_u64(delta);
+            changed[column] += F::from_u64(delta);
             assert!(!valid::<Host>(&changed));
         }
     }
@@ -671,11 +636,9 @@ fn generated_padding_and_private_inputs_do_not_claim_closed_execution() {
     let input = native(&trace.row_slice(0));
     assert!(has_open_bus::<Base>(&input));
     assert!(has_open_bus::<Core>(&input));
-    let mut host_input = input.clone();
-    host_input.extend([F::ZERO; 6]);
-    assert!(has_open_bus::<Host>(&host_input));
+    assert!(has_open_bus::<Host>(&input));
     assert!(matches!(
-        generate::<F, Host>(&[], &input, 1),
+        generate::<F, Host>(&[], &input[..64], 1),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
 }

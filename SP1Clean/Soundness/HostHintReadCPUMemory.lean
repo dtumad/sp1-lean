@@ -36,14 +36,13 @@ noncomputable def wordsAt (data : ProverData (ZMod p)) (words : List (HintReadCo
 def touch (row : HintReadCoverage.Row (p := p)) : TimedGrounding.Touch p :=
   (((HintReadCoverage.rowInput row).ram.prior, wordTime row), (HintReadCoverage.rowInput row).ram.pushed)
 
-private theorem wrapper_clock (data : ProverData (ZMod p)) (input : HostCallChip.Inputs (ZMod p))
-    (flag : ZMod p) : cpuClock data (.syscall input.instruction) =
-      ((input.message flag).clk_high, (input.message flag).clk_low) := rfl
+private theorem wrapper_clock (data : ProverData (ZMod p)) (input : SyscallInstrsChip.Inputs (ZMod p)) : cpuClock data (.syscall input) =
+      ((HostCallChip.message input).clk_high, (HostCallChip.message input).clk_low) := rfl
 
 private theorem wrapper_call_clock (data : ProverData (ZMod p)) (env : Environment (ZMod p)) :
-    cpuClock data (.syscall (HostCallLedger.input env).instruction) =
+    cpuClock data (.syscall (HostCallLedger.input env)) =
       ((HostCallLedger.call env).clk_high, (HostCallLedger.call env).clk_low) :=
-  wrapper_clock data (HostCallLedger.input env) _
+  wrapper_clock data (HostCallLedger.input env)
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem handler_clock (env : Environment (ZMod p)) :
@@ -120,9 +119,9 @@ theorem word_cpu
     ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
       ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
-        ExecutionRow.syscall (HostCallLedger.input env).instruction ∈
+        ExecutionRow.syscall (HostCallLedger.input env) ∈
           LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
-        cpuClock witness.data (.syscall (HostCallLedger.input env).instruction) = wordClock row := by
+        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row := by
   obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface cursor steps row member
   obtain ⟨env, active, call, physical, _⟩ := HostQueueCPUOrder.call_cpu witness interface constraints calls
     (none, handler) (handler_queue_member witness handler handlerMem)
@@ -282,11 +281,11 @@ theorem source_word_steps
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem read_call_code [Fact (2 ^ 17 < p)]
-    (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
+    (wrapper : SyscallInstrsChip.Inputs (ZMod p))
     (input : HostHintReadChip.Inputs (ZMod p))
-    (same : wrapper.message flag = input.call) (spec : HostHintReadChip.Spec input) :
-    (syscallEventOfRow wrapper.instruction).rawCode = SyscallKind.hintRead.code := by
-  change Word.toBitVec64 (wrapper.message flag).code = _
+    (same : HostCallChip.message wrapper = input.call) (spec : HostHintReadChip.Spec input) :
+    (syscallEventOfRow wrapper).rawCode = SyscallKind.hintRead.code := by
+  change Word.toBitVec64 (HostCallChip.message wrapper).code = _
   rw [same, spec.1, HostHintReadChip.codeWord, Target.toBitVec64_bitVecToWord]
 
 private theorem wordsAt_nil_of_not_read
@@ -324,7 +323,7 @@ private theorem wordsAt_nil_of_not_read
     have shared : (handlerTable witness).data = witness.data :=
       witness.same_data _ (handlerTable_mem witness)
     rwa [Table.environment, shared, handlerTable_component, same] at checked
-  exact notRead _ sameEvent (read_call_code (HostCallLedger.input env) _ _ sameCall spec)
+  exact notRead _ sameEvent (read_call_code (HostCallLedger.input env) _ sameCall spec)
 
 /-- Only an authenticated HINT_READ can own added hint RAM rows. CPU clock uniqueness rules
 out assigning another call's words to a non-read event, without using Memory-value guarantees. -/
@@ -371,7 +370,7 @@ theorem words_partition
     (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) wordClock uniqueKeys (by
       intro row member
       obtain ⟨_, _, env, _, _, physical, time⟩ := word_cpu witness interface constraints calls cursor steps row member
-      exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env).instruction,
+      exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env),
         exhaustive.mem_iff.mpr physical, time⟩)
   unfold wordsAt
   simpa only [List.flatMap_map, Function.comp_def] using partition

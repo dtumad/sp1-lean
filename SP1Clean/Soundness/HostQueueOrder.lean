@@ -85,11 +85,11 @@ def time (state : State (ZMod p)) : ℕ := Semantics.clkNat state.clk_high state
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem read_strict (input : HostHintReadChip.Inputs (ZMod p)) (valid : HostHintReadChip.Spec input) :
-    time input.previous < time input.next := valid.2.2.2.2.2.2.2.1.2.2.2.2
+    time input.previous < time input.next := valid.2.2.2.2.2.2.1.2.2.2.2
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem length_strict (empty : Bool) (input : HostHintLengthChip.Inputs (ZMod p))
-    (valid : HostHintLengthChip.Spec empty input) : time input.previous < time input.next := valid.2.2.1.2.2.2.2
+    (valid : HostHintLengthChip.Spec empty input) : time input.previous < time input.next := valid.2.1.2.2.2.2
 
 theorem view_strict (index : Index) (env : Environment (ZMod p)) (valid : (view index).component.Spec env) :
     time ((view index).edge env).1 < time ((view index).edge env).2 := by

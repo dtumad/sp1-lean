@@ -21,7 +21,6 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion (Gadgets.Equality.circuit Word) (input.call.code, const codeWord)
-  assertion (Gadgets.Equality.circuit Word) (input.call.length, const (0 : Word (ZMod p)))
   assertion (Gadgets.Equality.circuit Word) (input.call.result, const codeWord)
   assertion (Gadgets.Equality.circuit Word) (input.call.arg1, Address.asWord input.span.start)
   assertion (Gadgets.Equality.circuit Word) (input.call.arg2, input.span.length.value)

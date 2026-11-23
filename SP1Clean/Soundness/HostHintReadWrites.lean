@@ -35,7 +35,7 @@ theorem writes_of_records (env : Environment (ZMod p)) (rows : List (HintReadCov
         (wordWrites (Address.toNat (input env).span.start) node.bytes) := by
   have headerBinding := header
   obtain ⟨node, read, _, _⟩ := header
-  obtain ⟨_, _, _, _, _, nodeLength, _, _, span, endStep, nodeValid⟩ := valid
+  obtain ⟨_, _, _, _, nodeLength, _, _, span, endStep, nodeValid⟩ := valid
   have count := (span.node_end (input env).node headerBinding nodeValid nodeLength (input env).endStep.word
     ending endStep.1 rfl rfl read).2.1
   rw [handler_cursor] at balanced
@@ -66,7 +66,7 @@ theorem complete_writes (env : Environment (ZMod p)) (rows : List (HintReadCover
     (input env).first (input env).final wordSpecs balanced store node read words
     (by simp [HostHintReadChip.Inputs.first, Address.toNat]) count
   refine ⟨node.bytes, rest, head, next, ?_, ?_⟩
-  · have argument : (input env).call.arg2 = (input env).span.length.value := valid.2.2.2.2.1
+  · have argument : (input env).call.arg2 = (input env).span.length.value := valid.2.2.2.1
     rwa [argument] at length
   · exact (perm.map HintReadWrites.produced).symm.trans (List.Perm.of_eq inventory)
 

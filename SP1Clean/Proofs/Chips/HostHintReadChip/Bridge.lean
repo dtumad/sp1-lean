@@ -36,7 +36,7 @@ theorem node_effect_of_spec (input : Inputs (ZMod p)) (valid : Spec input)
       hints = node.bytes :: rest ∧ input.next.Binds store rest ∧
       Word.toNat input.call.arg2 = node.bytes.length ∧
       Address.toNat input.span.count = wordCount node.bytes := by
-  obtain ⟨_, _, _, _, length, nodeLength, head, _, span, ending, nodeValid⟩ := valid
+  obtain ⟨_, _, _, length, nodeLength, head, _, span, ending, nodeValid⟩ := valid
   have headerBinding := header
   obtain ⟨node, read, tail, _⟩ := header
   have currentHead := current.2.2.2
@@ -70,7 +70,7 @@ theorem run_of_spec (input : Inputs (ZMod p)) (valid : Spec input)
       host.run policy context = some (execution input host bytes rest) := by
   obtain ⟨node, rest, _, hints, next, length, count⟩ :=
     node_effect_of_spec input valid store host.io.hints current header word
-  obtain ⟨hcode, _, result, address, argLength, _, _, _, span, _⟩ := valid
+  obtain ⟨hcode, result, address, argLength, _, _, _, span, _⟩ := valid
   have addressNat : (Word.toBitVec64 input.call.arg1).toNat = Address.toNat input.span.start := by
     rw [address, Word.toBitVec64_toNat (Address.isU64_asWord span.1), Address.toNat_asWord]
   have lengthNat : (Word.toBitVec64 input.call.arg2).toNat = node.bytes.length := by

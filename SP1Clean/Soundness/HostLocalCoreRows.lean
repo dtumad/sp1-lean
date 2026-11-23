@@ -3,10 +3,8 @@ import SP1Clean.Soundness.LocalCoreRows
 
 /-! # The full host Memory interior in execution-row form
 
-The physical wrapper adds an x12 pair to the instruction prefix, and appended components retain
-their complete Memory ledgers. Separating these contributions is a permutation: wrapper rows
-interleave old and new accesses. No host access, disabled interaction, or duplicate occurrence
-is discarded, and no Memory balance is projected to the smaller local assembly.
+The instruction wrapper preserves the complete original Memory ledger. Appended host components
+supply the remaining Memory rows, including their disabled interactions and repeated keys.
 -/
 
 namespace SP1Clean.Soundness.HostLocalCore
@@ -23,15 +21,6 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
     {channelNames : ((registry image source channels).map (·.name)).Nodup}
     {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
-
-/-- Every physical wrapper's additional pair, including its zero-multiplicity padding. -/
-def wrapperMemory (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
-    List (TypedInteraction (memoryChannel (p := p))) :=
-  ((hostCallTable witness).table.map (Environment.fromArray · witness.data)).flatMap fun env =>
-    [TypedInteraction.pulledIfValue memoryChannel (HostCallProjection.extraRead env).is_real
-      (HostCallProjection.extraRead env).prior,
-     TypedInteraction.pushedIfValue memoryChannel (HostCallProjection.extraRead env).is_real
-      (HostCallProjection.extraRead env).pushed]
 
 /-- The actual appended component ledgers, without imposing a particular handler registry. -/
 noncomputable def auxiliaryMemory (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
@@ -92,17 +81,15 @@ theorem hostCallTable_prefix (witness : EnsembleWitness (ensemble image source a
     (LocalCore.systemTable (localWitness witness) 3).table =
       (hostCallTable witness).table.map (·.extract 0 (HostCallProjection.original (p := p)).width) := rfl
 
-private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
-    (constraints : witness.Constraints) :
-    (typedTableInteractionsWith (hostCallTable witness) memoryChannel).Perm
-      (typedTableInteractionsWith (LocalCore.systemTable (localWitness witness) 3) memoryChannel ++
-        wrapperMemory witness) := by
+private theorem wrapper_memory_eq (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
+    typedTableInteractionsWith (hostCallTable witness) memoryChannel =
+      typedTableInteractionsWith (LocalCore.systemTable (localWitness witness) 3) memoryChannel := by
   have shared : (hostCallTable witness).data = witness.data :=
     witness.same_data _ (hostCallTable_mem witness)
   have localShared : (LocalCore.systemTable (localWitness witness) 3).data = (localWitness witness).data :=
     (localWitness witness).same_data _ (LocalCore.systemTable_mem (localWitness witness) 3)
   rw [typedTableInteractionsWith, typedTableInteractionsWith, hostCallTable_prefix,
-    wrapperMemory, List.flatMap_map, List.flatMap_map]
+    List.flatMap_map]
   simp only [Table.environment, shared, localShared]
   have original : (hostCallTable witness).table.flatMap (fun physical =>
       typedInteractionValuesWith (LocalCore.systemTable (localWitness witness) 3).component.operations
@@ -117,26 +104,10 @@ private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image s
     simp only [typedInteractionValuesWith_raw, LocalCore.systemTable_component]
     exact HostCallProjection.original_values_prefix physical witness.data (localWitness witness).data memoryChannel.toRaw
   rw [original]
-  have values : (hostCallTable witness).table.flatMap
-      (fun physical => typedInteractionValuesWith (hostCallTable witness).component.operations memoryChannel
-        (Environment.fromArray physical witness.data)) =
-      (hostCallTable witness).table.flatMap (fun physical =>
-        typedInteractionValuesWith HostCallProjection.original.operations memoryChannel
-          (Environment.fromArray physical witness.data) ++
-        [TypedInteraction.pulledIfValue memoryChannel
-          (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).is_real
-          (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).prior,
-         TypedInteraction.pushedIfValue memoryChannel
-          (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).is_real
-          (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).pushed]) := by
-    apply List.flatMap_congr
-    intro physical member
-    have checked := constraints _ (hostCallTable_mem witness) physical member
-    simp only [Table.environment, shared] at checked
-    rw [hostCallTable_component] at checked ⊢
-    exact wrapper_memory_interactions _ checked
-  rw [values]
-  exact (List.flatMap_append_perm _ _ _).symm
+  apply List.flatMap_congr
+  intro physical _
+  rw [hostCallTable_component]
+  exact wrapper_memory_interactions _
 
 private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     typedTableInteractionsWith (witness.tables[61]'(by have := extended_length witness; omega)) memoryChannel = [] := by
@@ -173,11 +144,9 @@ private theorem permission_membership_memory_nil (witness : EnsembleWitness (ens
   simp [memoryChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
 
 /-- The complete interior is the original instruction/refresh ledger plus all actual host
-accesses. The permutation preserves complete typed interactions, including disabled pairs. -/
-theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
-    (constraints : witness.Constraints) :
-    (memoryInterior witness).Perm
-      (LocalCore.memoryInterior (localWitness witness) ++ wrapperMemory witness ++ auxiliaryMemory witness) := by
+accesses, in physical order, including every disabled pair. -/
+theorem memoryInterior_eq (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
+    memoryInterior witness = LocalCore.memoryInterior (localWitness witness) ++ auxiliaryMemory witness := by
   have fullSplit : witness.tables.drop 58 = hostCallTable witness ::
       witness.tables[59]'(by have := extended_length witness; omega) ::
       witness.tables[60]'(by have := extended_length witness; omega) ::
@@ -217,9 +186,7 @@ theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source au
   rw [LocalCore.memoryInterior, NativeCore.flatMap_split (localWitness witness).tables _ 6 52,
     originalSplit, List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, List.flatMap_nil,
     originalFixedSilent, originalRamSilent, List.nil_append, List.nil_append, List.append_nil, before_wrapper]
-  simpa only [List.append_assoc, auxiliaryMemory, auxiliaryTables] using
-    ((wrapper_memory_perm witness constraints).append_right
-      ((witness.tables.drop 63).flatMap (typedTableInteractionsWith · memoryChannel))).append_left
-        (((witness.tables.drop 6).take 52).flatMap (typedTableInteractionsWith · memoryChannel))
+  rw [wrapper_memory_eq]
+  simp only [List.append_assoc, auxiliaryMemory, auxiliaryTables]
 
 end SP1Clean.Soundness.HostLocalCore

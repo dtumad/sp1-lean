@@ -3,7 +3,7 @@ import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
+import SP1Clean.Proofs.Chips.HostCallChip.Formal
 import SP1Clean.Math.SP1Field
 
 /-! # Executed mutable commitment regressions
@@ -29,14 +29,14 @@ private def word (value : ℕ) : Word Fp :=
   Soundness.Target.bitVecToWord (BitVec.ofNat 64 value)
 
 private def call (deferred : Bool) (slot : Fin 8) (clock value : ℕ) : HostCallChip.Message Fp :=
-  ⟨0, clock, codeWord deferred, slotWord slot, word value, codeWord deferred, 0⟩
+  ⟨0, clock, codeWord deferred, slotWord slot, word value, codeWord deferred⟩
 
 private def genesis : HostCommitChip.State Fp := ⟨0, 0, Vector.replicate 8 0⟩
 
 private def row (deferred : Bool) (slot : Fin 8) (value : ℕ) : Inputs Fp :=
   HostCommitChip.populate deferred (call deferred slot 1 value) genesis
 
-private def instruction (deferred : Bool) (slot : Fin 8) (clock value : ℕ) : HostCallChip.Inputs Fp :=
+private def instruction (deferred : Bool) (slot : Fin 8) (clock value : ℕ) : SyscallInstrsChip.Inputs Fp :=
   let code : ℕ := if deferred then 26 else 16
   let input : SyscallInstrsChip.Inputs Fp :=
     { state := ⟨0, (clock / 65536 : ℕ), (clock % 65536 : ℕ), #v[0, 1, 0]⟩
@@ -53,10 +53,10 @@ private def instruction (deferred : Bool) (slot : Fin 8) (clock value : ℕ) : H
       digest_index_bits := Vector.ofFn (fun i : Fin 8 => if i == slot then 1 else 0)
       digest_word := if deferred then 0 else Vector.ofFn (fun i : Fin 4 => ((value / 256 ^ i.val % 256 : ℕ) : Fp))
       op_b_cmp := ⟨1⟩, op_c_cmp := ⟨if value / 65536 < 32512 then 1 else 0⟩, is_real := 1 }
-  HostCallChip.populate input 0 0
+  input
 
 private def instructionEvaluation (deferred : Bool) (slot : Fin 8) (clock value : ℕ) : Bool × Ledger :=
-  evaluateProgram (HostCallChip.main (varFromOffset HostCallChip.Inputs 0))
+  evaluateProgram (HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0))
     (toElements (instruction deferred slot clock value)).toList
 
 private def balance (ledger : Ledger) : Bool :=
@@ -89,7 +89,6 @@ theorem rejectsMalformed :
      { (row false 0 17) with call := { (row false 0 17).call with arg1 := word 8 } },
      { (row false 0 17) with call := { (row false 0 17).call with arg1 := #v[0, 0, 0, 1] } },
      { (row false 0 17) with call := { (row false 0 17).call with result := word 0 } },
-     { (row false 0 17) with call := { (row false 0 17).call with length := word 1 } },
      { (row false 0 17) with bytes := ⟨#v[18, 0, 0, 0]⟩ }].all
       (fun input => !(evaluate false 0 input).1) = true ∧
     (evaluate true 0 (row true 0 SP1Prime)).1 = false ∧

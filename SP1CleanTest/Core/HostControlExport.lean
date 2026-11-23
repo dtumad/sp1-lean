@@ -45,7 +45,7 @@ def rustExports : List (String × Except String String) :=
 private def word (value : ℕ) : Word Fp := Soundness.Target.bitVecToWord (BitVec.ofNat 64 value)
 
 private def call (code arg1 arg2 result : ℕ) : HostCallChip.Message Fp :=
-  ⟨0, 265, word code, word arg1, word arg2, word result, 0⟩
+  ⟨0, 265, word code, word arg1, word arg2, word result⟩
 
 private def previous : HostCommitChip.State Fp :=
   ⟨0, 1, Vector.ofFn fun i : Fin 8 => word (100 + i.val)⟩

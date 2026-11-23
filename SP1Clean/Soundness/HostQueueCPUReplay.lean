@@ -31,20 +31,19 @@ private theorem syscall_queue (row : SyscallInstrsChip.Inputs (ZMod p)) :
   simp only [queueEvent?, rawCode_syscallEventOfRow, arg2_syscallEventOfRow, result_syscallEventOfRow]
   rfl
 
-private theorem wrapper_projection (data : ProverData (ZMod p)) (input : HostCallChip.Inputs (ZMod p))
-    (flag : ZMod p) : stampedCPU data (.syscall input.instruction) = stamped (input.message flag) := by
-  simp only [stampedCPU, ExecutionRow.event, syscall_queue, stamped, project, HostCallChip.Inputs.message]
+private theorem wrapper_projection (data : ProverData (ZMod p)) (input : SyscallInstrsChip.Inputs (ZMod p)) : stampedCPU data (.syscall input) = stamped (HostCallChip.message input) := by
+  simp only [stampedCPU, ExecutionRow.event, syscall_queue, stamped, project, HostCallChip.message]
   rfl
 
 private theorem syscall_projection (data : ProverData (ZMod p)) (env : Environment (ZMod p)) :
-    stampedCPU data (.syscall (HostCallLedger.input env).instruction) = stamped (HostCallLedger.call env) :=
-  wrapper_projection data (HostCallLedger.input env) _
+    stampedCPU data (.syscall (HostCallLedger.input env)) = stamped (HostCallLedger.call env) :=
+  wrapper_projection data (HostCallLedger.input env)
 
 private theorem syscall_safe (env : Environment (ZMod p)) :
-    QueueProjectionSafe (ExecutionRow.syscall (HostCallLedger.input env).instruction).event ↔
+    QueueProjectionSafe (ExecutionRow.syscall (HostCallLedger.input env)).event ↔
       safe (HostCallLedger.call env) := by
   simp only [QueueProjectionSafe, ExecutionRow.event, rawCode_syscallEventOfRow,
-    safe, HostCallLedger.call, HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat]
+    safe, HostCallLedger.call, HostCallChip.message, Word.toBitVec64, Word.toNat]
 
 /-- Every active legacy HALT row carries the actual zero syscall code. -/
 theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
@@ -101,7 +100,7 @@ private theorem inventory_projection (data : ProverData (ZMod p))
     (wrappers : List (Environment (ZMod p)))
     (codeZero : ∀ row ∈ haltRows, Word.toBitVec64 row.x5_memory.prev_value = 0) :
     ((instructions.map ExecutionRow.instruction ++ haltRows.map ExecutionRow.halt ++
-      (wrappers.map fun env => ExecutionRow.syscall (HostCallLedger.input env).instruction)).filterMap
+      (wrappers.map fun env => ExecutionRow.syscall (HostCallLedger.input env))).filterMap
         (stampedCPU data)) = (wrappers.map HostCallLedger.call).filterMap stamped := by
   apply filterMap_inventory
   · intro row _

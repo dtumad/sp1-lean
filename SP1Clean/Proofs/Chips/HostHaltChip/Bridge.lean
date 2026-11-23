@@ -24,7 +24,7 @@ def execution (input : Inputs (ZMod p)) (host : HostState) : HostExecution :=
 theorem exit_value_of_spec (input : Inputs (ZMod p)) (valid : Spec input) :
     ((Word.toNat input.call.arg1 : ℕ) : ZMod p).val =
       ((Word.toBitVec64 input.call.arg1).setWidth 32).toNat := by
-  obtain ⟨_, _, _, word, below⟩ := valid
+  obtain ⟨_, _, word, below⟩ := valid
   have bounds := lt_min_iff.mp below
   rw [ZMod.val_natCast_of_lt bounds.1, BitVec.toNat_setWidth,
     Word.toBitVec64_toNat word, Nat.mod_eq_of_lt bounds.2]
@@ -34,7 +34,7 @@ theorem executeKind_of_spec (input : Inputs (ZMod p)) (valid : Spec input)
     (context : HostReadContext) :
     host.executeKind policy context .halt (Word.toBitVec64 input.call.arg1)
       (Word.toBitVec64 input.call.arg2) = some (execution input host).effect := by
-  obtain ⟨_, _, _, word, below⟩ := valid
+  obtain ⟨_, _, word, below⟩ := valid
   have bounds := lt_min_iff.mp below
   simp only [HostState.executeKind, characteristic, Word.toBitVec64_toNat word,
     ite_eq_left bounds, execution]

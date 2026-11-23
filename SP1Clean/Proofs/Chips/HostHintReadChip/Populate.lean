@@ -85,7 +85,7 @@ private theorem populate_at_node (store : Store) (head previousClock clock : ℕ
   have wordBinding := WordRecord.encode_binds (p := p) read headBound (bytes.length / 8)
     (by simp only [wordCount]; omega) indexBound
   refine ⟨⟨spanAssumptions, ?_⟩, ?_, endWord.symm ▸ wordBinding⟩
-  · refine ⟨?_, rfl, ?_, ?_, rfl, ?_, rfl,
+  · refine ⟨?_, ?_, ?_, rfl, ?_, rfl,
       ClockOrder.encode_spec previousClock clock fits order, span, ?_, ?_⟩
     · simp only [populate, HostControl.message, kind, codeWord]
     · simp only [populate, HostControl.message, result, codeWord]
