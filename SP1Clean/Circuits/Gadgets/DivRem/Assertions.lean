@@ -5,10 +5,10 @@ public import Clean.Circuit.Basic
 
 /-! # `DivRemChip` — the chip's own assertZero constraints (the `[E13…E367, op_a_0]` list).
 
-The `DivRemChip.Columns.asserts` own-constraint tail, as a pure `Var Columns → List (Expression …)`
-function. Kept pure (no `Circuit` monad) so the ~360-step `let E…` chain elaborates without the
-per-operation offset whnf of a `do`-block; `Defs.main` emits it with one `assertZeros`. Numerals are
-pinned to `Expression` by per-binding ascriptions. -/
+The local circuit uses one list for the arithmetic and selector constraints of the pinned
+SP1 `DivRemChip::eval` in `crates/core/machine/src/alu/divrem/mod.rs`. The carrier-generic
+list is elaborated once and emitted by `assertZeros`; its field-valued instantiation is used
+by the row proofs. -/
 
 @[expose] public section
 
@@ -17,7 +17,7 @@ namespace SP1Clean.DivRemChip
 variable {p : ℕ} [Fact p.Prime]
 
 set_option linter.unusedVariables false in
-/-- SP1's `Columns.eval` own-constraint list (the `[E13…E367, adapter.op_a_0]` tail).
+/-- Arithmetic and selector gates emitted after the DivRem subcircuits.
 
 **Generic over the carrier `R`** so the one chain serves both levels: the chip/`DivRemCore` `main`s
 emit it at `R = Expression (ZMod p)` (the constraint expressions), while the `DivRemCore.CoreSpec`

@@ -1,53 +1,50 @@
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Math.Word
+public import Clean.Gadgets.Boolean
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.IntervalCases
 
-/-! # `AddOperation` — the arithmetic core (`RawSpec` + carry-chain lemmas)
+/-! # Carries of four-limb word addition
 
-The structural carry-bool + limb-range form `RawSpec`, and the two native carry-chain theorems
-(`addSemantics_of_carries` / `carries_of_addSemantics`) the gadget's soundness/completeness route
-through. Uses only the local `limb_lift`/`val_65536_*` foundations. The `FormalAssertion` contract
-lives in `Proofs/Operations/AddOperation/Formal.lean`. -/
+Boolean carries characterize addition modulo $2^{64}$ for words with 16-bit limbs.
+The addition gadget and both selected branch successors use the same arithmetic theorem.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.AddOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- **Assertion half** — the carry-bool form (the part of SP1's `AddOperation` that comes from the
-`asserts` list), stated against the result word `value`. -/
-def AssertSpec (a b value : Word (ZMod p)) : Prop :=
+/-- Outgoing base-$2^{16}$ carries determined by the two operands and a proposed sum. -/
+def carries (a b value : Word (ZMod p)) : Word (ZMod p) :=
   let c0 : ZMod p := (a[0] + b[0] - value[0]) * 65536⁻¹
   let c1 : ZMod p := (a[1] + b[1] - value[1] + c0) * 65536⁻¹
   let c2 : ZMod p := (a[2] + b[2] - value[2] + c1) * 65536⁻¹
   let c3 : ZMod p := (a[3] + b[3] - value[3] + c2) * 65536⁻¹
-  (c0 = 0 ∨ c0 = 1) ∧ (c1 = 0 ∨ c1 = 1) ∧ (c2 = 0 ∨ c2 = 1) ∧ (c3 = 0 ∨ c3 = 1)
+  #v[c0, c1, c2, c3]
 
-/-- **Interaction half** — the limb-range form (the part that comes from the byte-range `interactions`
-list — four `Range` byte sends). -/
-def InteractSpec (value : Word (ZMod p)) : Prop :=
-  value[0].val < 65536 ∧ value[1].val < 65536 ∧ value[2].val < 65536 ∧ value[3].val < 65536
-
-/-- Forward (soundness) core — native port of `AddOperation.spec`: the carry-bool +
-range form implies the result is a 64-bit value equal to the BitVec sum. -/
+/-- Four binary carries certify the low 64 bits of the sum. -/
 theorem addSemantics_of_carries {a b value : Word (ZMod p)}
-    (ha : a.isU64) (hb : b.isU64)
-    (h_assert : AssertSpec a b value) (h_interact : InteractSpec value) :
-    value.isU64 ∧ value.toBitVec64 = a.toBitVec64 + b.toBitVec64 := by
-  obtain ⟨hc0, hc1, hc2, hc3⟩ := h_assert
-  obtain ⟨hv0, hv1, hv2, hv3⟩ := h_interact
-  have h_isU64_v : value.isU64 := Word.isU64_of_cases hv0 hv1 hv2 hv3
-  refine ⟨h_isU64_v, ?_⟩
+    (ha : a.isU64) (hb : b.isU64) (hv : value.isU64) (binary : ∀ i : Fin 4, IsBool (carries a b value)[i]) :
+    value.toBitVec64 = a.toBitVec64 + b.toBitVec64 := by
+  obtain ⟨hv0, hv1, hv2, hv3⟩ := Word.lt_cases_of_isU64 hv
   obtain ⟨ha0, ha1, ha2, ha3⟩ := Word.lt_cases_of_isU64 ha
   obtain ⟨hbb0, hbb1, hbb2, hbb3⟩ := Word.lt_cases_of_isU64 hb
   have h65inv : (65536 : ZMod p) * (65536 : ZMod p)⁻¹ = 1 :=
     mul_inv_cancel₀ val_65536_ne_zero
   rw [← BitVec.toNat_inj, BitVec.toNat_add,
-      Word.toBitVec64_toNat h_isU64_v, Word.toBitVec64_toNat hb, Word.toBitVec64_toNat ha,
+      Word.toBitVec64_toNat hv, Word.toBitVec64_toNat hb, Word.toBitVec64_toNat ha,
       Word.toNat_def, Word.toNat_def, Word.toNat_def]
   set c0 : ZMod p := (a[0] + b[0] - value[0]) * (65536 : ZMod p)⁻¹ with hc0_def
   set c1 : ZMod p := (a[1] + b[1] - value[1] + c0) * (65536 : ZMod p)⁻¹ with hc1_def
   set c2 : ZMod p := (a[2] + b[2] - value[2] + c1) * (65536 : ZMod p)⁻¹ with hc2_def
   set c3 : ZMod p := (a[3] + b[3] - value[3] + c2) * (65536 : ZMod p)⁻¹ with hc3_def
+  have hc0 : c0 = 0 ∨ c0 = 1 := binary 0
+  have hc1 : c1 = 0 ∨ c1 = 1 := binary 1
+  have hc2 : c2 = 0 ∨ c2 = 1 := binary 2
+  have hc3 : c3 = 0 ∨ c3 = 1 := binary 3
   have e0 : a[0] + b[0] + (0 : ZMod p) = value[0] + c0 * 65536 := by
     rw [hc0_def]; linear_combination -1 * (a[0] + b[0] - value[0]) * h65inv
   have e1 : a[1] + b[1] + c0 = value[1] + c1 * 65536 := by
@@ -68,12 +65,11 @@ theorem addSemantics_of_carries {a b value : Word (ZMod p)}
   have hc3_lt : c3.val ≤ 1 := by rcases hc3 with h | h <;> simp [h, ZMod.val_zero, ZMod.val_one]
   omega
 
-/-- Backward (completeness) core — native port of `AddOperation.spec_inv`: a 64-bit
-value equal to the BitVec sum witnesses the unique boolean carry chain + ranges. -/
+/-- On 16-bit limbs, a correct 64-bit sum makes every recovered carry binary. -/
 theorem carries_of_addSemantics {a b value : Word (ZMod p)}
     (ha : a.isU64) (hb : b.isU64) (hv : value.isU64)
-    (h_bv : value.toBitVec64 = a.toBitVec64 + b.toBitVec64) :
-    AssertSpec a b value ∧ InteractSpec value := by
+    (h_bv : value.toBitVec64 = a.toBitVec64 + b.toBitVec64) (i : Fin 4) :
+    IsBool (carries a b value)[i] := by
   have hp : 2 ^ 17 < p := Fact.out
   obtain ⟨ha0, ha1, ha2, ha3⟩ := Word.lt_cases_of_isU64 ha
   obtain ⟨hbb0, hbb1, hbb2, hbb3⟩ := Word.lt_cases_of_isU64 hb
@@ -136,10 +132,14 @@ theorem carries_of_addSemantics {a b value : Word (ZMod p)}
     have h : a[3] + b[3] - value[3] + (q2 : ZMod p) = (q3 : ZMod p) * 65536 := by
       linear_combination hc3_lift
     rw [h, mul_assoc, h65inv, mul_one]
-  refine ⟨⟨?_, ?_, ?_, ?_⟩, hv0, hv1, hv2, hv3⟩
-  · rw [hc0_eq]; interval_cases q0 <;> simp
-  · rw [hc1_eq]; interval_cases q1 <;> simp
-  · rw [hc2_eq]; interval_cases q2 <;> simp
-  · rw [hc3_eq]; interval_cases q3 <;> simp
+  fin_cases i
+  · apply (congrArg IsBool hc0_eq).mpr
+    interval_cases q0 <;> simp [IsBool]
+  · apply (congrArg IsBool hc1_eq).mpr
+    interval_cases q1 <;> simp [IsBool]
+  · apply (congrArg IsBool hc2_eq).mpr
+    interval_cases q2 <;> simp [IsBool]
+  · apply (congrArg IsBool hc3_eq).mpr
+    interval_cases q3 <;> simp [IsBool]
 
 end SP1Clean.AddOperation
