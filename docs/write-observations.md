@@ -25,6 +25,27 @@ bytes, queued hints and matched requests and replies. Values enqueued by WRITE c
 later HINT_READ even when the caller only inspects the final guest state.
 [Guest WRITE wrapper](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/io.rs#L13-L31) · [Guest HALT](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/halt.rs#L24-L42) · [COMMIT AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/syscall/instructions/air.rs#L350-L367) · [SDK verification](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/sdk/src/prover.rs#L172-L220)
 
+## Physical memory versions
+
+Each incoming CPU clock falls between two successive effect-slot pushes at a given register
+or RAM location. The original typed Memory messages supply both clocks and the held four-limb
+word. The incoming snapshot supplies the first value. The final version extends through the
+outgoing cut. If a location has no effect-slot push, its snapshot value covers every cut.
+The interval inventory preserves repeated pushes in physical order. From the installed
+constraints and ledger balance, Lean identifies the unique clock-selected version with the
+paired Sail state. The packet theorem applies that join to x12 and to every aligned buffer
+word, including when several calls observe the same cell.
+[Physical intervals](../SP1Clean/Soundness/WriteVersionIntervals.lean) · [Installed cut theorem](../SP1Clean/Proofs/Completeness/WriteObservationCuts.lean) · [Packet characterization](../SP1Clean/Proofs/Completeness/WriteObservationPacket.lean)
+
+At SP1's finer Memory-record times an access supplies its pulled word from the previous clock
+up to its own push. The last pushed word survives after that time. The existing per-location
+balance proof supplies these record handoffs even for aliased touch slots. A native AIR provider
+can use the consecutive version boundaries for a private lookup keyed by location and time.
+It still has to authenticate complete boundary coverage, including the absence of prior effects
+for a source-only location, register the observer alongside the physical producers, and
+constrain the host effects of the selected packet.
+[Typed Memory record intervals](../SP1Clean/Proofs/Completeness/MemoryVersionHistory.lean)
+
 ## Read-only probe demand
 
 Along a successful execution, let `C` count WRITE packets, `W` count the aligned words

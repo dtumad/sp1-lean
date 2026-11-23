@@ -177,6 +177,17 @@ with their respective ceilings. The row proofs establish the clock phase, the fu
 instruction encoding and the SP1 link-write condition. The raw statement supplies the complete
 endpoints and the commitment declarations. [Release criterion](../SP1Clean/Export/InstalledExecutionResources.lean)
 
+At every cut, the recovered tape's peak payload and the reached state's payload are at most
+the incoming payload plus eight bytes per ordinary retirement in the prefix. A decoded store
+can change at most eight byte addresses. HINT_READ consumes enough host payload to pay for the
+entire padded write, and the Sail output is preserved. Hence a raw native shard of any duration
+satisfies the complete native release statement whenever incoming payload plus elapsed ticks is at
+most `SP1Prime - 1`. For raw acceptance at `fixedProviderPreset`, the verified incoming payload
+is at most $2^{29}+124$ and the elapsed time is at most $2^{24}$ ticks. Their sum is below the
+native ceiling. Thus every accepted shard at that preset has a complete release execution at the
+broader native limits. The tighter preset's own peak and padded-write ceilings still require
+separate checks. [Payload bound and capstone theorems](../SP1Clean/Export/InstalledBoundaryGrowth.lean)
+
 Two normally retired RV64 byte stores witness the difference between endpoints and the peak.
 The first writes one to a zero byte, and the second clears it. A carried stdout stream puts
 both endpoints exactly at the native payload ceiling, `SP1Prime - 1`. The intermediate state

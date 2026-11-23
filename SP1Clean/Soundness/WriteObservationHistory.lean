@@ -14,15 +14,27 @@ namespace SP1Clean.Soundness.WriteObservationHistory
 open Semantics Target TimedGrounding
 open Channels (StateMsg MemoryMsg)
 
-variable {p : ℕ} [Fact p.Prime]
+variable {p : ℕ}
 
 private def atEffect (row : RowFacts p) (loc : MemLoc) (msg : MemoryMsg (ZMod p)) : Bool :=
   decide (MemoryMsg.locOf msg = loc ∧
     MemoryMsg.timeNat msg = StateMsg.timeNat row.statePull + writeOffset loc)
 
+/-- The genuine Memory push in this row's write-effect slot, if the row has one at this key. -/
+def effectPush? (loc : MemLoc) (row : RowFacts p) : Option (MemoryMsg (ZMod p)) :=
+  row.memPushes.find? (atEffect row loc)
+
+/-- A version boundary carries the original typed message, its address, and its real SP1 clock. -/
+theorem effectPush?_some {loc : MemLoc} {row : RowFacts p} {msg : MemoryMsg (ZMod p)}
+    (found : effectPush? loc row = some msg) : msg ∈ row.memPushes ∧ MemoryMsg.locOf msg = loc ∧
+      MemoryMsg.timeNat msg = StateMsg.timeNat row.statePull + writeOffset loc := by
+  exact ⟨List.mem_of_find?_eq_some found, by simpa only [atEffect, decide_eq_true_eq] using List.find?_some found⟩
+
 /-- Carry a single physical word across this row, using the row's existing full Memory footprint. -/
 def carry (loc : MemLoc) (prior : Word (ZMod p)) (row : RowFacts p) : Word (ZMod p) :=
-  ((row.memPushes.find? (atEffect row loc)).map (·.value)).getD prior
+  ((effectPush? loc row).map (·.value)).getD prior
+
+variable [Fact p.Prime]
 
 /-- Observe the prefix ending strictly before `cut`, seeded by the complete incoming snapshot. -/
 def wordAt (snapshot : MemorySnapshot) (rows : List (RowFacts p)) (cut : ℕ) (loc : MemLoc) : Word (ZMod p) :=
@@ -42,7 +54,7 @@ private theorem carry_truth {program : GuestProgram} {traj : Trajectory} {initia
     And.intro (grounded.2 mp member).1.1 (And.intro (grounded.2 mp member).1.2.1 (grounded.2 mp member).2)
   cases found : physical.memPushes.find? (atEffect physical loc) with
   | none =>
-    simp only [carry, found, Option.map_none, Option.getD_none]
+    simp only [carry, effectPush?, found, Option.map_none, Option.getD_none]
     refine ⟨bounded, ?_⟩
     rw [← finish]
     apply frame grounded.1 inputs loc prior _ (start ▸ current)
@@ -61,7 +73,7 @@ private theorem carry_truth {program : GuestProgram} {traj : Trajectory} {initia
         (Option.some.inj (priorRead.symm.trans current))
     · exact False.elim (List.find?_eq_none.mp found m (pushes.mem_iff.mpr member) (by simp [atEffect, same, effect, time]))
   | some m =>
-    simp only [carry, found, Option.map_some, Option.getD_some]
+    simp only [carry, effectPush?, found, Option.map_some, Option.getD_some]
     obtain ⟨same, effect⟩ : MemoryMsg.locOf m = loc ∧
         MemoryMsg.timeNat m = StateMsg.timeNat row.statePull + writeOffset loc := by
       simpa only [atEffect, decide_eq_true_eq, time] using List.find?_some found

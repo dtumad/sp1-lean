@@ -18264,11 +18264,25 @@
       "typeFingerprint": "240298820"
     },
     {
+      "bodyFingerprint": "2768942889",
+      "local": false,
+      "module": "Init.Data.List.Basic",
+      "name": "List.getLast",
+      "typeFingerprint": "3912483850"
+    },
+    {
       "bodyFingerprint": "3841813522",
       "local": false,
       "module": "Init.Data.List.Basic",
       "name": "List.getLast?",
       "typeFingerprint": "3929191103"
+    },
+    {
+      "bodyFingerprint": "1790605143",
+      "local": false,
+      "module": "Init.Data.List.Basic",
+      "name": "List.head",
+      "typeFingerprint": "3912483850"
     },
     {
       "bodyFingerprint": "1123831460",
@@ -18619,6 +18633,13 @@
       "module": "Mathlib.Data.Multiset.AddSub",
       "name": "Multiset.instAdd",
       "typeFingerprint": "1551243499"
+    },
+    {
+      "bodyFingerprint": "2433371811",
+      "local": false,
+      "module": "Mathlib.Data.Multiset.Defs",
+      "name": "Multiset.instMembership",
+      "typeFingerprint": "2639279147"
     },
     {
       "bodyFingerprint": "2658178406",
@@ -19165,6 +19186,13 @@
       "module": "Init.Prelude",
       "name": "Option",
       "typeFingerprint": "3807510281"
+    },
+    {
+      "bodyFingerprint": "883137042",
+      "local": false,
+      "module": "Init.Data.Option.Basic",
+      "name": "Option.all",
+      "typeFingerprint": "2224120843"
     },
     {
       "bodyFingerprint": "2974559149",
@@ -35302,6 +35330,13 @@
       "typeFingerprint": "722827036"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.InstalledBoundaryGrowth",
+      "name": "SP1Clean.Export.InstalledAssembly.ExecutionFacts.prefix_boundary_growth",
+      "typeFingerprint": "101948070"
+    },
+    {
       "bodyFingerprint": "746068900",
       "local": true,
       "module": "SP1Clean.Export.InstalledHintAssembly",
@@ -35570,6 +35605,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.InstalledBoundaryGrowth",
+      "name": "SP1Clean.Export.InstalledAssembly.fixedProvider_native_soundnessTarget",
+      "typeFingerprint": "2859888554"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.header_of_statement",
       "typeFingerprint": "1462121111"
@@ -35622,6 +35664,13 @@
       "module": "SP1Clean.Export.ShortShard",
       "name": "SP1Clean.Export.InstalledAssembly.native_short_soundnessTarget",
       "typeFingerprint": "2713520275"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.InstalledBoundaryGrowth",
+      "name": "SP1Clean.Export.InstalledAssembly.native_soundnessTarget_of_boundary_budget",
+      "typeFingerprint": "721674686"
     },
     {
       "bodyFingerprint": "3079730973",
@@ -65264,6 +65313,41 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Semantics.Transition.MicroTime",
+      "name": "SP1Clean.Semantics.Timeline",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.MicroTime",
+      "name": "SP1Clean.Semantics.Timeline.mk",
+      "typeFingerprint": "2053786812"
+    },
+    {
+      "bodyFingerprint": "4136123826",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.DurationTime",
+      "name": "SP1Clean.Semantics.Timeline.ofDurations",
+      "typeFingerprint": "2979225916"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.DurationTime",
+      "name": "SP1Clean.Semantics.Timeline.ofDurations._proof_7",
+      "typeFingerprint": "1422051039"
+    },
+    {
+      "bodyFingerprint": "286232709",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.MicroTime",
+      "name": "SP1Clean.Semantics.Timeline.start",
+      "typeFingerprint": "2936446508"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Semantics.Memory.WritePermission",
       "name": "SP1Clean.Semantics.WritePermissionInterval",
       "typeFingerprint": "2330190150"
@@ -84393,6 +84477,13 @@
       "typeFingerprint": "2911848267"
     },
     {
+      "bodyFingerprint": "3800234341",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.MicroTime",
+      "name": "SP1Clean.Semantics.locContent",
+      "typeFingerprint": "1717787306"
+    },
+    {
       "bodyFingerprint": "534276241",
       "local": true,
       "module": "SP1Clean.Semantics.Transition.AccessSchedule",
@@ -89195,6 +89286,27 @@
       "typeFingerprint": "1011779040"
     },
     {
+      "bodyFingerprint": "237459467",
+      "local": true,
+      "module": "SP1Clean.Soundness.CoreRowTransport",
+      "name": "SP1Clean.Soundness.NativeCore.ExecutionCarrier.rows",
+      "typeFingerprint": "3606168955"
+    },
+    {
+      "bodyFingerprint": "1942705375",
+      "local": true,
+      "module": "SP1Clean.Soundness.CoreRowTransport",
+      "name": "SP1Clean.Soundness.NativeCore.ExecutionCarrier.timeline",
+      "typeFingerprint": "1249282695"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.CoreRowTransport",
+      "name": "SP1Clean.Soundness.NativeCore.ExecutionCarrier.timeline._proof_1",
+      "typeFingerprint": "1367198073"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.CoreExecutionRow",
@@ -91239,6 +91351,20 @@
       "typeFingerprint": "1222733113"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.TouchChains",
+      "name": "SP1Clean.Soundness.TimedGrounding.ChainOK",
+      "typeFingerprint": "3825584966"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.TouchChains",
+      "name": "SP1Clean.Soundness.TimedGrounding.ChainOK.mk",
+      "typeFingerprint": "4046603690"
+    },
+    {
       "bodyFingerprint": "1332046320",
       "local": true,
       "module": "SP1Clean.Soundness.MixedRowTransport",
@@ -91295,6 +91421,20 @@
       "typeFingerprint": "785240580"
     },
     {
+      "bodyFingerprint": "3663300544",
+      "local": true,
+      "module": "SP1Clean.Soundness.TouchChains",
+      "name": "SP1Clean.Soundness.TimedGrounding.chainPulls",
+      "typeFingerprint": "1894908769"
+    },
+    {
+      "bodyFingerprint": "2047105943",
+      "local": true,
+      "module": "SP1Clean.Soundness.TouchChains",
+      "name": "SP1Clean.Soundness.TimedGrounding.chainPushes",
+      "typeFingerprint": "1894908769"
+    },
+    {
       "bodyFingerprint": "1693591491",
       "local": true,
       "module": "SP1Clean.Soundness.TouchChains",
@@ -91323,6 +91463,13 @@
       "typeFingerprint": "1771460920"
     },
     {
+      "bodyFingerprint": "2090971045",
+      "local": true,
+      "module": "SP1Clean.Soundness.WalkTimeline",
+      "name": "SP1Clean.Soundness.TimedGrounding.rowDuration",
+      "typeFingerprint": "3134946260"
+    },
+    {
       "bodyFingerprint": "1316647430",
       "local": true,
       "module": "SP1Clean.Soundness.TouchChains",
@@ -91335,6 +91482,20 @@
       "module": "SP1Clean.Soundness.TouchChains",
       "name": "SP1Clean.Soundness.TimedGrounding.rowPushesAt",
       "typeFingerprint": "2344041596"
+    },
+    {
+      "bodyFingerprint": "1242283129",
+      "local": true,
+      "module": "SP1Clean.Soundness.WalkTimeline",
+      "name": "SP1Clean.Soundness.TimedGrounding.rowTimeline",
+      "typeFingerprint": "253777755"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.WalkTimeline",
+      "name": "SP1Clean.Soundness.TimedGrounding.rowTimeline._proof_2",
+      "typeFingerprint": "3253210667"
     },
     {
       "bodyFingerprint": "3814558405",
@@ -91435,11 +91596,102 @@
       "typeFingerprint": "1331773137"
     },
     {
-      "bodyFingerprint": "1746847583",
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval",
+      "typeFingerprint": "3972626760"
+    },
+    {
+      "bodyFingerprint": "4053003017",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.covers",
+      "typeFingerprint": "2799600986"
+    },
+    {
+      "bodyFingerprint": "3054996329",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.coversClock",
+      "typeFingerprint": "2799600986"
+    },
+    {
+      "bodyFingerprint": "4233463826",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.lower",
+      "typeFingerprint": "742887052"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.mk",
+      "typeFingerprint": "3069623497"
+    },
+    {
+      "bodyFingerprint": "3811913987",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.next",
+      "typeFingerprint": "249482644"
+    },
+    {
+      "bodyFingerprint": "324333879",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.previous",
+      "typeFingerprint": "249482644"
+    },
+    {
+      "bodyFingerprint": "139401149",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.upper",
+      "typeFingerprint": "742887052"
+    },
+    {
+      "bodyFingerprint": "3007385655",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionInterval.value",
+      "typeFingerprint": "1955404711"
+    },
+    {
+      "bodyFingerprint": "2778213478",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.VersionedWord",
+      "typeFingerprint": "3868627335"
+    },
+    {
+      "bodyFingerprint": "849163330",
       "local": true,
       "module": "SP1Clean.Soundness.WriteObservationHistory",
       "name": "SP1Clean.Soundness.WriteObservationHistory.carry",
       "typeFingerprint": "1700649989"
+    },
+    {
+      "bodyFingerprint": "1314386560",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteObservationHistory",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.effectPush?",
+      "typeFingerprint": "2548803804"
+    },
+    {
+      "bodyFingerprint": "1465657237",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.versionIntervals",
+      "typeFingerprint": "3401554019"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "SP1Clean.Soundness.WriteObservationHistory.versionIntervals_effects",
+      "typeFingerprint": "869090998"
     },
     {
       "bodyFingerprint": "3885005317",
@@ -100922,6 +101174,188 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "199974127",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.Continues",
+      "typeFingerprint": "373697932"
+    },
+    {
+      "bodyFingerprint": "2657431603",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.current",
+      "typeFingerprint": "3885570085"
+    },
+    {
+      "bodyFingerprint": "1620610070",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.heldAt",
+      "typeFingerprint": "995462717"
+    },
+    {
+      "bodyFingerprint": "2969520697",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.heldAt._f",
+      "typeFingerprint": "3376527442"
+    },
+    {
+      "bodyFingerprint": "3536812404",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.heldAt.match_1",
+      "typeFingerprint": "186183590"
+    },
+    {
+      "bodyFingerprint": "2382317070",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.loc",
+      "typeFingerprint": "238002720"
+    },
+    {
+      "bodyFingerprint": "3061676920",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.matchingValues",
+      "typeFingerprint": "2122500274"
+    },
+    {
+      "bodyFingerprint": "3487194853",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.matchingValues._f",
+      "typeFingerprint": "1938325598"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.matchingValues_of_balance",
+      "typeFingerprint": "1512004182"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.mk",
+      "typeFingerprint": "2018658342"
+    },
+    {
+      "bodyFingerprint": "2431541902",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.ofTouch",
+      "typeFingerprint": "1292744915"
+    },
+    {
+      "bodyFingerprint": "2939070387",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.previous",
+      "typeFingerprint": "3885570085"
+    },
+    {
+      "bodyFingerprint": "4050030414",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.pulled",
+      "typeFingerprint": "3753147219"
+    },
+    {
+      "bodyFingerprint": "497939286",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.pushed",
+      "typeFingerprint": "3753147219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.IsRecordChain",
+      "typeFingerprint": "3026035107"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.IsRecordChain.mk",
+      "typeFingerprint": "3261132931"
+    },
+    {
+      "bodyFingerprint": "2828605433",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.accesses",
+      "typeFingerprint": "2661636201"
+    },
+    {
+      "bodyFingerprint": "2786581870",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.first",
+      "typeFingerprint": "135932359"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.heldAt_final",
+      "typeFingerprint": "3225434656"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.heldAt_interval",
+      "typeFingerprint": "421068853"
+    },
+    {
+      "bodyFingerprint": "1295279699",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.last",
+      "typeFingerprint": "135932359"
+    },
+    {
+      "bodyFingerprint": "1580712532",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.loc",
+      "typeFingerprint": "2278765995"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.mk",
+      "typeFingerprint": "150298338"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.nonempty",
+      "typeFingerprint": "2889730446"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedBumpInventory",
       "name": "SP1Clean.TraceGen.MixedBumpInput",
       "typeFingerprint": "3931117990"
@@ -101613,6 +102047,13 @@
       "typeFingerprint": "3430091282"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteObservationPacket",
+      "name": "SP1Clean.TraceGen.WriteObservations.checkPacket_iff_versions",
+      "typeFingerprint": "2133649678"
+    },
+    {
       "bodyFingerprint": "1589944390",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteObservationPacket",
@@ -101625,6 +102066,13 @@
       "module": "SP1Clean.Proofs.Completeness.WriteObservationCuts",
       "name": "SP1Clean.TraceGen.WriteObservations.installed_cuts",
       "typeFingerprint": "2459492071"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteObservationCuts",
+      "name": "SP1Clean.TraceGen.WriteObservations.installed_versions",
+      "typeFingerprint": "3418063074"
     },
     {
       "bodyFingerprint": "794700569",
@@ -108585,6 +109033,34 @@
       "typeFingerprint": "2691945658"
     },
     {
+      "bodyFingerprint": "648770718",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "_private.SP1Clean.Soundness.WriteVersionIntervals.0.SP1Clean.Soundness.WriteObservationHistory.intervalsFrom",
+      "typeFingerprint": "3729984887"
+    },
+    {
+      "bodyFingerprint": "2079606659",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "_private.SP1Clean.Soundness.WriteVersionIntervals.0.SP1Clean.Soundness.WriteObservationHistory.intervalsFrom._f",
+      "typeFingerprint": "2904815537"
+    },
+    {
+      "bodyFingerprint": "2975096587",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "_private.SP1Clean.Soundness.WriteVersionIntervals.0.SP1Clean.Soundness.WriteObservationHistory.intervalsFrom.match_1",
+      "typeFingerprint": "1710253284"
+    },
+    {
+      "bodyFingerprint": "2699279581",
+      "local": true,
+      "module": "SP1Clean.Soundness.WriteVersionIntervals",
+      "name": "_private.SP1Clean.Soundness.WriteVersionIntervals.0.SP1Clean.Soundness.WriteObservationHistory.intervalsFrom.match_3",
+      "typeFingerprint": "457825955"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "ToMathlib.ExtDHashMapOfFintype",
@@ -109545,6 +110021,12 @@
     "SP1Clean.TraceGen.InstalledInstructionTables.table_receipts",
     "SP1Clean.TraceGen.InstalledInstructionTables.receipt_weights",
     "SP1Clean.TraceGen.WriteObservations.installed_cuts",
+    "SP1Clean.Soundness.WriteObservationHistory.versionIntervals_effects",
+    "SP1Clean.TraceGen.WriteObservations.installed_versions",
+    "SP1Clean.TraceGen.WriteObservations.checkPacket_iff_versions",
+    "SP1Clean.TraceGen.MemoryHistoryAccess.matchingValues_of_balance",
+    "SP1Clean.TraceGen.MemoryLocationHistory.heldAt_interval",
+    "SP1Clean.TraceGen.MemoryLocationHistory.heldAt_final",
     "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_capacity",
     "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_ordinary_base_fits",
     "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_compiled_ordinary_fits",
@@ -109561,6 +110043,9 @@
     "SP1Clean.TraceGen.syscallInstruction_stateMessages",
     "SP1Clean.TraceGen.admissibleExecution_mixedBumpInventory",
     "SP1Clean.Export.InstalledAssembly.bump_constructed_tables",
+    "SP1Clean.Export.InstalledAssembly.ExecutionFacts.prefix_boundary_growth",
+    "SP1Clean.Export.InstalledAssembly.fixedProvider_native_soundnessTarget",
+    "SP1Clean.Export.InstalledAssembly.native_soundnessTarget_of_boundary_budget",
     "SP1Clean.Export.InstalledAssembly.fixedProviderPreset_bump_base_fits",
     "SP1CleanTest.MixedStateBumpEdges.low_pc_carry_at_full_upper_limbs",
     "SP1CleanTest.MixedStateBumpEdges.clock_carry_into_last_window",

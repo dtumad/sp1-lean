@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Completeness.WriteObservations
-import SP1Clean.Soundness.WriteObservationHistory
+import SP1Clean.Soundness.WriteVersionIntervals
 
 /-! # Checking the untraced WRITE operands against a physical prefix
 
@@ -24,6 +24,27 @@ def checkPacket (snapshot : MemorySnapshot) (rows : List (RowFacts p)) (cut : �
     length = wordAt snapshot rows cut (.reg 12) ∧ 2 ^ 16 ≤ address ∧ address + size ≤ 2 ^ 48 ∧
     buffer.length = wordCount address size ∧
     buffer = (List.range buffer.length).map (fun i => wordAt snapshot rows cut (.ram (cell address i))))
+
+/-- The released packet checker accepts exactly when x12 and every *indexed* buffer
+word have an authentic physical interval at this cut. No register or RAM touch is added. -/
+theorem checkPacket_iff_versions {snapshot : MemorySnapshot} {rows : List (RowFacts p)} {cut : ℕ}
+    (within : cut ≤ rows.length) (call : CoreSyscallEvent) (length : Word (ZMod p))
+    (buffer : List (Word (ZMod p))) :
+    checkPacket snapshot rows cut call length buffer = true ↔
+      call.rawCode = SyscallKind.write.code ∧ VersionedWord snapshot rows cut (.reg 12) length ∧
+      2 ^ 16 ≤ call.arg2.toNat ∧ call.arg2.toNat + length.toBitVec64.toNat ≤ 2 ^ 48 ∧
+      buffer.length = wordCount call.arg2.toNat length.toBitVec64.toNat ∧
+      ∀ i (inside : i < buffer.length),
+        VersionedWord snapshot rows cut (.ram (cell call.arg2.toNat i)) buffer[i] := by
+  simp only [checkPacket, decide_eq_true_eq, versionedWord_iff within]
+  refine and_congr_right fun _ => and_congr_right fun _ => and_congr_right fun _ =>
+    and_congr_right fun _ => and_congr_right fun _ => ?_
+  constructor
+  · intro same i inside
+    simpa only [List.getElem?_map, List.getElem?_range inside, Option.map_some,
+      List.getElem?_eq_getElem inside, Option.some.injEq] using congrArg (·[i]?) same
+  · intro each
+    exact List.ext_getElem (by simp) fun i inside _ => by simpa using each i inside
 
 private theorem cell_busAddress {address length index : ℕ} (upper : address + length ≤ 2 ^ 48)
     (inside : index < wordCount address length) : (MemLoc.ram (cell address index)).busAddress < 2 ^ 48 := by
