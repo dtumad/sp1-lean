@@ -193,8 +193,8 @@ private def commitSource : ExecutionSnapshot :=
 private def commitTarget : HostState :=
   { commitSource.host with committed := commitSource.host.committed.set 0 65537 }
 
-private def commitInstruction : HostCallChip.Inputs Fp :=
-  ⟨{ syscallInput 16 with
+private def commitInstruction : SyscallInstrsChip.Inputs Fp :=
+  { syscallInput 16 with
       op_a_memory.prev_value := word 16, op_b_memory.prev_value := word 0,
       op_c_memory.prev_value := word 65537,
       syscall_id_bytes := U16toU8OperationSafe.populate (word 16),
@@ -203,11 +203,10 @@ private def commitInstruction : HostCallChip.Inputs Fp :=
       is_halt_zero := IsZeroOperation.populate (16 : Fp),
       is_commit := IsZeroOperation.populate (0 : Fp),
       is_commit_deferred := IsZeroOperation.populate (-10 : Fp),
-      digest_index_bits := #v[1, 0, 0, 0, 0, 0, 0, 0], digest_word := #v[1, 0, 1, 0] },
-    ⟨0, ⟨0, 0⟩⟩⟩
+      digest_index_bits := #v[1, 0, 0, 0, 0, 0, 0, 0], digest_word := #v[1, 0, 1, 0] }
 
 private def commitHandler : HostCommitChip.Inputs Fp :=
-  HostCommitChip.populate false (commitInstruction.message 0)
+  HostCommitChip.populate false (HostCallChip.message commitInstruction)
     (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false commitSource.host))
 
 private def commitRows : List Row :=
@@ -325,8 +324,8 @@ private def unchangedBanks (host : HostState) : List Row :=
   [(88, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
    (89, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues true host))).toList)]
 
-private def haltInstruction (exit : ℕ) : HostCallChip.Inputs Fp :=
-  ⟨{ syscallInput 0 with
+private def haltInstruction (exit : ℕ) : SyscallInstrsChip.Inputs Fp :=
+  { syscallInput 0 with
       op_a_memory.prev_value := word 0, op_b_memory.prev_value := word exit,
       next_pc := #v[1, 0, 0], is_halt := 1,
       syscall_id_bytes := U16toU8OperationSafe.populate (word 0),
@@ -334,14 +333,13 @@ private def haltInstruction (exit : ℕ) : HostCallChip.Inputs Fp :=
       is_hint_len := IsZeroOperation.populate (-240 : Fp),
       is_halt_zero := IsZeroOperation.populate (0 : Fp),
       is_commit := IsZeroOperation.populate (-16 : Fp),
-      is_commit_deferred := IsZeroOperation.populate (-26 : Fp) },
-    ⟨0, ⟨0, 0⟩⟩⟩
+      is_commit_deferred := IsZeroOperation.populate (-26 : Fp) }
 
 private def installedHaltRows (exit : ℕ) (legacy : Bool) : List Row :=
   (if legacy then haltRows exit else
     (haltRows exit).filter (fun row => row.1 != 57) ++
       [(58, (toElements (haltInstruction exit)).toList),
-       (64, (toElements (HostHaltChip.populate ((haltInstruction exit).message 0))).toList)]) ++
+       (64, (toElements (HostHaltChip.populate (HostCallChip.message (haltInstruction exit)))).toList)]) ++
     unchangedBanks (haltSource exit).host
 
 private def checkInstalledHalt (exit publicExit : ℕ) (rows : List Row) : Bool :=

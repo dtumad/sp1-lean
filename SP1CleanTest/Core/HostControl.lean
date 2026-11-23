@@ -24,7 +24,7 @@ private def word (value : ℕ) : Word Fp :=
   Soundness.Target.bitVecToWord (BitVec.ofNat 64 value)
 
 private def call (halt : Bool) (arg1 arg2 : ℕ) : HostCallChip.Message Fp :=
-  ⟨0, 1, word (if halt then 0 else 3), word arg1, word arg2, 0, 0⟩
+  ⟨0, 1, word (if halt then 0 else 3), word arg1, word arg2, 0⟩
 
 private def evaluateHalt (input : HostCallChip.Message Fp) (corrupt : Option ℕ := none) : Bool × Ledger :=
   evaluateProgram (HostHaltChip.main (varFromOffset HostHaltChip.Inputs 0))
@@ -33,7 +33,7 @@ private def evaluateHalt (input : HostCallChip.Message Fp) (corrupt : Option ℕ
 private def evaluateEnter (input : HostCallChip.Message Fp) : Bool × Ledger :=
   evaluateProgram (HostNoopChip.main .enter (varFromOffset HostNoopChip.Inputs 0)) (toElements input).toList
 
-private def instruction (halt : Bool) (arg1 arg2 : ℕ) : HostCallChip.Inputs Fp :=
+private def instruction (halt : Bool) (arg1 arg2 : ℕ) : SyscallInstrsChip.Inputs Fp :=
   let code : ℕ := if halt then 0 else 3
   let input : SyscallInstrsChip.Inputs Fp :=
     { state := ⟨0, 0, 1, #v[0, 1, 0]⟩
@@ -50,10 +50,10 @@ private def instruction (halt : Bool) (arg1 arg2 : ℕ) : HostCallChip.Inputs Fp
       digest_index_bits := Vector.replicate 8 0, digest_word := 0
       op_b_cmp := ⟨if arg1 / 65536 < 32512 then 1 else 0⟩
       op_c_cmp := ⟨if arg2 / 65536 < 32512 then 1 else 0⟩, is_real := 1 }
-  HostCallChip.populate input 0 0
+  input
 
 private def sourceChecked (halt : Bool) (arg1 arg2 : ℕ) : Bool × Ledger :=
-  evaluateProgram (HostCallChip.main (varFromOffset HostCallChip.Inputs 0))
+  evaluateProgram (HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0))
     (toElements (instruction halt arg1 arg2)).toList
 
 private def selected (channel : String) (ledger : Ledger) : Ledger :=
@@ -73,17 +73,16 @@ theorem canonicalExits : [0, 65535, 65536, SP1Prime - 1].all (fun exit =>
 theorem unusedArguments : [(0, 0), (SP1Prime, 2 ^ 32), (2 ^ 64 - 1, 2 ^ 64 - 1)].all
     (fun (a, b) => (evaluateEnter (call false a b)).1) = true := by native_decide
 
-/-- Full codes, returns, length fields, canonical limbs, and internal witness bits are checked. -/
+/-- Full codes, returns, canonical limbs, and internal witness bits are checked. -/
 theorem rejectsMalformed :
     [{ (call true 1 0) with code := #v[0, 0, 1, 0] },
      { (call true 1 0) with result := word 1 },
-     { (call true 1 0) with length := word 1 },
      { (call true 1 0) with arg1 := #v[65536, 0, 0, 0] },
      { (call true 1 0) with arg1 := #v[-1, 0, 0, 0] }].all
       (fun input => !(evaluateHalt input).1) = true ∧
     [{ (call false 1 2) with code := #v[3, 0, 0, 1] },
      { (call false 1 2) with result := word 3 },
-     { (call false 1 2) with length := word 1 }, call true 1 2].all
+     call true 1 2].all
       (fun input => !(evaluateEnter input).1) = true ∧
     [0, 31, 63].all (fun index => !(evaluateHalt (call true 65536 0) (some index)).1) = true := by
   native_decide

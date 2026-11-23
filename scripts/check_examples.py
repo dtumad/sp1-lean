@@ -44,12 +44,12 @@ def validate_report(name, result, revision, dirty):
                        "changed-empty-target", "wrong-execution-flag", "changed-host-output",
                        "changed-hint-suffix", "malformed-seed-index", "malformed-seed-length"]
         values = [True, False, False, False, False, True, False, False, False, False, False, False]
-        # 634 original component-channel declarations plus one receipt for each of 25 producers.
+        # 632 original component-channel declarations plus one receipt for each of 25 producers.
         # The verifier adds the observation start and final links.
         # Sail, host and resource boundary checks add seven, one and three assertions.
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 100, "uniqueChannels": 37, "declaredChannelOccurrences": 634 + 25 + 132 + 2 + 22 + 2,
+                    "tableCount": 100, "uniqueChannels": 37, "declaredChannelOccurrences": 632 + 25 + 132 + 2 + 22 + 2,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43 + 2 + 22}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and
