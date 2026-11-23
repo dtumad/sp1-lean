@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Operations.WriteProbeLedger
 import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
+import Clean.Air.WitnessGeneration
 
 /-! # Native WRITE read-only observer regressions
 
@@ -85,5 +86,32 @@ theorem rejectsForgedJoins :
      check correct 24 correct (read 65536 23 held),
      check (version 65536 16 32 held) 23 correct (read 65536 23 held)] =
       [(true, false), (true, false), (true, false)] := by native_decide
+
+/-- Run the registered demand guard with actual private index pages and canonical row inputs. -/
+private def routing (request : Read F) : Except String Bool := do
+  let clock : UInt64 := 2 ^ 32 + 17
+  let ram : UInt64 := 2 ^ 40 + 8
+  let input (key time : UInt64) (value : Word F) : RowInput F :=
+    (populate (version key.toNat 0 (2 ^ 48 - 1) value) (Address.ofNat time.toNat), 1)
+  let indexed ← Witgen.HintIndex.prepareKeys (Input := RowInput)
+    [([clock, 12], input 12 clock held), ([clock, ram], input ram clock forged),
+     ([clock + 1, ram], input ram (clock + 1) held)]
+  let name := (guarded (p := SP1Prime)).name
+  let hints : ProverHint F := Air.Flat.WitnessGeneration.readNamedRows [
+    (name ++ ".index", .ofRows (indexed.index.map (·.toArray)) 1),
+    (name, .ofRows (indexed.inputs.map (·.toArray)) (size RowInput))]
+  match generation (p := SP1Prime) with
+  | .demand mode => pure (mode.accepts
+      ⟨(readChannel (p := SP1Prime)).name, (toElements request).toArray, -1⟩ (.empty F) hints)
+  | .preallocated _ => throw "expected one row per probe request"
+
+/-- Actual Clean routing distinguishes both high-limb keys, both high-limb clocks, and a
+forged payload with the correct key and clock. The absent row cannot answer a zero-word demand. -/
+theorem routesFullReceipt :
+    let clock := 2 ^ 32 + 17
+    let ram := 2 ^ 40 + 8
+    ([read 12 clock held, read ram clock forged, read ram (clock + 1) held, read ram clock held,
+      read 12 (clock + 1) 0, read (ram + 8) clock 0].mapM routing) =
+      .ok [true, true, true, false, false, false] := by native_decide
 
 end SP1CleanTest.Core.WriteProbe
