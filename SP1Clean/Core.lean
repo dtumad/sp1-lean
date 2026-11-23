@@ -88,6 +88,7 @@ import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.FormalModel.Contracts.OrderedBoundary
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.PublicValues
+import SP1Clean.FormalModel.Contracts.StockPublicOutput
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.FormalModel.Contracts.RegisterRead
 import SP1Clean.FormalModel.Contracts.ResourceBoundary

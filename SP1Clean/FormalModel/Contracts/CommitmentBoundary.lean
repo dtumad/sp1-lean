@@ -35,8 +35,7 @@ def Spec (statement : CommitmentStatement) (input : SP1PublicIO (ZMod p)) : Prop
 def publicValues (statement : CommitmentStatement) (values : SP1PublicValues (ZMod p)) :
     SP1PublicValues (ZMod p) :=
   { values with
-    committed_value_digest := Vector.ofFn fun word => Vector.ofFn fun byte =>
-      (committed statement)[4 * word.val + byte.val]'(by omega)
+    committed_value_digest := (committed statement).toChunks 4
     deferred_proofs_digest := deferred statement
     commit_syscall := if statement.commit then 1 else 0
     commit_deferred_syscall := if statement.commitDeferred then 1 else 0 }
