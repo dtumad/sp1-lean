@@ -7,6 +7,7 @@ public import ToClean.Circuit.SubcircuitProjection
 public import ToClean.Circuit.VerifierAssertions
 public import ToClean.Circuit.VerifierInteractions
 public import ToClean.Circuit.Receipt
+public import ToClean.Circuit.ReceiptList
 public import ToClean.Circuit.Guarded
 public import ToClean.Air.RowProjection
 public import ToClean.Air.EnsembleProjection

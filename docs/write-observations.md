@@ -99,3 +99,5 @@ one row per probe. Each physical row contributes one occurrence to each of its t
 channels, including zero-weight padding. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
 
 The sparse boundary construction sorts the union of real Memory keys and admissible probe keys. Each previously untouched key gets an ordered source row and an ordered finalizer row. The emitted zero-time word comes directly from the source snapshot circuit. Its unit Memory push cancels the finalizer’s unit pull, and the finalizer publishes that same word through the last representable clock.
+
+Each protected ordinary table can publish one predecessor receipt per original Memory pull using the instruction’s incoming CPU clock and the old record’s timestamp. The 25 compiled tables retain their exact original rows, pre-existing ledgers and power-of-two heights. Each physical row, including padding, has one to three such occurrences. The chronological Memory proof covers every incoming CPU cut in a genuine predecessor interval, including a value-preserving push at the cut itself.

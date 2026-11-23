@@ -393,6 +393,7 @@ import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Native.Operations.WriteProbe
 import SP1Clean.Native.Operations.WriteProbeRegisterBoundary
 import SP1Clean.Native.Operations.WriteProbeReadback
+import SP1Clean.Native.Operations.WriteProbeAccess
 import SP1Clean.Native.Operations.WritePermission
 import SP1Clean.Native.Readers.ALUTypeReader
 import SP1Clean.Native.Readers.ALUTypeReaderImmutable
