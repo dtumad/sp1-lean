@@ -23,6 +23,16 @@ def channel {p : ℕ} : Channel (ZMod p) Cursor where
   name := "sp1.native.write_buffer_cursor"
   Guarantees _ _ := True
 
+/-- Every checked span supplies its complete packet to the host effect receiver, including empty spans. -/
+def effectHeaderChannel {p : ℕ} : Channel (ZMod p) WritePacket.Header where
+  name := "sp1.native.write_effect_header"
+  Guarantees _ _ := True
+
+/-- Every checked word supplies its full clock, aligned RAM key, and value to the effect receiver. -/
+def wordChannel {p : ℕ} : Channel (ZMod p) WriteProbe.Read where
+  name := "sp1.native.write_buffer_value"
+  Guarantees _ _ := True
+
 /-- Natural cell index obtained by rounding the full byte endpoint down or up. -/
 def cellIndex (roundUp : Bool) (byte : ℕ) : ℕ := (byte + if roundUp then 7 else 0) / 8
 
