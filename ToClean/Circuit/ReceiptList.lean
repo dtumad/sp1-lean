@@ -29,6 +29,26 @@ theorem many_name : (many provider channel trivial projections).name = provider.
   | nil => rfl
   | cons first rest ih => exact ih _
 
+/-- A single publication appends one declared channel to the circuit. -/
+theorem channel_of_receipt (projection : Projection F Input Message) {selected : RawChannel F}
+    (used : selected ∈ (circuit provider channel trivial projection).channels) :
+    selected ∈ provider.channels ∨ selected = channel.toRaw := by
+  change selected ∈ provider.channelsWithGuarantees ++ (provider.channelsWithRequirements ++ [channel.toRaw]) at used
+  change selected ∈ provider.channelsWithGuarantees ++ provider.channelsWithRequirements ∨ _
+  simpa only [← List.append_assoc, List.mem_append, List.mem_singleton] using used
+
+/-- The only extra registry entry required by any number of projections is their shared
+destination. Repetition and the original channels retain their physical multiplicities. -/
+theorem many_channels {selected : RawChannel F}
+    (used : selected ∈ (many provider channel trivial projections).channels) :
+    selected ∈ provider.channels ∨ selected = channel.toRaw := by
+  induction projections generalizing provider with
+  | nil => exact Or.inl used
+  | cons first rest ih =>
+    rcases ih (circuit provider channel trivial first) used with previous | added
+    · exact channel_of_receipt provider channel trivial first previous
+    · exact Or.inr added
+
 theorem many_assumptions : (many provider channel trivial projections).Assumptions = provider.Assumptions := by
   induction projections generalizing provider with
   | nil => rfl

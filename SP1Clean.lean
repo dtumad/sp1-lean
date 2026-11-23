@@ -9,6 +9,8 @@ import SP1Clean.Export.InstalledOrdinaryPreset
 import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
+import SP1Clean.Export.WriteSourceRegistry
+import SP1Clean.Proofs.Completeness.WritePacketHandoff
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
