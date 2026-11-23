@@ -76,6 +76,7 @@ private theorem eval_asWord (env : Environment (ZMod p)) (x : fields 3 (Expressi
     Eval.eval env (Address.asWord x) = Address.asWord (Eval.eval env x) := by
   simp only [Address.asWord, circuit_norm]
 
+/-- Checked read-only observation of an aligned RAM word or x12 at a bounded incoming clock. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.write_probe.row"
   main

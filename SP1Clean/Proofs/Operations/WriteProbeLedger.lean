@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Operations.WriteProbe
 import ToClean.Circuit.Guarded
 import ToClean.Air.HintIndex
+import ToClean.Air.ChannelClosure
 import Clean.Air.FlatComponent
 
 /-! # Physical WRITE probe component and its private ledger
@@ -54,6 +55,18 @@ abbrev RowInput := ProvablePair Inputs field
 /-- Active and padding rows share a single table. -/
 def guarded : GeneralFormalCircuit (ZMod p) RowInput unit :=
   Guarded.circuit circuit guardSupported
+
+/-- The flat row constraints force Boolean activity and the checked observation contract for
+every live row. The private version bus has a structural payload; the provider supplies its value. -/
+theorem guarded_spec_of_constraints (input : Var RowInput (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
+    (checked : ((guarded.main input).operations offset).ConstraintsHold env) :
+    IsBool (eval env input).2 ∧ ((eval env input).2 = 1 → Spec (eval env input).1) := by
+  apply (guarded.original_full_soundness offset env input (fun _ => trivial) checked ?_).1
+  rw [Operations.guarantees_iff _ _ _ (guarded.in_channels_or_guarantees_full input offset env)]
+  intro selected member
+  change selected ∈ [versionChannel.toRaw] at member
+  obtain rfl := List.mem_singleton.mp member
+  exact Operations.channelGuarantees_of_trivial _ (by simp [versionChannel, Channel.toRaw]) _ _
 
 /-- Route requests by their absolute clock and location. The built-in demand guard checks
 the whole read receipt, including its four-limb value, before accepting a private input. -/

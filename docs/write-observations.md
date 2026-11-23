@@ -46,6 +46,24 @@ for a source-only location, register the observer alongside the physical produce
 constrain the host effects of the selected packet.
 [Typed Memory record intervals](../SP1Clean/Proofs/Completeness/MemoryVersionHistory.lean)
 
+## Native probe table
+
+An active `WriteProbe.component` row pulls one private version containing the location, a
+closed clock interval, and a four-limb word. The circuit enforces a canonical x12 or aligned
+RAM key, 16-bit limbs, and inclusive integer clock comparisons. It pushes the same key and
+word together with the absolute incoming clock. The demand guard compares that full receipt
+with the requested read. Padding gives both messages zero multiplicity. Probes use neither
+a guest event nor a new guest Memory timestamp.
+[Observer circuit](../SP1Clean/Proofs/Operations/WriteProbe.lean) · [Physical signed messages](../SP1Clean/Proofs/Operations/WriteProbeLedger.lean)
+
+`installed_table` builds an ordinary Clean table from a finite list of requests at checked
+physical execution cuts. Repeated requests retain their positions and values. Genesis admits
+clock zero and a final version admits the largest 48-bit clock. When a physical provider
+offers a smaller range inside an authentic version, `installed_read_of_restriction` identifies
+the checked result with the held Sail word at the same cut. The enclosing host assembly must
+authenticate every version supply and balance both private channels.
+[Interval encoding and replay](../SP1Clean/Proofs/Completeness/WriteProbeInputs.lean) · [Table generation](../SP1Clean/Proofs/Completeness/WriteProbeTables.lean)
+
 ## Read-only probe demand
 
 Along a successful execution, let `C` count WRITE packets, `W` count the aligned words
@@ -55,6 +73,6 @@ buffer endpoints gives `8W ≤ B + 14C`. These bounds cover ignored descriptors 
 callbacks and ordinary outputs.
 
 At `fixedProviderPreset`, `C ≤ 63,550` and `W ≤ 266,449,516`. Together at most
-266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` if a table uses one
-row per probe. Shared-channel capacity for a physical observer depends on the interactions
-emitted by its actual rows. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
+266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` for the native table's
+one row per probe. Each physical row contributes one occurrence to each of its two private
+channels, including zero-weight padding. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)

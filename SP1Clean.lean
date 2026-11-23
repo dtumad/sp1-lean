@@ -110,6 +110,8 @@ import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
 import SP1Clean.Proofs.Completeness.WriteProbeDemand
+import SP1Clean.Proofs.Completeness.WriteProbeInputs
+import SP1Clean.Proofs.Completeness.WriteProbeTables
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Proofs.Sail.Advance

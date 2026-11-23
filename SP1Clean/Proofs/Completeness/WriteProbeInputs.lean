@@ -56,6 +56,36 @@ theorem encodeVersion?_clock {snapshot : MemorySnapshot} {loc : MemLoc} {v : Ver
     omega
   · contradiction
 
+/-- Physical suppliers can offer a narrower interval when genuine read-back accesses split an
+unchanged word. The key and value must still be the original payload. -/
+def Version.Restricts (offered genuine : Version (ZMod p)) : Prop :=
+  offered.key = genuine.key ∧ offered.value = genuine.value ∧
+  Address.toNat genuine.lower ≤ Address.toNat offered.lower ∧
+  Address.toNat offered.upper ≤ Address.toNat genuine.upper
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem encodeVersion?_payload {snapshot : MemorySnapshot} {loc : MemLoc} {v : VersionInterval p}
+    {version : Version (ZMod p)} (built : encodeVersion? snapshot loc v = some version) :
+    version.key = Address.ofNat loc.busAddress ∧ version.value = v.value (bitVecToWord (snapshot.read loc)) := by
+  unfold encodeVersion? at built
+  split at built
+  · cases Option.some.inj built
+    exact ⟨rfl, rfl⟩
+  · contradiction
+
+/-- An accepted row consuming a subinterval of a real physical version returns that version's
+unchanged value at its clock. The endpoint check is the one enforced by the probe circuit. -/
+theorem read_of_restriction {snapshot : MemorySnapshot} {loc : MemLoc} {v : VersionInterval p}
+    {genuine : Version (ZMod p)} (encoded : encodeVersion? snapshot loc v = some genuine)
+    {input : Inputs (ZMod p)} (row : Spec input) (supply : input.version.Restricts genuine) :
+    input.read.key = Address.ofNat loc.busAddress ∧ v.coversClock (Address.toNat input.clock) = true ∧
+      input.read.value = v.value (bitVecToWord (snapshot.read loc)) := by
+  obtain ⟨key, value, lower, upper⟩ := supply
+  obtain ⟨_, _, _, _, clock, _, first, last⟩ := row
+  obtain ⟨address, held⟩ := encodeVersion?_payload encoded
+  exact ⟨key.trans address, (encodeVersion?_clock encoded (Address.toNat_lt clock)).mp
+    ⟨lower.trans first, last.trans upper⟩, value.trans held⟩
+
 /-- A genuine in-range cut constructs exactly the read that the caller requests; the
 circuit's division witness is derived from the physical key. -/
 theorem populate_covered (snapshot : MemorySnapshot) (loc : MemLoc) (v : VersionInterval p)
@@ -123,5 +153,39 @@ theorem installed_inputs {q : ℕ} [Fact q.Prime] [Fact (2 ^ 25 < q)] [Fact (2 ^
   refine ⟨_, by rw [inputAt?, ite_eq_left bound, selected]; simp [encoded], honest, ?_⟩
   rw [read]
   exact ⟨rfl, rfl, semantic⟩
+
+/-- Soundness at an installed cut for any checked physical row whose interval pull is supplied
+by a restriction of a genuine version. A second, forged word for that same clock is impossible.
+Upstream registration and private ledger balance establish the supply used in this local join. -/
+theorem installed_read_of_restriction {q : ℕ} [Fact q.Prime] [Fact (2 ^ 25 < q)] [Fact (2 ^ 17 < q)]
+    {extra : List (Air.Flat.Component (ZMod q))} [Soundness.GroundingResources extra]
+    {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod q)}
+    {bankFinal : HostState} {channels : List (RawChannel (ZMod q))}
+    [Soundness.HostFinalMemory.Registration image source extra Soundness.HostCallReceivers.available
+      (Soundness.HostHintReadLocal.sourceResources source.host.io.hints) channels]
+    {names : Soundness.HostFinalMemory.UniqueNames image source extra Soundness.HostCallReceivers.available
+      (Soundness.HostHintReadLocal.sourceResources source.host.io.hints)}
+    (witness : Soundness.HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels names)
+    (checked : witness.Constraints) (balanced : Soundness.HostHintQueueBoundary.Balanced witness) :
+    ∃ (valid : image.Valid) (carrier : Soundness.HostHintReadCPU.GroundingCarrier witness),
+      ∀ cut ≤ carrier.ordered.length, ∃ current, carrier.pairedTrajectory valid cut = some current ∧
+        ∀ loc, loc.busAddress < 2 ^ 48 →
+          ∀ v ∈ versionIntervals (TraceGen.WriteObservations.physicalRows carrier) loc, ∀ genuine,
+          encodeVersion? source.sail.memorySnapshot loc v = some genuine →
+          ∀ input : Inputs (ZMod q), Spec input → input.version.Restricts genuine →
+            Address.toNat input.clock = carrier.timeline.start cut →
+              input.read.key = Address.ofNat loc.busAddress ∧ locContent current.sail loc = some input.read.value.toBitVec64 := by
+  obtain ⟨valid, carrier, all⟩ := TraceGen.WriteObservations.installed_versions witness checked balanced
+  refine ⟨valid, carrier, fun cut within => ?_⟩
+  obtain ⟨current, reached, atCut⟩ := all cut within
+  refine ⟨current, reached, ?_⟩
+  intro loc bound v member genuine encoded input row supply clock
+  obtain ⟨address, covered, held⟩ := read_of_restriction encoded row supply
+  obtain ⟨selected, unique, _, value⟩ := atCut loc bound
+  rw [clock] at covered
+  have chosen : v ∈ (versionIntervals (TraceGen.WriteObservations.physicalRows carrier) loc).filter
+      (·.coversClock (carrier.timeline.start cut)) := List.mem_filter.mpr ⟨member, covered⟩
+  rw [unique, List.mem_singleton] at chosen
+  exact ⟨address, by rwa [held, chosen]⟩
 
 end SP1Clean.WriteProbe
