@@ -54,4 +54,22 @@ def Spec {p : Nat} (input : Inputs (ZMod p)) : Prop :=
 theorem spec_of_bounded {p : Nat} [Fact p.Prime] [Fact (2 ^ 24 < p)] (input : Inputs (ZMod p))
     (bounds : input.timestamp.Bounded) : Spec input := ⟨bounds, (input.timestamp.time bounds).symm⟩
 
+/-- Build the packet input from the instruction receipt and the word returned for x12. -/
+def populate {p : Nat} [Fact p.Prime] (call : HostCallChip.Message (ZMod p)) (length : Word (ZMod p)) : Inputs (ZMod p) :=
+  ⟨ClockParts.split call.clk_high call.clk_low, call.arg1, call.arg2, length⟩
+
+/-- Constructor completeness includes exact agreement with the complete instruction message. -/
+theorem populate_write {p : Nat} [Fact p.Prime] [Fact (2 ^ 24 < p)] (call : HostCallChip.Message (ZMod p))
+    (length : Word (ZMod p)) (high : call.clk_high.val < 2 ^ 24) (low : call.clk_low.val < 2 ^ 24)
+    (code : call.code = #v[2, 0, 0, 0]) (returns : call.result = call.code) :
+    let input := populate call length
+    input.timestamp.Bounded ∧ input.call = call ∧
+      Address.toNat input.read.clock = Semantics.clkNat call.clk_high call.clk_low ∧ input.read.value = length := by
+  obtain ⟨bounded, hi, lo⟩ := ClockParts.split_spec call.clk_high call.clk_low high low
+  refine ⟨bounded, ?_, ?_, rfl⟩
+  · cases call
+    simp only [populate, Inputs.call] at *
+    rw [hi, lo, ← code, returns]
+  · exact ((ClockParts.split call.clk_high call.clk_low).time bounded).trans (congrArg₂ Semantics.clkNat hi lo)
+
 end SP1Clean.WritePacket
