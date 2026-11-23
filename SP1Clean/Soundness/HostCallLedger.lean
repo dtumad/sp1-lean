@@ -24,38 +24,31 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 def producer : Component (ZMod p) := { circuit := HostCallChip.circuit, Assumptions := (HostCallChip.circuit).Assumptions, generation := HostCallChip.generation }
 
-def input (env : Environment (ZMod p)) : HostCallChip.Inputs (ZMod p) :=
-  valueFromOffset HostCallChip.Inputs 0 env
+def input (env : Environment (ZMod p)) : SyscallInstrsChip.Inputs (ZMod p) :=
+  valueFromOffset SyscallInstrsChip.Inputs 0 env
 
 def call (env : Environment (ZMod p)) : Message (ZMod p) :=
-  (input env).message (writeFlag (input env).instruction.op_a_memory.prev_value)
+  message (input env)
 
 def clock (message : Message (ZMod p)) : ZMod p × ZMod p := (message.clk_high, message.clk_low)
 
 def activeRows (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Environment (ZMod p)) :=
-  (table.table.map (Environment.fromArray · data)).filter fun env => decide ((input env).instruction.is_real = 1)
+  (table.table.map (Environment.fromArray · data)).filter fun env => decide ((input env).is_real = 1)
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Membership exposes semantic activity without leaking the filter's field-equality instance. -/
 theorem activeRows_is_real (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (env : Environment (ZMod p)) (member : env ∈ activeRows table data) :
-    (input env).instruction.is_real = 1 :=
+    (input env).is_real = 1 :=
   of_decide_eq_true (List.mem_filter.mp member).2
 
 def calls (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Message (ZMod p)) := (activeRows table data).map call
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem eval_instruction (row : Var HostCallChip.Inputs (ZMod p)) (env : Environment (ZMod p)) :
-    eval env row.instruction = (eval env row).instruction := by
-  cases row
-  simp only [circuit_norm]
-
-private theorem main_binary (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ)
+private theorem main_binary (row : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p)) (constraints : ((HostCallChip.main row).operations offset).ConstraintsHold env) :
-    (eval env row).instruction.is_real = 0 ∨ (eval env row).instruction.is_real = 1 := by
+    (eval env row).is_real = 0 ∨ (eval env row).is_real = 1 := by
   have core := HostCallChip.instruction_of_constraints row offset env constraints
-  have profile := CoreSyscallChip.profile_of_constraints row.instruction offset env core
-  rw [eval_instruction] at profile
+  have profile := CoreSyscallChip.profile_of_constraints row offset env core
   exact profile.1
 
 omit [Fact (2 ^ 25 < p)] in
@@ -65,64 +58,46 @@ private theorem eval_memory (memory : Circuits.Types.RegisterAccessCols (Express
   cases memory
   simp only [circuit_norm]
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem eval_message (row : Var HostCallChip.Inputs (ZMod p)) (flag : Expression (ZMod p))
+private theorem main_values (row : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p)) :
-    eval env (row.message flag) = (eval env row).message (env flag) := by
-  rcases row with ⟨instruction, length⟩
-  cases instruction
-  cases length
-  simp only [Inputs.message, circuit_norm, eval_memory]
-  apply Vector.ext
-  intro i hi
-  simp only [Vector.getElem_map, ProvableType.getElem_eval_fields]
-
-private theorem main_values (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ)
-    (env : Environment (ZMod p)) (constraints : ((HostCallChip.main row).operations offset).ConstraintsHold env) :
     ((HostCallChip.main row).operations offset).interactionValuesWith channel.toRaw env =
-      [channel.pushedIfValue (eval env row).instruction.is_real
-        ((eval env row).message (writeFlag (eval env row).instruction.op_a_memory.prev_value))] := by
+      [channel.pushedIfValue (eval env row).is_real (message (eval env row))] := by
   simp only [Operations.interactionValuesWith, HostCallChip.main_host_interactions,
     List.map_cons, List.map_nil, Channel.eval_pushedIf]
-  rw [eval_message, HostCallChip.selector_of_constraints row offset env constraints]
-  rcases row with ⟨instruction, length⟩
-  cases instruction
-  simp only [circuit_norm, eval_memory]
+  cases row
+  simp only [message, circuit_norm, eval_memory]
 
 /-- The full-code guard enforces binary activity before any semantic Memory grounding. -/
 theorem binary_of_constraints (env : Environment (ZMod p))
     (constraints : producer.operations.ConstraintsHold env) :
-    (input env).instruction.is_real = 0 ∨ (input env).instruction.is_real = 1 := by
-  have binary := main_binary (varFromOffset HostCallChip.Inputs 0) (size HostCallChip.Inputs) env
+    (input env).is_real = 0 ∨ (input env).is_real = 1 := by
+  have binary := main_binary (varFromOffset SyscallInstrsChip.Inputs 0) (size SyscallInstrsChip.Inputs) env
     ((Component.constraintsHold_iff env).mp constraints)
   simpa only [eval_varFromOffset_valueFromOffset, input] using binary
 
 /-- The actual evaluated row emits exactly its binary-gated full call. -/
-theorem row_values (env : Environment (ZMod p))
-    (constraints : producer.operations.ConstraintsHold env) :
+theorem row_values (env : Environment (ZMod p)) :
     producer.operations.interactionValuesWith channel.toRaw env =
-      [channel.pushedIfValue (input env).instruction.is_real (call env)] := by
-  have projected := main_values (varFromOffset HostCallChip.Inputs 0) (size HostCallChip.Inputs) env
-    ((Component.constraintsHold_iff env).mp constraints)
+      [channel.pushedIfValue (input env).is_real (call env)] := by
+  have projected := main_values (varFromOffset SyscallInstrsChip.Inputs 0) (size SyscallInstrsChip.Inputs) env
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((HostCallChip.main (varFromOffset HostCallChip.Inputs 0)).operations
-    (size HostCallChip.Inputs)).interactionValuesWith channel.toRaw env = _
+  change ((HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0)).operations
+    (size SyscallInstrsChip.Inputs)).interactionValuesWith channel.toRaw env = _
   simpa only [eval_varFromOffset_valueFromOffset, input, call] using projected
 
 /-- Every physical row remains in the ledger, including zero-multiplicity padding. -/
 theorem table_values (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = producer)
-    (constraints : table.Constraints) :
-    table.interactionsWith channel.toRaw =
+    : table.interactionsWith channel.toRaw =
       (table.table.map (Environment.fromArray · data)).map fun env =>
-        channel.pushedIfValue (input env).instruction.is_real (call env) := by
+        channel.pushedIfValue (input env).is_real (call env) := by
   simp only [Table.interactionsWith, List.map_map, Function.comp_def]
   rw [component]
   trans table.table.flatMap (fun physical =>
-    [channel.pushedIfValue (input (Environment.fromArray physical data)).instruction.is_real
+    [channel.pushedIfValue (input (Environment.fromArray physical data)).is_real
       (call (Environment.fromArray physical data))])
   · apply List.flatMap_congr
-    intro physical member
-    exact row_values _ (component ▸ constraints physical member)
+    intro physical _
+    exact row_values _
   · exact List.flatMap_pure_eq_map _ _
 
 /-- Complete handler messages are a permutation of actual active instruction calls.
@@ -133,9 +108,9 @@ theorem calls_perm (table : Table (ZMod p)) (data : ProverData (ZMod p)) (compon
       ((table.interactionsWith channel.toRaw).filter (fun interaction => decide (interaction.mult ≠ 0)) ++
         consumed.map channel.pulledValue)) :
     (calls table data).Perm consumed := by
-  rw [table_values table data component constraints] at balanced
+  rw [table_values table data component] at balanced
   have binary : ∀ env ∈ table.table.map (Environment.fromArray · data),
-      (input env).instruction.is_real = 0 ∨ (input env).instruction.is_real = 1 := by
+      (input env).is_real = 0 ∨ (input env).is_real = 1 := by
     intro env member
     obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
     have checked := binary_of_constraints _ (component ▸ constraints physical present)

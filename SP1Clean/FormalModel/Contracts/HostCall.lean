@@ -1,25 +1,16 @@
 import SP1Clean.FormalModel.Contracts.CoreSyscall
-import SP1Clean.FormalModel.Contracts.RegisterRead
 
-/-! # Instruction-authenticated native host calls
+/-! # Instruction-authenticated host calls
 
-Each active instruction emits its full syscall word, arguments, return word, and event clock.
-The native wrapper additionally posts an x12 Memory read at event time plus one for WRITE.
-Released WRITE observes x12 without advancing its timestamp. The installed restricted host
-profiles disable WRITE. Other calls emit zero in the length field. The host tables establish
-the returned value and stateful effects.
+The released ECALL instruction supplies the incoming clock, full code in x5, x10 and x11,
+and the returned x5 word. WRITE obtains x12 from the read-only observer at this clock.
 -/
 
 namespace SP1Clean.HostCallChip
 
 open Circuit Channels
 
-structure Inputs (F : Type) where
-  instruction : SyscallInstrsChip.Inputs F
-  length : Circuits.Types.RegisterAccessCols F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
+/-- The incoming event clock and the four words observed by the ECALL instruction. -/
 structure Message (F : Type) where
   clk_high : F
   clk_low : F
@@ -27,7 +18,6 @@ structure Message (F : Type) where
   arg1 : Word F
   arg2 : Word F
   result : Word F
-  length : Word F
 deriving ProvableStruct
 provable_struct_eval_lemmas Message
 
@@ -35,27 +25,9 @@ def channel {p : ℕ} [Fact p.Prime] : Channel (ZMod p) Message where
   name := "sp1.native.host_call"
   Guarantees _ _ := True
 
-def writeWord {R : Type} [OfNat R 2] [Zero R] : Word R := #v[2, 0, 0, 0]
-
-def writeFlag {p : ℕ} (word : Word (ZMod p)) : ZMod p :=
-  if word = writeWord then 1 else 0
-
-def Inputs.read {R : Type} [Add R] [Mul R] [OfNat R 65536] [One R] [OfNat R 12]
-    (input : Inputs R) (flag : R) : Readers.RegisterRead.Inputs R :=
-  ⟨input.length, input.instruction.state.clk_high,
-    input.instruction.state.clk_0_16 + input.instruction.state.clk_16_24 * 65536 + 1,
-    12, input.instruction.is_real * flag⟩
-
-def Inputs.message {R : Type} [Add R] [Mul R] [OfNat R 65536]
-    (input : Inputs R) (flag : R) : Message R :=
-  ⟨input.instruction.state.clk_high,
-    input.instruction.state.clk_0_16 + input.instruction.state.clk_16_24 * 65536,
-    input.instruction.op_a_memory.prev_value, input.instruction.op_b_memory.prev_value,
-    input.instruction.op_c_memory.prev_value, input.instruction.op_a_value,
-    input.length.prev_value.map (flag * ·)⟩
-
-def Spec {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] (input : Inputs (ZMod p)) : Prop :=
-  CoreSyscallChip.Spec input.instruction ∧
-    Readers.RegisterRead.Spec (input.read (writeFlag input.instruction.op_a_memory.prev_value))
+/-- Decode the handoff directly from the physical instruction inputs. -/
+def message {R : Type} [Add R] [Mul R] [OfNat R 65536] (input : SyscallInstrsChip.Inputs R) : Message R :=
+  ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536,
+    input.op_a_memory.prev_value, input.op_b_memory.prev_value, input.op_c_memory.prev_value, input.op_a_value⟩
 
 end SP1Clean.HostCallChip
