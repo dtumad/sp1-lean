@@ -89,7 +89,6 @@ import SP1Clean.FormalModel.Contracts.OrderedBoundary
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.FormalModel.Contracts.RegisterRead
 import SP1Clean.FormalModel.Contracts.ResourceBoundary
 import SP1Clean.FormalModel.Contracts.SailBoundary
 import SP1Clean.FormalModel.Contracts.ShardHeader
@@ -393,9 +392,6 @@ import SP1Clean.Native.Readers.MemoryAccess
 import SP1Clean.Native.Readers.RTypeReader
 import SP1Clean.Native.Readers.RegisterAccessCols
 import SP1Clean.Native.Readers.RegisterAccessTimestamp
-import SP1Clean.Native.Readers.RegisterRead
-import SP1Clean.Native.Readers.RegisterReadLedger
-import SP1Clean.Native.Readers.RegisterReadPopulate
 import SP1Clean.Native.Readers.RegisterWrite
 import SP1Clean.Proofs.Chips.AddChip.Complete
 import SP1Clean.Proofs.Chips.AddChip.Formal
