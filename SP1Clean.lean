@@ -82,6 +82,7 @@ import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
+import SP1Clean.Proofs.Completeness.MemoryReadbackIntervals
 import SP1Clean.Proofs.Completeness.MemoryVersionHistory
 import SP1Clean.Proofs.Completeness.ProviderInteractions
 import SP1Clean.Proofs.Completeness.ProviderTables
