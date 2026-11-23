@@ -4,8 +4,7 @@ import SP1Clean.Soundness.LocalCoreTouches
 /-! # Low-clock bounds from the full host Memory ledger
 
 Original instruction and refresh pushes use constraints, Byte guarantees, and Program balance.
-The wrapper's extra x12 push uses the same CPU clock checks. Auxiliary pushes remain in the
-physical ledger and supply their own local clock bounds. Full record conservation then transfers
+Auxiliary pushes remain in the physical ledger and supply their own local clock bounds. Full record conservation then transfers
 these bounds to predecessors; no instruction-only Memory balance is asserted.
 -/
 
@@ -24,59 +23,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
     {channelNames : ((registry image source channels).map (·.name)).Nodup}
     {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
 
-private theorem wrapper_extra_bound
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
-    (bytes : ∀ table ∈ (localWitness witness).tables,
-      table.ChannelGuarantees byteChannel.toRaw)
-    (physical : Array (ZMod p)) (member : physical ∈ (hostCallTable witness).table)
-    (real : (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real = 1) :
-    MemoryMsg.ClkBound (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).pushed := by
-  have prefixMem : physical.extract 0 (HostCallProjection.original (p := p)).width ∈
-      (LocalCore.systemTable (localWitness witness) 3).table := by
-    rw [hostCallTable_prefix]
-    exact List.mem_map_of_mem member
-  have same : syscallInstrsRow (localWitness witness).data
-      (physical.extract 0 (HostCallProjection.original (p := p)).width) =
-      (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction :=
-    HostCallProjection.input_prefix physical witness.data (localWitness witness).data
-  have bounds := syscallInstrsRow_cpuState_bounds_of_component
-    (LocalCore.systemTable (localWitness witness) 3) (localWitness witness).data
-    (LocalCore.systemTable_component (localWitness witness) 3)
-    ((localWitness witness).same_data _ (LocalCore.systemTable_mem (localWitness witness) 3))
-    (bytes _ (LocalCore.systemTable_mem (localWitness witness) 3)) prefixMem (by rw [same]; exact real)
-  rw [same] at bounds
-  exact MemoryMsg.clkBound_of_cpuState_bounds _ _ 1 1 (ZMod.val_one _) (by decide) bounds.1 bounds.2
-
-private theorem wrapper_push_bound
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
-    (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ (localWitness witness).tables,
-      table.ChannelGuarantees byteChannel.toRaw) :
-    ∀ message ∈ producedMessages (wrapperMemory witness), MemoryMsg.ClkBound message := by
-  intro message member
-  rw [wrapperMemory, List.flatMap_map, producedMessages_flatMap] at member
-  obtain ⟨physical, physicalMem, extra⟩ := List.mem_flatMap.mp member
-  have checked := constraints _ (hostCallTable_mem witness) physical physicalMem
-  have shared : (hostCallTable witness).data = witness.data :=
-    witness.same_data _ (hostCallTable_mem witness)
-  rw [Table.environment, shared, hostCallTable_component] at checked
-  have binary := HostCallLedger.binary_of_constraints (Environment.fromArray physical witness.data) checked
-  have flag := HostCallChip.writeFlag_binary
-    (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.op_a_memory.prev_value
-  rcases binary with inactive | real
-  · simp [producedMessages, HostCallProjection.extraRead, HostCallChip.Inputs.read, inactive,
-      Channel.pulledIfValue, Channel.pushedIfValue] at extra
-  · have bound := wrapper_extra_bound witness bytes physical physicalMem real
-    rcases flag with disabled | enabled
-    · simp [producedMessages, HostCallProjection.extraRead, HostCallChip.Inputs.read, disabled,
-        Channel.pulledIfValue, Channel.pushedIfValue] at extra
-    · have gate : (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).is_real = 1 := by
-        simp only [HostCallProjection.extraRead, HostCallChip.Inputs.read, real, enabled, mul_one]
-      simp [producedMessages, gate, Channel.pulledIfValue, Channel.pushedIfValue] at extra
-      exact extra ▸ bound
-
 /-- Every physical interior push has a bounded low clock. The exact Memory decomposition
-retains original rows, WRITE's x12 read-back and all auxiliary pushes; Memory balance is not assumed. -/
+retains the instruction ledger and all auxiliary pushes; Memory balance is not assumed. -/
 theorem memoryInterior_push_bound (valid : image.Valid)
     (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints)
@@ -89,16 +37,10 @@ theorem memoryInterior_push_bound (valid : image.Valid)
   have originalBytes := localWitness_byte_of_guarantees witness bytes
   have original := LocalCore.memoryInterior_push_bound valid (localWitness witness)
     (localWitness_constraints witness constraints) originalBytes program
-  have perm : (producedMessages (memoryInterior witness)).Perm
-      (producedMessages (LocalCore.memoryInterior (localWitness witness) ++
-        wrapperMemory witness ++ auxiliaryMemory witness)) :=
-    ((memoryInterior_perm witness constraints).filter _).map _
   intro message member
-  have selected := perm.mem_iff.mp member
-  simp only [producedMessages_append, List.mem_append] at selected
-  rcases selected with (old | wrapper) | auxiliary
+  rw [memoryInterior_eq, producedMessages_append, List.mem_append] at member
+  rcases member with old | auxiliary
   · exact original message old
-  · exact wrapper_push_bound witness constraints originalBytes message wrapper
   · rw [auxiliaryMemory, producedMessages_flatMap] at auxiliary
     obtain ⟨table, tableMem, emitted⟩ := List.mem_flatMap.mp auxiliary
     exact extra table tableMem message emitted

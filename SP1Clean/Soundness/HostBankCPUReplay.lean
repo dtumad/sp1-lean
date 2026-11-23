@@ -252,24 +252,24 @@ theorem calls_projection (deferred : Bool)
   simpa only [HostHintQueueBoundary.projected_data] using projected
 
 private theorem wrapper_projection (deferred : Bool) (data : ProverData (ZMod p))
-    (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p) :
-    stampedCPU deferred data (.syscall input.instruction) = stamped deferred (input.message flag) := by
+    (input : SyscallInstrsChip.Inputs (ZMod p)) :
+    stampedCPU deferred data (.syscall input) = stamped deferred (HostCallChip.message input) := by
   simp only [stampedCPU, ExecutionRow.event, bankEvent?, rawCode_syscallEventOfRow,
-    arg1_syscallEventOfRow, arg2_syscallEventOfRow, stamped, HostCallChip.Inputs.message]
+    arg1_syscallEventOfRow, arg2_syscallEventOfRow, stamped, HostCallChip.message]
   rfl
 
 private theorem syscall_projection (deferred : Bool) (data : ProverData (ZMod p))
     (env : Environment (ZMod p)) :
-    stampedCPU deferred data (.syscall (HostCallLedger.input env).instruction) =
+    stampedCPU deferred data (.syscall (HostCallLedger.input env)) =
       stamped deferred (HostCallLedger.call env) :=
-  wrapper_projection deferred data (HostCallLedger.input env) _
+  wrapper_projection deferred data (HostCallLedger.input env)
 
 private theorem inventory_projection (deferred : Bool) (data : ProverData (ZMod p))
     (instructions : List (DecodedInstructionRow p)) (haltRows : List (HaltChip.Inputs (ZMod p)))
     (wrappers : List (Environment (ZMod p)))
     (codeZero : ∀ row ∈ haltRows, Word.toBitVec64 row.x5_memory.prev_value = 0) :
     ((instructions.map ExecutionRow.instruction ++ haltRows.map ExecutionRow.halt ++
-      (wrappers.map fun env => ExecutionRow.syscall (HostCallLedger.input env).instruction)).filterMap
+      (wrappers.map fun env => ExecutionRow.syscall (HostCallLedger.input env))).filterMap
         (stampedCPU deferred data)) = (wrappers.map HostCallLedger.call).filterMap (stamped deferred) := by
   apply HostQueueCPUReplay.filterMap_inventory
   · intro row _

@@ -5,7 +5,7 @@ import ToClean.Air.TableEvaluation
 /-! # Memory accounting with physical host accesses retained
 
 The host extension keeps the two boundary inventories unchanged. Its interior is read from
-the actual tables, including the wrapper's x12 accesses and every appended host RAM row.
+the actual tables, including every appended host RAM row.
 No Memory balance is projected to the smaller instruction-only assembly.
 -/
 
@@ -37,19 +37,13 @@ private theorem boundary_components (index : Fin 6) :
     List.getElem_set_ne (show 26 ≠ index.val by omega),
     List.getElem_set_ne (show 25 ≠ index.val by omega)]
 
-/-- The typed wrapper ledger retains the original row plus the actual gated x12 pair. -/
-theorem wrapper_memory_interactions (env : Environment (ZMod p))
-    (constraints : HostCallLedger.producer.operations.ConstraintsHold env) :
+/-- The instruction handoff preserves every typed Memory record at the same clock. -/
+theorem wrapper_memory_interactions (env : Environment (ZMod p)) :
     typedInteractionValuesWith HostCallLedger.producer.operations memoryChannel env =
-      typedInteractionValuesWith HostCallProjection.original.operations memoryChannel env ++
-      [TypedInteraction.pulledIfValue memoryChannel (HostCallProjection.extraRead env).is_real
-        (HostCallProjection.extraRead env).prior,
-       TypedInteraction.pushedIfValue memoryChannel (HostCallProjection.extraRead env).is_real
-        (HostCallProjection.extraRead env).pushed] := by
+      typedInteractionValuesWith HostCallProjection.original.operations memoryChannel env := by
   apply List.map_injective_iff.mpr TypedInteraction.raw_injective
-  simp only [List.map_append, typedInteractionValuesWith_raw, List.map_cons, List.map_nil,
-    TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
-  exact HostCallProjection.memory_values env constraints
+  simp only [typedInteractionValuesWith_raw]
+  exact HostCallProjection.memory_values env
 
 /-- Both boundary inventories retain their components and complete physical row arrays. -/
 theorem boundary_tables (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
@@ -106,49 +100,10 @@ theorem memory_interactions (witness : EnsembleWitness (ensemble image source au
     exact LocalCore.verifier_memory_silent image source _
   rw [silent, List.nil_append, ← List.flatMap_append, List.take_append_drop]
 
-private theorem wrapper_memorySigns (input : Var HostCallChip.Inputs (ZMod p))
-    (offset : ℕ) (env : Environment (ZMod p))
-    (checked : ((HostCallChip.main input).operations offset).ConstraintsHold env) :
-    ∀ interaction ∈ ((HostCallChip.main input).operations offset).interactionValuesWith memoryChannel.toRaw env,
-      IsBool interaction.mult := by
-  have real := (CoreSyscallChip.profile_of_constraints input.instruction offset env
-    (HostCallChip.instruction_of_constraints input offset env checked)).1
-  have evalReal (row : Var SyscallInstrsChip.Inputs (ZMod p)) :
-      (eval env row).is_real = env row.is_real := by cases row; simp only [circuit_norm]
-  rw [evalReal] at real
-  have flag := HostCallChip.selector_of_constraints input offset env checked
-  have readBinary : env (input.read (HostCallChip.selector input offset)).is_real = 0 ∨
-      env (input.read (HostCallChip.selector input offset)).is_real = 1 := by
-    change env (input.instruction.is_real * HostCallChip.selector input offset) = 0 ∨
-      env (input.instruction.is_real * HostCallChip.selector input offset) = 1
-    change env input.instruction.is_real * env (HostCallChip.selector input offset) = 0 ∨
-      env input.instruction.is_real * env (HostCallChip.selector input offset) = 1
-    simp only [flag, HostCallChip.writeFlag]
-    split
-    · simpa only [mul_one] using real
-    · simp only [mul_zero, eq_self, true_or]
-  intro interaction member
-  rw [Operations.interactionValuesWith, HostCallChip.main_memory_interactions, List.map_append] at member
-  rcases List.mem_append.mp member with original | extra
-  · simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
-      GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-      SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit,
-      Operations.interactionsWith] at original
-    change interaction ∈ (((SyscallInstrsChip.main input.instruction).operations offset).interactionsWith
-      memoryChannel.toRaw).map _ at original
-    rw [SyscallInstrsChip.Ledger.syscallInstrsInteractionsWith_memory] at original
-    simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false] at original
-    rcases original with rfl | rfl | rfl | rfl | rfl | rfl
-    all_goals exact real
-  · simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false] at extra
-    rcases extra with rfl | rfl
-    all_goals exact readBinary
-
 private theorem wrapper_memoryBinary : NativeCore.MemoryBinary (HostCallLedger.producer (p := p)) := by
   intro data physical constraints
-  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  exact wrapper_memorySigns (varFromOffset HostCallChip.Inputs 0) (size HostCallChip.Inputs)
-    (Environment.fromArray physical data) ((Component.constraintsHold_iff _).mp constraints)
+  rw [HostCallProjection.memory_values]
+  exact NativeCore.syscall_memoryBinary data physical (HostCallProjection.constraints_original _ constraints)
 
 private theorem interior_component_binary
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component)
@@ -202,7 +157,7 @@ private theorem interior_component_binary
         exact binary _ (List.getElem_mem _)
 
 /-- Constraints force unit signed Memory multiplicities in the retained core, including WRITE's
-x12 pair. Appended components supply only their static multiplicity property. -/
+instruction. Appended components supply their static multiplicity property. -/
 theorem memoryInterior_signedBinary (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) :
@@ -260,8 +215,6 @@ theorem final_records_canonical_nodup (witness : EnsembleWitness (ensemble image
   change BalancedInteractions ((LocalCore.finalWitness (localWitness witness)).interactionsWith _)
   rw [LocalCore.finalWitness_interactions, localWitness_other witness _
     (by simp [LocalCore.baseEnsemble])
-    (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, byteChannel, Channel.toRaw])
-    (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, memoryChannel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, HostCallChip.channel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, WritePermissionProvider.channel, Channel.toRaw]) finalSilent]
   exact finalBalanced
@@ -304,8 +257,6 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
     change BalancedInteractions ((LocalCore.sourceWitness (localWitness witness)).interactionsWith _)
     rw [LocalCore.sourceWitness_interactions, localWitness_other witness _
       (by simp [LocalCore.baseEnsemble])
-      (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, byteChannel, Channel.toRaw])
-      (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, memoryChannel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, HostCallChip.channel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, WritePermissionProvider.channel, Channel.toRaw]) sourceSilent]
     exact sourceBalanced

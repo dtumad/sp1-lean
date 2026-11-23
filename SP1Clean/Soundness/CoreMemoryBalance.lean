@@ -82,7 +82,8 @@ private theorem halt_memoryBinary : MemoryBinary ({ circuit := HaltChip.circuit,
   simp [HaltChip.exposedMemoryInteractions, Channel.pulledIf, Channel.pushedIf,
     ChannelInteraction.toRaw, pulledIf_mult, pushedIf_mult]
 
-private theorem syscall_memoryBinary : MemoryBinary ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)) := by
+/-- The released ECALL uses its binary activity for every physical register access. -/
+theorem syscall_memoryBinary : MemoryBinary ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)) := by
   apply memoryBinary_of_gated SyscallInstrsChip.circuit SyscallInstrsChip.generation (fun input => input.is_real) ?_
     SyscallInstrsChip.selectorBinary_of_shallow
   intro input offset env

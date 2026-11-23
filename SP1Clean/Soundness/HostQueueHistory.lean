@@ -45,7 +45,7 @@ private theorem read_advance (input : HostHintReadChip.Inputs (ZMod p)) (valid :
     (current : input.previous.Binds store hints) :
     ∃ nextHints, (Event.read (Word.toNat input.call.arg2)).apply? hints = some nextHints ∧
       input.next.Binds store nextHints := by
-  have head := valid.2.2.2.2.2.2.1
+  have head := valid.2.2.2.2.2.1
   have bound : Address.toNat input.node.pointer ≤ store.size := by
     rw [← head]
     exact current.2.2.2.bound
@@ -63,7 +63,7 @@ private theorem length_advance [Fact (2 ^ 17 < p)] (empty : Bool) (input : HostH
   have binding : empty = false → input.node.Binds store := by
     intro nonempty
     subst empty
-    have head : input.previous.head = input.node.pointer := valid.2.2.2.1
+    have head : input.previous.head = input.node.pointer := valid.2.2.1
     apply (header rfl).restrict bounded
     rw [← head]
     exact current.2.2.2.bound

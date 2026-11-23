@@ -47,17 +47,17 @@ private theorem event_eq (left right : Machine.CoreSyscallEvent)
   rfl
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem event_of_run (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
+private theorem event_of_run (wrapper : SyscallInstrsChip.Inputs (ZMod p))
     (host : HostState) (policy : HostPolicy) (context : HostReadContext) (execution : HostExecution)
-    (observed : context.register 5 = some (Word.toBitVec64 (wrapper.message flag).code) ∧
-      context.register 10 = some (Word.toBitVec64 (wrapper.message flag).arg1) ∧
-      context.register 11 = some (Word.toBitVec64 (wrapper.message flag).arg2))
+    (observed : context.register 5 = some (Word.toBitVec64 (HostCallChip.message wrapper).code) ∧
+      context.register 10 = some (Word.toBitVec64 (HostCallChip.message wrapper).arg1) ∧
+      context.register 11 = some (Word.toBitVec64 (HostCallChip.message wrapper).arg2))
     (ran : host.run policy context = some execution)
-    (result : execution.result = Word.toBitVec64 (wrapper.message flag).result)
-    (law : (syscallEventOfRow wrapper.instruction).RowLaw)
-    (clock : ℕ) (atClock : clock = (syscallEventOfRow wrapper.instruction).clock) :
-    execution.toEvent clock (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage wrapper.instruction)) =
-      syscallEventOfRow wrapper.instruction := by
+    (result : execution.result = Word.toBitVec64 (HostCallChip.message wrapper).result)
+    (law : (syscallEventOfRow wrapper).RowLaw)
+    (clock : ℕ) (atClock : clock = (syscallEventOfRow wrapper).clock) :
+    execution.toEvent clock (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage wrapper)) =
+      syscallEventOfRow wrapper := by
   have dispatched := (host.run_eq_some_iff policy context execution).mp ran
   apply event_eq _ _ (execution.rowLaw dispatched.2.2.2.2.1 _ _).2.2.1 law.2.2.1 atClock rfl
   · exact Option.some.inj (dispatched.2.1.symm.trans observed.1)
@@ -74,16 +74,16 @@ private theorem syscall_physical {auxiliary : List (Component (ZMod p))}
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness)) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
-      row = (HostCallLedger.input env).instruction := by
+      row = (HostCallLedger.input env) := by
   have active : row ∈ activeSystemRows (LocalCore.systemTable (HostLocalCore.localWitness witness) 3)
       (syscallInstrsRow (HostLocalCore.localWitness witness).data) (·.is_real) := by simpa [LocalCore.executionRows] using member
   rw [← HostLocalCore.hostCallTable_projection witness] at active
   obtain ⟨env, active, same⟩ := List.mem_map.mp active
   exact ⟨env, active, same.symm⟩
 
-private theorem control_not_read (event : ExecutionRow p) (wrapper : HostCallChip.Inputs (ZMod p))
-    (flag : ZMod p) (same : event = .syscall wrapper.instruction)
-    (code : Word.toBitVec64 (wrapper.message flag).code ≠ SyscallKind.hintRead.code) :
+private theorem control_not_read (event : ExecutionRow p) (wrapper : SyscallInstrsChip.Inputs (ZMod p))
+    (same : event = .syscall wrapper)
+    (code : Word.toBitVec64 (HostCallChip.message wrapper).code ≠ SyscallKind.hintRead.code) :
     ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code := by
   intro row rowEq
   have sameRow := ExecutionRow.syscall.inj (same.symm.trans rowEq)
@@ -102,7 +102,7 @@ private theorem control_step (valid : image.Valid)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (physical : Environment (ZMod p))
     (active : physical ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness)) witness.data)
-    (sameEvent : event = .syscall (HostCallLedger.input physical).instruction)
+    (sameEvent : event = .syscall (HostCallLedger.input physical))
     (notRead : Word.toBitVec64 (HostCallLedger.call physical).code ≠ SyscallKind.hintRead.code)
     (dispatch : ∀ (host : HostState), host.exitCode = none → ∀ (context : HostReadContext),
       (context.register 5 = some (Word.toBitVec64 (HostCallLedger.call physical).code) ∧
@@ -136,7 +136,7 @@ private theorem control_step (valid : image.Valid)
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
-  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
+  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical)).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
@@ -144,7 +144,7 @@ private theorem control_step (valid : image.Valid)
     apply List.mem_append_left
     simpa only [sameEvent, ExecutionRow.facts] using present
   have instructionTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-      (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
+      (HostCallLedger.input physical)) = carrier.timeline.start n := by
     simpa only [sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
   have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.projected witness)
     (source_program_silent source) checks program
@@ -157,13 +157,13 @@ private theorem control_step (valid : image.Valid)
   have committed := committed physical active
   have fetched := (committed.ecall_of_opcode rfl).1
   change (image.toGuestProgram valid).fetchWord
-    (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
+    (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical))) =
       some Target.ECALL_ENC at fetched
   have sourcePc : StateMsg.pcBits (event.facts witness.data).statePull =
-      StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction) := by
+      StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical)) := by
     rw [sameEvent]; rfl
   have atInstructionPc : current.sail.regs.get? LeanRV64D.Register.PC =
-      some (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) := by
+      some (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical))) := by
     rwa [sourcePc] at atPc
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member paired atInstructionPc fetched
   obtain ⟨execution, ran, result, noWrite⟩ := dispatch current.host running (.ofSail current.sail) registers
@@ -178,7 +178,7 @@ private theorem control_step (valid : image.Valid)
   have currentTime : current.clock = carrier.timeline.start n := by
     rw [carrier.timeline_events constraints balanced, eventTimeline_start_le _ _ _ covered]
     exact replayEvents?_clock paired
-  have label := event_of_run (HostCallLedger.input physical) _ current.host _ (.ofSail current.sail)
+  have label := event_of_run (HostCallLedger.input physical) current.host _ (.ofSail current.sail)
     execution registers ran result law.1 current.clock (currentTime.trans (instructionTime.symm.trans law.2.symm))
   let next : ExecutionState := ⟨execution.apply current.sail (StateMsg.pcBits (event.facts witness.data).statePull),
     execution.effect.state, current.clock + Machine.syscallSchedule.duration⟩
@@ -196,7 +196,7 @@ private theorem control_step (valid : image.Valid)
     change (carrier.pairedTrajectory valid n).bind _ = _
     rw [paired, Option.bind_some, step.replay]
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced event member
-    (control_not_read event (HostCallLedger.input physical) _ sameEvent notRead)
+    (control_not_read event (HostCallLedger.input physical) sameEvent notRead)
   refine ⟨n, current, next, atIndex, paired, after, step, ?_, noWords⟩
   intro cell
   simp only [next, locContent, HostExecution.apply, HostEffect.applyMemory, noWrite]
@@ -234,7 +234,7 @@ theorem GroundingCarrier.syscall_engineFacts (valid : image.Valid)
     rw [same]
     exact (congrArg (fun message : HostCallChip.Message (ZMod p) => clkNat message.clk_high message.clk_low) sameCall).trans
       (HostQueueCPUOrder.call_time queueRow)
-  · have sameEvent : ExecutionRow.syscall row = .syscall (HostCallLedger.input physical).instruction := congrArg _ same
+  · have sameEvent : ExecutionRow.syscall row = .syscall (HostCallLedger.input physical) := congrArg _ same
     apply carrier.syscall_engineFacts_of_effects valid constraints balanced (.syscall row) member physical active sameEvent
     intro pull currency
     obtain ⟨n, current, next, atIndex, paired, after, step, unchanged, noWords⟩ :=

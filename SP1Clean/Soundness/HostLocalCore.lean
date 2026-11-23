@@ -42,8 +42,7 @@ def registry (image : ProgramImage) (source : ExecutionSnapshot)
 private theorem producer_channels :
     (HostCallLedger.producer (p := p)).circuit.channels =
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
-        exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw,
-        byteChannel.toRaw, memoryChannel.toRaw] ++
+        exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] ++
         [memoryChannel.toRaw, HostCallChip.channel.toRaw] := by
   change (HostCallChip.elaborated (p := p)).channelsWithGuarantees ++
     [memoryChannel.toRaw, HostCallChip.channel.toRaw] = _
@@ -245,7 +244,6 @@ private theorem suffix_components (image : ProgramImage) (source : ExecutionSnap
 
 private theorem component_other_interactions (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) (index : Fin 61) (channel : RawChannel (ZMod p))
-    (notByte : channel ≠ byteChannel.toRaw) (notMemory : channel ≠ memoryChannel.toRaw)
     (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw) :
     ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).operations.interactionsWith channel =
       ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.interactionsWith channel := by
@@ -254,7 +252,7 @@ private theorem component_other_interactions (image : ProgramImage) (source : Ex
   · have same : index = ⟨58, by decide⟩ := Fin.ext wrapper.symm
     subst index
     simp only [↓reduceIte]
-    exact HostCallProjection.other_interactions channel notByte notMemory notCall
+    exact HostCallProjection.other_interactions channel notCall
   · rw [ite_eq_right wrapper]
     exact ((ProtectedLocalCore.component_projection (p := p) image source index).2.2 channel notPermission).symm
 
@@ -400,7 +398,6 @@ theorem localWitness_verifier_interactions (channel : RawChannel (ZMod p))
 /-- Channels unaffected by the wrappers retain their complete registered ledger. -/
 theorem localWitness_other (channel : RawChannel (ZMod p))
     (channelRegistered : channel ∈ (LocalCore.baseEnsemble image source).channels)
-    (notByte : channel ≠ byteChannel.toRaw) (notMemory : channel ≠ memoryChannel.toRaw)
     (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw)
     (silent : ∀ component ∈ auxiliary, channel ∉ component.circuit.channels) :
     (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
@@ -446,9 +443,9 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
       change HostCallProjection.original.operations.interactionValuesWith channel _ =
         ((tables image source auxiliary)[58]'(by rw [tables_length]; omega)).operations.interactionValuesWith channel _
       rw [core_component image source auxiliary ⟨58, by decide⟩, ite_eq_left rfl]
-      exact HostCallProjection.other_values_prefix row witness.data (localWitness witness).data channel notByte notMemory notCall
+      exact HostCallProjection.other_values_prefix row witness.data (localWitness witness).data channel notCall
     · rw [projectionWidth_eq (names := names) (channelNames := channelNames) (registered := registered) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
-      have projected := component_other_interactions image source auxiliary ⟨index.val, bound⟩ channel notByte notMemory notCall notPermission
+      have projected := component_other_interactions image source auxiliary ⟨index.val, bound⟩ channel notCall notPermission
       change (LocalCore.ensemble (p := p) image source).tables[index.val].operations.interactionsWith channel =
         ((ensemble image source auxiliary channels names channelNames registered).tables[index.val]'(by
           have := projectionLength (names := names) (channelNames := channelNames) (registered := registered) (channels := channels); omega)).operations.interactionsWith channel at projected
@@ -460,8 +457,6 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
 theorem localWitness_state (interface : AuxiliaryInterface auxiliary) :
     (localWitness witness).interactionsWith stateChannel.toRaw = witness.interactionsWith stateChannel.toRaw :=
   localWitness_other witness stateChannel.toRaw (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-    (by simp [stateChannel, byteChannel, Channel.toRaw])
-    (by simp [stateChannel, memoryChannel, Channel.toRaw])
     (by simp [stateChannel, HostCallChip.channel, Channel.toRaw])
     (by simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw]) interface.state
 
@@ -470,8 +465,6 @@ theorem localWitness_program
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels) :
     (localWitness witness).interactionsWith programChannel.toRaw = witness.interactionsWith programChannel.toRaw :=
   localWitness_other witness programChannel.toRaw (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-    (by simp [programChannel, byteChannel, Channel.toRaw])
-    (by simp [programChannel, memoryChannel, Channel.toRaw])
     (by simp [programChannel, HostCallChip.channel, Channel.toRaw])
     (by simp [programChannel, WritePermissionProvider.channel, Channel.toRaw]) silent
 
@@ -485,10 +478,6 @@ theorem localWitness_membership (channel : RawChannel (ZMod p))
   rcases known with rfl | rfl
   all_goals
     apply localWitness_other witness _ (by simp [LocalCore.baseEnsemble])
-    · simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
-        StaticTable.ofRows, byteChannel, Channel.toRaw]
-    · simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
-        StaticTable.ofRows, memoryChannel, Channel.toRaw]
     · simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
         StaticTable.ofRows, HostCallChip.channel, Channel.toRaw]
     · simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
@@ -634,7 +623,7 @@ theorem hostCallTable_mem : hostCallTable witness ∈ witness.tables := List.get
 
 /-- The active instruction inventory is decoded from the same actual rows, including padding. -/
 theorem hostCallTable_projection :
-    ((HostCallLedger.activeRows (hostCallTable witness) witness.data).map fun env => (HostCallLedger.input env).instruction) =
+    ((HostCallLedger.activeRows (hostCallTable witness) witness.data).map HostCallLedger.input) =
       activeSystemRows (LocalCore.systemTable (localWitness witness) 3)
         (syscallInstrsRow (localWitness witness).data) (·.is_real) := by
   have rows : (LocalCore.systemTable (localWitness witness) 3).table =
@@ -644,7 +633,7 @@ theorem hostCallTable_projection :
     List.map_map, List.filter_map, Function.comp_def]
   have decode (row : Array (ZMod p)) :
       syscallInstrsRow (localWitness witness).data (row.extract 0 (HostCallProjection.original (p := p)).width) =
-        (HostCallLedger.input (Environment.fromArray row witness.data)).instruction :=
+        (HostCallLedger.input (Environment.fromArray row witness.data)) :=
     HostCallProjection.input_prefix row witness.data (localWitness witness).data
   simp only [decode]
   congr 1

@@ -144,7 +144,7 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
     witness.same_data _ (handlerTable_mem witness)
   rw [Table.environment, shared, handlerTable_component] at valid
   have span : HintReadSpan.Spec (HostHintReadCoverage.input (Environment.fromArray physical witness.data)).span :=
-    valid.2.2.2.2.2.2.2.2.1
+    valid.2.2.2.2.2.2.2.1
   exact le_trans span.2.2.1.1 lower
 
 private theorem permission_request_lower (tables : List (Table (ZMod p)))

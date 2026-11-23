@@ -1,6 +1,5 @@
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.FormalModel.Contracts.HostCall
 import SP1Clean.FormalModel.Contracts.HostRamRead
 import SP1Clean.Semantics.Execution.ExecutionAccess
 import SP1Clean.Soundness.Grounding.MemoryCell
@@ -276,15 +275,6 @@ theorem of_admissibleExecution {limits : ResourceLimits} {p : ℕ} {image : Prog
         data ▸ dispatched
       have agrees := both.trans (congrArg some nextHost.symm)
       exact ⟨agrees, hint_effects agrees⟩
-
-/-- The native wrapper's enabled x12 receiver strictly advances time. It cannot preserve
-the predecessor timestamp of a released WRITE observation. -/
-theorem traced_x12_incompatible {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] {input : HostCallChip.Inputs (ZMod p)}
-    (valid : HostCallChip.Spec input) (active : input.instruction.is_real = 1)
-    (code : input.instruction.op_a_memory.prev_value = HostCallChip.writeWord) :
-    let extra := input.read (HostCallChip.writeFlag input.instruction.op_a_memory.prev_value)
-    MemoryMsg.timeNat extra.prior < MemoryMsg.timeNat extra.pushed := by
-  exact (valid.2 (by simp [HostCallChip.Inputs.read, HostCallChip.writeFlag, active, code])).2.2
 
 /-- The traced native host RAM read also requires strictly increasing Memory time. -/
 theorem traced_ram_incompatible {p : ℕ} [Fact p.Prime] {input : HostRamReadChip.Inputs (ZMod p)}
