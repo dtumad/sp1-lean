@@ -4,6 +4,7 @@ import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Proofs.Completeness.MemoryReadbackIntervals
 import ToClean.Air.TableBuild
 import Mathlib.Data.Finset.Sort
+import Std.Data.HashSet.Lemmas
 
 /-! # Queried sparse keys in both authenticated Memory boundaries
 
@@ -88,9 +89,19 @@ private theorem source_live (snapshot : MemorySnapshot) (ram : Bool) (env : Envi
   rw [active] at ledger
   exact ledger
 
+/-- Select the real source circuit's active ordered input for an extra probe key. -/
+def sourceInput? (snapshot : MemorySnapshot) (ram : Bool) (previous key : ℕ) :
+    Option ((source (p := p) snapshot ram).Input (ZMod p)) :=
+  match ram with
+  | true => OrderedSnapshotProvider.populateRam? previous key
+  | false => if key = 12 ∧ previous < 13 then
+      some (OrderedMemoryProvider.populate (SnapshotRegisterProvider.populate (p := p) snapshot 12) previous 12)
+    else none
+
 private theorem registerSource (snapshot : MemorySnapshot) (previous : ℕ) (ordered : previous < 12 + 1)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∃ input : (source (p := p) snapshot false).Input (ZMod p),
+      sourceInput? snapshot false previous 12 = some input ∧
       let c := source (p := p) snapshot false
       let env := Environment.fromArray (c.buildRow input data hint) data
       c.operations.ConstraintsHold env ∧
@@ -101,7 +112,7 @@ private theorem registerSource (snapshot : MemorySnapshot) (previous : ℕ) (ord
   have valid := OrderedSnapshotProvider.populateRegister_assumptions (p := p)
     SnapshotMemoryEnsemble.channelName snapshot 12 previous ordered data hint
   let env := Environment.fromArray (c.buildRow input data hint) data
-  refine ⟨input, (c.buildRow_constraintsHold input data hint valid).1, ?_, ?_⟩
+  refine ⟨input, by simp [sourceInput?, ordered, input], (c.buildRow_constraintsHold input data hint valid).1, ?_, ?_⟩
   · have decoded : valueFromOffset (OrderedMemoryProvider.RowInput RegisterSnapshotRow) 0 env = input :=
       c.rowInput_buildRow input data data hint
     have stored := congrArg (fun r : OrderedMemoryProvider.RowInput RegisterSnapshotRow (ZMod p) => r.2) decoded
@@ -123,6 +134,7 @@ private theorem ramSource (snapshot : MemorySnapshot) (previous key : ℕ) (orde
     (lower : 2 ^ 16 ≤ key) (upper : key < 2 ^ 48) (aligned : key % 8 = 0)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∃ input : (source (p := p) snapshot true).Input (ZMod p),
+      sourceInput? snapshot true previous key = some input ∧
       let c := source (p := p) snapshot true
       let env := Environment.fromArray (c.buildRow input data hint) data
       c.operations.ConstraintsHold env ∧
@@ -132,12 +144,13 @@ private theorem ramSource (snapshot : MemorySnapshot) (previous key : ℕ) (orde
   obtain ⟨input, found⟩ := Option.isSome_iff_exists.mp
     ((OrderedSnapshotProvider.populateRam?_isSome_iff (p := p) previous key).mpr ⟨ordered, lower, upper, aligned⟩)
   have valid := OrderedSnapshotProvider.populateRam?_sound SnapshotMemoryEnsemble.channelName snapshot previous key input found data hint
+  have produced := found
   unfold OrderedSnapshotProvider.populateRam? at found
   rw [ite_eq_left ordered] at found
   obtain ⟨payload, _, rfl⟩ := Option.map_eq_some_iff.mp found
   let input := OrderedMemoryProvider.populate payload previous key
   let env := Environment.fromArray (c.buildRow input data hint) data
-  refine ⟨input, (c.buildRow_constraintsHold input data hint valid).1, ?_, ?_⟩
+  refine ⟨input, produced, (c.buildRow_constraintsHold input data hint valid).1, ?_, ?_⟩
   · have decoded : valueFromOffset (OrderedMemoryProvider.RowInput Word) 0 env = input :=
       c.rowInput_buildRow input data data hint
     have stored := congrArg (fun r : OrderedMemoryProvider.RowInput Word (ZMod p) => r.2) decoded
@@ -260,22 +273,138 @@ theorem initial_final_keys (stream : List MemoryHistoryAccess) (requested : List
       keys ((memoryFinalEntries stream).map MemRecordEntry.addr) requested := by
   rw [memoryInitialEntries_addresses, memoryFinalEntries_addresses]
 
-/-- Two real generated rows at one canonical sparse key. The source's authenticated output
-is used verbatim as the finalized record, preserving exact Memory cancellation. -/
+/-- The two physical row arrays built by the source and final circuits for one sparse location. -/
+structure Rows (F : Type) where
+  /-- Guest RAM uses the RAM components, x12 uses the register components. -/
+  ram : Bool
+  /-- Ordered Memory address used by both original providers. -/
+  key : ℕ
+  /-- Source array produced by the actual ordered snapshot component. -/
+  initial : Array F
+  /-- Final array produced by the protected ordered finalizer. -/
+  final : Array F
+
+private def buildFrom (snapshot : MemorySnapshot) (ram : Bool) (previous key : ℕ)
+    (input : (source (p := p) snapshot ram).Input (ZMod p)) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Rows (ZMod p) :=
+  let initial := (source snapshot ram).buildRow input data hint
+  let record := sourceRecord snapshot ram (Environment.fromArray initial data)
+  ⟨ram, key, initial, (finalComponent ram).buildRow (OrderedMemoryProvider.populate record previous key) data hint⟩
+
+/-- Execute the honest ordered source constructor, then finalize its exact authenticated output. -/
+def build? (snapshot : MemorySnapshot) (previous key : ℕ) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    Option (Rows (ZMod p)) :=
+  let ram := decide (key ≠ 12)
+  (sourceInput? snapshot ram previous key).map fun input => buildFrom snapshot ram previous key input data hint
+
+/-- Both raw environments satisfy their constraints, cancel the same original Memory record, and
+supply its closed private version. The original source circuit fixes the actual timestamp and word. -/
+def Rows.Checked (rows : Rows (ZMod p)) (snapshot : MemorySnapshot) (data : ProverData (ZMod p)) : Prop :=
+  let sourceEnv := Environment.fromArray rows.initial data
+  let record := sourceRecord snapshot rows.ram sourceEnv
+  let finalEnv := Environment.fromArray rows.final data
+  (source snapshot rows.ram).operations.ConstraintsHold sourceEnv ∧
+    (source snapshot rows.ram).operations.interactionValuesWith memoryChannel.toRaw sourceEnv = [memoryChannel.pushedValue record] ∧
+    MemoryBoundary.SnapshotAtSpec snapshot rows.key record ∧
+    (finalComponent rows.ram).operations.ConstraintsHold finalEnv ∧
+    (finalComponent rows.ram).operations.interactionValuesWith memoryChannel.toRaw finalEnv = [memoryChannel.pulledValue record] ∧
+    (finalComponent rows.ram).operations.interactionValuesWith readbackChannel.toRaw finalEnv = [readbackChannel.pushedValue (finalReadback record)]
+
+/-- Two real generated rows at a canonical sparse key. -/
 def RowPair (snapshot : MemorySnapshot) (ram : Bool) (previous key : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Prop :=
-  ∃ input : (source (p := p) snapshot ram).Input (ZMod p),
-    let sc := source (p := p) snapshot ram
-    let sourceEnv := Environment.fromArray (sc.buildRow input data hint) data
-    let record := sourceRecord snapshot ram sourceEnv
-    let fc := finalComponent ram
-    let finalEnv := Environment.fromArray (fc.buildRow (OrderedMemoryProvider.populate record previous key) data hint) data
-    sc.operations.ConstraintsHold sourceEnv ∧
-      sc.operations.interactionValuesWith memoryChannel.toRaw sourceEnv = [memoryChannel.pushedValue record] ∧
-      MemoryBoundary.SnapshotAtSpec snapshot key record ∧
-      fc.operations.ConstraintsHold finalEnv ∧
-      fc.operations.interactionValuesWith memoryChannel.toRaw finalEnv = [memoryChannel.pulledValue record] ∧
-      fc.operations.interactionValuesWith readbackChannel.toRaw finalEnv = [readbackChannel.pushedValue (finalReadback record)]
+  ∃ input, (buildFrom snapshot ram previous key input data hint).Checked snapshot data
+
+private theorem generated (snapshot : MemorySnapshot) (touched requested : List ℕ)
+    (i : Fin (keys touched requested).length) (fresh : (keys touched requested)[i.val] ∉ touched)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    let ks := keys touched requested
+    let key := ks[i.val]
+    let previous := previousKey ks i
+    ∃ (ram : Bool) (input : (source (p := p) snapshot ram).Input (ZMod p)),
+      ram = decide (key ≠ 12) ∧ sourceInput? snapshot ram previous key = some input ∧
+      (buildFrom snapshot ram previous key input data hint).Checked snapshot data := by
+  let ks := keys touched requested
+  let key := ks[i.val]
+  let previous := previousKey ks i
+  have valid : ValidKey key := ((mem_keys.mp (List.getElem_mem i.isLt)).resolve_left fresh).2
+  have ordered : previous < key + 1 := previousKey_lt (ordered_keys touched requested) i
+  rcases valid with reg | ⟨lower, upper, aligned⟩
+  · obtain ⟨input, found, holds, ledger, indexed⟩ := registerSource snapshot previous (reg ▸ ordered) data hint
+    let c := source (p := p) snapshot false
+    let env := Environment.fromArray (c.buildRow input data hint) data
+    have atKey : MemoryBoundary.SnapshotAtSpec snapshot key (sourceRecord snapshot false env) := by
+      rw [reg]
+      exact indexed
+    have tag : false = decide (key ≠ 12) := by simp [reg]
+    have made : sourceInput? snapshot false previous key = some input := by rw [reg]; exact found
+    exact ⟨false, input, tag, made, holds, ledger, atKey,
+      finalPair false snapshot previous key _ atKey reg ordered data hint⟩
+  · obtain ⟨input, found, holds, ledger, indexed⟩ := ramSource snapshot previous key ordered lower upper aligned data hint
+    have tag : true = decide (key ≠ 12) := by simp [show key ≠ 12 by omega]
+    exact ⟨true, input, tag, found, holds, ledger, indexed,
+      finalPair true snapshot previous key _ indexed ⟨lower, upper, aligned⟩ ordered data hint⟩
+
+/-- Every additional valid request yields actual checked source and final arrays from the executable builder. -/
+theorem build?_checked (snapshot : MemorySnapshot) (touched requested : List ℕ)
+    (i : Fin (keys touched requested).length) (fresh : (keys touched requested)[i.val] ∉ touched)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ∃ rows, build? snapshot (previousKey (keys touched requested) i) (keys touched requested)[i.val] data hint = some rows ∧
+      rows.key = (keys touched requested)[i.val] ∧ rows.Checked snapshot data := by
+  obtain ⟨ram, input, tag, made, valid⟩ := generated snapshot touched requested i fresh data hint
+  subst ram
+  exact ⟨_, by simp only [build?, made, Option.map_some], rfl, valid⟩
+
+private def positions (ks : List ℕ) : List (ℕ × ℕ) :=
+  ks.zip (0 :: ks.map (· + 1))
+
+private theorem positions_length (ks : List ℕ) : (positions ks).length = ks.length := by
+  simp [positions]
+
+private theorem position_eq (ks : List ℕ) (i : Fin ks.length) :
+    (positions ks)[i.val]'(by rw [positions_length]; exact i.isLt) = (ks[i.val], previousKey ks i) := by
+  rcases i with ⟨_ | n, inside⟩ <;> simp [positions, List.getElem_zip, previousKey]
+
+/-- Build every additional pair in canonical order. The existing Memory stream is indexed
+once, and adjacent ordered cursors are obtained in a single traversal of the sorted union. -/
+def buildAll (snapshot : MemorySnapshot) (touched requested : List ℕ) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    List (Rows (ZMod p)) :=
+  let used := Std.HashSet.ofList touched
+  (positions (keys touched requested)).filterMap fun (key, previous) =>
+    if used.contains key then none else build? snapshot previous key data hint
+
+/-- The batch's committed pairs are exactly the successful builders at fresh positions of the
+combined inventory. No multiple requests at the same key can generate a second boundary pair. -/
+theorem mem_buildAll_iff (snapshot : MemorySnapshot) (touched requested : List ℕ) (data : ProverData (ZMod p))
+    (hint : ProverHint (ZMod p)) (rows : Rows (ZMod p)) :
+    rows ∈ buildAll snapshot touched requested data hint ↔
+      ∃ i : Fin (keys touched requested).length, (keys touched requested)[i.val] ∉ touched ∧
+        build? snapshot (previousKey (keys touched requested) i) (keys touched requested)[i.val] data hint = some rows := by
+  let ks := keys touched requested
+  constructor
+  · intro member
+    obtain ⟨⟨key, previous⟩, position, built⟩ := List.mem_filterMap.mp member
+    obtain ⟨n, inside, same⟩ := List.mem_iff_getElem.mp position
+    let i : Fin ks.length := ⟨n, by rw [positions_length] at inside; exact inside⟩
+    have agree := (position_eq ks i).symm.trans same
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj agree
+    by_cases used : ks[i.val] ∈ touched
+    · simp [Std.HashSet.contains_ofList, used] at built
+    · exact ⟨i, used, by simpa [Std.HashSet.contains_ofList, used] using built⟩
+  · rintro ⟨i, unused, built⟩
+    apply List.mem_filterMap.mpr
+    refine ⟨(ks[i.val], previousKey ks i), List.mem_iff_getElem.mpr ⟨i.val, ?_, position_eq ks i⟩, ?_⟩
+    · rw [positions_length]
+      exact i.isLt
+    · simpa only [ks, Std.HashSet.contains_ofList, List.contains_iff_mem, unused, ↓reduceIte] using built
+
+/-- Each previously untouched valid request occurs in the actual generated batch with its
+authentic word, exact original Memory cancellation and finalizer publication. -/
+theorem buildAll_covers (snapshot : MemorySnapshot) (touched requested : List ℕ)
+    (i : Fin (keys touched requested).length) (fresh : (keys touched requested)[i.val] ∉ touched)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ∃ rows ∈ buildAll snapshot touched requested data hint, rows.key = (keys touched requested)[i.val] ∧ rows.Checked snapshot data := by
+  obtain ⟨rows, built, key, checked⟩ := build?_checked snapshot touched requested i fresh data hint
+  exact ⟨rows, (mem_buildAll_iff snapshot touched requested data hint rows).mpr ⟨i, fresh, built⟩, key, checked⟩
 
 /-- Any additional admissible request has a real source and final row at its place in the
 combined strict ordering. The source fixes all four limbs of the word and timestamp zero. -/
@@ -283,23 +412,8 @@ theorem sparse_pair (snapshot : MemorySnapshot) (touched requested : List ℕ)
     (i : Fin (keys touched requested).length) (fresh : (keys touched requested)[i.val] ∉ touched)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∃ ram, RowPair snapshot ram (previousKey (keys touched requested) i) (keys touched requested)[i.val] data hint := by
-  let ks := keys touched requested
-  let key := ks[i.val]
-  let previous := previousKey ks i
-  have valid : ValidKey key := ((mem_keys.mp (List.getElem_mem i.isLt)).resolve_left fresh).2
-  have ordered : previous < key + 1 := previousKey_lt (ordered_keys touched requested) i
-  rcases valid with reg | ⟨lower, upper, aligned⟩
-  · obtain ⟨input, holds, ledger, indexed⟩ := registerSource snapshot previous (reg ▸ ordered) data hint
-    let c := source (p := p) snapshot false
-    let env := Environment.fromArray (c.buildRow input data hint) data
-    have atKey : MemoryBoundary.SnapshotAtSpec snapshot key (sourceRecord snapshot false env) := by
-      rw [reg]
-      exact indexed
-    exact ⟨false, input, holds, ledger, atKey,
-      finalPair false snapshot previous key _ atKey reg ordered data hint⟩
-  · obtain ⟨input, holds, ledger, indexed⟩ := ramSource snapshot previous key ordered lower upper aligned data hint
-    exact ⟨true, input, holds, ledger, indexed,
-      finalPair true snapshot previous key _ indexed ⟨lower, upper, aligned⟩ ordered data hint⟩
+  obtain ⟨ram, input, _, _, valid⟩ := generated snapshot touched requested i fresh data hint
+  exact ⟨ram, input, valid⟩
 
 omit [Fact (2 ^ 17 < p)] in
 /-- A zero-time sparse suffix covers every legal probe clock and carries the snapshot's

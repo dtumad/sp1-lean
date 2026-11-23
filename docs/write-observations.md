@@ -76,8 +76,9 @@ The chronological selector picks the first later push, or the final suffix when 
 [Incoming-cut proof and selector](../SP1Clean/Proofs/Completeness/WriteAccessIntervals.lean)
 
 Both ordered finalizers publish the actual last Memory record through the largest 48-bit
-clock. Valid queries outside the touched inventory enter both sorted boundaries. The original
-source snapshot circuit supplies the authentic zero-timestamp word. Its unit Memory push
+clock. Valid queries outside the touched inventory enter both sorted boundaries. The batch
+builder runs the source and final circuits at every new key and returns their physical row
+arrays. The snapshot circuit supplies the authentic zero-timestamp word. Its unit Memory push
 cancels the finalizer's unit pull, and the suffix covers every representable clock.
 [Sparse boundary construction](../SP1Clean/Proofs/Completeness/WriteSparseBoundaries.lean) · [Fixed x12 rows](../SP1Clean/Native/Operations/WriteProbeRegisterBoundary.lean)
 
