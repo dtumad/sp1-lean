@@ -10,6 +10,7 @@ import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.WriteProbeCapacity
+import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
 import SP1Clean.Export.WriteRefreshTables
 import SP1Clean.Soundness.WriteReadbackSupply
 import SP1Clean.Soundness.WriteReadbackSources

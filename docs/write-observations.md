@@ -97,3 +97,5 @@ At `fixedProviderPreset`, `C ≤ 63,550` and `W ≤ 266,449,516`. Together at mo
 266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` for the native table's
 one row per probe. Each physical row contributes one occurrence to each of its two private
 channels, including zero-weight padding. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
+
+The sparse boundary construction sorts the union of real Memory keys and admissible probe keys. Each previously untouched key gets an ordered source row and an ordered finalizer row. The emitted zero-time word comes directly from the source snapshot circuit. Its unit Memory push cancels the finalizer’s unit pull, and the finalizer publishes that same word through the last representable clock.
