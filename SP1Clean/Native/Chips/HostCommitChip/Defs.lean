@@ -30,7 +30,6 @@ def main (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p)) : Circui
   assertion (Gadgets.Equality.circuit Word) (input.call.code, const (codeWord deferred))
   assertion (Gadgets.Equality.circuit Word) (input.call.arg1, const (slotWord slot))
   assertion (Gadgets.Equality.circuit Word) (input.call.result, const (codeWord deferred))
-  assertion (Gadgets.Equality.circuit Word) (input.call.length, const (0 : Word (ZMod p)))
   let _ ← ClockOrder.circuit input.clock
   let _ ← BoundedWord.circuit (bound p deferred) (bound_fits p deferred) ⟨input.call.arg2, input.comparison⟩
   assertion U16toU8OperationSafe.circuit ⟨input.call.arg2, input.bytes, 1⟩

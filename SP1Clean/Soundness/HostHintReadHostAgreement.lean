@@ -55,7 +55,7 @@ private theorem inventory_calls
       obtain ⟨env, envMem, rfl⟩ := List.mem_map.mp active
       have received := handoff.mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) envMem)
       simpa only [HostReceiptProfile.code, HostReceiptProfile.event, ExecutionRow.event, rawCode_syscallEventOfRow,
-        HostCallLedger.call, HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat]
+        HostCallLedger.call, HostCallChip.message, Word.toBitVec64, Word.toNat]
         using receivedCode _ received
 
 private theorem queue_terminal

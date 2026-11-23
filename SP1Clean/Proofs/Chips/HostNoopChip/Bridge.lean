@@ -48,7 +48,7 @@ theorem run_of_spec (kind : Kind) (input : Inputs (ZMod p)) (valid : Spec kind i
   refine ⟨running, ?_, arg1, arg2, ?_, by cases kind <;> rfl⟩
   · simpa only [valid.1, code_value, execution] using code
   · cases kind with
-    | enter => simp [execution, valid.2.1, Kind.syscall, resultWord, HostState.result, Word.toBitVec64, Word.toNat]
-    | verify => exact (congrArg Word.toBitVec64 valid.2.1).trans (code_value .verify)
+    | enter => simp [execution, valid.2, Kind.syscall, resultWord, HostState.result, Word.toBitVec64, Word.toNat]
+    | verify => exact (congrArg Word.toBitVec64 valid.2).trans (code_value .verify)
 
 end SP1Clean.HostNoopChip

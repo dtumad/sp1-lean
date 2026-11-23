@@ -198,9 +198,9 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     simp only [GroundingCarrier.trajectory, paired, Option.map_some]
   have time := ExecutionCarrier.time_of_ordered_at carrier atIndex
   have instructionTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-      (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
+      (HostCallLedger.input physical)) = carrier.timeline.start n := by
     simpa only [eventFacts, sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
-  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
+  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical)).memPulls,
       LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
     apply currency mp

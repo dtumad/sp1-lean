@@ -26,7 +26,6 @@ attribute [local circuit_norm]
   AddressOperation.circuit AddressOperation.main AddressOrder.circuit AddressOrder.main
   BoundedWord.circuit BoundedWord.main Circuit.Guarded.circuit ClockOrder.circuit ClockOrder.main
   CoreSyscallChip.circuit CoreSyscallChip.main Gadgets.Equality.circuit Gadgets.Equality.main
-  Gadgets.IsEqual.circuit Gadgets.IsEqual.main Gadgets.IsZero.circuit Gadgets.IsZero.main
   Gadgets.IsZeroField.circuit HaltChip.circuit HaltChip.main HaltPaddingChip.circuit
   HaltPaddingChip.main HintReadSpan.circuit HintReadSpan.main HintReadStep.circuit
   HintReadStep.main HintReadWordChip.circuit HintReadWordChip.main HostCallChip.circuit
@@ -37,7 +36,7 @@ attribute [local circuit_norm]
   Readers.CPUState.main Readers.ITypeReaderImmutable.circuit Readers.ITypeReaderImmutable.main
   Readers.MemoryAccess.circuit Readers.MemoryAccess.main Readers.RegisterAccessCols.circuit
   Readers.RegisterAccessCols.main Readers.RegisterAccessTimestamp.circuit
-  Readers.RegisterAccessTimestamp.main Readers.RegisterRead.circuit Readers.RegisterRead.main
+  Readers.RegisterAccessTimestamp.main
   StoreByteChip.circuit StoreByteChip.main StoreDoubleChip.circuit StoreDoubleChip.main
   StoreHalfChip.circuit StoreHalfChip.main StoreWordChip.circuit StoreWordChip.main
   SyscallCodeGuard.circuit SyscallCodeGuard.main U16CompareOperation.circuit

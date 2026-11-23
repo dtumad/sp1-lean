@@ -104,7 +104,7 @@ private theorem eval_endpoints (env : Environment (ZMod p)) (input : Var Inputs 
     Eval.eval env input.first = (Eval.eval env input).first ∧
       Eval.eval env input.final = (Eval.eval env input).final := by
   rcases input with ⟨call, previous, node, span, lastIndex, lastValue⟩
-  rcases call with ⟨high, low, code, arg1, arg2, result, length⟩
+  rcases call with ⟨high, low, code, arg1, arg2, result⟩
   rcases node with ⟨pointer, tail, length⟩
   rcases span with ⟨start, quotients, length, last, count⟩
   simp only [Inputs.first, Inputs.final, circuit_norm, and_self]

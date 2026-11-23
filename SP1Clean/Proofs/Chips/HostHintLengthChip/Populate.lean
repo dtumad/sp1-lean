@@ -37,7 +37,7 @@ theorem populate_spec_of_run (store : HintQueue.Store) (head previousClock clock
     (current : HintQueue.Represents store head host.io.hints)
     (headBound : head < 2 ^ 48) (fits : clock < 2 ^ 48) (order : previousClock < clock) :
     Spec (decide (head = 0)) (populate (p := p) store head previousClock clock executed) := by
-  refine ⟨?_, rfl, clock_spec store head previousClock clock executed fits order, ?_⟩
+  refine ⟨?_, clock_spec store head previousClock clock executed fits order, ?_⟩
   · simp only [populate, HostControl.message, kind, codeWord]
   have length := HostState.hintLength?_of_run success kind current
   by_cases empty : head = 0

@@ -1,7 +1,7 @@
 import SP1CleanTest.Alignment.Support.BoundaryFixture
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
+import SP1Clean.Proofs.Chips.HostCallChip.Formal
 import SP1Clean.Semantics.Host.HostSnapshot
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
@@ -88,8 +88,8 @@ def ecall (construction : Construction) (policy : HostPolicy) (program : Target.
     Except String Construction := do
   let before := construction.current
   let some (after, event) := before.hostStep? policy program | throw "semantic host step failed"
-  let row := HostCallChip.populate (syscallInstruction (p := SP1Prime) construction.frontier event) 0 0
-  let message := row.message 0
+  let row := syscallInstruction (p := SP1Prime) construction.frontier event
+  let message := HostCallChip.message row
   let mut next : Construction := { construction with
     current := after
     frontier := (scheduleAccessPlan construction.frontier event.clock (syscallRegisterPlan event)).outgoing

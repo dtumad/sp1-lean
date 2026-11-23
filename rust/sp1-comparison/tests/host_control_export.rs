@@ -206,7 +206,7 @@ fn clock(value: u64) -> Vec<F> {
 }
 fn call(code: u64, arg1: u64, arg2: u64, result: u64, clk: u64) -> Vec<F> {
     let mut out = clock(clk);
-    for value in [code, arg1, arg2, result, 0] {
+    for value in [code, arg1, arg2, result] {
         out.extend(word(value));
     }
     out
@@ -410,7 +410,7 @@ fn all_commit_slots_preserve_released_executor_effects_and_literal_receipts() {
                     }
                     same_ledger(nonbyte((handler.ledger)(&row)), expected);
                     let mut equal_clock = input.clone();
-                    equal_clock[22..24].copy_from_slice(&message[..2]);
+                    equal_clock[18..20].copy_from_slice(&message[..2]);
                     assert!(!handler.valid(&handler.build(&equal_clock)));
                     previous = next;
                 }
@@ -503,7 +503,7 @@ fn verify_matches_released_x5_write_and_full_handoff() {
     assert_eq!(values(&row), reference.row);
     same_ledger((verify.ledger)(&row), reference.ledger);
     assert!(verify.valid(&row));
-    for col in [2, 5, 14, 17, 18] {
+    for col in [2, 5, 14, 17] {
         let mut wrong = input.clone();
         wrong[col] += F::ONE;
         assert!(!verify.valid(&verify.build(&wrong)));
@@ -543,7 +543,7 @@ fn verify_matches_released_x5_write_and_full_handoff() {
 #[test]
 fn shared_receipt_consumes_both_released_no_effect_calls_once() {
     let shared = handler::<enter_or_verify::Ensemble>();
-    assert_eq!((shared.input_width, shared.width), (22, 22));
+    assert_eq!((shared.input_width, shared.width), (18, 18));
     assert!(!shared.valid(&shared.build(&vec![F::ZERO; shared.input_width])));
     let mut instructions = vec![];
     constrained_enter(&mut instructions);
@@ -577,7 +577,7 @@ fn shared_receipt_consumes_both_released_no_effect_calls_once() {
             (shared.ledger)(&row),
             vec![entry("sp1.native.host_call", -F::ONE, &input)],
         );
-        for col in [2, 5, 14, 17, 18] {
+        for col in [2, 5, 14, 17] {
             let mut wrong = input.clone();
             wrong[col] += F::ONE;
             assert!(!shared.valid(&shared.build(&wrong)));
@@ -593,7 +593,7 @@ fn malformed_calls_bounds_and_terminal_clocks_are_rejected() {
     for (index, (handler, reference)) in handlers().iter().zip(references().rows).enumerate() {
         let input = fields(&reference.input);
         if index < 18 {
-            for column in [2, 4, 14, 18] {
+            for column in [2, 4, 14, 17] {
                 let mut changed = input.clone();
                 changed[column] += F::ONE;
                 assert!(
@@ -953,19 +953,19 @@ fn malformed_hint_calls_clocks_and_spans_are_rejected() {
     );
     for (handler, input) in handlers.iter().zip([empty, length, input.clone()]) {
         assert!(handler.valid(&handler.build(&input)));
-        for column in [2, 4, 14, 18] {
+        for column in [2, 4, 14, 17] {
             let mut changed = input.clone();
             changed[column] += F::ONE;
             assert!(!handler.valid(&handler.build(&changed)));
         }
         let mut equal_clock = input.clone();
-        equal_clock[22..24].copy_from_slice(&input[..2]);
+        equal_clock[18..20].copy_from_slice(&input[..2]);
         assert!(!handler.valid(&handler.build(&equal_clock)));
         let mut wrong_head = input.clone();
-        wrong_head[24] += F::ONE;
+        wrong_head[20] += F::ONE;
         assert!(!handler.valid(&handler.build(&wrong_head)));
     }
-    for column in [6, 10, 40, 43, 46, 50, 53, 56, 59] {
+    for column in [6, 10, 36, 39, 42, 46, 49, 52, 55] {
         let mut changed = input.clone();
         changed[column] += F::ONE;
         assert!(
@@ -992,7 +992,7 @@ fn malformed_hint_calls_clocks_and_spans_are_rejected() {
     // The handler requests an authenticated final word. Its local assertions alone do not bind
     // that word to source bytes; preserve this boundary instead of treating an open bus as proof.
     let mut changed = input.clone();
-    changed[62] += F::ONE;
+    changed[58] += F::ONE;
     assert_ne!(
         nonbyte((handlers[2].ledger)(&handlers[2].build(&changed))),
         nonbyte((handlers[2].ledger)(&handlers[2].build(&input)))

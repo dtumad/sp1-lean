@@ -58,8 +58,8 @@ private def instruction (call : HostCallChip.Message Fp) : Bool × Ledger :=
       is_commit := IsZeroOperation.populate 225, is_commit_deferred := IsZeroOperation.populate 215
       digest_index_bits := Vector.replicate 8 0, digest_word := 0
       op_b_cmp := ⟨0⟩, op_c_cmp := ⟨1⟩, is_real := 1 }
-  evaluateProgram (HostCallChip.main (varFromOffset HostCallChip.Inputs 0))
-    (toElements (HostCallChip.populate row 0 0)).toList (programAddress := 131072)
+  evaluateProgram (HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0))
+    (toElements row).toList (programAddress := 131072)
 
 private def boundaries (honest : HostHintReadChip.Inputs Fp) : Ledger :=
   (evaluateProgram (do
@@ -163,7 +163,6 @@ theorem malformedRows :
     let row := input [1, 2, 3] 65536
     [{ row with call := { row.call with code := #v[241, 0, 0, 1] } },
      { row with call := { row.call with result := 0 } },
-     { row with call := { row.call with length := #v[1, 0, 0, 0] } },
      { row with call := { row.call with arg1 := #v[0, 1, 0, 1] } },
      { row with call := { row.call with arg2 := #v[4, 0, 0, 0] } },
      { row with previous := { row.previous with clk_low := 1 } },

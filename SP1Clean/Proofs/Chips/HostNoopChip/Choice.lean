@@ -25,7 +25,6 @@ def choiceMain (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero input.result[1]
   assertZero input.result[2]
   assertZero input.result[3]
-  assertion (Gadgets.Equality.circuit Word) (input.length, const (0 : Word (ZMod p)))
   HostCallChip.channel.pull input
 
 instance choiceElaborated : ElaboratedCircuit (ZMod p) Inputs unit choiceMain := by elaborate_circuit
@@ -56,20 +55,19 @@ def choiceCircuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   channelsWithRequirements := [HostCallChip.channel.toRaw]
   soundness := by
     circuit_proof_start [choiceMain, Gadgets.Equality.circuit, HostCallChip.channel]
-    obtain ⟨root, enterResult, verifyResult, c1, c2, c3, r1, r2, r3, length⟩ := h_holds
-    simp only [Vector.map_id'] at length
+    obtain ⟨root, enterResult, verifyResult, c1, c2, c3, r1, r2, r3⟩ := h_holds
     simp only [mul_eq_zero, sub_eq_zero] at root enterResult verifyResult
     rcases root with enter | verify
     · left
       exact ⟨word_eq _ _ enter c1 c2 c3,
-        word_eq _ _ (enterResult.resolve_left (enter ▸ different)) r1 r2 r3, length⟩
+        word_eq _ _ (enterResult.resolve_left (enter ▸ different)) r1 r2 r3⟩
     · right
       exact ⟨word_eq _ _ verify c1 c2 c3,
-        word_eq _ _ (verifyResult.resolve_left (verify ▸ Ne.symm different)) r1 r2 r3, length⟩
+        word_eq _ _ (verifyResult.resolve_left (verify ▸ Ne.symm different)) r1 r2 r3⟩
   completeness := by
     circuit_proof_start [choiceMain, Gadgets.Equality.circuit, HostCallChip.channel]
-    rcases h_assumptions with ⟨code, result, length⟩ | ⟨code, result, length⟩ <;>
-      dsimp only at code result length <;>
-      simp [code, result, length, codeWord, resultWord, circuit_norm]
+    rcases h_assumptions with ⟨code, result⟩ | ⟨code, result⟩ <;>
+      dsimp only at code result <;>
+      simp [code, result, codeWord, resultWord, circuit_norm]
 
 end SP1Clean.HostNoopChip

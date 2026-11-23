@@ -23,8 +23,8 @@ theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) mai
 theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by
   circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
-  obtain ⟨⟨code, result, length, value⟩, comparison⟩ := h_assumptions
-  simpa only [Vector.map_id'] using And.intro code ⟨result, length, value, comparison⟩
+  obtain ⟨⟨code, result, value⟩, comparison⟩ := h_assumptions
+  simpa only [Vector.map_id'] using And.intro code ⟨result, value, comparison⟩
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.host_halt"

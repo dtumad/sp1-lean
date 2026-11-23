@@ -101,8 +101,8 @@ theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Sp
   | none =>
     change HostHintReadChip.Spec (HostHintReadCoverage.input env) at valid
     have length : Word.isU64 (HostHintReadCoverage.input env).call.arg2 := by
-      rw [valid.2.2.2.2.1]
-      exact valid.2.2.2.2.2.2.2.2.1.2.1
+      rw [valid.2.2.2.1]
+      exact valid.2.2.2.2.2.2.2.1.2.1
     simp only [safe, project, call, valid.1, HostHintReadChip.codeWord,
       Target.toBitVec64_bitVecToWord, queueCallEvent?, SyscallKind.code,
       BitVec.reduceEq, ↓reduceIte, Word.toBitVec64_toNat length, HostQueueHistory.event]

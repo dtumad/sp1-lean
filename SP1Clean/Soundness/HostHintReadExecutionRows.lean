@@ -6,9 +6,8 @@ import SP1Clean.Soundness.HostLocalCoreProgram
 /-! # CPU execution rows with their installed hint Memory effects
 
 Each event keeps its State edge and fetch and adds the active hint words assigned to it by
-the two installed ledgers. The present source registry derives absence of WRITE, so its wrapper's
-x12 pair is disabled; this is a proved property of that registry, not an inactivity premise or
-a restriction on the eventual eight-call capstone. Future WRITE installation must retain that pair.
+the two installed ledgers. The host ECALL row preserves every released Memory occurrence;
+HINT_READ contributes the auxiliary word writes.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -96,23 +95,6 @@ theorem word_memory_messages (tables : List (Table (ZMod p)))
     · simpa [producedMessages, consumedMessages, inactive, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue, TypedInteraction.raw, Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.mult, TypedInteraction.message, ProvableType.fromElements_toElements] using tail
     · simpa [producedMessages, consumedMessages, active, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue, TypedInteraction.raw, Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.mult, TypedInteraction.message, ProvableType.fromElements_toElements] using tail
 
-private theorem write_word_bits :
-    Word.toBitVec64 (HostCallChip.writeWord (R := ZMod p)) = SyscallKind.write.code := by
-  have two : (2 : ZMod p).val = 2 := ZMod.val_natCast_of_lt
-    (show 2 < p by have := Fact.out (p := 2 ^ 25 < p); omega)
-  simp [HostCallChip.writeWord, Word.toBitVec64, Word.toNat, two, SyscallKind.code]
-
-private theorem extra_disabled (input : HostCallChip.Inputs (ZMod p))
-    (safe : Word.toBitVec64 (input.message (HostCallChip.writeFlag input.instruction.op_a_memory.prev_value)).code ≠
-      SyscallKind.write.code) :
-    (input.read (HostCallChip.writeFlag input.instruction.op_a_memory.prev_value)).is_real = 0 := by
-  have different : input.instruction.op_a_memory.prev_value ≠ HostCallChip.writeWord := by
-    intro same
-    apply safe
-    change Word.toBitVec64 input.instruction.op_a_memory.prev_value = _
-    rw [same, write_word_bits]
-  simp only [HostCallChip.Inputs.read, HostCallChip.writeFlag, ite_eq_right different, mul_zero]
-
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
   {names : ((HostLocalCore.tables image source
@@ -122,46 +104,6 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources)),
     component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
-
-/-- The current physical receiver registry disables every x12 pair, including padding.
-The general extended ledger still retains WRITE's pair when that handler is installed later. -/
-theorem wrapper_disabled
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface HostCallReceivers.available resources)
-    (constraints : witness.Constraints) (bytes : witness.BalancedChannel byteChannel.toRaw)
-    (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
-    (specs : ∀ table ∈ queueTables witness, table.Spec) :
-    ∀ env ∈ (HostLocalCore.hostCallTable witness).table.map (Environment.fromArray · witness.data),
-      (HostCallProjection.extraRead env).is_real = 0 := by
-  have safe := (HostQueueCallProjection.calls_projection witness interface constraints bytes specs).1
-  have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface) constraints calls
-  intro env member
-  have checked : HostCallLedger.producer.operations.ConstraintsHold env := by
-    obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
-    have checked := constraints _ (HostLocalCore.hostCallTable_mem witness) physical present
-    have shared : (HostLocalCore.hostCallTable witness).data = witness.data :=
-      witness.same_data _ (HostLocalCore.hostCallTable_mem witness)
-    rwa [Table.environment, shared, HostLocalCore.hostCallTable_component] at checked
-  rcases HostCallLedger.binary_of_constraints env checked with inactive | active
-  · simp only [HostCallProjection.extraRead, HostCallChip.Inputs.read, inactive, zero_mul]
-  · apply extra_disabled (HostCallLedger.input env)
-    apply safe
-    apply handoff.mem_iff.mp
-    exact List.mem_map.mpr ⟨env,
-      List.mem_filter.mpr ⟨member, by simpa only [decide_eq_true_eq] using active⟩, rfl⟩
-
-private theorem wrapper_messages_nil
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (disabled : ∀ env ∈ (HostLocalCore.hostCallTable witness).table.map (Environment.fromArray · witness.data),
-      (HostCallProjection.extraRead env).is_real = 0) :
-    producedMessages (HostLocalCore.wrapperMemory witness) = [] ∧
-      consumedMessages (HostLocalCore.wrapperMemory witness) = [] := by
-  rw [HostLocalCore.wrapperMemory, producedMessages_flatMap, consumedMessages_flatMap]
-  constructor
-  all_goals
-    apply List.flatMap_eq_nil_iff.mpr
-    intro env member
-    simp [producedMessages, consumedMessages, disabled env member]
 
 private theorem auxiliary_memory_words
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
@@ -209,27 +151,19 @@ variable [sourceRegistration : HostFinalMemory.Registration image source extra H
   {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints)}
 /-- Every active host Memory contribution of the installed source assembly belongs to its
-word tables. The zero x12 pairs remain in the raw ledger and disappear only by signed activity. -/
+word tables. The generic instruction receipt preserves all of the released register accesses. -/
 theorem source_memory_messages
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
-    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
+    :
     (producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
       (producedMessages (LocalCore.memoryInterior (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
         producedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · memoryChannel))) ∧
     (consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
       (consumedMessages (LocalCore.memoryInterior (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
         consumedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · memoryChannel))) := by
-  have checked := HostHintQueueBoundary.projected_constraints witness constraints
-  have records := HostHintQueueBoundary.record_channels witness balanced
-  have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
-  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
-  have specs := queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checked records
-  have empty := wrapper_messages_nil _ (wrapper_disabled _ interface checked records.byte calls specs)
   have words := auxiliary_memory_words (HostHintQueueBoundary.projected witness) (source_memory_silent source)
-  have perm := HostLocalCore.memoryInterior_perm (HostHintQueueBoundary.projected witness) checked
-  have messages := messages_perm _ _ perm
-  simpa only [producedMessages_append, consumedMessages_append, empty.1, empty.2, List.append_nil,
-    words, HostHintQueueBoundary.projected_data] using messages
+  rw [HostLocalCore.memoryInterior_eq, words, producedMessages_append, consumedMessages_append]
+  exact ⟨.refl _, .refl _⟩
 
 /-- The actual CPU inventory with all installed hint-word Memory effects attached. -/
 noncomputable def sourceExecutionRows
@@ -269,7 +203,7 @@ theorem source_execution_memory_projection
   have words := word_memory_messages _ (wordTables_aligned (HostHintQueueBoundary.projected witness))
     (fun table member => HostHintQueueBoundary.projected_constraints witness constraints table
       (wordTables_mem _ table member))
-  have messages := source_memory_messages witness constraints balanced
+  have messages := source_memory_messages witness
   have fullPushes := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
     (Multiset.coe_eq_coe.mpr messages.1)
   have fullPulls := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
@@ -411,7 +345,7 @@ private theorem source_word_owner
     (member : row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))) event) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness)) witness.data,
-      event = .syscall (HostCallLedger.input env).instruction := by
+      event = .syscall (HostCallLedger.input env) := by
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have cursor := HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced

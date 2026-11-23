@@ -65,8 +65,8 @@ private def instruction (result : Word Fp) : Bool × Ledger :=
       is_commit := IsZeroOperation.populate 224, is_commit_deferred := IsZeroOperation.populate 214
       digest_index_bits := Vector.replicate 8 0, digest_word := 0
       op_b_cmp := ⟨0⟩, op_c_cmp := ⟨1⟩, is_real := 1 }
-  evaluateProgram (HostCallChip.main (varFromOffset HostCallChip.Inputs 0))
-    (toElements (HostCallChip.populate row 0 0)).toList
+  evaluateProgram (HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0))
+    (toElements row).toList
 
 private def endpoints (row : HostHintLengthChip.Inputs Fp) : Bool × Ledger :=
   evaluateProgram (do
@@ -124,7 +124,6 @@ theorem forgedEmpty :
 theorem rejectsMalformed :
     let row := input [[1, 2, 3]] 0 1
     [{ row with call := { row.call with code := #v[240, 0, 0, 1] } },
-     { row with call := { row.call with length := word 1 } },
      { row with previous := { row.previous with clk_low := 1 } },
      { row with previous := { row.previous with clk_high := 2 ^ 24 } },
      { row with node := { row.node with tail := row.node.pointer } },

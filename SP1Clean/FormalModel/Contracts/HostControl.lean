@@ -21,7 +21,7 @@ provable_struct_eval_lemmas Inputs
 def bound (p : ℕ) : ℕ := min p (2 ^ 32)
 
 def CallSpec {p : ℕ} [Fact p.Prime] (call : HostCallChip.Message (ZMod p)) : Prop :=
-  call.code = 0 ∧ call.result = 0 ∧ call.length = 0 ∧
+  call.code = 0 ∧ call.result = 0 ∧
     Word.isU64 call.arg1 ∧ Word.toNat call.arg1 < bound p
 
 def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop := CallSpec input.call
@@ -50,11 +50,11 @@ def resultWord {p : ℕ} (kind : Kind) : Word (ZMod p) :=
   | .enter => 0
   | .verify => codeWord .verify
 
-/-- No-effect calls leave both arguments unrestricted and use no WRITE length. -/
-def Spec {p : ℕ} [Fact p.Prime] (kind : Kind) (input : Inputs (ZMod p)) : Prop :=
-  input.code = codeWord kind ∧ input.result = resultWord kind ∧ input.length = 0
+/-- No-effect calls leave both arguments unrestricted. -/
+def Spec {p : ℕ} (kind : Kind) (input : Inputs (ZMod p)) : Prop :=
+  input.code = codeWord kind ∧ input.result = resultWord kind
 
 /-- Either of the released no-effect calls with its corresponding x5 result. -/
-def ChoiceSpec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop := Spec .enter input ∨ Spec .verify input
+def ChoiceSpec {p : ℕ} (input : Inputs (ZMod p)) : Prop := Spec .enter input ∨ Spec .verify input
 
 end SP1Clean.HostNoopChip

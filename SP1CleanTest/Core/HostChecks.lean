@@ -1,5 +1,5 @@
 import Clean.Air.Balance
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
+import SP1Clean.Proofs.Chips.HostCallChip.Formal
 import SP1Clean.Math.SP1Field
 import SP1Clean.Math.Address
 import ToClean.Air.FiniteLookup

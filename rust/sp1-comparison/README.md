@@ -109,7 +109,7 @@ Comparisons cover these boundaries:
   codes, every commit slot, canonical field-sized exits, full-word arguments and clock/PC carries;
   18,720 column mutations compare constraints, public bindings and every shared interaction.
   Public-value mutations bind the exit, flags and selected digest cells. Composed tests reject
-  upper-word aliases and precompile dispatch, check WRITE's x12 read and retain inactive messages.
+  upper-word aliases and precompile dispatch, compare the full ECALL ledger and its five-field native receipt and retain inactive messages.
   Both configurations check supervisor mode; the optional syscall trap cell is explicitly zero.
   Weighted public queries preserve the complete bitmap, including on inactive rows. Sixteen
   inactive cases cover empty, unit, multi-hot, non-Boolean and cancelling weights, with public
@@ -193,7 +193,7 @@ Cuts agree on their public clock/PC endpoints. These finite fixture constructors
 access compiler and semantic host steps; they are neither an interpreter nor a total Sail compiler.
 The standalone VERIFY receiver shares the constrained ENTER circuit and uses the released x5
 result for each call. Its comparison binds the full argument words and the single host-call pull.
-The 100-slot production capstone installs this shared 22-cell receiver at slot 65. Its released
+The 100-slot production capstone installs this shared 18-cell receiver at slot 65. Its released
 fixture runs ENTER, VERIFY and HALT on the same constrained replay, checks both observed x5
 results and rejects swapped selector results. WRITE installation and general whole-assembly
 generation completeness remain open.

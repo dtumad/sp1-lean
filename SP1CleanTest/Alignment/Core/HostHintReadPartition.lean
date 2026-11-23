@@ -540,9 +540,9 @@ private def cpuQueuePath : List (HostQueueOrder.Row (p := SP1Prime)) :=
     (fun first second => HostQueueCPUOrder.eventTime first ≤ HostQueueCPUOrder.eventTime second)
 
 private def enterCall (index : ℕ) : HostCallChip.Message Fp :=
-  ⟨(cpuTime index / 2 ^ 24 : ℕ), (cpuTime index % 2 ^ 24 : ℕ), #v[3, 0, 0, 0], 0, 0, 0, 0⟩
+  ⟨(cpuTime index / 2 ^ 24 : ℕ), (cpuTime index % 2 ^ 24 : ℕ), #v[3, 0, 0, 0], 0, 0, 0⟩
 
-private def queueInstruction (message : HostCallChip.Message Fp) : HostCallChip.Inputs Fp :=
+private def queueInstruction (message : HostCallChip.Message Fp) : SyscallInstrsChip.Inputs Fp :=
   let code := message.code[0]
   let input : SyscallInstrsChip.Inputs Fp :=
     { state := ⟨message.clk_high, (message.clk_low.val / 65536 : ℕ),
@@ -556,7 +556,7 @@ private def queueInstruction (message : HostCallChip.Message Fp) : HostCallChip.
       is_hint_len := IsZeroOperation.populate (code - 240), is_halt_zero := IsZeroOperation.populate code
       is_commit := IsZeroOperation.populate (code - 16), is_commit_deferred := IsZeroOperation.populate (code - 26)
       digest_index_bits := 0, digest_word := 0, op_b_cmp := ⟨1⟩, op_c_cmp := ⟨1⟩, is_real := 1 }
-  HostCallChip.populate input 0 0
+  input
 
 private def cpuCalls : List (HostCallChip.Message Fp) :=
   ((cpuQueuePath.map HostQueueCPUOrder.call) ++ [enterCall 1, enterCall 4]).mergeSort
@@ -568,7 +568,7 @@ private theorem cpuCalls_bounded : cpuCalls.length + 2 ≤ UInt64.size := by nat
 private def cpuInstructions (messages : List (HostCallChip.Message Fp))
     (bounded : messages.length + 2 ≤ UInt64.size) : Table Fp :=
   let padding := queueInstruction (enterCall 1)
-  let padding := { padding with instruction := { padding.instruction with is_real := 0 } }
+  let padding := { padding with is_real := 0 }
   have rowsBound : (padding :: (messages.map queueInstruction).reverse ++ [padding]).length ≤ UInt64.size := by
     simp only [List.length_cons, List.length_nil, List.length_append, List.length_reverse, List.length_map]
     omega
@@ -600,7 +600,7 @@ theorem queueCPUHandoff :
       queueStamps = [0, 2, 3, 5, 6, 7, 8].map cpuTime ∧
       decide (queueStamps.Sublist stamps) = true ∧
       (cpuCalls.map queueInstruction).all (fun row => (evaluateProgram
-        (HostCallChip.main (varFromOffset HostCallChip.Inputs 0)) (toElements row).toList).1) = true ∧
+        (HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0)) (toElements row).toList).1) = true ∧
       cpuQueueTables.all (fun table => (checked (deriveProverData cpuQueueTables #[]) table).1) = true ∧
       HintReadFixtures.balanced (closedQueueLedger final cpuQueueTables) = true ∧
       cpuHandoff cpuCalls = true ∧ cpuHandoff changed = false ∧
@@ -613,7 +613,7 @@ This strengthens the handoff fixture with event contents; it still does not clai
 theorem queueCPUProjection :
     let instructions := cpuInstructions cpuCalls cpuCalls_bounded
     let rows := (HostCallLedger.activeRows instructions (deriveProverData [instructions] #[])).reverse.map fun env =>
-      NativeCore.ExecutionRow.syscall (HostCallLedger.input env).instruction
+      NativeCore.ExecutionRow.syscall (HostCallLedger.input env)
     let events := rows.map NativeCore.ExecutionRow.event
     events.filterMap queueEvent? = cpuQueuePath.map HostQueueHistory.event ∧
       events.all (fun event => match event with
@@ -631,7 +631,7 @@ private def callWords (physical : List (HintReadCoverage.Row (p := SP1Prime)))
 private theorem callWords_eq (data : ProverData Fp) (physical : List (HintReadCoverage.Row (p := SP1Prime)))
     (env : Environment Fp) :
     HostHintReadCPU.wordsAt data physical
-      (.syscall (HostCallLedger.input env).instruction) = callWords physical env := rfl
+      (.syscall (HostCallLedger.input env)) = callWords physical env := rfl
 
 private def cpuWordRows := ([call 3 (cpuTime 0) (cpuTime 2) 65536,
   call 2 (cpuTime 3) (cpuTime 5) 65536, call 1 (cpuTime 6) (cpuTime 7) 65536].flatMap words).reverse
@@ -644,7 +644,7 @@ selection itself must never erase those occurrences. The fixture remains a proto
 theorem cpuWordGrouping :
     let instructions := cpuInstructions cpuCalls cpuCalls_bounded
     let rows := (HostCallLedger.activeRows instructions (deriveProverData [instructions] #[])).reverse.map fun env =>
-      NativeCore.ExecutionRow.syscall (HostCallLedger.input env).instruction
+      NativeCore.ExecutionRow.syscall (HostCallLedger.input env)
     let table := consumers cpuWordRows cpuWordRows_bounded
     let data := deriveProverData table #[]
     let physical := TransitionView.readIndexedRows HintReadCoverage.variants table

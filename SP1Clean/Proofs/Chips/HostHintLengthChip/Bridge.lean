@@ -33,13 +33,13 @@ theorem result_of_spec (empty : Bool) (input : Inputs (ZMod p)) (valid : Spec em
       some (Word.toBitVec64 input.call.result) := by
     cases empty with
     | false =>
-      have head := valid.2.2.2
+      have head := valid.2.2
       change input.previous.head = input.node.pointer ∧
         input.call.result = input.node.length ∧ input.node.Valid at head
       rw [head.1, head.2.1]
       exact (binding rfl).hintLength
     | true =>
-      have head := valid.2.2.2
+      have head := valid.2.2
       change input.previous.head = 0 ∧ input.call.result = emptyWord at head
       rw [head.1, head.2]
       simp [HintQueue.hintLength?, Address.toNat, emptyWord, toBitVec64_bitVecToWord]

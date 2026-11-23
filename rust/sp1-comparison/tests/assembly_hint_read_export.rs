@@ -145,8 +145,7 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
     let traces = padded.into_traces().unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
     let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights, 1).unwrap();
-    // Active host-call constraints have degree ten; their quotient needs a 16x LDE.
-    // Read the actual emitted constraints so that this fixture detects degree drift.
+    // Measure the emitted constraints of every populated table, including the shared ECALL.
     let mut max_degree = 0;
     for (component, rows) in witness.tables.iter().enumerate() {
         if rows.is_empty() {
@@ -168,7 +167,7 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
                 .unwrap_or(0),
         );
     }
-    assert_eq!(max_degree, 10);
+    assert_eq!(max_degree, 4);
     let mut key = EnsembleKey::new(backend::config_with_log_blowup(4), 1).unwrap();
     let proof = key.prove(&statement, traces.clone(), &public).unwrap();
     key.verify(&statement, &proof, &public).unwrap();

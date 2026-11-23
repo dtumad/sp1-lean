@@ -47,8 +47,8 @@ private theorem call_bounds (deferred : Bool) (slot : Fin 8) (call : HostCallChi
       (Word.toBitVec64 call.arg2).toNat < bound p deferred := by
   constructor
   · rw [valid.2.1, Word.toBitVec64_toNat (slot_bound slot), slot_value]
-  · rw [Word.toBitVec64_toNat valid.2.2.2.2.1]
-    exact valid.2.2.2.2.2
+  · rw [Word.toBitVec64_toNat valid.2.2.2.1]
+    exact valid.2.2.2.2
 
 private theorem code_value (deferred : Bool) :
     Word.toBitVec64 (codeWord (R := ZMod p) deferred) =

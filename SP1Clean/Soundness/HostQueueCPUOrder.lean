@@ -102,9 +102,9 @@ theorem call_cpu
     (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
       HostCallLedger.call env = call row ∧
-      ExecutionRow.syscall (HostCallLedger.input env).instruction ∈
+      ExecutionRow.syscall (HostCallLedger.input env) ∈
         LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
-      StateMsg.timeNat ((ExecutionRow.syscall (HostCallLedger.input env).instruction).edge witness.data).1 =
+      StateMsg.timeNat ((ExecutionRow.syscall (HostCallLedger.input env)).edge witness.data).1 =
         eventTime row := by
   have registered := call_mem witness row member
   have produced := (HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
@@ -113,9 +113,9 @@ theorem call_cpu
   refine ⟨env, active, same, ?_, ?_⟩
   · apply List.mem_append_right
     apply List.mem_map.mpr
-    refine ⟨(HostCallLedger.input env).instruction, ?_, rfl⟩
+    refine ⟨(HostCallLedger.input env), ?_, rfl⟩
     rw [← HostLocalCore.hostCallTable_projection witness]
-    exact List.mem_map_of_mem (f := fun env => (HostCallLedger.input env).instruction) active
+    exact List.mem_map_of_mem (f := fun env => (HostCallLedger.input env)) active
   · have clock := congrArg (fun message : HostCallChip.Message (ZMod p) =>
       clkNat message.clk_high message.clk_low) same
     exact clock.trans (call_time row)
@@ -131,7 +131,7 @@ theorem call_cpu_at
     (cpu : ExecutionRow p) (cpuMember : cpu ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
     (clock : StateMsg.timeNat (cpu.edge witness.data).1 = eventTime row) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
-      HostCallLedger.call env = call row ∧ cpu = .syscall (HostCallLedger.input env).instruction := by
+      HostCallLedger.call env = call row ∧ cpu = .syscall (HostCallLedger.input env) := by
   obtain ⟨env, active, same, physical, atTime⟩ := call_cpu witness interface constraints balanced row member
   have unique := LocalCore.executionRows_times_nodup_of_orderingChannels (HostLocalCore.localWitness witness)
     (HostLocalCore.localWitness_constraints witness constraints)
@@ -178,7 +178,7 @@ theorem clocks_sublist
   obtain ⟨row, rowMember, rfl⟩ := List.mem_map.mp member
   obtain ⟨env, _, _, physical, clock⟩ := call_cpu witness interface constraints balanced row
     (queueExhaustive.mem_iff.mp rowMember)
-  exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env).instruction, cpuExhaustive.mem_iff.mpr physical, clock⟩
+  exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env), cpuExhaustive.mem_iff.mpr physical, clock⟩
 
 /-- Queue events selected by an actual CPU prefix, preserving the queue path's physical rows. -/
 noncomputable def beforeCPU (data : ProverData (ZMod p)) (prior : List (ExecutionRow p))
