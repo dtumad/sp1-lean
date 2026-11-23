@@ -51,10 +51,10 @@ def resultWord {p : ℕ} (kind : Kind) : Word (ZMod p) :=
   | .verify => codeWord .verify
 
 /-- No-effect calls leave both arguments unrestricted. -/
-def Spec {p : ℕ} [Fact p.Prime] (kind : Kind) (input : Inputs (ZMod p)) : Prop :=
+def Spec {p : ℕ} (kind : Kind) (input : Inputs (ZMod p)) : Prop :=
   input.code = codeWord kind ∧ input.result = resultWord kind
 
 /-- Either of the released no-effect calls with its corresponding x5 result. -/
-def ChoiceSpec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop := Spec .enter input ∨ Spec .verify input
+def ChoiceSpec {p : ℕ} (input : Inputs (ZMod p)) : Prop := Spec .enter input ∨ Spec .verify input
 
 end SP1Clean.HostNoopChip
