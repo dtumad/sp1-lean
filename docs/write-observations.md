@@ -83,9 +83,10 @@ cancels the finalizer's unit pull, and the suffix covers every representable clo
 [Sparse boundary construction](../SP1Clean/Proofs/Completeness/WriteSparseBoundaries.lean) · [Fixed x12 rows](../SP1Clean/Native/Operations/WriteProbeRegisterBoundary.lean)
 
 The 25 protected ordinary families, ECALL, both HINT_READ word variants, the register refresh
-and both ordered finalizers form a 31-component source group. Raw receipt balance and the
-counted supplier's physical constraints trace each positive version to a specific original
-source. All original guest Memory multiplicities and padding are preserved. At canonical
+and both ordered finalizers form a 31-component source group. The raw LogUp bound counts
+the supplier height plus each source height times its number of pull sites, including padding.
+When this total fits the prime field, raw receipt balance and the supplier’s physical constraints
+trace each positive version to a specific original source. All original guest Memory multiplicities and padding are preserved. At canonical
 ordinary-block data, mixed execution constructs each protected ordinary table with one to
 three predecessor occurrences on every physical row. ECALL contributes three and each
 HINT_READ word contributes one. Installing the whole group alongside the packet, span and
