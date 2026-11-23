@@ -18901,6 +18901,13 @@
       "typeFingerprint": "4163592787"
     },
     {
+      "bodyFingerprint": "1976228243",
+      "local": false,
+      "module": "Init.Data.Nat.Log2",
+      "name": "Nat.log2",
+      "typeFingerprint": "1150766452"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "Init.Prelude",
@@ -19417,6 +19424,27 @@
       "module": "Init.Prelude",
       "name": "PProd",
       "typeFingerprint": "2757041089"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Core",
+      "name": "PSigma",
+      "typeFingerprint": "862639584"
+    },
+    {
+      "bodyFingerprint": "522272422",
+      "local": false,
+      "module": "Init.Core",
+      "name": "PSigma.casesOn",
+      "typeFingerprint": "3181798632"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Core",
+      "name": "PSigma.mk",
+      "typeFingerprint": "2415193544"
     },
     {
       "bodyFingerprint": null,
@@ -31585,6 +31613,13 @@
       "typeFingerprint": "2317431283"
     },
     {
+      "bodyFingerprint": "1718594309",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.CommitmentBoundary",
+      "name": "SP1Clean.CommitmentBoundary.publicValues",
+      "typeFingerprint": "1638094987"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Native.Operations.CommitmentBoundary",
@@ -37463,6 +37498,153 @@
       "module": "SP1Clean.FormalModel.ShardMachine",
       "name": "SP1Clean.FormalModel.Shard.sp1Machine",
       "typeFingerprint": "824897750"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.Claim",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "2537632742",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.Claim.accepts",
+      "typeFingerprint": "1516774681"
+    },
+    {
+      "bodyFingerprint": "3834952986",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.Claim.digest",
+      "typeFingerprint": "4213583610"
+    },
+    {
+      "bodyFingerprint": "51807060",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.Claim.exitCode",
+      "typeFingerprint": "328622028"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.Claim.mk",
+      "typeFingerprint": "1778399954"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "712623674",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.accepts",
+      "typeFingerprint": "1342508482"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.any",
+      "typeFingerprint": "3243133525"
+    },
+    {
+      "bodyFingerprint": "4252756791",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.casesOn",
+      "typeFingerprint": "3837172666"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.invalidHint",
+      "typeFingerprint": "3243133525"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.panic",
+      "typeFingerprint": "3243133525"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.rec",
+      "typeFingerprint": "2959271082"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ExpectedStatus.success",
+      "typeFingerprint": "3243133525"
+    },
+    {
+      "bodyFingerprint": "901676805",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.acceptsCore",
+      "typeFingerprint": "2368948962"
+    },
+    {
+      "bodyFingerprint": "3264668043",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.blake3",
+      "typeFingerprint": "442263252"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.commitment_projection",
+      "typeFingerprint": "4202821075"
+    },
+    {
+      "bodyFingerprint": "603260316",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.instReprExpectedStatus.repr.match_1",
+      "typeFingerprint": "507409706"
+    },
+    {
+      "bodyFingerprint": "3576624302",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ofCore",
+      "typeFingerprint": "2499027646"
+    },
+    {
+      "bodyFingerprint": "2546146870",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ofFields",
+      "typeFingerprint": "2916982255"
+    },
+    {
+      "bodyFingerprint": "3060079537",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.ofNative",
+      "typeFingerprint": "272977179"
+    },
+    {
+      "bodyFingerprint": "2068341221",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.StockPublicOutput",
+      "name": "SP1Clean.FormalModel.StockPublicOutput.sha256",
+      "typeFingerprint": "442263252"
     },
     {
       "bodyFingerprint": null,
@@ -60887,6 +61069,20 @@
       "typeFingerprint": "2271130875"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1MProtectPublicValues",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1MProtectPublicValues.mk",
+      "typeFingerprint": "2662637648"
+    },
+    {
       "bodyFingerprint": "3885861155",
       "local": true,
       "module": "SP1Clean.Math.SP1Field",
@@ -60948,6 +61144,293 @@
       "module": "SP1Clean.FormalModel.Contracts.LocalCoreBoundary",
       "name": "SP1Clean.SP1PublicIO.SourceFor._proof_5",
       "typeFingerprint": "3810659771"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": "3089403656",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.committed_value_digest",
+      "typeFingerprint": "1528959072"
+    },
+    {
+      "bodyFingerprint": "2304695196",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.empty",
+      "typeFingerprint": "1680773159"
+    },
+    {
+      "bodyFingerprint": "586088849",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.exit_code",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "2572829358",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.global_count",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "113023937",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.global_cumulative_sum",
+      "typeFingerprint": "933703960"
+    },
+    {
+      "bodyFingerprint": "875746981",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.global_finalize_count",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "3493027449",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.global_init_count",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "3411083025",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.global_page_prot_finalize_count",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "895483738",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.global_page_prot_init_count",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "2344452003",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.initial_timestamp",
+      "typeFingerprint": "2187498452"
+    },
+    {
+      "bodyFingerprint": "3092073996",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.initial_timestamp_inv",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "447857713",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.inv_timestamp_high",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "566936607",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.inv_timestamp_low",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "469724621",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.is_execution_shard",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "921024163",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.is_first_execution_shard",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "1426265973",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.is_timestamp_high_eq",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "1327782432",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.is_timestamp_low_eq",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "1073951702",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.is_untrusted_programs_enabled",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "3016381510",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.last_finalize_addr",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "4073910420",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.last_finalize_page_idx",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "207547250",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.last_init_addr",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "3915232910",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.last_init_page_idx",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "3163472494",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.last_timestamp",
+      "typeFingerprint": "2187498452"
+    },
+    {
+      "bodyFingerprint": "745256587",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.last_timestamp_inv",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.mk",
+      "typeFingerprint": "2899203584"
+    },
+    {
+      "bodyFingerprint": "1103619177",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.mprotect",
+      "typeFingerprint": "3273640063"
+    },
+    {
+      "bodyFingerprint": "376077288",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.next_pc",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "2912078950",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.pc_start",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "2958387536",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.prev_commit_deferred_syscall",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "751895452",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.prev_commit_syscall",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "2578251697",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.prev_committed_value_digest",
+      "typeFingerprint": "1528959072"
+    },
+    {
+      "bodyFingerprint": "2083383116",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.prev_deferred_proofs_digest",
+      "typeFingerprint": "554971985"
+    },
+    {
+      "bodyFingerprint": "2716118880",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.prev_exit_code",
+      "typeFingerprint": "1166653989"
+    },
+    {
+      "bodyFingerprint": "106598674",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.previous_finalize_addr",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "780485053",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.previous_finalize_page_idx",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "3795051382",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.previous_init_addr",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "1234533711",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.previous_init_page_idx",
+      "typeFingerprint": "3170464229"
+    },
+    {
+      "bodyFingerprint": "677495167",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1PublicValues.proof_nonce",
+      "typeFingerprint": "1680773159"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1SepticDigest",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1SepticDigest.mk",
+      "typeFingerprint": "3680786639"
     },
     {
       "bodyFingerprint": null,
@@ -61193,6 +61676,27 @@
       "module": "SP1Clean.FormalModel.Contracts.PublicValues",
       "name": "SP1Clean.SP1StateBoundary.rec",
       "typeFingerprint": "2871840324"
+    },
+    {
+      "bodyFingerprint": "396230181",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1Timestamp",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": "396230181",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1Word32",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": "3769601456",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Contracts.PublicValues",
+      "name": "SP1Clean.SP1Word48",
+      "typeFingerprint": "2330190150"
     },
     {
       "bodyFingerprint": "607977763",
@@ -105449,6 +105953,104 @@
       "typeFingerprint": "1217647666"
     },
     {
+      "bodyFingerprint": "4266771043",
+      "local": true,
+      "module": "ToClean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.blake3",
+      "typeFingerprint": "1431627259"
+    },
+    {
+      "bodyFingerprint": "1248835273",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.blockLen",
+      "typeFingerprint": "421340980"
+    },
+    {
+      "bodyFingerprint": "2213631617",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.chunkLen",
+      "typeFingerprint": "421340980"
+    },
+    {
+      "bodyFingerprint": "1975919543",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.compress",
+      "typeFingerprint": "2965320852"
+    },
+    {
+      "bodyFingerprint": "3479695490",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.iv",
+      "typeFingerprint": "4025398905"
+    },
+    {
+      "bodyFingerprint": "3576053838",
+      "local": true,
+      "module": "ToClean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.leftSubtreeLen",
+      "typeFingerprint": "2546708756"
+    },
+    {
+      "bodyFingerprint": "2424630899",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.parent",
+      "typeFingerprint": "421340980"
+    },
+    {
+      "bodyFingerprint": "3184314314",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.processChunk",
+      "typeFingerprint": "2887758918"
+    },
+    {
+      "bodyFingerprint": "3679421700",
+      "local": false,
+      "module": "Clean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.root",
+      "typeFingerprint": "421340980"
+    },
+    {
+      "bodyFingerprint": "2945364533",
+      "local": true,
+      "module": "ToClean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.subtreeWords",
+      "typeFingerprint": "3930860433"
+    },
+    {
+      "bodyFingerprint": "649408548",
+      "local": true,
+      "module": "ToClean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.subtreeWords._unary",
+      "typeFingerprint": "3000834364"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.subtreeWords._unary._proof_1",
+      "typeFingerprint": "3206020303"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Specs.BLAKE3",
+      "name": "Specs.BLAKE3.subtreeWords._unary._proof_2",
+      "typeFingerprint": "2297670786"
+    },
+    {
+      "bodyFingerprint": "2456907008",
+      "local": false,
+      "module": "Clean.Specs.SHA256",
+      "name": "Specs.SHA256.sha256",
+      "typeFingerprint": "3057549288"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "Clean.Circuit.Lookup",
@@ -106194,6 +106796,20 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "Init.Prelude",
+      "name": "UInt32",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3843323030",
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "UInt32.toNat",
+      "typeFingerprint": "3775865586"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Prelude",
       "name": "UInt64",
       "typeFingerprint": "3931117990"
     },
@@ -106287,6 +106903,13 @@
       "module": "Init.Data.Vector.Basic",
       "name": "Vector.cast",
       "typeFingerprint": "1225757945"
+    },
+    {
+      "bodyFingerprint": "1976095882",
+      "local": false,
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.flatMap",
+      "typeFingerprint": "2823770030"
     },
     {
       "bodyFingerprint": "1128925729",
@@ -106385,6 +107008,13 @@
       "module": "Init.Data.Vector.Basic",
       "name": "Vector.set",
       "typeFingerprint": "240397422"
+    },
+    {
+      "bodyFingerprint": "2462176403",
+      "local": false,
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.take",
+      "typeFingerprint": "2771934453"
     },
     {
       "bodyFingerprint": "1620014125",
@@ -109986,6 +110616,8 @@
     }
   ],
   "roots": [
+    "SP1Clean.FormalModel.StockPublicOutput.acceptsCore",
+    "SP1Clean.FormalModel.StockPublicOutput.commitment_projection",
     "SP1Clean.Soundness.Shard.statement_iff",
     "SP1Clean.Soundness.Shard.SoundnessTarget",
     "SP1Clean.Soundness.Shard.CompilerTarget",

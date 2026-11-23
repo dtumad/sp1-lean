@@ -56,5 +56,6 @@ public import ToClean.Tactic.GetElemFastPath
 public import ToClean.Air.Realizes
 
 public import ToClean.Gadgets.Equality
+public import ToClean.Specs.BLAKE3
 
 import ToClean.Circuit.ComputableWitnesses
