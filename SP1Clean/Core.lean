@@ -47,6 +47,16 @@ import SP1Clean.FormalModel.Contracts.BoundedWord
 import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
+import SP1Clean.FormalModel.Contracts.WriteEffects
+import SP1Clean.Native.Operations.WriteDescriptor
+import SP1Clean.Native.Operations.WriteEffects
+import SP1Clean.Native.Operations.WriteStreamBoundary
+import SP1Clean.Native.Operations.WriteStreamSource
+import SP1Clean.Proofs.Operations.WriteEffects
+import SP1Clean.Semantics.Host.WriteDescriptor
+import SP1Clean.Semantics.Host.WriteEffects
+import SP1Clean.Semantics.Host.WriteStreamRecords
+import SP1Clean.Semantics.Specs.U16toU8Bytes
 import SP1Clean.FormalModel.Contracts.ClockParts
 import SP1Clean.Native.Operations.ClockParts
 import SP1Clean.FormalModel.Contracts.WritePacketHeader
