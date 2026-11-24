@@ -23,6 +23,24 @@ variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 noncomputable def Component.channelWidth (component : Component F) (channel : RawChannel F) : ℕ :=
   (component.operations.interactionsWith channel).length
 
+/-- On an installed component, counting the typed channel agrees with the verifier's
+count by channel name because the ensemble registers unique names. -/
+theorem Ensemble.channelWidth_eq_countP (ens : Ensemble F PublicIO) {c : Component F}
+    (member : c ∈ ens.tables) {ch : RawChannel F} (registered : ch ∈ ens.channels) :
+    c.channelWidth ch = c.operations.interactions.countP (·.channel.name == ch.name) := by
+  classical
+  unfold Component.channelWidth Operations.interactionsWith
+  rw [List.countP_eq_length_filter]
+  apply congrArg List.length
+  apply List.filter_congr
+  intro i inside
+  have localMember : i.channel ∈ c.circuit.channels := by
+    apply c.circuit.channels_subset c.rowInputVar c.rowOffset
+    exact List.mem_map_of_mem (c.interactions_eq ▸ inside)
+  rw [Bool.eq_iff_iff, decide_eq_true_iff, beq_iff_eq]
+  exact ⟨congrArg RawChannel.name, List.inj_on_of_nodup_map ens.unique_channel_names
+    (ens.tables_channels c member localMember) registered⟩
+
 /-- The complete ledger counts every syntactic interaction on every physical row. -/
 theorem Table.interactions_length (table : Table F) :
     table.interactions.length = table.length * table.component.operations.interactions.length := by
