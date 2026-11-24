@@ -13,6 +13,7 @@ import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot
 import SP1Clean.Export.WriteSourceInstallation
+import SP1Clean.Export.WriteSourceProjection
 import SP1Clean.Proofs.Completeness.WriteAllocations
 import SP1Clean.Proofs.Completeness.WriteCountedData
 import SP1Clean.Proofs.Completeness.WriteCountedHints

@@ -87,9 +87,14 @@ private theorem final_fixedRows (ram : Bool)
   funext rows
   cases mode <;> rfl
 
+/-- Decoration retains the installed finalizer's fixed-column interpretation. -/
+theorem final_fixed (ram : Bool) :
+    (finalComponent (p := p) ram).FixedRowsMatch = (originalFinal ram).FixedRowsMatch :=
+  final_fixedRows ram _
+
 /-- Add the version source to an actual registered RAM or register finalizer. -/
 def publishFinal (ram : Bool) (table : Table (ZMod p)) (family : table.component = originalFinal ram) : Table (ZMod p) :=
-  table.withComponent (finalComponent ram) (by rw [family]; rfl) (by rw [family]; exact final_fixedRows ram _)
+  table.withComponent (finalComponent ram) (by rw [family]; rfl) (by rw [family]; exact final_fixed ram)
     (by rw [family]; rfl) (by rw [family]; rfl)
 
 theorem publishFinal_constraints (ram : Bool) (table : Table (ZMod p)) (family : table.component = originalFinal ram) :
