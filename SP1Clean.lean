@@ -164,6 +164,7 @@ import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
 import SP1Clean.Proofs.Completeness.MixedSyscallRows
+import SP1Clean.Proofs.Completeness.MixedSyscallTable
 import SP1Clean.Proofs.Completeness.ReleaseInstructionRows
 import SP1Clean.Proofs.Completeness.InstalledInstructionTables
 import SP1Clean.Proofs.Completeness.MixedInstructionTables
