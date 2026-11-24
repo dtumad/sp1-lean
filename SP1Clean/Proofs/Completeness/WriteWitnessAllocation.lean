@@ -66,7 +66,7 @@ theorem Batch.rows_at (batch : Batch) (previous clock : Nat) (before : Store × 
       rows.step.Valid ∧ rows.step.before = batch.cursorAt clock before.2 before.1.size i ∧
       rows.step.after = batch.cursorAt clock before.2 before.1.size (i.val+1) ∧
       rows.step.contents.pointer = Address.ofNat (before.1.size + i + 1) ∧ rows.step.contents.length = Address.ofNat bytes.length ∧
-      rows.words.length = wordCount bytes ∧ ∀ later, Extends after later →
+      rows.words = (nodeRows readers rows.step bytes).words ∧ rows.words.length = wordCount bytes ∧ ∀ later, Extends after later →
         rows.step.node.node.Binds later ∧ ∀ r ∈ rows.words, r.word.Binds later := by
   intro bytes
   obtain ⟨step, found, valid, first, last, pointer, size, _, binds⟩ := publishes readers.nodes i
@@ -77,11 +77,35 @@ theorem Batch.rows_at (batch : Batch) (previous clock : Nat) (before : Store × 
     rfl
   have height : node.words.length = wordCount bytes := by
     simp only [node, nodeRows, Words.walk_length]
-  refine ⟨node, rowAt, valid, first, last, pointer, size, height, ?_⟩
+  refine ⟨node, rowAt, valid, first, last, pointer, size, rfl, height, ?_⟩
   intro later ext
   refine ⟨(binds later ext).1, ?_⟩
   intro r member
   obtain ⟨j, rfl⟩ := List.mem_ofFn.mp member
   exact (binds later ext).2 j j.isLt _ _
+
+/-- Every emitted seed is authorized by its actual valid node. Every carried word meets the
+original component's range, padding, activity and cursor conditions. -/
+theorem Batch.rows_valid (batch : Batch) (previous clock : Nat) (before : Store × Nat) (after : Store)
+    (publishes : batch.Publishes clock before after) (readers : Readers)
+    (capacity : before.1.size + batch.buffers.length < 2^48) (size : ∀ b ∈ batch.buffers, b.length < 2^48)
+    (node : NodeRows) (used : node ∈ (batch.rows previous clock before readers).nodes) :
+    node.step.Valid ∧ ∀ row ∈ node.words, row.Valid := by
+  obtain ⟨i,atNode⟩ := List.mem_iff_getElem?.mp used
+  have inside := (List.getElem?_eq_some_iff.mp atNode).1
+  rw [Batch.rows_length] at inside
+  let bytes := batch.buffers.reverse[i]'(by simp [inside])
+  obtain ⟨actual, found, valid, _, _, pointer, _, words, _, _⟩ := batch.rows_at previous clock before after publishes readers ⟨i,inside⟩
+  cases Option.some.inj (atNode.symm.trans found)
+  have bounded : Address.Bounded node.step.contents.pointer := pointer ▸ Address.bounded_ofNat _
+  have positive : 0 < Address.toNat node.step.contents.pointer := by
+    rw [pointer, Address.toNat_ofNat _ (by simpa only [Fin.val_mk] using (show before.1.size + i + 1 < 2^48 by omega))]
+    omega
+  have fits : bytes.length < 2^48 := size bytes (List.mem_reverse.mp (List.getElem_mem ..))
+  refine ⟨valid, ?_⟩
+  intro row member
+  rw [words] at member
+  obtain ⟨j,rfl⟩ := List.mem_ofFn.mp member
+  exact Words.populate_valid node.step.contents bytes j _ _ valid.1 bounded positive fits j.isLt
 
 end SP1Clean.WriteAllocation

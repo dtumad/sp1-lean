@@ -1,68 +1,17 @@
-import SP1Clean.Proofs.Completeness.WriteDispatchRows
+import SP1Clean.Proofs.Completeness.WriteDispatchReplay
 import SP1Clean.Proofs.Completeness.WritePlacementCapacity
 import ToClean.Air.GuardedDemandTable
 
 /-! # The physical WRITE dispatcher for an admissible mixed shard
 
 Every WRITE, including an empty one, contributes its dispatch row at its actual CPU position.
-Clean pads the resulting ordered rows at the installed component's demand height. Recovering
-the event pre-state uses the same noncomputable Sail trajectory as the mixed instruction compiler.
+Clean pads the shared chronological collector’s dispatch projection at the installed component’s demand height.
 -/
 
 namespace SP1Clean.WriteEffects
 open Circuit Air.Flat Semantics Machine FormalModel.Shard TraceGen
 
 private abbrev F := ZMod SP1Prime
-
-/-- Inspect one event at an arbitrary cut with the specified incoming dispatch clock and queue.
-The first host state anchors all stream offsets for the shard. -/
-noncomputable def dispatchAt? (image : ProgramImage) (initialHost : HostState)
-    (previous : Nat) (source : ExecutionState) (cursor : HintQueue.Store × Nat) (events : List ExecutionEvent) :
-    ExecutionEvent × Nat → Option (Dispatch F)
-  | (.ordinary, _) => none
-  | (.syscall call, cut) => do
-    if call.rawCode ≠ SyscallKind.write.code then none else
-    let policy := FormalModel.Shard.policy SP1Prime image
-    let current ← executionTrajectory policy image.program source events cut
-    let (length, _) ← WriteObservations.read? current.sail call
-    let (store, _) ← HintQueue.storeAfter? policy image.program source (events.take cut) cursor
-    return dispatchRow call.arg1 call.arg2 length current.clock ((events.take cut).foldl advanceWriteClock previous)
-      (WriteStreams.fromEndpoints initialHost current.host) current.host store
-
-/-- Dispatchers appear in source order, indexed by the entire event tape. -/
-noncomputable def dispatchInputs (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent) : List (Dispatch F) :=
-  events.zipIdx.filterMap (dispatchAt? image source.host source.clock source.realize (HintQueue.ofList source.host.io.hints) events)
-
-private theorem dispatchAt_valid {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
-    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events)
-    {event : ExecutionEvent} {cut : Nat} (present : events[cut]? = some event) :
-    let input := dispatchAt? image source.host source.clock source.realize (HintQueue.ofList source.host.io.hints) events (event,cut)
-    input.isSome = WriteObservations.isWriteCall event ∧ ∀ r ∈ input, r.Valid := by
-  cases event with
-  | ordinary => simp [dispatchAt?, WriteObservations.isWriteCall]
-  | syscall call =>
-    by_cases write : call.rawCode = SyscallKind.write.code
-    · obtain ⟨current, _, len, buf, cursor, reached, _, read, store, valid, _⟩ := native_dispatch_at run present write
-      simpa [dispatchAt?, WriteObservations.isWriteCall, write, reached, read, store] using valid
-    · simp [dispatchAt?, WriteObservations.isWriteCall, write]
-
-/-- All and only actual WRITEs supply valid inputs, in particular zero-byte and ignored writes. -/
-theorem dispatchInputs_valid {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
-    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) :
-    (dispatchInputs image source events).length = events.countP WriteObservations.isWriteCall ∧
-    ∀ r ∈ dispatchInputs image source events, r.Valid := by
-  constructor
-  · rw [dispatchInputs, List.length_filterMap_eq_countP]
-    calc
-      _ = events.zipIdx.countP (WriteObservations.isWriteCall ∘ Prod.fst) := by
-        apply List.countP_congr
-        intro ⟨event, cut⟩ h
-        rw [(dispatchAt_valid run (List.mk_mem_zipIdx_iff_getElem?.mp h)).1]
-        rfl
-      _ = _ := by rw [← List.countP_map, List.zipIdx_map_fst]
-  · intro row member
-    obtain ⟨⟨event, cut⟩, h, built⟩ := List.mem_filterMap.mp member
-    exact (dispatchAt_valid run (List.mk_mem_zipIdx_iff_getElem?.mp h)).2 row built
 
 /-- Clean's physical dispatcher table, including its canonical zero-weight padding. -/
 def dispatchTable (inputs : List (Dispatch F)) (data : ProverData F)
