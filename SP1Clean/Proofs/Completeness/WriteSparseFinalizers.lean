@@ -258,10 +258,10 @@ theorem finalTable_length (ram : Bool) (rows : List (Terminal (ZMod p))) (data :
     (congrArg WitnessGeneration.demandHeight (orderedInputs_length ram _ rows 0))
 
 /-- Every physically representable touched key and every extra key is below the native 48-bit
-address limit, so its original Clean table fits the host row-index type. -/
-theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+address limit, which bounds the number of active original finalizer rows. -/
+theorem terminal_count_bound (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
     (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    WitnessGeneration.demandHeight ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ UInt64.size := by
+    ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ 2 ^ 48 := by
   let touched := (memoryInitialEntries stream).map MemRecordEntry.addr
   let ks := keys touched requested
   have bound : ks.toFinset ⊆ Finset.range (2 ^ 48) := by
@@ -280,7 +280,13 @@ theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : Li
   let rows := terminals snapshot stream requested data hint
   have lengthKeys : rows.length = ks.length := by simpa using congrArg List.length (terminals_keys snapshot stream requested canonical data hint)
   have required := (List.length_filter_le (fun r : Terminal (ZMod p) => r.ram == ram) rows).trans (lengthKeys.le.trans cap)
-  exact (WitnessGeneration.demandHeight_le_pow required).trans (by decide)
+  exact required
+
+/-- Rounding the original finalizer height fits the host row-index type. -/
+theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+    (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    WitnessGeneration.demandHeight ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ UInt64.size :=
+  (WitnessGeneration.demandHeight_le_pow (terminal_count_bound ram snapshot stream requested canonical data hint)).trans (by decide)
 
 /-- Every finalizer host-row count fits by its physical address inventory. -/
 theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
@@ -289,17 +295,6 @@ theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List Me
   unfold finalInputs
   rw [orderedInputs_length]
   exact terminal_count_fit ram snapshot stream requested canonical data hint
-
-/-- Native guest RAM accesses and register indices have noncolliding 48-bit Memory encodings. -/
-theorem canonical_addresses {stream : List MemoryHistoryAccess}
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress) :
-    MemoryAddressesCanonical stream := by
-  intro access member
-  cases eq : access.loc with
-  | reg idx => trivial
-  | ram cell =>
-    have h := guest access member cell eq
-    exact ⟨le_trans (by decide : 32 ≤ 2 ^ 16) h.1, h.2⟩
 
 /-- The actual terminal payloads appear in strict physical address order. -/
 theorem terminals_ordered (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
@@ -311,7 +306,7 @@ theorem terminals_ordered (snapshot : MemorySnapshot) (stream : List MemoryHisto
 
 /-- Both touched and untouched payloads belong to their original register/RAM row domains. -/
 theorem terminals_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∀ row ∈ terminals snapshot stream requested data hint, row.Valid := by
   intro row member
@@ -333,11 +328,11 @@ theorem terminals_valid (snapshot : MemorySnapshot) (stream : List MemoryHistory
 /-- If touched guest RAM belongs to the native guest address range, the generated tables
 satisfy both original finalizers. Registers are in range by construction. -/
 theorem compiled_finalizers_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (ram : Bool) :
     let rows := terminals snapshot stream requested data hint
     ∃ fit, (finalTable ram rows data fit).Constraints ∧ (finalTable ram rows data fit).Guarantees := by
-  have canonical := canonical_addresses guest
+  have canonical := guest.canonical
   exact ⟨terminals_fit ram snapshot stream requested canonical data hint, finalTable_valid ram _ data _
     (terminals_ordered snapshot stream requested canonical data hint) (terminals_valid snapshot stream requested guest data hint)⟩
 

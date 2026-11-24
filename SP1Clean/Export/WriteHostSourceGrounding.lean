@@ -35,7 +35,8 @@ private theorem ecall_rows (witness : EnsembleWitness (HostObserved.ensemble ima
   simp only [List.getElem_map, List.getElem_drop, Nat.add_zero] at same
   exact same
 
-private theorem ecall_records (env : Environment Fp) :
+/-- The actual ECALL source cells publish one timestamped readback per original register pull. -/
+theorem ecall_records (env : Environment Fp) :
     let r := HostCallLedger.input env
     let state := SyscallInstrsChip.statePulledMessage r
     rowRecords (.host .ecall) env = (syscallRowFacts r).memPulls.map (fun x =>
@@ -112,7 +113,8 @@ private theorem word_origin (witness : EnsembleWitness (HostObserved.ensemble im
   · exact suffix_array_at 84 (by decide) bounds (by omega) (host_arrays witness)
   · exact suffix_array_at 85 (by decide) bounds (by omega) (host_arrays witness)
 
-private theorem word_records (last : Bool) (env : Environment Fp) :
+/-- Each physical word cell publishes the actual RAM predecessor at its original instruction clock. -/
+theorem word_records (last : Bool) (env : Environment Fp) :
     let ram := (HintReadCoverage.rowInput (last, env)).ram
     rowRecords (.host (.word last)) env =
       [(HintReadCoverage.rowActivity (last, env), AccessSupply.atClock (ram.clk_high, ram.clockLow) ram.prior)] := by
@@ -153,12 +155,6 @@ private theorem host_record_of_origin (witness : EnsembleWitness (HostObserved.e
   rw [raw_registered witness (.host family)] at pulled
   exact ⟨cells, present, host_records_of_pull family _ 1 prior pulled⟩
 
-private theorem host_record_data (family : HostSources.Family) (cells : Array Fp) (left right : ProverData Fp) :
-    rowRecords (.host family) (Environment.fromArray cells left) = rowRecords (.host family) (Environment.fromArray cells right) := by
-  cases family with
-  | ecall => rw [ecall_records, ecall_records]; rfl
-  | word last => rw [word_records, word_records]; rfl
-
 /-- Each authenticated ECALL receipt is one of the three actual predecessor reads in a
 real decoded syscall row, stamped with that row's incoming State. -/
 theorem syscall_event_of_origin (witness : EnsembleWitness (HostObserved.ensemble image source target final))
@@ -171,7 +167,7 @@ theorem syscall_event_of_origin (witness : EnsembleWitness (HostObserved.ensembl
   let host := hostWitness witness
   let env := Environment.fromArray cells host.data
   simp only [Table.environment] at found
-  rw [host_record_data .ecall cells _ host.data, ecall_records] at found
+  rw [rowRecords_setData (.host .ecall) cells _ host.data, ecall_records] at found
   obtain ⟨⟨prior, time⟩, read, eq⟩ := List.mem_map.mp found
   have enabled : (HostCallLedger.input env).is_real = 1 := congrArg Prod.fst eq
   have member : env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable host) host.data := by
@@ -206,7 +202,7 @@ theorem word_of_origin (witness : EnsembleWitness (HostObserved.ensemble image s
   have physical : cells ∈ table.table := (word_origin witness pair).symm ▸ present
   let row : HintReadCoverage.Row (p := SP1Prime) := (last, table.environment cells)
   simp only [Table.environment] at found
-  rw [host_record_data (.word last) cells _ table.data, word_records, List.mem_singleton] at found
+  rw [rowRecords_setData (.host (.word last)) cells _ table.data, word_records, List.mem_singleton] at found
   refine ⟨row, HintReadCoverage.mem_active_rows.mpr ⟨?_, ?_⟩, ?_⟩
   · exact List.mem_flatMap.mpr ⟨(last, table), pair, List.mem_map.mpr ⟨cells, physical, rfl⟩⟩
   · exact (congrArg Prod.fst found).symm

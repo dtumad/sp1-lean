@@ -36,9 +36,9 @@ theorem boundaryTables_registered (image : ProgramImage) (source target : Execut
 
 /-- Every table in the six-slot prefix satisfies its original circuit and channel guarantees. -/
 theorem boundaryTables_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData F) (hint : ProverHint F) :
-    ∀ t ∈ boundaryTables snapshot stream requested (canonical_addresses guest) data hint, t.Constraints ∧ t.Guarantees := by
+    ∀ t ∈ boundaryTables snapshot stream requested guest.canonical data hint, t.Constraints ∧ t.Guarantees := by
   have reg := compiled_boundaries_valid snapshot stream requested guest data hint false
   have ram := compiled_boundaries_valid snapshot stream requested guest data hint true
   have bounded := fun r hr => (terminals_valid snapshot stream requested guest data hint r hr).key_lt
@@ -80,10 +80,10 @@ theorem build_prefix_ledger (image : ProgramImage) (source target : ExecutionSna
 physical table constructors supply theirs. -/
 theorem build_constraints (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
     (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (suffix : List (Table F)) (registered)
     (checked : ∀ t ∈ suffix, t.Constraints) :
-    (build image source target endQueue stream requested (canonical_addresses guest) data hint header suffix registered).Constraints := by
+    (build image source target endQueue stream requested guest.canonical data hint header suffix registered).Constraints := by
   intro t member row included
   have free := HostObserved.lookupFree (image := image) (source := source) (target := target) (final := endQueue)
     t.component (EnsembleWitness.component_mem_tables_of_mem member)
@@ -101,7 +101,8 @@ theorem build_constraints (image : ProgramImage) (source target : ExecutionSnaps
   change old.table = t.table at eqRows
   exact t.component.constraintsHold_setData free (eqComponent ▸ valid row (eqRows ▸ included))
 
-private theorem finalizer_rows (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
+/-- The original boundary finalizers retain their exact generated row arrays under canonical installation. -/
+theorem finalizer_rows (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
     (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
     (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (suffix : List (Table F)) (registered) (ram : Bool) :
     let w := build image source target endQueue stream requested canonical data hint header suffix registered
@@ -122,6 +123,31 @@ private theorem finalizer_rows (image : ProgramImage) (source target : Execution
   simp only [List.getElem?_map, got, Option.map_some] at located
   rw [List.getElem?_append_left (by change WriteSourceRegistry.position (.finalizer ram) < 6; cases ram <;> decide)] at located
   cases ram <;> exact Option.some.inj located
+
+/-- The concrete register and RAM finalizer arrays for this compiled history and demand set. -/
+def FinalRows (raw : AccessInventory.Source → Table F) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess)
+    (requested : List ℕ) (canonical : MemoryAddressesCanonical stream) (data : ProverData F) (hint : ProverHint F) : Prop :=
+  ∀ ram, (raw (.finalizer ram)).table = (finalTable ram (terminals snapshot stream requested data hint) data
+    (terminals_fit ram snapshot stream requested canonical data hint)).table
+
+/-- Once a touched location has finished its last transfer, the genuine row of its installed
+register or RAM finalizer covers every remaining representable query clock with its posted word. -/
+theorem terminal_covers_of_rows (raw : AccessInventory.Source → Table F) (snapshot : MemorySnapshot)
+    (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
+    (data : ProverData F) (hint : ProverHint F) (installed : FinalRows raw snapshot stream requested canonical data hint)
+    (history : MemoryLocationHistory) (listed : history ∈ memoryLocationHistories stream) (legal : ValidKey history.loc.busAddress)
+    (time : ℕ) (exhausted : history.last.current ≤ time) (fits : time < 2 ^ 48) :
+    ∃ r ∈ Counted.live (AccessInventory.records raw),
+      Counted.Covers r ⟨Address.ofNat history.loc.busAddress, Address.ofNat time, Target.bitVecToWord history.last.pushed⟩ := by
+  let row := terminalOfEntry (p := SP1Prime) history.finalEntry
+  have terminal : row ∈ terminals snapshot stream requested data hint :=
+    List.mem_mergeSort.mpr (List.mem_append_left _ (List.mem_map_of_mem (List.mem_map_of_mem listed)))
+  have live := final_mem_live_of_rows raw _ data _ installed row terminal
+  refine ⟨finalReadback row.record, live, ?_⟩
+  have covered := Counted.covers_compiled_entry (p := SP1Prime) history.finalEntry (2 ^ 48 - 1) time legal exhausted (by omega) (by decide)
+  change Counted.Covers (finalReadback row.record)
+    ⟨Address.ofNat history.loc.busAddress, Address.ofNat time, Target.bitVecToWord (BitVec.ofNat 64 history.last.pushed.toNat)⟩ at covered
+  simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using covered
 
 /-- Every valid untouched x12 or guest RAM request has a covering source on the actual
 supervisor witness, after canonicalizing all 98 tables and selecting the original physical

@@ -109,16 +109,16 @@ theorem initialTable_length (snapshot : MemorySnapshot) (ram : Bool) (rows : Lis
 /-- Compile the source and final register/RAM tables from their common genuine address
 inventory. Heights are fixed by physical counts, including on the empty Memory history. -/
 theorem compiled_boundaries_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (ram : Bool) :
     let rows := terminals snapshot stream requested data hint
-    let initial := initialTable snapshot ram rows data (terminal_count_fit ram snapshot stream requested (canonical_addresses guest) data hint)
-    let final := finalTable ram rows data (terminals_fit ram snapshot stream requested (canonical_addresses guest) data hint)
+    let initial := initialTable snapshot ram rows data (terminal_count_fit ram snapshot stream requested guest.canonical data hint)
+    let final := finalTable ram rows data (terminals_fit ram snapshot stream requested guest.canonical data hint)
     initial.Constraints ∧ initial.Guarantees ∧ final.Constraints ∧ final.Guarantees ∧ initial.table.length = final.table.length := by
-  have ordered := terminals_ordered snapshot stream requested (canonical_addresses guest) data hint
+  have ordered := terminals_ordered snapshot stream requested guest.canonical data hint
   have valid := terminals_valid snapshot stream requested guest data hint
-  have start := initialTable_valid snapshot ram _ data (terminal_count_fit ram snapshot stream requested (canonical_addresses guest) data hint) ordered valid
-  have endRows := finalTable_valid ram _ data (terminals_fit ram snapshot stream requested (canonical_addresses guest) data hint) ordered valid
+  have start := initialTable_valid snapshot ram _ data (terminal_count_fit ram snapshot stream requested guest.canonical data hint) ordered valid
+  have endRows := finalTable_valid ram _ data (terminals_fit ram snapshot stream requested guest.canonical data hint) ordered valid
   exact ⟨start.1, start.2, endRows.1, endRows.2, (initialTable_length ..).trans (finalTable_length ..).symm⟩
 
 end SP1Clean.WriteProbe.SparseBoundary

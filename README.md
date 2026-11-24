@@ -18,11 +18,18 @@ whose public clock advances by fewer than 16 ticks. For an arbitrary-length acce
 the remaining comparison is the peak boundary payload on that same trace.
 [Installed theorem](SP1Clean/Export/InstalledAssembly.lean) · [Short shards](SP1Clean/Export/ShortShard.lean) · [General release criterion](SP1Clean/Export/InstalledExecutionResources.lean)
 
-**Constructive completeness.** A bounded execution of the eight-call Sail model supplies the
-four observation tables and a persistent hint inventory, including every node and padded word
-after a pop. The local chip proofs construct witnesses for each supported ordinary instruction.
-Whole-assembly completeness still requires the joint instruction, Memory, host and provider
-witness, its channel balance and its physical capacity. Installing WRITE completes the eight-call handler inventory. [Observation tables](SP1Clean/Proofs/Completeness/ObservationData.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
+**Constructive completeness.** A release-encodable bounded execution supplies instruction rows for all 25 ordinary
+families and all eight modeled host calls, the four observation tables, and a persistent hint
+store that retains popped nodes. Each WRITE length and
+aligned guest-buffer read has an original generated Memory row with the required address,
+value and clock interval. From those reads, the compiler builds five observer tables with checked
+constraints, exact heights and five balanced channels. The same execution supplies all eighteen
+commitment tables and four ordinary observation tables. Both commitment-state channels balance
+at the supplied snapshots, including repeated writes to a lane. Forty-one original supervisor
+slots remain to be constructed. [Native observer construction](SP1Clean/Export/WriteObservationReadBuild.lean)
+
+The remaining capstone must construct one witness for all installed tables and prove its
+channel balances and physical capacity. [Mixed instruction rows](SP1Clean/Proofs/Completeness/MixedSyscallTable.lean) · [WRITE read funding](SP1Clean/Export/WriteMixedReadFunding.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
 
 The fixed RAM providers use one row per maximal constant-byte run before padding. An empty
 shard with $2^{29}$ identical live bytes needs four rows for each endpoint RAM provider.

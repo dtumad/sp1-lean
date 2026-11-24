@@ -51,6 +51,13 @@ def bumpTables (registers : List MemoryBumpEvent) (pushes : List StateBumpEvent)
     ((state_height pushes).trans_le sh) (by trivial)
     (state.inputData_consistent _ data))
 
+/-- The register refresh table pays the independently rounded demand of its own generated events. -/
+theorem bumpTables_registerLength (registers : List MemoryBumpEvent) (states : List StateBumpEvent)
+    (data : ProverData Fp) (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
+    (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) :
+    (bumpTables registers states data mh sh).1.length = WitnessGeneration.demandHeight registers.length :=
+  (List.length_map ..).trans (memory_height registers)
+
 /-- Exact committed register refresh rows, including the scheduler's disabled suffix. -/
 theorem bumpTables_registerRows (registers : List MemoryBumpEvent) (states : List StateBumpEvent)
     (data : ProverData Fp) (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
@@ -67,6 +74,20 @@ private theorem padded_valid {α : Type} (rows : List α) (padding : α) (P : α
   rcases List.mem_append.mp member with active | tail
   · exact live r active
   · exact (List.eq_of_mem_replicate tail) ▸ disabled
+
+/-- The generated register refresh table satisfies its installed constraints for every
+well-formed event, including its canonical disabled padding. -/
+theorem bumpTables_registerValid (registers : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
+    (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
+    (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) (valid : ∀ e ∈ registers, e.WellFormed) :
+    (bumpTables registers states data mh sh).1.Constraints ∧ (bumpTables registers states data mh sh).1.Guarantees := by
+  have rows := padded_valid _ _ (MemoryBumpChip.Spec (p := SP1Prime)) (memoryBumpTraceInputs_spec valid) MemoryBumpChip.spec_paddingInputs
+  dsimp only [bumpTables]
+  constructor
+  · apply Table.build_constraints
+    exact rows
+  · apply Table.build_guarantees
+    exact rows
 
 /-- The construction simultaneously satisfies both circuits on one
 shared prover input. Their heights are the ones charged by the 44-component preset. -/
@@ -91,13 +112,11 @@ theorem bump_constructed_tables (ctx : Context) {events : List ExecutionEvent}
     change _ ≤ 2 ^ 64
     omega
   refine ⟨inputs, routed, height _ mem, height _ (by omega), rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact (List.length_map ..).trans (memory_height (MixedBumpInput.memoryRows inputs))
+  · exact bumpTables_registerLength ..
   · exact (List.length_map ..).trans (state_height (MixedBumpInput.stateRows inputs))
+  · exact (bumpTables_registerValid _ _ _ _ _ mv).1
+  · exact (bumpTables_registerValid _ _ _ _ _ mv).2
   all_goals dsimp only [bumpTables]
-  · apply Table.build_constraints
-    exact padded_valid _ _ MemoryBumpChip.Spec (memoryBumpTraceInputs_spec mv) MemoryBumpChip.spec_paddingInputs
-  · apply Table.build_guarantees
-    exact padded_valid _ _ MemoryBumpChip.Spec (memoryBumpTraceInputs_spec mv) MemoryBumpChip.spec_paddingInputs
   · apply Table.build_constraints
     exact padded_valid _ _ StateBumpChip.Spec (stateBumpTraceInputs_spec sv) StateBumpChip.spec_paddingInputs
   · apply Table.build_guarantees

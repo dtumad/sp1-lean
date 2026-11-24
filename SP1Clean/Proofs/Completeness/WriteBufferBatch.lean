@@ -203,12 +203,13 @@ theorem readDemand_at [Fact (2 ^ 17 < p)] {limits : ResourceLimits} {image : Pro
     (run : AdmissibleExecution limits p image source target events)
     (collected : WriteObservations.packets? (policy p image) image.program source.realize events = some packets)
     {cut : ℕ} {r : WriteProbe.Read (ZMod p)} (member : (cut, r) ∈ readDemand (packetRows events packets)) :
-    ∃ current frontier loc, mixedAccessPrefix (policy p image) image.program source.realize events cut = some (current, frontier) ∧
+    ∃ call current frontier loc, events[cut]? = some (.syscall call) ∧ call.rawCode = SyscallKind.write.code ∧
+      call.clock = current.clock ∧ mixedAccessPrefix (policy p image) image.program source.realize events cut = some (current, frontier) ∧
       WriteProbe.ValidKey loc.busAddress ∧ r.key = Address.ofNat loc.busAddress ∧ r.clock = Address.ofNat current.clock ∧
       r.value.isU64 ∧ locContent current.sail loc = some r.value.toBitVec64 := by
   obtain ⟨row, inBatch, tagged⟩ := List.mem_flatMap.mp member
   obtain ⟨actual, actualRead, same⟩ := List.mem_map.mp tagged
-  obtain ⟨n, call, current, frontier, len, buffer, _, _, prefixAt, clock, read, rfl⟩ :=
+  obtain ⟨n, call, current, frontier, len, buffer, present, write, prefixAt, clock, read, rfl⟩ :=
     packetRows_member run collected inBatch
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj same
   obtain ⟨_, x12, lower, upper, count, atWord⟩ := WriteObservations.read?_eq_some_iff.mp read
@@ -216,7 +217,7 @@ theorem readDemand_at [Fact (2 ^ 17 < p)] {limits : ResourceLimits} {image : Pro
   let words := wordSteps h.clock (call.arg2.toNat / 8) (buffer.map bitVecToWord)
   change actual ∈ WriteProbe.Read.mk (Address.ofNat 12) h.clock h.length :: words.map Step.read at actualRead
   rcases List.mem_cons.mp actualRead with rfl | memory
-  · exact ⟨current, frontier, .reg 12, prefixAt, Or.inl rfl, rfl, congrArg Address.ofNat clock,
+  · exact ⟨call, current, frontier, .reg 12, present, write, clock, prefixAt, Or.inl rfl, rfl, congrArg Address.ofNat clock,
       isU64_bitVecToWord _, by simpa [h, headerOfCall, locContent, toBitVec64_bitVecToWord] using x12⟩
   · obtain ⟨j, inWords, keyAt⟩ := List.mem_iff_getElem.mp memory
     have bj : j < buffer.length := by simpa [words, wordSteps] using inWords
@@ -233,7 +234,7 @@ theorem readDemand_at [Fact (2 ^ 17 < p)] {limits : ResourceLimits} {image : Pro
     have key : loc.busAddress = 8 * (call.arg2.toNat / 8 + j) := by
       simp only [loc, MemLoc.busAddress, WriteObservations.cell, BitVec.toNat_ofNat,
         Nat.mod_eq_of_lt (show call.arg2.toNat / 8 + j < 2 ^ 61 by omega), Nat.mul_comm]
-    refine ⟨current, frontier, loc, prefixAt, Or.inr ⟨?_, ?_, ?_⟩, by rw [key], congrArg Address.ofNat clock,
+    refine ⟨call, current, frontier, loc, present, write, clock, prefixAt, Or.inr ⟨?_, ?_, ?_⟩, by rw [key], congrArg Address.ofNat clock,
       isU64_bitVecToWord _, ?_⟩
     · rw [key]; omega
     · rw [key]; omega

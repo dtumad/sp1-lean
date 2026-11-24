@@ -233,12 +233,12 @@ private theorem extra_genesis (snapshot : MemorySnapshot) (touched requested : L
 This is a per-message identity between the two actual tables, including every row and both
 directions. It holds for every list of requests, including repeated and absent keys. -/
 theorem sparse_memory_residual (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (ram : Bool) (msg : Array (ZMod p)) :
     let original := ((memoryFinalEntries stream).map (terminalOfEntry (p := p))).filter (fun r => r.ram == ram)
     let rows := terminals snapshot stream requested data hint
-    let sourceTable := initialTable snapshot ram rows data (terminal_count_fit ram snapshot stream requested (canonical_addresses guest) data hint)
-    let endTable := finalTable ram rows data (terminals_fit ram snapshot stream requested (canonical_addresses guest) data hint)
+    let sourceTable := initialTable snapshot ram rows data (terminal_count_fit ram snapshot stream requested guest.canonical data hint)
+    let endTable := finalTable ram rows data (terminals_fit ram snapshot stream requested guest.canonical data hint)
     balanceOf (sourceTable.interactionsWith memoryChannel.toRaw ++ endTable.interactionsWith memoryChannel.toRaw) msg =
       balanceOf (original.map (fun r => memoryChannel.pushedValue (genesis snapshot r)) ++
         original.map (fun r => memoryChannel.pulledValue r.record)) msg := by
@@ -249,7 +249,7 @@ theorem sparse_memory_residual (snapshot : MemorySnapshot) (stream : List Memory
   let selected := fun r : Terminal (ZMod p) => r.ram == ram
   let push := fun r : Terminal (ZMod p) => memoryChannel.pushedValue (genesis snapshot r)
   let pull := fun r : Terminal (ZMod p) => memoryChannel.pulledValue r.record
-  have sorted := terminals_ordered snapshot stream requested (canonical_addresses guest) data hint
+  have sorted := terminals_ordered snapshot stream requested guest.canonical data hint
   have valid := terminals_valid snapshot stream requested guest data hint
   have perm : rows.Perm (orig ++ extras) := List.mergeSort_perm _ _
   have paired : ((extras.filter selected).map (genesis snapshot)).Perm ((extras.filter selected).map Terminal.record) := by

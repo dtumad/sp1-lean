@@ -1,6 +1,7 @@
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Proofs.Chips.WriteProbeRefresh
 import SP1Clean.Soundness.WriteReadbackSupply
+import SP1Clean.Soundness.SystemMemoryRows
 import SP1Clean.Proofs.Completeness.MemoryReadbackIntervals
 
 /-! # Constructing physical WRITE sources from actual mixed-execution register refreshes
@@ -30,6 +31,33 @@ private theorem refreshEventReceipt_eq (e : MemoryBumpEvent) :
   simp only [refreshEventReceipt, refreshReadback, memoryBumpCols, memoryAccessCols_prev_high,
     memoryAccessCols_prev_low, memoryAccessCols_prev_value, Nat.shiftRight_eq_div_pow]
   exact congrArg₂ (fun a b => Readback.mk _ _ _ a b _) high low
+
+/-- The actual generated refresh retains every canonical predecessor and post field on
+the original Memory bus. The 64-bit word representation also agrees for arbitrary natural inputs. -/
+theorem refresh_transfers (e : MemoryBumpEvent) (valid : e.WellFormed) :
+    let event := MemoryHistoryAccess.ofMemoryBump e
+    Soundness.MemoryBumpChip.pulledMessage (memoryBumpCols (p := SP1Prime) e) = event.pulledEntry.toMemoryMsg ∧
+      Soundness.MemoryBumpChip.pushedMessage (memoryBumpCols (p := SP1Prime) e) = event.pushedEntry.toMemoryMsg := by
+  obtain ⟨addr, _, _⟩ := valid
+  have low : e.addr % 2 ^ 16 = e.addr := by omega
+  have mid : e.addr / 2 ^ 16 % 2 ^ 16 = 0 := by omega
+  have high : e.addr / 2 ^ 32 % 2 ^ 16 = 0 := by omega
+  have small : e.addr % 2 ^ 5 = e.addr := by omega
+  have value : wordOfNat (p := SP1Prime) (BitVec.ofNat 64 e.value).toNat = wordOfNat e.value := by
+    apply Word.eq_of_toBitVec64_eq (wordOfNat_isU64 _) (wordOfNat_isU64 _)
+    rw [toBitVec64_wordOfNat, toBitVec64_wordOfNat, BitVec.ofNat_toNat]
+    rfl
+  change wordOfNat (p := SP1Prime) (e.value % 2 ^ 64) = wordOfNat e.value at value
+  have upper := pack (e.currTs / 2 ^ 24) 256
+  have lower := pack (e.currTs % 2 ^ 24) 65536
+  simp only [Nat.cast_ofNat] at upper lower
+  dsimp only
+  simp only [MemoryHistoryAccess.ofMemoryBump, MemoryHistoryAccess.pulledEntry, MemoryHistoryAccess.pushedEntry,
+    MemRecordEntry.toMemoryMsg, MemLoc.busAddress, value, BitVec.toNat_ofNat, small, low, mid, high, Nat.cast_zero,
+    Soundness.MemoryBumpChip.pulledMessage, Soundness.MemoryBumpChip.pushedMessage, memoryBumpCols,
+    memoryAccessCols_prev_value, memoryAccessCols_prev_high, memoryAccessCols_prev_low, Nat.shiftRight_eq_div_pow,
+    true_and]
+  exact congrArg₂ (fun a b => Channels.MemoryMsg.mk a b (e.addr : Fp) 0 0 (wordOfNat e.value)) upper lower
 
 private theorem validInput (e : MemoryBumpEvent) (honest : e.WellFormed) (weight : Fp) :
     Valid (populate (refreshEventReceipt e) weight) ∧ (populate (refreshEventReceipt e) weight).receipt = refreshEventReceipt e := by
@@ -123,6 +151,36 @@ private abbrev memory := Soundness.providerTableFor (p := SP1Prime) .memoryBump
 
 private def physicalInputs (events : List MemoryBumpEvent) : List (MemoryBumpChip.Inputs Fp) :=
   memoryBumpTraceInputs events ++ List.replicate (WitnessGeneration.demandPadding events.length) MemoryBumpChip.paddingInputs
+
+/-- Both signed original Memory ledgers of the generated table are the complete ordered
+lists of actual refreshes. Disabled rows contribute zero on both sides. -/
+theorem bumpTables_registerMemory (regs : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
+    (mh : WitnessGeneration.demandHeight regs.length ≤ UInt64.size)
+    (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) (valid : ∀ e ∈ regs, e.WellFormed) :
+    let t := (bumpTables regs states data mh sh).1
+    let ledger := Soundness.typedTableInteractionsWith t Channels.memoryChannel
+    Soundness.consumedMessages ledger = regs.map (fun e => (MemoryHistoryAccess.ofMemoryBump e).pulledEntry.toMemoryMsg) ∧
+      Soundness.producedMessages ledger = regs.map (fun e => (MemoryHistoryAccess.ofMemoryBump e).pushedEntry.toMemoryMsg) := by
+  intro t ledger
+  have sides := Soundness.memoryBumpRows_projection t t.data rfl (bumpTables_registerValid _ _ _ _ _ valid).1
+  have decoded : Soundness.activeSystemRows t (Soundness.memoryBumpRow t.data) (·.is_real) = regs.map memoryBumpCols := by
+    have roundtrip (row : MemoryBumpChip.Inputs Fp) :
+        Soundness.memoryBumpRow t.data (memory.buildRow row t.data (ProverHint.empty _)) = row :=
+      memory.rowInput_buildRow row t.data t.data (ProverHint.empty _)
+    let build := fun (r : MemoryBumpChip.Inputs Fp) => memory.buildRow r t.data (ProverHint.empty _)
+    have recover : (t.table.map (Soundness.memoryBumpRow t.data)) = physicalInputs regs := by
+      rw [bumpTables_registerRows]
+      exact (List.map_map (l := physicalInputs regs) (f := build) (g := Soundness.memoryBumpRow t.data)).trans
+        (by simp [Function.comp_def, build, roundtrip])
+    rw [Soundness.activeSystemRows, recover]
+    simp [physicalInputs, memoryBumpTraceInputs, List.filter_append, List.filter_map, Function.comp_def,
+      show ∀ e : MemoryBumpEvent, (memoryBumpCols (p := SP1Prime) e).is_real = 1 from fun _ => rfl,
+      show (MemoryBumpChip.paddingInputs (p := SP1Prime)).is_real = 0 from rfl]
+  dsimp only [ledger]
+  rw [sides.1, sides.2, decoded]
+  simp only [List.flatMap_map, Soundness.MemoryBumpChip.memoryPairs, List.map_cons, List.map_nil, ← List.map_eq_flatMap]
+  exact ⟨List.map_congr_left (fun e member => (refresh_transfers e (valid e member)).1),
+    List.map_congr_left (fun e member => (refresh_transfers e (valid e member)).2)⟩
 
 private theorem original_receipts (regs : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
     (mh : WitnessGeneration.demandHeight regs.length ≤ UInt64.size)

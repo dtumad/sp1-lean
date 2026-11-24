@@ -88,7 +88,9 @@ private theorem outside (i : ℕ) (off : ¬(7 ≤ i ∧ i < 32)) :
   rw [show HostOrdinaryReceipts.replace (p := SP1Prime) i = id by funext c; exact dite_eq_right off]
   exact congrFun Option.map_id _
 
-private theorem outer (i : ℕ) (lo : 32 ≤ i) (hi : i < 94) (other : i ≠ 57) :
+/-- Receipt installation retains the original host/core tables between the lookup providers
+and the target-memory checks, except for the HALT replacement. -/
+theorem retained_at (i : ℕ) (lo : 32 ≤ i) (hi : i < 94) (other : i ≠ 57) :
     (base image source target final).tables[i]? =
       (HostFinalMemory.beforeChecks image source HostCallReceivers.available
         (HostHintReadLocal.sourceResources source.host.io.hints))[i]? := by
@@ -98,13 +100,13 @@ private theorem outer (i : ℕ) (lo : 32 ≤ i) (hi : i < 94) (other : i ≠ 57)
 
 private theorem core (i : ℕ) (lo : 32 ≤ i) (hi : i < 63) (other : i ≠ 57) :
     (base image source target final).tables[i]? = ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer)[i]? := by
-  rw [outer _ _ _ _ _ lo (by omega) other, HostFinalMemory.beforeChecks, HostLocalCore.tables,
+  rw [retained_at _ _ _ _ _ lo (by omega) other, HostFinalMemory.beforeChecks, HostLocalCore.tables,
     List.getElem?_append_left (by rw [List.length_set, ProtectedLocalCore.tables_length]; exact hi)]
 
 private theorem word (last : Bool) :
     (base image source target final).tables[position (.host (.word last))]? = some (original (.host (.word last))) := by
   cases last <;>
-    rw [outer _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
+    rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
       List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide),
       List.length_set, ProtectedLocalCore.tables_length] <;> rfl
 
@@ -178,7 +180,8 @@ theorem sourceAt_position (id : Source) : sourceAt (position id) = some id := by
   | refresh => decide
   | finalizer ram => cases ram <;> decide
 
-private theorem position_of_sourceAt {index : ℕ} {id : Source} (found : sourceAt index = some id) :
+/-- Selection recovers the unique physical table index of its source. -/
+theorem position_of_sourceAt {index : ℕ} {id : Source} (found : sourceAt index = some id) :
     position id = index := eq_of_beq (List.find?_some (p := fun candidate => position candidate == index) found)
 
 /-- Publish the registered sources in place. All other physical components retain their
