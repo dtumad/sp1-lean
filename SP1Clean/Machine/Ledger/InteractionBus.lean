@@ -703,9 +703,17 @@ token the boundary pushed and ending with the one the boundary pulls.
 
 For the State bus each row's successor token is the next row's current `(clock, pc)` token. For the
 Memory bus it is the per-location record chain. -/
-def IsHandoffChain : LookupKey → List (LookupKey × LookupKey) → LookupKey → Prop
+def IsHandoffChain {α : Type*} : α → List (α × α) → α → Prop
   | held, [], last => held = last
   | held, link :: rest, last => link.1 = held ∧ IsHandoffChain link.2 rest last
+
+/-- Adjacent hand-offs compose whenever the first segment ends with the token consumed by the next. -/
+theorem IsHandoffChain.append {α : Type*} {initial middle final : α} {left right : List (α × α)}
+    (first : IsHandoffChain initial left middle) (second : IsHandoffChain middle right final) :
+    IsHandoffChain initial (left ++ right) final := by
+  induction left generalizing initial with
+  | nil => exact (show initial = middle from first) ▸ second
+  | cons link rest ih => exact ⟨first.1, ih first.2⟩
 
 /-- **A chain's ledger is a hand-off's**, up to the reordering a real trace imposes.
 

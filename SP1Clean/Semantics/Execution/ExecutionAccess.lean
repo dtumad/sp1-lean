@@ -118,45 +118,43 @@ theorem ordinaryEncodedAt.project {program : GuestProgram} {located : LocatedTra
   refine ⟨⟨pc, word, decoded, key, id, some plan⟩, plan, ?_, rfl, wellFormed, length⟩
   simp [projectSP1Transition?, atPc, fetched, observed, image, keyEq, route, generated]
 
-/-- Every extracted register and aligned RAM cell belongs to the canonical bus address domain.
-The strict RAM upper bound follows from the positive decoder width and the complete guest span. -/
-theorem ordinaryEncodedAt.canonical_locations {program : GuestProgram} {located : LocatedTransition} {view : SP1TransitionView}
+/-- The aligned word of each decoded RAM operand lies in the full native guest memory window. -/
+theorem ordinaryEncodedAt.guest_ram {program : GuestProgram} {located : LocatedTransition} {view : SP1TransitionView}
     (encoded : ordinaryEncodedAt program located.source) (configured : SailConfigured located.source)
     (projected : projectSP1Transition? program located = some view)
     {plan : InstructionAccessPlan} (generated : view.accessPlan? = some plan)
-    (loc : MemLoc) (member : loc ∈ plan.map PlannedTouch.loc) : loc.CanonicalAddress := by
-  cases loc with
-  | reg => trivial
-  | ram cell =>
-    obtain ⟨pc, word, instr, atPc, fetched, decode, image, routed, memory⟩ := encoded
-    have actual := decodeLocated?_eq_some_of (located := located) atPc fetched (decode _ configured)
-    have same := Option.some.inj ((projectSP1Transition?_decode projected).symm.trans actual)
-    have planEq := (projectSP1Transition?_accesses projected).trans generated
-    rw [same] at planEq
-    have ram := instructionAccessPlan_ram planEq member
-    clear planEq routed actual same decode
-    have canonical (base : BitVec 64) (offset : BitVec 12) (width : ℕ) (positive : 0 < width)
-        (span : NativeLayout.guestMemory.ContainsSpan (memoryEffectiveAddress base offset).toNat width) :
-        (MemLoc.ram (memoryRamCell base offset)).CanonicalAddress := by
-      have small : (memoryEffectiveAddress base offset).toNat / 8 < 2 ^ 61 := by
-        have := (memoryEffectiveAddress base offset).isLt; omega
-      have lower : 2 ^ 16 ≤ _ := span.1
-      have upper : _ + width ≤ 2 ^ 48 := span.2
-      simp only [MemLoc.CanonicalAddress, memoryRamCell, ramCellOfByteAddress, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
-      omega
-    cases instr <;> rename_i ops <;> cases ops <;> try contradiction
-    · rename_i args
-      rcases args with ⟨imm, rs1, rd, unsigned, width⟩
-      obtain ⟨base, read, rfl⟩ := ram
-      obtain ⟨actual, observed, span, _⟩ := memory
-      cases Option.some.inj (read.symm.trans observed)
-      exact canonical base imm width.toNat (loadWidth_positive image) span
-    · rename_i args
-      rcases args with ⟨imm, rs2, rs1, width⟩
-      obtain ⟨base, read, rfl⟩ := ram
-      obtain ⟨actual, observed, span, _⟩ := memory
-      cases Option.some.inj (read.symm.trans observed)
-      exact canonical base imm width.toNat (storeWidth_positive image) span
+    (cell : RamCell) (member : MemLoc.ram cell ∈ plan.map PlannedTouch.loc) :
+    NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress := by
+  obtain ⟨pc, word, instr, atPc, fetched, decode, image, routed, memory⟩ := encoded
+  have actual := decodeLocated?_eq_some_of (located := located) atPc fetched (decode _ configured)
+  have same := Option.some.inj ((projectSP1Transition?_decode projected).symm.trans actual)
+  have planEq := (projectSP1Transition?_accesses projected).trans generated
+  rw [same] at planEq
+  have ram := instructionAccessPlan_ram planEq member
+  clear planEq routed actual same decode
+  have canonical (base : BitVec 64) (offset : BitVec 12) (width : ℕ) (positive : 0 < width)
+      (span : NativeLayout.guestMemory.ContainsSpan (memoryEffectiveAddress base offset).toNat width) :
+      NativeLayout.guestMemory.Contains (MemLoc.ram (memoryRamCell base offset)).busAddress := by
+    have small : (memoryEffectiveAddress base offset).toNat / 8 < 2 ^ 61 := by
+      have := (memoryEffectiveAddress base offset).isLt; omega
+    have lower : 2 ^ 16 ≤ _ := span.1
+    have upper : _ + width ≤ 2 ^ 48 := span.2
+    change 2 ^ 16 ≤ (memoryRamCell base offset).toNat * 8 ∧ (memoryRamCell base offset).toNat * 8 < 2 ^ 48
+    simp only [memoryRamCell, ramCellOfByteAddress, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
+    omega
+  cases instr <;> rename_i ops <;> cases ops <;> try contradiction
+  · rename_i args
+    rcases args with ⟨imm, rs1, rd, unsigned, width⟩
+    obtain ⟨base, read, rfl⟩ := ram
+    obtain ⟨actual, observed, span, _⟩ := memory
+    cases Option.some.inj (read.symm.trans observed)
+    exact canonical base imm width.toNat (loadWidth_positive image) span
+  · rename_i args
+    rcases args with ⟨imm, rs2, rs1, width⟩
+    obtain ⟨base, read, rfl⟩ := ram
+    obtain ⟨actual, observed, span, _⟩ := memory
+    cases Option.some.inj (read.symm.trans observed)
+    exact canonical base imm width.toNat (storeWidth_positive image) span
 
 /-- Actual ordinary execution supplies both states needed by the canonical projection. -/
 theorem ExecutionStep.project_ordinary {policy : HostPolicy} {program : GuestProgram}
