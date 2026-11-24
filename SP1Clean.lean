@@ -58,6 +58,7 @@ import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Export.WriteGeneratedHostSources
 import SP1Clean.Export.WriteGeneratedRamSources
 import SP1Clean.Export.WriteGeneratedRegisterSources
+import SP1Clean.Export.WriteGeneratedSelection
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
@@ -181,11 +182,11 @@ import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.MixedCompiledRows
 import SP1Clean.Proofs.Completeness.MixedMemoryHistory
-import SP1Clean.Proofs.Completeness.MixedMemoryPosts
-import SP1Clean.Proofs.Completeness.MixedMemorySyscall
 import SP1Clean.Proofs.Completeness.MixedMemoryValues
 import SP1Clean.Proofs.Completeness.MixedMemoryRecords
 import SP1Clean.Proofs.Completeness.MixedMemorySelection
+import SP1Clean.Proofs.Completeness.MixedMemoryPosts
+import SP1Clean.Proofs.Completeness.MixedMemorySyscall
 import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
