@@ -1,10 +1,10 @@
-import SP1Clean.Semantics.Host.WriteStreamRecords
+import SP1Clean.Semantics.Host.WriteStreamMetadata
 import ToClean.Air.StaticProvider
 
 /-! # Fixed source of WRITE bytes and supplied hook reply records
 
 The provider takes the verifier's complete host endpoints. It exposes exactly their local
-output and consumed replies, including metadata for empty lists. Physical demand determines
+lengths, hook descriptors and return counts, including metadata for empty lists. Physical demand determines
 only multiplicities; every active source row admits an independently derived endpoint lookup.
 -/
 
@@ -13,18 +13,24 @@ open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 
-/-- Counts belong to the provider and may be zero when a record is unused. -/
+/-- Multiplicities are determined by the physical demands for real metadata. -/
 def recordChannel : Channel (ZMod p) Record where
   name := "sp1.native.write_fixed_stream"
   Guarantees _ _ := True
 
 /-- Verifier-fixed record inventory for this source and target host. -/
 def streamTable (source target : HostState) : StaticTable (ZMod p) Record :=
-  StaticTable.ofRows "sp1.native.write_fixed_streams" (fixedRows (.fromEndpoints source target))
+  let streams := WriteStreams.fromEndpoints source target
+  StaticTable.ofRows "sp1.native.write_fixed_streams" (if inventoryOK streams then metadataRows streams else [])
 
 omit [Fact p.Prime] in
 private theorem height_bound (source target : HostState) : (streamTable (p := p) source target).height < UInt64.size := by
-  have rows : (streamTable (p := p) source target).length < 2 ^ 48 := fixedRows_length _
+  let s := WriteStreams.fromEndpoints source target
+  have rows : (streamTable (p := p) source target).length < 2 ^ 48 := by
+    change (if inventoryOK s then metadataRows (p := p) s else []).length < 2^48
+    split
+    · exact (metadataRows_le_queries s).trans_lt ((inventoryOK_iff s).mp (by assumption)).1
+    · change 0 < 2^48; decide
   have padding := (streamTable (p := p) source target).height_lt_double
   norm_num [UInt64.size] at *
   omega
@@ -39,6 +45,27 @@ theorem stream_authenticates (source target : HostState) (table : Table (ZMod p)
     table.Authenticates recordChannel (fun row => row.Binds (.fromEndpoints source target)) := by
   apply ((streamTable source target).payload_authenticates recordChannel (by intros; trivial)
     (height_bound source target) table component checked).mono
-  exact fun row member => ((fixedRows_iff _ row).mp member).2
+  intro row member
+  let s := WriteStreams.fromEndpoints source target
+  change row ∈ (if inventoryOK s then metadataRows s else []) at member
+  split at member
+  · rename_i valid
+    obtain ⟨q,v,_,found,same⟩ := (metadataRows_iff ..).mp member
+    exact ⟨q,v,q.enumerated found,found,Query.fits_of_inventory valid found,same⟩
+  · cases member
+
+omit [Fact p.Prime] in
+theorem streamTable_length {source target : HostState} (checked : inventoryOK (.fromEndpoints source target) = true) :
+    (streamTable (p := p) source target).length = 3 + ((WriteStreams.fromEndpoints source target).hooks.map fun r => 3 + r.hints.length).sum := by
+  change (if inventoryOK _ then metadataRows (p := p) _ else []).length = _
+  simp only [checked,ite_true,metadataRows_length]
+
+omit [Fact p.Prime] in
+theorem metadata_available {source target : HostState} {q : Query} {v : Nat} (isMeta : q.IsMetadata)
+    (checked : inventoryOK (.fromEndpoints source target) = true) (found : q.lookup (.fromEndpoints source target) = some v) :
+    (streamTable (p := p) source target).Spec (q.encode v) := by
+  change q.encode v ∈ (if inventoryOK _ then metadataRows _ else [])
+  simp only [checked,ite_true]
+  exact (metadataRows_iff ..).mpr ⟨q,v,isMeta,found,rfl⟩
 
 end SP1Clean.WriteEffects
