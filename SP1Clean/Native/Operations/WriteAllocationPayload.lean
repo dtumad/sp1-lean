@@ -83,4 +83,55 @@ theorem Payload.Valid.packed {r : Payload (ZMod p)} (valid : r.Valid) : (Word.of
   rw [← same]
   exact Word.ofBytes_isU64 b
 
+omit [Fact (2^17 < p)] in
+/-- Summing a prefix of unit lane activities returns the actual occupied count. -/
+theorem Payload.used_prefix (n : Nat) (small : n ≤ 8) (lanes : fields 8 (ZMod p)) :
+    (Payload.mk lanes (Vector.ofFn fun i => if i.val < n then 1 else 0)).used = (n : ZMod p) := by
+  interval_cases n <;> norm_num [Payload.used]
+
+omit [Fact (2^17 < p)] in
+/-- Arbitrary checked bytes have one uniquely positioned contiguous occupancy prefix.
+The terminal row has strictly fewer than eight occupied lanes. -/
+theorem Payload.Valid.prefix {r : Payload (ZMod p)} (valid : r.Valid) :
+    ∃ n ≤ 8, (∀ i : Fin 8, r.mask[i] = if i.val < n then 1 else 0) ∧
+      r.used = (n : ZMod p) ∧ (r.more = 1 ↔ n = 8) := by
+  classical
+  let stop := fun n : Nat => ∀ h : n < 8, r.mask[n] = 0
+  have existsEnd : ∃ n, stop n := ⟨8,fun h => (Nat.lt_irrefl _ h).elim⟩
+  let n := Nat.find existsEnd
+  have bound : n ≤ 8 := Nat.find_min' existsEnd (fun h => (Nat.lt_irrefl _ h).elim : stop 8)
+  have tailZero : ∀ k, n ≤ k → ∀ small : k < 8, r.mask[k] = 0 := by
+    intro k after
+    induction k, after using Nat.le_induction with
+    | base => exact Nat.find_spec existsEnd
+    | succ k after ih =>
+      intro small
+      obtain dead|live := (valid ⟨k+1,small⟩).2.1
+      · exact dead
+      · have prev := (valid ⟨k+1,small⟩).2.2.1 live
+        have z := ih (by omega)
+        simp [Payload.previous,z] at prev
+  have mask (i : Fin 8) : r.mask[i] = if i.val < n then 1 else 0 := by
+    split
+    · rename_i before
+      obtain dead|live := (valid i).2.1
+      · exact False.elim (Nat.find_min existsEnd before (fun _ => dead))
+      · exact live
+    · exact tailZero i.val (by omega) i.isLt
+  have shape : r.mask = Vector.ofFn (fun i : Fin 8 => if i.val < n then 1 else 0) := by
+    ext i h
+    rw [Vector.getElem_ofFn]
+    exact mask ⟨i,h⟩
+  refine ⟨n,bound,mask,?_,?_⟩
+  · calc
+      r.used = (Payload.mk r.bytes (Vector.ofFn (fun i : Fin 8 => if i.val < n then 1 else 0))).used := by
+        simp only [Payload.used,shape]
+      _ = _ := Payload.used_prefix n bound _
+  · change r.mask[7] = 1 ↔ n = 8
+    have lastLane : r.mask[7] = if 7 < n then 1 else 0 := mask ⟨7,by decide⟩
+    rw [lastLane]
+    split <;> rename_i last
+    · simp [show n = 8 by omega]
+    · simp [show n ≠ 8 by omega]
+
 end SP1Clean.WriteAllocation.Words
