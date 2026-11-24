@@ -1,3 +1,4 @@
+import ToClean.Air.ReaderCounts
 import SP1Clean.Proofs.Completeness.WriteDirectBlocks
 import SP1Clean.Proofs.Completeness.WriteFixedDataCapacity
 
@@ -20,18 +21,6 @@ def directRequests (g : Group F) : List (StreamBlock F) :=
 def returnedRequests (rows : List (Words.Row F)) : List (StreamBlock F) :=
   (rows.filter (fun r => r.hookGate = 1)).map Words.Row.returned
 
-/-- Ordered, occurrence-preserving source attribution. Applying it to two identical queries
-selects two occurrences in the returned index list. The supplier list remains untouched. -/
-theorem assigned {α : Type} {n : Nat} {requests : List α} {eligible : Fin n → Prop} {payload : Fin n → α}
-    (covered : ∀ b ∈ requests, ∃ i, eligible i ∧ payload i = b) :
-    ∃ indices : List (Fin n), indices.map payload = requests ∧ ∀ i ∈ indices, eligible i := by
-  induction requests with
-  | nil => exact ⟨[],rfl,by simp⟩
-  | cons x xs ih =>
-    obtain ⟨i,on,same⟩ := covered x (by simp)
-    obtain ⟨is,mapped,valid⟩ := ih (fun b h => covered b (List.mem_cons_of_mem _ h))
-    exact ⟨i::is,by simp [same,mapped],by simpa only [List.forall_mem_cons] using And.intro on valid⟩
-
 /-- Total indices of the occupied words and fixed reply blocks funding the entire chronological
 collection, preserving order, repeated requests and independent left/right occurrences. -/
 theorem native_block_indices {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
@@ -47,7 +36,7 @@ theorem native_block_indices {image : ProgramImage} {source target : ExecutionSn
       ∀ i ∈ ids, (provider.fixedEntry i.val).eligible = 1 := by
   dsimp only
   constructor
-  · apply assigned
+  · apply Air.Flat.ReaderCounts.assign
     intro b occurrence
     obtain ⟨g,mem,side⟩ := List.mem_flatMap.mp occurrence
     have selected (right : Bool) (on : (if right then g.rightGate else g.leftGate) = 1) :
@@ -64,7 +53,7 @@ theorem native_block_indices {image : ProgramImage} {source target : ExecutionSn
     · split at right
       next enabled => exact List.mem_singleton.mp right ▸ selected true enabled
       next => contradiction
-  · apply assigned
+  · apply Air.Flat.ReaderCounts.assign
     intro b occurrence
     obtain ⟨r,member,rfl⟩ := List.mem_map.mp occurrence
     obtain ⟨used,one⟩ := List.mem_filter.mp member
