@@ -142,6 +142,14 @@ the last target buffer establishes equality of the complete queue. This permits 
 head or allocation frontier larger than the queue length after a pop.
 [Snapshot lookup characterization](../SP1Clean/Semantics/Host/HintQueueSnapshot.lean)
 
+The native assembly installs one fixed row per outgoing padded word and a single terminal
+row. The terminal consumes the complete private queue state, starts the word walk at its
+actual head, and requires the last cursor to reach zero. Every word takes its ordinal,
+flags, byte length and contents from the public target. The next shard starts from its
+own canonical numbering of that target. The boundary payload covers all padded words,
+giving a physical reader height of at most `2^26` under the fixed-provider preset.
+[Physical reader](../SP1Clean/Native/Operations/HintQueueSnapshot.lean) · [Terminal](../SP1Clean/Native/Operations/HintQueueSeal.lean) · [Capacity](../SP1Clean/Export/HintSnapshotCapacity.lean)
+
 The full native acceptance theorem still needs to connect consecutive WRITE clocks, close
-all per-stream positions, and connect the final queue walk to the physical host state and
-node providers. The stock SDK digest statement above applies independently.
+all per-stream positions, and recover the persistent node and word sources for the
+terminal walk from the balanced physical tables. The stock SDK digest statement above applies independently.
