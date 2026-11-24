@@ -72,6 +72,46 @@ def makePacketRows (location : ℕ × CoreSyscallEvent) (packet : WriteObservati
 def packetRows (events : List ExecutionEvent) (packets : List WriteObservations.Packet) : List (PacketRows (ZMod p)) :=
   List.zipWith makePacketRows (writeLabels 0 events) packets
 
+private theorem relatedRowsFrom {α : Type} (collect : ExecutionEvent × Nat → Option α)
+    (packet : α → WriteObservations.Packet) (related : PacketRows (ZMod p) → α → Prop)
+    (events : List ExecutionEvent) (start : Nat)
+    (active : ∀ e i, (e,i) ∈ events.zipIdx start → (collect (e,i)).isSome = WriteObservations.isWriteCall e)
+    (row : ∀ call i x, (.syscall call,i) ∈ events.zipIdx start → call.rawCode = SyscallKind.write.code →
+      collect (.syscall call,i) = some x → related (makePacketRows (i,call) (packet x)) x) :
+    let entries := (events.zipIdx start).filterMap collect
+    List.Forall₂ related (List.zipWith makePacketRows (writeLabels start events) (entries.map packet)) entries := by
+  induction events generalizing start with
+  | nil => exact .nil
+  | cons event rest ih =>
+    simp only [List.zipIdx_cons, List.filterMap_cons] at *
+    have tail := ih (start+1) (fun e i m => active e i (.tail _ m)) (fun call i x m => row call i x (.tail _ m))
+    have selected := active event start (.head _)
+    cases event with
+    | ordinary =>
+      have none : collect (.ordinary,start) = none := by simpa [WriteObservations.isWriteCall] using selected
+      simpa only [none,writeLabels] using tail
+    | syscall call =>
+      by_cases write : call.rawCode = SyscallKind.write.code
+      · have someEntry : (collect (.syscall call,start)).isSome := by simpa [WriteObservations.isWriteCall,write] using selected
+        obtain ⟨x,hx⟩ := Option.isSome_iff_exists.mp someEntry
+        simpa only [hx,writeLabels,ite_eq_left write,List.map_cons,List.zipWith_cons_cons] using
+          List.Forall₂.cons (row call start x (.head _) write hx) tail
+      · have none : collect (.syscall call,start) = none := by simpa [WriteObservations.isWriteCall,write] using selected
+        simpa only [none,writeLabels,ite_eq_right write] using tail
+
+/-- A collector that emits exactly at WRITE cuts is paired with the complete buffer rows in that
+same order. The local relation can depend on the original label, its index, and the emitted packet. -/
+theorem packetRows_related {α : Type} (collect : ExecutionEvent × Nat → Option α)
+    (packet : α → WriteObservations.Packet) (related : PacketRows (ZMod p) → α → Prop)
+    (events : List ExecutionEvent)
+    (active : ∀ e i, events[i]? = some e → (collect (e,i)).isSome = WriteObservations.isWriteCall e)
+    (row : ∀ call i x, events[i]? = some (.syscall call) → call.rawCode = SyscallKind.write.code →
+      collect (.syscall call,i) = some x → related (makePacketRows (i,call) (packet x)) x) :
+    let entries := events.zipIdx.filterMap collect
+    List.Forall₂ related (packetRows events (entries.map packet)) entries :=
+  relatedRowsFrom collect packet related events 0 (fun e i m => active e i (List.mk_mem_zipIdx_iff_getElem?.mp m))
+    (fun call i x m => row call i x (List.mk_mem_zipIdx_iff_getElem?.mp m))
+
 /-- A successful collection supplies one complete packet at every WRITE position. -/
 theorem packetRows_length {host : HostPolicy} {program : GuestProgram} {source : ExecutionState}
     {events : List ExecutionEvent} {packets : List WriteObservations.Packet}
