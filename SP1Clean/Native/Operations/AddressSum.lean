@@ -28,6 +28,13 @@ variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 def Spec (x : Inputs (ZMod p)) : Prop := Address.Bounded x.left ∧ Address.Bounded x.right ∧
   Address.Bounded x.result ∧ Address.toNat x.result = Address.toNat x.left + Address.toNat x.right
 
+/-- Canonical encodings of an exact natural sum satisfy the address adder. -/
+theorem spec_ofNat (a b : Nat) (bound : a+b < 2^48) :
+    Spec (p := p) ⟨Address.ofNat a,Address.ofNat b,Address.ofNat (a+b)⟩ := by
+  refine ⟨Address.bounded_ofNat _,Address.bounded_ofNat _,Address.bounded_ofNat _,?_⟩
+  simp only [Address.toNat_ofNat _ (by omega : a < 2^48),Address.toNat_ofNat _ (by omega : b < 2^48),
+    Address.toNat_ofNat _ bound]
+
 /-- Range-check the operands and constrain the result with the SP1 address adder. -/
 def main (x : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion WordRangeCheck.circuit (Address.asWord x.left)

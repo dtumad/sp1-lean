@@ -40,12 +40,6 @@ private theorem offset_aligned (word lane : Nat) (small : lane < 8) :
   have hi : 8*word/4294967296 = (8*word+lane)/4294967296 := by omega
   simp only [Address.offset,Address.ofNat,circuit_norm,Nat.reducePow,← Nat.cast_add,low,mid,hi]
 
-private theorem sum_ofNat (a b : Nat) (bound : a+b < 2^48) :
-    AddressSum.Spec (p := p) ⟨Address.ofNat a,Address.ofNat b,Address.ofNat (a+b)⟩ := by
-  refine ⟨Address.bounded_ofNat _,Address.bounded_ofNat _,Address.bounded_ofNat _,?_⟩
-  simp only [Address.toNat_ofNat _ (by omega : a < 2^48),Address.toNat_ofNat _ (by omega : b < 2^48),
-    Address.toNat_ofNat _ bound]
-
 /-- Source and output cursor columns implement the natural window bounds, without wrapping
 even when the last selected guest address is the last representable RAM address. -/
 theorem Group.populate_coordinates (octets : Octets (ZMod p)) (sink : ZMod p) (owner : fields 3 (ZMod p))
@@ -58,11 +52,11 @@ theorem Group.populate_coordinates (octets : Octets (ZMod p)) (sink : ZMod p) (o
   have hp : 2^17 < p := Fact.out
   have firstAddr : Address.offset octets.key (first : ZMod p) = Address.ofNat (8*word+first) := by rw [key,offset_aligned word first f]
   have addOne : 8*word+first-1+1 = 8*word+first := by omega
-  have firstSum := sum_ofNat (p := p) (8*word+first-1) 1 (by omega)
+  have firstSum := AddressSum.spec_ofNat (p := p) (8*word+first-1) 1 (by omega)
   rw [addOne,short_address 1 (by decide)] at firstSum
-  have byteSum := sum_ofNat (p := p) base size out
+  have byteSum := AddressSum.spec_ofNat (p := p) base size out
   rw [short_address size (by omega)] at byteSum
-  have blockSum := sum_ofNat (p := p) (base/8) 1 (by omega)
+  have blockSum := AddressSum.spec_ofNat (p := p) (base/8) 1 (by omega)
   rw [short_address 1 (by decide)] at blockSum
   simp only [Nat.cast_one] at firstSum blockSum
   refine ⟨⟨rfl,Address.bounded_ofNat _,indexNat.trans (congrArg (· / 8) baseNat.symm),?_,?_,byteSum,blockSum⟩,rfl⟩
