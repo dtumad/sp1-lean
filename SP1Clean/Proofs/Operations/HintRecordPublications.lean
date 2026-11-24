@@ -96,4 +96,26 @@ theorem snapshot_pulls (hints : List Bytes) (ch : RawChannel F)
     obtain rfl := List.mem_singleton.mp mem
     apply Interaction.not_push_iff.mpr
     exact live.imp_right (fun h => ⟨rfl,h⟩)
+/-- An active allocation node has the full prepend specification once its original Byte lookups are funded. -/
+theorem valid_step (env : Environment F)
+    (checked : (stepComponent (p := SP1Prime)).operations.ConstraintsHold env)
+    (bytes : stepComponent.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
+    let r := valueFromOffset (ProvablePair Step field) 0 env
+    r.2 = 1 → r.1.Valid := by
+  let I := ProvablePair Step field
+  let input := varFromOffset I (F := F) 0
+  let g := Guarded.circuit (stepCircuit (p := SP1Prime)) stepSupported
+  have facts : IsBool (eval env input).2 ∧ ((eval env input).2 = 1 → (eval env input).1.Valid) := by
+    apply (g.original_full_soundness (size I) env input (fun _ => trivial) ((Component.constraintsHold_iff _).mp checked) ?_).1
+    rw [Operations.guarantees_iff _ _ _ (g.in_channels_or_guarantees_full input _ env)]
+    intro ch member
+    have known : ch = Channels.byteChannel.toRaw ∨ ch = cursorChannel.toRaw ∨ ch = WriteEffects.recordChannel.toRaw := by
+      simpa [g,stepCircuit,stepElaborated,HintNodeAllocate.circuit,HintNodeAllocate.elaborated,AddrAddOperation.circuit,AddressOrder.circuit,
+        AddressOrder.elaborated,AddressSum.circuit,AddressSum.elaborated,circuit_norm,or_left_comm,or_comm,or_assoc] using member
+    rcases known with rfl | rfl | rfl
+    · exact (Component.channelGuarantees_iff _ _).mp bytes
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [cursorChannel,Channel.toRaw]) _ _
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [WriteEffects.recordChannel,Channel.toRaw]) _ _
+  simpa only [input,eval_varFromOffset_valueFromOffset] using facts.2
+
 end SP1Clean.HintRecordPublications

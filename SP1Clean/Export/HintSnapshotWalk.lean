@@ -1,4 +1,4 @@
-import SP1Clean.Export.WriteObservationSources
+import SP1Clean.Export.WriteHintRecordOrigins
 import SP1Clean.Soundness.HintSnapshotDecode
 import ToClean.Air.AppendedAuthentication
 
@@ -116,5 +116,51 @@ theorem outgoing_queue_of_immutable_reads (store : HintQueue.Store)
   obtain ⟨tails, chain⟩ := reads_snapshot_of_walk store hints table (reader.table_component seen)
     (reader.table_constraints seen ((observed_constraints w).mp checked)) _ (native_hint_walk w checked fit raw) visible
   exact chain.represents
+
+/-- Each active lookup along the verifier-fixed outgoing queue walk has canonical shape and
+comes from its incoming physical inventory or an active allocation publisher. -/
+theorem outgoing_queue_read_origins (w : EnsembleWitness (native image source target)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (paid : w.Balanced .logUp) :
+    let seen := observed w
+    let endQueue := SP1Clean.HostHintQueueBoundary.initial (p := SP1Prime) target.host.io.hints
+    let reader := slot image source target endQueue 10
+    let table := reader.table seen
+    ∀ i : Fin table.table.length, let row := physicalInput table i
+      (row.1.first = 1 → (row.1.node row.2.1).Valid ∧ NodeOrigin seen (row.1.node row.2.1)) ∧
+      (row.1.active = 1 → (row.1.word row.2.1).Valid ∧ WordOrigin seen (row.1.word row.2.1)) := by
+  intro seen endQueue reader table i
+  let installed : TableSlot (native image source target).tables (HostHintSnapshot.component (p := SP1Prime) target.host.io.hints) := reader
+  have lookups := physical_lookups target.host.io.hints table (reader.table_component seen) i
+  obtain ⟨nodes,words⟩ := assembled_hint_read_origins w checked fit paid
+  exact ⟨fun first => nodes _ (installed.table_interactions_subset w _ (lookups.1 first)),
+    fun active => words _ (installed.table_interactions_subset w _ (lookups.2 active))⟩
+
+/-- A common persistent extension of the incoming store represents the outgoing queue when
+it binds the positive publications of the two dynamic allocation tables. Every fixed-source
+binding and every snapshot lookup is derived from the installed witness. -/
+theorem outgoing_queue_of_allocations (w : EnsembleWitness (native image source target)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (paid : w.Balanced .logUp) (store : HintQueue.Store)
+    (extension : HintQueue.Extends (HintQueue.ofList source.host.io.hints).1 store)
+    (nodes : ∀ r, PublishedBy ((slot image source target (SP1Clean.HostHintQueueBoundary.initial target.host.io.hints) 16).table
+      (observed w)) WriteAllocation.Step.readers (fun s => s.node.node) r → r.Binds store)
+    (words : ∀ r, PublishedBy ((slot image source target (SP1Clean.HostHintQueueBoundary.initial target.host.io.hints) 18).table
+      (observed w)) WriteAllocation.Words.Row.wordReads WriteAllocation.Words.Row.word r → r.Binds store) :
+    let seen := observed w
+    let endQueue := SP1Clean.HostHintQueueBoundary.initial (p := SP1Prime) target.host.io.hints
+    let terminal := slot image source target endQueue 11
+    let state := Seal.physicalState target.host.io.hints (terminal.table seen) (terminal.table_component seen)
+    HintQueue.Represents store (Address.toNat state.head) target.host.io.hints := by
+  obtain ⟨metadata,contents⟩ := assembled_hint_read_origins w checked fit paid
+  apply outgoing_queue_of_immutable_reads store w checked fit paid
+  · intro r read
+    obtain ⟨valid,origin⟩ := metadata r read
+    rcases origin with fixed | allocated
+    · exact ⟨valid,fixed.2.2.extend extension⟩
+    · exact ⟨valid,nodes r allocated⟩
+  · intro r read
+    obtain ⟨_,origin⟩ := contents r read
+    rcases origin with fixed | allocated
+    · exact fixed.2.2.extend extension
+    · exact words r allocated
 
 end SP1Clean.Export.WriteObservationAssembly

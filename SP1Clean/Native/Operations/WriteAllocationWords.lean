@@ -111,7 +111,8 @@ private theorem end_iff (r : Row (ZMod p)) (more : IsBool r.payload.more) :
       fin_cases i <;> rfl
   · simp [Payload.last,cont]
 
-private theorem receipt_valid {r : Row (ZMod p)} (h : r.Valid) : r.word.Valid := by
+/-- The published immutable word has a positive bounded pointer, canonical index, limbs and final flag. -/
+theorem Row.Valid.word_valid {r : Row (ZMod p)} (h : r.Valid) : r.word.Valid := by
   obtain ⟨_,payload,pointer,index,_,_⟩ := h
   have unit : Address.toNat (#v[1,0,0] : fields 3 (ZMod p))=1 := by simp [Address.toNat,circuit_norm,ZMod.val_one]
   have positive := pointer.2.2.2
@@ -150,7 +151,7 @@ def wordCircuit : GeneralFormalCircuit (ZMod p) Row unit where
       ⟨⟨⟨input_prior_contents_direct,input_prior_contents_pointer,input_prior_contents_reply,input_prior_contents_index,
         input_prior_contents_length⟩,input_prior_index,input_prior_remaining⟩,input_predecessor,input_nextIndex,input_left,
         ⟨input_payload_bytes,input_payload_mask⟩,input_blockReads,input_wordReads⟩ direct payload pointer index remaining (fun i => stop i)
-    exact ⟨valid,hookBool _ _ direct (payload 0).2.1,fun _ => receipt_valid valid⟩
+    exact ⟨valid,hookBool _ _ direct (payload 0).2.1,fun _ => valid.word_valid⟩
   completeness := by
     circuit_proof_start [wordMain,payloadCircuit,AddressSum.circuit,Payload.used,Payload.last,Payload.more,
       Row.hookGate,Row.directGate,Row.word,Word.ofBytes,cursorChannel,blockChannel,HostHintQueue.wordChannel]

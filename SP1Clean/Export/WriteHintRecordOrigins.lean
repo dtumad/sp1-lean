@@ -1,4 +1,5 @@
 import SP1Clean.Export.WriteObservationHandoff
+import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Proofs.Operations.HintRecordPublications
 
@@ -219,13 +220,22 @@ def FixedPublication {Record : TypeMap} [ProvableType Record] (table : Table F) 
     (record : Record F) : Prop :=
   ∃ i ∈ table.interactionsWith ch.toRaw, i.Push ∧ i.msg = (toElements record).toArray
 
+/-- The fixed incoming provider or a paid publication from the original fresh-node table. -/
+def NodeOrigin (w : EnsembleWitness (preprocessing image source target final)) (r : NodeRecord F) : Prop :=
+    (FixedPublication (hintHostTable w 23) nodeChannel r ∧ r.Valid ∧ r.Binds (ofList source.host.io.hints).1) ∨
+      PublishedBy ((slot image source target final 16).table w) Step.readers (fun step => step.node.node) r
+
+/-- The fixed incoming provider or a paid publication from the original allocation word table. -/
+def WordOrigin (w : EnsembleWitness (preprocessing image source target final)) (r : WordRecord F) : Prop :=
+    (FixedPublication (hintHostTable w 24) wordChannel r ∧ r.Valid ∧ r.Binds (ofList source.host.io.hints).1) ∨
+      PublishedBy ((slot image source target final 18).table w) Words.Row.wordReads Words.Row.word r
+
 /-- Every active metadata request in the full ledger gets its record either from the checked
 incoming queue or from a positively funded, active fresh-node row. -/
 theorem node_read_origin (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
     (funded : w.BalancedChannel nodeChannel.toRaw) (r : NodeRecord F)
     (read : nodeChannel.pulledValue r ∈ w.interactionsWith nodeChannel.toRaw) :
-    (FixedPublication (hintHostTable w 23) nodeChannel r ∧ r.Valid ∧ r.Binds (ofList source.host.io.hints).1) ∨
-      PublishedBy ((slot image source target final 16).table w) Step.readers (fun step => step.node.node) r := by
+    NodeOrigin w r := by
   obtain ⟨i,member,same,push⟩ := funded.exists_push_of_pull _ read ⟨rfl,rfl⟩
   rw [hintNode_ledger w] at member
   rcases List.mem_append.mp member with prior | later
@@ -253,8 +263,7 @@ incoming record or an actual active allocation word with the same pointer, posit
 theorem word_read_origin (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
     (funded : w.BalancedChannel wordChannel.toRaw) (r : WordRecord F)
     (read : wordChannel.pulledValue r ∈ w.interactionsWith wordChannel.toRaw) :
-    (FixedPublication (hintHostTable w 24) wordChannel r ∧ r.Valid ∧ r.Binds (ofList source.host.io.hints).1) ∨
-      PublishedBy ((slot image source target final 18).table w) Words.Row.wordReads Words.Row.word r := by
+    WordOrigin w r := by
   obtain ⟨i,member,same,push⟩ := funded.exists_push_of_pull _ read ⟨rfl,rfl⟩
   rw [hintWord_ledger w] at member
   rcases List.mem_append.mp member with prior | later
@@ -276,5 +285,83 @@ theorem word_read_origin (w : EnsembleWitness (preprocessing image source target
     let input := varFromOffset (ProvablePair Words.Row field) (F := F) 0
     have h := Guarded.activity_of_constraints Words.wordCircuit Words.wordSupported input _ _ ((Component.constraintsHold_iff _).mp valid)
     rwa [Guarded.eval_activity,eval_varFromOffset_valueFromOffset] at h
+
+/-- Node shape follows from both physical providers, using the complete ensemble's Byte ledger. -/
+theorem NodeOrigin.valid {w : EnsembleWitness (preprocessing image source target final)} (checked : w.Constraints)
+    (bytes : w.BalancedChannel Channels.byteChannel.toRaw) {r : NodeRecord F} (origin : NodeOrigin w r) : r.Valid := by
+  rcases origin with initial | ⟨row,live,active,_,equal⟩
+  · exact initial.2.1
+  let s : TableSlot (preprocessing image source target final).tables stepComponent := slot image source target final 16
+  have constraints := s.table_constraints w checked row live
+  have ranged := (byte_guarantees w checked bytes).2 _ (s.table_mem w) row live
+  rw [s.table_component w] at constraints ranged
+  have valid := valid_step _ constraints ranged active
+  exact equal ▸ valid.2.1.2.2.2.2.1
+
+/-- Both immutable word providers establish representation validity from their own checked rows. -/
+theorem WordOrigin.valid {w : EnsembleWitness (preprocessing image source target final)} (checked : w.Constraints)
+    {r : WordRecord F} (origin : WordOrigin w r) : r.Valid := by
+  rcases origin with initial | ⟨row,live,active,_,equal⟩
+  · exact initial.2.1
+  let s : TableSlot (preprocessing image source target final).tables Words.wordComponent := slot image source target final 18
+  let input := varFromOffset (ProvablePair Words.Row field) (F := F) 0
+  have constraints := s.table_constraints w checked row live
+  rw [s.table_component w] at constraints
+  have valid := Words.guarded_word_valid input _ _ ((Component.constraintsHold_iff _).mp constraints)
+  rw [eval_varFromOffset_valueFromOffset] at valid
+  exact equal ▸ (valid.2 active).word_valid
+
+/-- Actual HINT_READ word sites obtain their own channel guarantee from full installed
+balance, including source words, snapshots and dynamically allocated words. -/
+theorem hint_word_data (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
+    (funded : w.BalancedChannel wordChannel.toRaw) (last : Bool) :
+    (raw (supervisor w) (.host (.word last))).ChannelGuarantees wordChannel.toRaw := by
+  apply ((supervisor w).channelGuarantees_of_authenticated_pulls wordChannel ?_).2 _
+    ((originalSlot image source target final _).table_mem (supervisor w))
+  intro r read
+  apply WordOrigin.valid checked (word_read_origin w checked funded r ?_)
+  rw [hintWord_ledger w]
+  exact List.mem_append_left _ read
+
+private theorem immutable_registered (ch : RawChannel F) (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw) :
+    ch ∈ (preprocessing image source target final).channels := by
+  let reader : TableSlot (preprocessing image source target final).tables (HostHintSnapshot.component target.host.io.hints) := slot image source target final 10
+  apply (preprocessing image source target final).tables_channels _ (reader.component_eq ▸ List.getElem_mem reader.index.isLt)
+  rcases which with rfl | rfl
+  · exact List.mem_of_getElem? (i := 1) rfl
+  · exact List.mem_of_getElem? (i := 2) rfl
+
+private theorem observed_immutable (w : EnsembleWitness (assembly image source target final))
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp)
+    (ch : RawChannel F) (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw) :
+    (observed w).BalancedChannel ch ∧ (observed w).interactionsWith ch = w.interactionsWith ch := by
+  have used := immutable_registered (image := image) (source := source) (target := target) (final := final) ch which
+  have quiet : ch.name ∉ [(WriteEffects.cursorChannel (p := SP1Prime)).name, (WriteEffects.closeChannel (p := SP1Prime)).name] := by
+    rcases which with rfl | rfl <;> decide
+  exact ⟨observed_balance w fit raw _ used quiet,observed_ledger w _ used quiet⟩
+
+/-- Raw public verifier acceptance funds every immutable node and word read from one of the
+two authentic physical publisher families. -/
+theorem assembled_hint_read_origins (w : EnsembleWitness (assembly image source target final)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
+    (∀ r, nodeChannel.pulledValue r ∈ w.interactionsWith nodeChannel.toRaw → r.Valid ∧ NodeOrigin (observed w) r) ∧
+    (∀ r, wordChannel.pulledValue r ∈ w.interactionsWith wordChannel.toRaw → r.Valid ∧ WordOrigin (observed w) r) := by
+  have checks := (observed_constraints w).mp checked
+  constructor
+  · obtain ⟨funded,same⟩ := observed_immutable w fit raw _ (Or.inl rfl)
+    intro r read
+    have origin := node_read_origin _ checks funded r (same ▸ read)
+    exact ⟨origin.valid checks (observed_byte_balance w fit raw),origin⟩
+  · obtain ⟨funded,same⟩ := observed_immutable w fit raw _ (Or.inr rfl)
+    intro r read
+    have origin := word_read_origin _ checks funded r (same ▸ read)
+    exact ⟨origin.valid checks,origin⟩
+
+/-- Every public native witness satisfying constraints and LogUp supplies the immutable word
+guarantee on both original HINT_READ word modes without a separate grounding premise. -/
+theorem assembled_hint_word_data (w : EnsembleWitness (assembly image source target final)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (paid : w.Balanced .logUp) (last : Bool) :
+    (raw (supervisor (observed w)) (.host (.word last))).ChannelGuarantees wordChannel.toRaw :=
+  hint_word_data _ ((observed_constraints w).mp checked) (observed_immutable w fit paid _ (Or.inr rfl)).1 last
 
 end SP1Clean.Export.WriteObservationAssembly
