@@ -51,6 +51,13 @@ def bumpTables (registers : List MemoryBumpEvent) (pushes : List StateBumpEvent)
     ((state_height pushes).trans_le sh) (by trivial)
     (state.inputData_consistent _ data))
 
+/-- The register refresh table pays the independently rounded demand of its own generated events. -/
+theorem bumpTables_registerLength (registers : List MemoryBumpEvent) (states : List StateBumpEvent)
+    (data : ProverData Fp) (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
+    (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) :
+    (bumpTables registers states data mh sh).1.length = WitnessGeneration.demandHeight registers.length :=
+  (List.length_map ..).trans (memory_height registers)
+
 /-- Exact committed register refresh rows, including the scheduler's disabled suffix. -/
 theorem bumpTables_registerRows (registers : List MemoryBumpEvent) (states : List StateBumpEvent)
     (data : ProverData Fp) (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
@@ -105,7 +112,7 @@ theorem bump_constructed_tables (ctx : Context) {events : List ExecutionEvent}
     change _ ≤ 2 ^ 64
     omega
   refine ⟨inputs, routed, height _ mem, height _ (by omega), rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact (List.length_map ..).trans (memory_height (MixedBumpInput.memoryRows inputs))
+  · exact bumpTables_registerLength ..
   · exact (List.length_map ..).trans (state_height (MixedBumpInput.stateRows inputs))
   · exact (bumpTables_registerValid _ _ _ _ _ mv).1
   · exact (bumpTables_registerValid _ _ _ _ _ mv).2

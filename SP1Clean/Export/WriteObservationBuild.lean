@@ -78,31 +78,12 @@ theorem installed_sources (w : EnsembleWitness (base image source target final))
   have installed := (publish_project (installSources w) id).trans (installSources_publish w id)
   exact congrArg (fun t : Table F => t.interactionsWith readbackChannel.toRaw) installed
 
-/-- A successful deterministic counted route generates the two physical components and both
-of their raw private balances against the real installed supervisor. Coverage and clock bounds
-of a generated supervisor are separate compiler obligations. -/
-theorem counted_tables (w : EnsembleWitness (base image source target final)) (checked : w.Constraints)
-    (bounded : ∀ r ∈ live (AccessInventory.records (raw w)), Bounded r) (reads : List (Read F))
-    {requests : List (Request (live (AccessInventory.records (raw w))).length F)}
-    (routed : route? (live (AccessInventory.records (raw w))) reads = some requests)
-    (data : ProverData F) (supplyFits probeFits) :
-    let recs := live (AccessInventory.records (raw w))
-    let supply := Counted.table (allocated recs requests) data supplyFits
-    let inputs := probes recs requests
-    let observer := WriteProbe.table inputs data probeFits
-    supply.Constraints ∧ supply.Guarantees ∧ observer.Constraints ∧ observer.Guarantees ∧
-      LogUpBalanced ((installSources w).interactionsWith readbackChannel.toRaw ++ supply.interactionsWith readbackChannel.toRaw) ∧
-      LogUpBalanced (supply.interactionsWith versionChannel.toRaw ++ observer.interactionsWith versionChannel.toRaw) ∧
-      inputs.map Inputs.read = reads ∧ inputs.length = reads.length := by
-  have valid id : (raw w id).Constraints := (originalSlot image source target final id).table_constraints w checked
-  obtain ⟨supply, guarantee, probe, probeGuarantee, incoming, versions, emitted, count⟩ :=
-    physical_tables (raw w) (raw_registered w) valid bounded reads routed data supplyFits probeFits
-  refine ⟨supply, guarantee, probe, probeGuarantee, ?_, versions, emitted, count⟩
-  let table := Counted.table (allocated (live (AccessInventory.records (raw w))) requests) data supplyFits
-  have perm : ((installSources w).interactionsWith readbackChannel.toRaw ++ table.interactionsWith readbackChannel.toRaw).Perm
-      (AccessInventory.ledger (raw w) (raw_registered w) table) := by
-    simpa only [AccessInventory.ledger, List.flatMap_cons, List.flatMap_map] using
-      (List.perm_append_comm.trans ((installed_sources w).append_left (table.interactionsWith readbackChannel.toRaw)))
-  exact fun msg => (balanceOf_perm perm).trans (incoming msg)
+/-- The canonical read-back protocol, including the supplier row block, is the original
+source ledger up to permutation of the two groups. -/
+theorem installed_readback_perm (w : EnsembleWitness (base image source target final)) (supply : Table F) :
+    ((installSources w).interactionsWith readbackChannel.toRaw ++ supply.interactionsWith readbackChannel.toRaw).Perm
+      (AccessInventory.ledger (raw w) (raw_registered w) supply) := by
+  simpa only [AccessInventory.ledger, List.flatMap_cons, List.flatMap_map] using
+    (List.perm_append_comm.trans ((installed_sources w).append_left (supply.interactionsWith readbackChannel.toRaw)))
 
 end SP1Clean.Export.WriteObservationAssembly

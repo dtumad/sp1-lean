@@ -155,12 +155,6 @@ private theorem host_record_of_origin (witness : EnsembleWitness (HostObserved.e
   rw [raw_registered witness (.host family)] at pulled
   exact ⟨cells, present, host_records_of_pull family _ 1 prior pulled⟩
 
-private theorem host_record_data (family : HostSources.Family) (cells : Array Fp) (left right : ProverData Fp) :
-    rowRecords (.host family) (Environment.fromArray cells left) = rowRecords (.host family) (Environment.fromArray cells right) := by
-  cases family with
-  | ecall => rw [ecall_records, ecall_records]; rfl
-  | word last => rw [word_records, word_records]; rfl
-
 /-- Each authenticated ECALL receipt is one of the three actual predecessor reads in a
 real decoded syscall row, stamped with that row's incoming State. -/
 theorem syscall_event_of_origin (witness : EnsembleWitness (HostObserved.ensemble image source target final))
@@ -173,7 +167,7 @@ theorem syscall_event_of_origin (witness : EnsembleWitness (HostObserved.ensembl
   let host := hostWitness witness
   let env := Environment.fromArray cells host.data
   simp only [Table.environment] at found
-  rw [host_record_data .ecall cells _ host.data, ecall_records] at found
+  rw [rowRecords_setData (.host .ecall) cells _ host.data, ecall_records] at found
   obtain ⟨⟨prior, time⟩, read, eq⟩ := List.mem_map.mp found
   have enabled : (HostCallLedger.input env).is_real = 1 := congrArg Prod.fst eq
   have member : env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable host) host.data := by
@@ -208,7 +202,7 @@ theorem word_of_origin (witness : EnsembleWitness (HostObserved.ensemble image s
   have physical : cells ∈ table.table := (word_origin witness pair).symm ▸ present
   let row : HintReadCoverage.Row (p := SP1Prime) := (last, table.environment cells)
   simp only [Table.environment] at found
-  rw [host_record_data (.word last) cells _ table.data, word_records, List.mem_singleton] at found
+  rw [rowRecords_setData (.host (.word last)) cells _ table.data, word_records, List.mem_singleton] at found
   refine ⟨row, HintReadCoverage.mem_active_rows.mpr ⟨?_, ?_⟩, ?_⟩
   · exact List.mem_flatMap.mpr ⟨(last, table), pair, List.mem_map.mpr ⟨cells, physical, rfl⟩⟩
   · exact (congrArg Prod.fst found).symm
