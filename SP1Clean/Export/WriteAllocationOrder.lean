@@ -13,7 +13,8 @@ private abbrev F := ZMod SP1Prime
 local instance physicalQueueDecidableEq : DecidableEq F := FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : State F}
 
-private theorem handler_facts (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
+/-- Original HINT handlers increase the queue clock while preserving its permanent frontier. -/
+theorem handler_facts (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
     (r : HostQueueOrder.Row (p := SP1Prime)) (mem : r ∈ hintHandlerRows w) :
     HostQueueOrder.time (HostQueueOrder.edge r).1 < HostQueueOrder.time (HostQueueOrder.edge r).2 ∧
       (HostQueueOrder.edge r).2.allocated = (HostQueueOrder.edge r).1.allocated := by

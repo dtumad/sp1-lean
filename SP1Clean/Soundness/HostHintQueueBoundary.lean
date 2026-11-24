@@ -190,15 +190,30 @@ theorem projected_balancedChannel
     (HaltPadding.balancedChannel witness channel
       (balanced channel (List.mem_append_left _ registered) visible))
 
+/-- The original assertion channel that enforces the incoming queue length, bank endpoints
+and halt compatibility. Its ledger can be transported through a larger physical installation. -/
+def assertionChannel (_ : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
+    RawChannel (ZMod p) :=
+  (boundary source final bankFinal).channel (HostHintReadLocal.ensemble image source others resources channels names channelNames tableChannels)
+
+/-- This assertion channel is actually registered by the original boundary verifier. -/
+theorem assertionChannel_registered
+    (w : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
+    assertionChannel w ∈ (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels).channels := by
+  simp [assertionChannel,ensemble,HaltPadding.install,Ensemble.replaceComponent,ClosedVerifier.install]
+
+/-- The original boundary checks require only their dedicated assertion-channel balance. -/
+theorem checks_of_assertionChannel
+    (w : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
+    (paid : w.BalancedChannel (assertionChannel w)) : (boundary source final bankFinal).Checks w.data := by
+  have checked := ((boundary source final bankFinal).check_balanced_iff (underlying w)).mp (HaltPadding.balancedChannel w _ paid)
+  simpa only [underlying_data] using checked
+
 /-- Boundary assertions follow from their fresh check channel, not physical row constraints. -/
 theorem boundary_checks
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
     (balanced : Balanced witness) : (boundary source final bankFinal).Checks witness.data := by
-  have checked := ((boundary source final bankFinal).check_balanced_iff (underlying witness)).mp
-    (HaltPadding.balancedChannel witness _ (balanced _ (by simp [ensemble, HaltPadding.install,
-      Ensemble.replaceComponent, ClosedVerifier.install])
-      (verifier_visible _ _)))
-  simpa only [underlying_data] using checked
+  exact checks_of_assertionChannel witness (balanced _ (assertionChannel_registered witness) (verifier_visible _ _))
 
 theorem source_binding
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
