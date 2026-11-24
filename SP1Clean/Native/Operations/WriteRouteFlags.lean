@@ -12,11 +12,14 @@ open Circuit
 
 variable {p : Nat} [Fact p.Prime]
 
+/-- Field-valued equality indicator between a route and one explicit tag. -/
 def flagValue (route tag : ZMod p) : ZMod p := if route = tag then 1 else 0
 
+/-- Select the ignored, standard output, standard error, public output and direct-hint routes. -/
 def flagsFor (route : ZMod p) : DispatchFlags (ZMod p) :=
   ⟨flagValue route 0, flagValue route 1, flagValue route 2, flagValue route 13, flagValue route 14⟩
 
+/-- Compute the five route selectors with zero tests against their fixed tags. -/
 def flagsMain (r : Expression (ZMod p)) : Circuit (ZMod p) (Var DispatchFlags (ZMod p)) := do
   let ignored ← Gadgets.IsZeroField.circuit r
   let stdout ← Gadgets.IsZeroField.circuit (r - 1)
@@ -27,6 +30,7 @@ def flagsMain (r : Expression (ZMod p)) : Circuit (ZMod p) (Var DispatchFlags (Z
 
 instance flagsElaborated : ElaboratedCircuit (ZMod p) field DispatchFlags flagsMain := by elaborate_circuit
 
+/-- Formal circuit returning the exact selectors for a classified route. -/
 def flagsCircuit : GeneralFormalCircuit (ZMod p) field DispatchFlags where
   main := flagsMain
   elaborated := flagsElaborated

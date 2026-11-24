@@ -11,17 +11,22 @@ an empty packet starts at exactly 2^48. The comparison uses a full four-limb des
 namespace SP1Clean.WriteStart
 open Circuit
 
+/-- Predecessor address and complete guest buffer address at WRITE entry. -/
 structure Inputs (F : Type) where
+  /-- Three-limb address immediately before the start of the guest buffer. -/
   previous : fields 3 F
+  /-- Full four-limb guest buffer address supplied by WRITE. -/
   address : Word F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 
+/-- The full guest address is the natural-number successor of the bounded predecessor. -/
 def Spec (r : Inputs (ZMod p)) : Prop :=
   Address.Bounded r.previous ∧ r.address.isU64 ∧ r.address.toNat = Address.toNat r.previous + 1
 
+/-- Range-check the predecessor and enforce the full-width increment to the guest address. -/
 def main (r : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion WordRangeCheck.circuit (Address.asWord r.previous)
   assertion AddOperation.circuit ⟨Address.asWord r.previous, #v[1,0,0,0], ⟨r.address⟩, 1⟩
@@ -74,6 +79,7 @@ private theorem start_checks {previous : fields 3 (ZMod p)} {address : Word (ZMo
     Word.toBitVec64_toNat (unitWord (p := p)).1, (unitWord (p := p)).2, Address.toNat_asWord,
     Nat.mod_eq_of_lt (by have := Address.toNat_lt bound; omega), eq]
 
+/-- Formal assertion for locating the byte immediately before a guest buffer. -/
 def circuit : FormalAssertion (ZMod p) Inputs where
   main
   elaborated

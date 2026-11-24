@@ -13,10 +13,12 @@ open Circuit Air.Flat Semantics
 
 variable {p : Nat} [Fact p.Prime]
 
+/-- Authenticates an aligned block and its number of occupied byte lanes. -/
 def blockChannel : Channel (ZMod p) StreamBlock where
   name := "sp1.native.write_stream_blocks"
   Guarantees _ _ := True
 
+/-- Verifier-fixed aligned blocks of the public endpoint stream data. -/
 def blockTable (s : WriteStreams) : StaticTable (ZMod p) StreamBlock :=
   StaticTable.ofRows "sp1.native.write_stream_blocks" (if inventoryOK s then dataBlocks s else [])
 
@@ -31,6 +33,7 @@ private theorem block_height (s : WriteStreams) : (blockTable (p := p) s).height
   norm_num [UInt64.size] at *
   omega
 
+/-- Preallocated provider for aligned output, request and returned-hint blocks. -/
 def blockComponent (source target : HostState) : Component (ZMod p) :=
   let s := WriteStreams.fromEndpoints source target
   (blockTable s).payloadComponent blockChannel (by intros; trivial) (block_height s)

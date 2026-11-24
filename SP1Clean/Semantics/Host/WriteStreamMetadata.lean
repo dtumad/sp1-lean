@@ -13,10 +13,12 @@ materialized. The actual output and returned bytes live in the separate aligned 
 namespace SP1Clean.WriteEffects
 open Semantics
 
+/-- Selects descriptor, length and return-count records for the fixed metadata inventory. -/
 def Query.IsMetadata : Query → Prop
   | .byte .. => False
   | _ => True
 
+/-- The stream lengths, hook descriptors and returned-buffer counts and lengths in ordinal order. -/
 def metadataRows {p : Nat} (s : WriteStreams) : List (Record (ZMod p)) :=
   [(Query.length .stdout).encode s.stdout.length, (Query.length .stderr).encode s.stderr.length,
    (Query.length .publicOutput).encode s.publicOutput.length] ++

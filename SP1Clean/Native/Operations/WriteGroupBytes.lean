@@ -42,6 +42,7 @@ theorem Group.BytesMatch.atLane {r : Group (ZMod p)} (matchBytes : r.BytesMatch)
   have valid : r.plan.used[slot] ≠ 0 := by simp [shape,SlicePlan.ofNat,active]
   simpa only [shape, guestByte_ofNat f, streamByte_ofNat o] using matchBytes slot output valid
 
+/-- Compare enabled guest lanes with their corresponding destination lanes. -/
 def groupBytesMain (r : Var Group (ZMod p)) : Circuit (ZMod p) Unit := do
   forEach (Vector.ofFn fun i : Fin 8 => i) fun i => do
     let selected <== (1-r.ignored) * r.plan.used[i]
@@ -65,6 +66,7 @@ private theorem eval_stream (env : Environment (ZMod p)) (plan : Var SlicePlan (
   funext j
   split <;> simp only [circuit_norm]
 
+/-- Formal assertion that the selected guest and destination bytes agree. -/
 def groupBytesCircuit : FormalAssertion (ZMod p) Group where
   main := groupBytesMain
   elaborated := groupBytesElaborated

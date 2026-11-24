@@ -10,17 +10,29 @@ or two destination blocks. No field occurrence is indexed by an uncontrolled wit
 
 namespace SP1Clean.WriteEffects
 
+/-- Fixed lane masks and destination extents for one interval within a guest word. -/
 structure SlicePlan (F : Type) where
+  /-- Lane at which the selected guest interval begins. -/
   first : F
+  /-- Final guest lane computed from the start and byte count using truncated subtraction. -/
   last : F
+  /-- Number of guest bytes selected in this word. -/
   size : F
+  /-- Starting lane in the first destination block. -/
   offset : F
+  /-- One when at least one guest byte is selected. -/
   nonempty : F
+  /-- One when selected bytes extend into a second destination block. -/
   second : F
+  /-- Exclusive end of the covered lanes in the first destination block. -/
   firstExtent : F
+  /-- Number of covered lanes at the beginning of the second destination block. -/
   secondExtent : F
+  /-- One-hot mask for the first guest lane. -/
   guestSelect : fields 8 F
+  /-- One-hot mask for the starting destination lane. -/
   streamSelect : fields 8 F
+  /-- Prefix mask enabling exactly the selected number of bytes. -/
   used : fields 8 F
 deriving ProvableStruct, DecidableEq
 provable_struct_eval_lemmas SlicePlan
@@ -62,6 +74,7 @@ theorem window_spec (address length word : Nat) :
   · omega
   · intro lane small; omega
 
+/-- Supplies the fixed interval masks and extents used by word placement. -/
 def sliceChannel {p : Nat} : Channel (ZMod p) SlicePlan where
   name := "sp1.native.write_slice_plan"
   Guarantees _ _ := True
