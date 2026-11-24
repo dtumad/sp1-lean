@@ -38,6 +38,7 @@ import SP1Clean.Proofs.Completeness.WriteEffectRows
 import SP1Clean.Proofs.Completeness.WriteFixedDataCapacity
 import SP1Clean.Proofs.Completeness.WriteGroupRows
 import SP1Clean.Proofs.Completeness.WriteWindowTape
+import SP1Clean.Proofs.Completeness.WriteDestination
 import SP1Clean.Proofs.Completeness.WritePlacementCapacity
 import SP1Clean.Proofs.Completeness.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.WriteStreamExecution
