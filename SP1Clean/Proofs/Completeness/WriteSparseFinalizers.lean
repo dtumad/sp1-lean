@@ -154,56 +154,61 @@ private theorem inputs_valid {r : Terminal (ZMod p)} (valid : r.Valid) (previous
     apply OrderedFinalProvider.populateRam?_sound previous r.record _ _ data hint
     exact ite_eq_left ⟨⟨domain, word, clock⟩, ordered⟩
 
-/-- The physical input list for one named original finalizer. Even a skipped entry advances
-the predecessor because both address spaces participate in the same ordering channel. -/
-def finalInputs (ram : Bool) (previous : ℕ) : List (Terminal (ZMod p)) → List (OrderedMemoryProvider.Inputs MemoryMsg (ZMod p))
+/-- Walk the shared ordered key inventory for either pair of register/RAM boundary components.
+Every key advances the predecessor even when its row belongs to the other table. -/
+def orderedInputs {I F : Type} (ram : Bool) (input : ℕ → Terminal F → I) (previous : ℕ) : List (Terminal F) → List I
   | [] => []
   | row :: rest =>
-    let tail := finalInputs ram (row.key + 1) rest
-    if row.ram = ram then (OrderedMemoryProvider.populate row.record previous row.key).1 :: tail else tail
+    let tail := orderedInputs ram input (row.key + 1) rest
+    if row.ram = ram then input previous row :: tail else tail
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem finalInputs_member {row : Terminal (ZMod p)} {rows : List (Terminal (ZMod p))} (member : row ∈ rows) (previous : ℕ) :
-    ∃ input ∈ finalInputs row.ram previous rows, input.payload = row.record := by
+theorem orderedInputs_member {I F : Type} (input : ℕ → Terminal F → I) {row : Terminal F}
+    {rows : List (Terminal F)} (member : row ∈ rows) (previous : ℕ) :
+    ∃ prev, input prev row ∈ orderedInputs row.ram input previous rows := by
   induction rows generalizing previous with
   | nil => simp at member
   | cons first rest ih =>
     rcases List.mem_cons.mp member with rfl | later
-    · exact ⟨(OrderedMemoryProvider.populate row.record previous row.key).1, by simp [finalInputs], rfl⟩
-    · obtain ⟨input, inside, payload⟩ := ih later (first.key + 1)
-      refine ⟨input, ?_, payload⟩
-      unfold finalInputs
+    · exact ⟨previous, by simp [orderedInputs]⟩
+    · obtain ⟨prev, inside⟩ := ih later (first.key + 1)
+      refine ⟨prev, ?_⟩
+      unfold orderedInputs
       split
       · exact List.mem_cons_of_mem _ inside
       · exact inside
 
-private theorem finalInputs_valid (ram : Bool) (rows : List (Terminal (ZMod p))) (previous : ℕ)
-    (start : ∀ r ∈ rows, previous < r.key + 1) (ordered : rows.Pairwise (fun a b => a.key < b.key))
-    (valid : ∀ r ∈ rows, r.Valid) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ input ∈ finalInputs ram previous rows, (originalFinal ram).circuit.ProverAssumptions (input, 1) data hint := by
+theorem orderedInputs_all {I F : Type} (ram : Bool) (input : ℕ → Terminal F → I)
+    (rows : List (Terminal F)) (previous : ℕ) (P : I → Prop)
+    (ordered : rows.Pairwise (fun a b => a.key < b.key)) (start : ∀ r ∈ rows, previous < r.key + 1)
+    (point : ∀ r ∈ rows, r.ram = ram → ∀ prev < r.key + 1, P (input prev r)) :
+    ∀ i ∈ orderedInputs ram input previous rows, P i := by
   induction rows generalizing previous with
-  | nil => simp [finalInputs]
+  | nil => simp [orderedInputs]
   | cons first rest ih =>
     have order := List.pairwise_cons.mp ordered
-    have tail := ih (first.key + 1) (fun r hr => Nat.succ_lt_succ (order.1 r hr)) order.2
-      (fun r hr => valid r (List.mem_cons_of_mem _ hr))
-    intro input inside
-    unfold finalInputs at inside
+    have tail := ih (first.key + 1) order.2 (fun r hr => Nat.succ_lt_succ (order.1 r hr))
+      (fun r hr => point r (List.mem_cons_of_mem _ hr))
+    intro i inside
+    unfold orderedInputs at inside
     split at inside
     next same =>
       rcases List.mem_cons.mp inside with rfl | found
-      · subst ram
-        exact inputs_valid (valid first (List.mem_cons_self ..)) previous (start first (List.mem_cons_self ..)) data hint
-      · exact tail input found
-    next => exact tail input inside
+      · exact point first (List.mem_cons_self ..) same previous (start first (List.mem_cons_self ..))
+      · exact tail i found
+    next => exact tail i inside
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem finalInputs_length (ram : Bool) (rows : List (Terminal (ZMod p))) (previous : ℕ) :
-    (finalInputs ram previous rows).length = (rows.filter (fun r => r.ram == ram)).length := by
+theorem orderedInputs_length {I F : Type} (ram : Bool) (input : ℕ → Terminal F → I)
+    (rows : List (Terminal F)) (previous : ℕ) :
+    (orderedInputs ram input previous rows).length = (rows.filter (fun r => r.ram == ram)).length := by
   induction rows generalizing previous with
   | nil => rfl
   | cons first rest ih =>
-    by_cases tag : first.ram = ram <;> simp [finalInputs, tag, ih, beq_iff_eq]
+    by_cases tag : first.ram = ram <;> simp [orderedInputs, tag, ih, beq_iff_eq]
+
+/-- Active inputs for the original finalizer carry the full terminal record at each key. -/
+def finalInputs (ram : Bool) (previous : ℕ) (rows : List (Terminal (ZMod p))) :
+    List (OrderedMemoryProvider.Inputs MemoryMsg (ZMod p)) :=
+  orderedInputs ram (fun prev r => (OrderedMemoryProvider.populate r.record prev r.key).1) previous rows
 
 /-- Build the actual original table, including its genuine physical padding. -/
 def finalTable (ram : Bool) (rows : List (Terminal (ZMod p))) (data : ProverData (ZMod p))
@@ -223,7 +228,11 @@ theorem finalTable_valid (ram : Bool) (rows : List (Terminal (ZMod p))) (data : 
   intro row member
   rcases List.mem_append.mp member with active | padding
   · obtain ⟨input, inside, rfl⟩ := List.mem_map.mp active
-    exact finalInputs_valid ram rows 0 (fun _ _ => Nat.zero_lt_succ _) ordered valid _ _ input inside
+    refine orderedInputs_all ram _ rows 0 (fun i => (originalFinal ram).circuit.ProverAssumptions (i, 1) _ _)
+      ordered (fun _ _ => Nat.zero_lt_succ _) ?_ input inside
+    intro r hr same prev before
+    subst ram
+    exact inputs_valid (valid r hr) prev before _ _
   · obtain ⟨_, rfl⟩ := List.mem_replicate.mp padding
     cases ram <;> exact ⟨Or.inl rfl, fun h => (zero_ne_one h).elim⟩
 
@@ -233,13 +242,13 @@ theorem finalTable_length (ram : Bool) (rows : List (Terminal (ZMod p))) (data :
     (finalTable ram rows data fit).table.length = WitnessGeneration.demandHeight (rows.filter (fun r => r.ram == ram)).length := by
   refine (Table.ofInputs_length (originalFinal ram) _ data _ (fun _ => trivial)).trans ?_
   exact (WitnessGeneration.guardedRows_length (F := ZMod p) (finalInputs ram 0 rows)).trans
-    (congrArg WitnessGeneration.demandHeight (finalInputs_length ram rows 0))
+    (congrArg WitnessGeneration.demandHeight (orderedInputs_length ram _ rows 0))
 
 /-- Every physically representable touched key and every extra key is below the native 48-bit
 address limit, so its original Clean table fits the host row-index type. -/
-theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
     (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    WitnessGeneration.demandHeight (finalInputs ram 0 (terminals snapshot stream requested data hint)).length ≤ UInt64.size := by
+    WitnessGeneration.demandHeight ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ UInt64.size := by
   let touched := (memoryInitialEntries stream).map MemRecordEntry.addr
   let ks := keys touched requested
   have bound : ks.toFinset ⊆ Finset.range (2 ^ 48) := by
@@ -258,8 +267,55 @@ theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List Me
   let rows := terminals snapshot stream requested data hint
   have lengthKeys : rows.length = ks.length := by simpa using congrArg List.length (terminals_keys snapshot stream requested canonical data hint)
   have required := (List.length_filter_le (fun r : Terminal (ZMod p) => r.ram == ram) rows).trans (lengthKeys.le.trans cap)
-  rw [finalInputs_length]
   exact (WitnessGeneration.demandHeight_le_pow required).trans (by decide)
+
+/-- Every finalizer host-row count fits by its physical address inventory. -/
+theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+    (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    WitnessGeneration.demandHeight (finalInputs ram 0 (terminals snapshot stream requested data hint)).length ≤ UInt64.size := by
+  unfold finalInputs
+  rw [orderedInputs_length]
+  exact terminal_count_fit ram snapshot stream requested canonical data hint
+
+/-- Native guest RAM accesses and register indices have noncolliding 48-bit Memory encodings. -/
+theorem canonical_addresses {stream : List MemoryHistoryAccess}
+    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress) :
+    MemoryAddressesCanonical stream := by
+  intro access member
+  cases eq : access.loc with
+  | reg idx => trivial
+  | ram cell =>
+    have h := guest access member cell eq
+    exact ⟨le_trans (by decide : 32 ≤ 2 ^ 16) h.1, h.2⟩
+
+/-- The actual terminal payloads appear in strict physical address order. -/
+theorem terminals_ordered (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+    (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (terminals snapshot stream requested data hint).Pairwise (fun a b => a.key < b.key) := by
+  apply (List.pairwise_map (R := (· < ·)) (f := Terminal.key)).mp
+  rw [terminals_keys snapshot stream requested canonical data hint]
+  exact (ordered_keys ..).pairwise
+
+/-- Both touched and untouched payloads belong to their original register/RAM row domains. -/
+theorem terminals_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ∀ row ∈ terminals snapshot stream requested data hint, row.Valid := by
+  intro row member
+  rcases List.mem_append.mp (List.mem_mergeSort.mp member) with touched | additional
+  · obtain ⟨entry, inside, rfl⟩ := List.mem_map.mp touched
+    apply entry_valid
+    have key := List.mem_map_of_mem (f := MemRecordEntry.addr) inside
+    rw [memoryFinalEntries_addresses] at key
+    obtain ⟨loc, present, key⟩ := List.mem_map.mp key
+    obtain ⟨a, used, locEq⟩ := mem_touchedMemoryLocations.mp present
+    cases loc with
+    | reg index => exact Or.inl (key ▸ index.isLt)
+    | ram cell =>
+      have domain := guest a used cell locEq
+      exact Or.inr (key ▸ ⟨domain.1, domain.2, Nat.mul_mod_left _ _⟩)
+  · obtain ⟨extra, inside, rfl⟩ := List.mem_map.mp additional
+    exact extra_valid snapshot _ requested data hint extra inside
 
 /-- If touched guest RAM belongs to the native guest address range, the generated tables
 satisfy both original finalizers. Registers are in range by construction. -/
@@ -268,32 +324,9 @@ theorem compiled_finalizers_valid (snapshot : MemorySnapshot) (stream : List Mem
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (ram : Bool) :
     let rows := terminals snapshot stream requested data hint
     ∃ fit, (finalTable ram rows data fit).Constraints ∧ (finalTable ram rows data fit).Guarantees := by
-  have canonical : MemoryAddressesCanonical stream := by
-    intro access member
-    cases eq : access.loc with
-    | reg idx => trivial
-    | ram cell =>
-      have h := guest access member cell eq
-      exact ⟨le_trans (by decide : 32 ≤ 2 ^ 16) h.1, h.2⟩
-  refine ⟨terminals_fit ram snapshot stream requested canonical data hint, finalTable_valid ram _ data _ ?_ ?_⟩
-  · apply (List.pairwise_map (R := (· < ·)) (f := Terminal.key)).mp
-    rw [terminals_keys snapshot stream requested canonical data hint]
-    exact (ordered_keys ..).pairwise
-  · intro row member
-    rcases List.mem_append.mp (List.mem_mergeSort.mp member) with touched | additional
-    · obtain ⟨entry, inside, rfl⟩ := List.mem_map.mp touched
-      apply entry_valid
-      have key := List.mem_map_of_mem (f := MemRecordEntry.addr) inside
-      rw [memoryFinalEntries_addresses] at key
-      obtain ⟨loc, present, key⟩ := List.mem_map.mp key
-      obtain ⟨a, used, locEq⟩ := mem_touchedMemoryLocations.mp present
-      cases loc with
-      | reg index => exact Or.inl (key ▸ index.isLt)
-      | ram cell =>
-        have domain := guest a used cell locEq
-        exact Or.inr (key ▸ ⟨domain.1, domain.2, Nat.mul_mod_left _ _⟩)
-    · obtain ⟨extra, inside, rfl⟩ := List.mem_map.mp additional
-      exact extra_valid snapshot _ requested data hint extra inside
+  have canonical := canonical_addresses guest
+  exact ⟨terminals_fit ram snapshot stream requested canonical data hint, finalTable_valid ram _ data _
+    (terminals_ordered snapshot stream requested canonical data hint) (terminals_valid snapshot stream requested guest data hint)⟩
 
 /-- Replace the two original finalizer slots in a physical source family with their concrete
 generated tables. Every other source is read unchanged. -/
@@ -308,7 +341,8 @@ physical register/RAM row, for any original provider data or multiplicities on o
 theorem final_mem_live (raw : Source → Table (ZMod p)) (rows : List (Terminal (ZMod p))) (data : ProverData (ZMod p))
     (fit : ∀ ram, WitnessGeneration.demandHeight (finalInputs ram 0 rows).length ≤ UInt64.size) (r : Terminal (ZMod p)) (member : r ∈ rows) :
     finalReadback r.record ∈ Counted.live (records (withFinalTables raw rows data fit)) := by
-  obtain ⟨input, found, payload⟩ := finalInputs_member member 0
+  obtain ⟨previous, found⟩ := orderedInputs_member (fun prev r => (OrderedMemoryProvider.populate r.record prev r.key).1) member 0
+  let input := (OrderedMemoryProvider.populate r.record previous r.key).1
   let c := originalFinal (p := p) r.ram
   let inputs := WitnessGeneration.guardedRows (F := ZMod p) (finalInputs r.ram 0 rows)
   let actual : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p) := (input, 1)
@@ -321,7 +355,7 @@ theorem final_mem_live (raw : Source → Table (ZMod p)) (rows : List (Terminal 
     c.rowInput_buildRow actual _ _ _
   have gate : (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 = 1 := congrArg Prod.snd decoded
   have record : finalRecordAt r.ram env = r.record := (finalRecordAt_eq r.ram env).trans
-    ((congrArg (fun i : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p) => i.1.payload) decoded).trans payload)
+    (congrArg (fun i : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p) => i.1.payload) decoded)
   have real : (1, finalReadback r.record) ∈ records (withFinalTables raw rows data fit) := by
     refine List.mem_flatMap.mpr ⟨.finalizer r.ram, sources_complete _, List.mem_flatMap.mpr ⟨built, present, ?_⟩⟩
     change (1, finalReadback r.record) ∈ [((valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2, finalReadback (finalRecordAt r.ram env))]
