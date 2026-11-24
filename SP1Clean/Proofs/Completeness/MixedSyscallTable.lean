@@ -73,6 +73,11 @@ def table (compiled : List MixedCompiledRow) (data : ProverData F) (hint : Prove
   Table.build component rows (component.inputData rows data) hint ((height compiled).trans_le fit)
     (by trivial) (component.inputData_consistent rows data)
 
+/-- The ECALL table has the exact rounded height of its generated instruction rows. -/
+theorem table_length (compiled : List MixedCompiledRow) (data : ProverData F) (hint : ProverHint F) (fit) :
+    (table compiled data hint fit).length = demandHeight (compiled.filterMap (MixedCompiledRow.syscallInput? (p := SP1Prime))).length :=
+  (List.length_map ..).trans (height compiled)
+
 /-- Decoding the physical arrays recovers exactly the active compiler inputs for the eight calls. -/
 theorem active (compiled : List MixedCompiledRow) (data evaluation : ProverData F) (hint : ProverHint F) (fit) :
     ((HostCallLedger.activeRows (table compiled data hint fit) evaluation).map HostCallLedger.input) =

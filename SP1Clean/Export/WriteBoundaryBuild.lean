@@ -101,7 +101,8 @@ theorem build_constraints (image : ProgramImage) (source target : ExecutionSnaps
   change old.table = t.table at eqRows
   exact t.component.constraintsHold_setData free (eqComponent ▸ valid row (eqRows ▸ included))
 
-private theorem finalizer_rows (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
+/-- The original boundary finalizers retain their exact generated row arrays under canonical installation. -/
+theorem finalizer_rows (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
     (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
     (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (suffix : List (Table F)) (registered) (ram : Bool) :
     let w := build image source target endQueue stream requested canonical data hint header suffix registered

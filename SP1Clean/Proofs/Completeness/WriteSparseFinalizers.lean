@@ -258,10 +258,10 @@ theorem finalTable_length (ram : Bool) (rows : List (Terminal (ZMod p))) (data :
     (congrArg WitnessGeneration.demandHeight (orderedInputs_length ram _ rows 0))
 
 /-- Every physically representable touched key and every extra key is below the native 48-bit
-address limit, so its original Clean table fits the host row-index type. -/
-theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+address limit, which bounds the number of active original finalizer rows. -/
+theorem terminal_count_bound (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
     (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    WitnessGeneration.demandHeight ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ UInt64.size := by
+    ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ 2 ^ 48 := by
   let touched := (memoryInitialEntries stream).map MemRecordEntry.addr
   let ks := keys touched requested
   have bound : ks.toFinset ⊆ Finset.range (2 ^ 48) := by
@@ -280,7 +280,13 @@ theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : Li
   let rows := terminals snapshot stream requested data hint
   have lengthKeys : rows.length = ks.length := by simpa using congrArg List.length (terminals_keys snapshot stream requested canonical data hint)
   have required := (List.length_filter_le (fun r : Terminal (ZMod p) => r.ram == ram) rows).trans (lengthKeys.le.trans cap)
-  exact (WitnessGeneration.demandHeight_le_pow required).trans (by decide)
+  exact required
+
+/-- Rounding the original finalizer height fits the host row-index type. -/
+theorem terminal_count_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
+    (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    WitnessGeneration.demandHeight ((terminals snapshot stream requested data hint).filter (fun r => r.ram == ram)).length ≤ UInt64.size :=
+  (WitnessGeneration.demandHeight_le_pow (terminal_count_bound ram snapshot stream requested canonical data hint)).trans (by decide)
 
 /-- Every finalizer host-row count fits by its physical address inventory. -/
 theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)

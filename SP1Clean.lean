@@ -55,6 +55,7 @@ import SP1Clean.Export.WriteGeneratedSelection
 import SP1Clean.Export.WriteMixedReadFunding
 import SP1Clean.Export.WriteMixedSourceAssembly
 import SP1Clean.Export.WriteMixedSourceTables
+import SP1Clean.Export.WriteMixedSupplyCapacity
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming

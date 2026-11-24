@@ -232,6 +232,19 @@ theorem wordTable_hostRam_closed (last : Bool) (entries : List Entry) (data : Pr
     by_cases selected : (toElements row.1.ram.message).toArray = msg <;>
       simp [balanceOf, Channel.pulledIfValue, Channel.pushedIfValue, Interaction.signedMult, selected]
 
+/-- Each genuine HINT_READ word variant has at most the original paid write-byte count. -/
+theorem selected_count_bound {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (execution : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    (last : Bool) : (selected last (history image source events)).length ≤ SP1Prime - 1 := by
+  let lengths := events.filterMap HintReadDemand.length?
+  have charge := HintReadDemand.writeBytes execution.1.2
+  have paid := execution.2.2.1 .writeBytes
+  change _ ≤ SP1Prime - 1 at paid
+  have small : (selected last (history image source events)).length ≤ SP1Prime - 1 := by
+    rw [show (selected last (history image source events)).length = _ from selected_length execution last]
+    split <;> omega
+  exact small
+
 /-- Both variants have kernel-checked constraints and guarantees for the actual full tape and
 their exact independently rounded heights, with no supplied row evidence or height bound. -/
 theorem tables_of_admissibleExecution {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
@@ -241,13 +254,7 @@ theorem tables_of_admissibleExecution {image : ProgramImage} {source target : Ex
     ∃ height, (wordTable last entries data height).Constraints ∧ (wordTable last entries data height).Guarantees := by
   let entries := history image source events
   have honest := (history_complete execution).2
-  let lengths := events.filterMap HintReadDemand.length?
-  have charge := HintReadDemand.writeBytes execution.1.2
-  have paid := execution.2.2.1 .writeBytes
-  change _ ≤ SP1Prime - 1 at paid
-  have small : (selected last entries).length ≤ SP1Prime - 1 := by
-    rw [show (selected last entries).length = _ from selected_length execution last]
-    split <;> omega
+  have small := selected_count_bound execution last
   have height := (WitnessGeneration.demandHeight_bounds (selected last entries).length).2.trans (Nat.mul_le_mul_left 2 small)
   refine ⟨height.trans (by decide), ?_⟩
   let rows := physicalInputs last entries
