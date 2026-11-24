@@ -28,7 +28,7 @@ private theorem source_fresh :
   rw [List.map_append,List.mem_append,WriteSourceRegistry.names_eq]
   exact not_or.mpr ⟨FixedHintAssembly.declarationFresh ctx.image ctx.source ctx.target final ctx.commitments,of_decide_eq_true rfl⟩
 
-private theorem declarations_registered : CommitmentDeclaration.channel.toRaw ∈ (observer ctx).channels := by
+theorem declarations_registered : CommitmentDeclaration.channel.toRaw ∈ (observer ctx).channels := by
   let final := SP1Clean.HostHintQueueBoundary.initial (p := SP1Prime) ctx.target.host.io.hints
   apply List.mem_append_left
   change _ ∈ channels ++ (WriteSourceRegistry.withSources ctx.image ctx.source ctx.target final).channels

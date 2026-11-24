@@ -105,6 +105,9 @@ theorem project_ledger (witness : EnsembleWitness (extended image source target 
 def installSources (witness : EnsembleWitness (old image source target final)) : EnsembleWitness (extended image source target final) :=
   (sameRows ..).symm.transport witness
 
+theorem installSources_publicInput (witness : EnsembleWitness (old image source target final)) :
+    (installSources witness).publicInput = witness.publicInput := (sameRows ..).symm.publicInput witness
+
 theorem installSources_data (witness : EnsembleWitness (old image source target final)) :
     (installSources witness).data = witness.data := (sameRows ..).symm.data witness
 

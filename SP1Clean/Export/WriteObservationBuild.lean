@@ -28,6 +28,12 @@ def build (original : EnsembleWitness (base image source target final)) (suffix 
     EnsembleWitness (preprocessing image source target final) :=
   (appended image source target final).extend (installSources original) suffix registered
 
+theorem build_publicInput (w : EnsembleWitness (base image source target final)) (suffix : List (Table F))
+    (registered : suffix.map Table.component = tables source target) :
+    (build w suffix registered).publicInput = w.publicInput :=
+  ((appended image source target final).extend_publicInput (installSources w) suffix registered).trans
+    (installSources_publicInput w)
+
 theorem build_heights (original : EnsembleWitness (base image source target final)) (suffix : List (Table F))
     (registered : suffix.map (·.component) = tables source target) :
     (build original suffix registered).heights = original.heights ++ suffix.map (·.length) := by

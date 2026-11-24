@@ -1,4 +1,4 @@
-import Clean.Air.Balance
+import ToClean.Air.MessageFilter
 import SP1Clean.Math.SP1Field
 
 /-! # Physical count and LogUp balance of an installed channel -/
@@ -17,5 +17,11 @@ structure CheckedLedger (ledger : List (Interaction (ZMod SP1Prime))) (count : N
   fits : (Balance.logUp (F := ZMod SP1Prime)).fits ledger.length = true
   /-- Every active occurrence has a matching occurrence of opposite sign. -/
   matched : BalancedInteractions ledger
+
+/-- Changing the order of complete physical groups preserves their count, funding and active matches. -/
+theorem CheckedLedger.of_perm {xs ys : List (Interaction (ZMod SP1Prime))} {count : Nat}
+    (paid : CheckedLedger xs count) (same : ys.Perm xs) : CheckedLedger ys count :=
+  ⟨same.length_eq.trans paid.size, fun value => (balanceOf_perm same).trans (paid.signed value),
+    same.length_eq ▸ paid.fits, BalancedInteractions.of_perm paid.matched same.symm⟩
 
 end SP1Clean.Export

@@ -11,6 +11,7 @@ import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
 
 /-! # One native witness for guest reads, commitment banks and funded WRITE allocations
 
+The queue seal rebases the last private pointer and timestamp to the canonical target token.
 The chronological execution supplies the immutable reader counts, the final private
 queue state, the outgoing walk and its seal, and every alignment plan requested by a
 guest group. The fixed stream metadata table counts the actual hook dispatches and allocation
@@ -49,6 +50,12 @@ private theorem public_bank (pre : EnsembleWitness (preprocessing image source t
     exact List.mem_cons_self
   · cases d <;> exact of_decide_eq_true rfl
 
+/-- The observer, including both public checks, retains the original supervisor header. -/
+theorem joint_publicInput (w : EnsembleWitness (base image source target final)) (suffix : List (Table F))
+    (registered : suffix.map Table.component = tables source target) :
+    (withPublicChecks (build w suffix registered)).publicInput = w.publicInput :=
+  (withPublicChecks_publicInput (build w suffix registered)).trans (build_publicInput w suffix registered)
+
 /-- The three generated effect consumers surrounding the fixed stream-metadata source. -/
 def effectMiddle {events : List ExecutionEvent} {entries : List Entry} {streams : WriteStreams}
     (cap : EffectFits events entries streams) (data : ProverData F) (metadata : Table F) : List (Table F) :=
@@ -69,11 +76,11 @@ commitment families, the private outgoing queue state and its immutable reader c
 The complete slice and queue-walk ledgers keep their exact physical occurrence counts. -/
 noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {events : List ExecutionEvent}
     (run : ReleaseAdmissibleExecution ctx.limits SP1Prime ctx.image ctx.source ctx.target events)
-    (preset : ctx.limits.LE InstalledAssembly.fixedProviderPreset) (data : ProverData F) (hint : ProverHint F) : Prop :=
+    (preset : ctx.limits.LE InstalledAssembly.fixedProviderPreset) (data : ProverData F) (hint : ProverHint F)
+    (final : HostHintQueue.State F) (header : SP1PublicIO F) : Prop :=
     let release : ReleaseAdmissibleExecution (.native SP1Prime) SP1Prime ctx.image ctx.source ctx.target events :=
       ⟨run.1.mono (preset.trans InstalledAssembly.fixedProviderPreset_le_native),run.2⟩
     let uses := HintQueueReaders.freshDemand release.1
-    let final := outgoingState (ctx := ctx) release.1
     let hints := outgoingTables (ctx := ctx) release.1 data
     let close := WriteEffects.closeTable ctx.source ctx.target events data
     ∃ (rows : List MixedCompiledRow)
@@ -88,7 +95,7 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
         ∃ cap : EffectFits events entries (.fromEndpoints ctx.source.host ctx.target.host), cap.Realized data ∧
         ∃ plan : Table F, plan.component = WriteEffects.planComponent ∧ plan.Constraints ∧ plan.Guarantees ∧ plan.length = 512 ∧
           (∀ t ∈ hints, t.Constraints ∧ t.Guarantees) ∧ close.Constraints ∧ close.Guarantees ∧
-        ∀ (header : SP1PublicIO F) (remaining : WriteMixedControlTables.Remaining ctx.image ctx.source ctx.target final),
+        ∀ (remaining : WriteMixedControlTables.Remaining ctx.image ctx.source ctx.target final),
           let fixed := WriteMixedControlTables.install release routed data remaining
           let plans := [plan,close]
           let w := WriteMixedSourceTables.ofExecution release routed final data hint header (WriteMixedHostTables.install release.1 data (WriteMixedFixedResources.install release routed data hint packets fixed)) packets
@@ -126,9 +133,10 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
 theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {events : List ExecutionEvent}
     (run : ReleaseAdmissibleExecution ctx.limits SP1Prime ctx.image ctx.source ctx.target events)
     (preset : ctx.limits.LE InstalledAssembly.fixedProviderPreset) (data : ProverData F) (hint : ProverHint F) :
-    ObservationAllocation run preset data hint := by
+    ∀ (final : HostHintQueue.State F) (header : SP1PublicIO F), ObservationAllocation run preset data hint final header := by
+  intro final header
   unfold ObservationAllocation
-  intro release uses final hints close
+  intro release uses hints close
   obtain ⟨rows,routed,packets,observed,requests,_,hc,hq,hp,hs,hw,physical,_,_,_,_,_,_,_,install⟩ := counted_packet_tables release data hint
   let generated := WriteMixedSourceTables.compiledSource release routed data hint packets
   let batch := WriteBuffer.packetRows (p := SP1Prime) events packets
@@ -151,7 +159,7 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   have md := Metadata.checked release.1 readers collected s cap data
   refine ⟨rows,routed,_,observed,front,physical,entries,collected,md.constraints,md.guarantees,md.height,s,paid,funding,cap,realized,
     plan,planReg,planGood,planGuar,planSize,hintGood,closeGood,closeGuar,?_⟩
-  intro header remaining fixed plans w suffix
+  intro remaining fixed plans w suffix
   have hh : hints.map Table.component = ((tables ctx.source ctx.target).drop 10).take 2 := rfl
   have hplans : plans.map Table.component = ((tables ctx.source ctx.target).drop 13).take 2 := by
     simp only [plans,List.map_cons,List.map_nil,planReg]; rfl
@@ -206,5 +214,12 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     exact ⟨md.count,md.signed,md.fits,md.matched⟩
   · obtain ⟨_,_,_,hspan,hword,hrequest,hoctets⟩ := realized
     exact installed_effect_joins w suffix reg _ _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl hspan hword hrequest hoctets
+
+/-- Construct at the verifier's public header and the canonical outgoing hint token. -/
+theorem native_observation_allocation {ctx : InstalledAssembly.Context} {events : List ExecutionEvent}
+    (execution : ReleaseStatementExecution ctx.limits SP1Prime ctx.commitments ctx.image ctx.source ctx.target events)
+    (preset : ctx.limits.LE InstalledAssembly.fixedProviderPreset) (data : ProverData F) (hint : ProverHint F) :
+    ObservationAllocation execution.1 preset data hint (SP1Clean.HostHintQueueBoundary.initial ctx.target.host.io.hints) ctx.header :=
+  compiled_observation_allocation execution.1 preset data hint _ _
 
 end SP1Clean.Export.WriteObservationAssembly

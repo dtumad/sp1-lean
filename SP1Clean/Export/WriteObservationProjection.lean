@@ -23,6 +23,9 @@ def observed (w : EnsembleWitness (assembly image source target final)) : Ensemb
 def withPublicChecks (w : EnsembleWitness (preprocessing image source target final)) : EnsembleWitness (assembly image source target final) :=
   w.withEnsemble _ (by unfold assembly withCursors; rfl)
 
+theorem withPublicChecks_publicInput (w : EnsembleWitness (preprocessing image source target final)) :
+    (withPublicChecks w).publicInput = w.publicInput := rfl
+
 theorem observed_constraints (w : EnsembleWitness (assembly image source target final)) :
     w.Constraints ↔ (observed w).Constraints := Iff.rfl
 

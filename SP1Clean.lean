@@ -45,6 +45,9 @@ import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteInstalledMetadata
 import SP1Clean.Export.WriteJointObservation
 import SP1Clean.Export.NativeShardBoundary
+import SP1Clean.Export.CommitmentReaders
+import SP1Clean.Export.CommitmentReaderLedger
+import SP1Clean.Export.NativeShardCommitments
 import SP1Clean.Export.WriteObserverSlotLedger
 import SP1Clean.Proofs.Completeness.WriteCollectedEffects
 import SP1Clean.Proofs.Completeness.WriteEffectAssembly
@@ -152,6 +155,7 @@ import SP1Clean.Proofs.Completeness.MixedCommitCalls
 import SP1Clean.Proofs.Completeness.MixedCommitHistory
 import SP1Clean.Proofs.Completeness.MixedCommitTables
 import SP1Clean.Proofs.Completeness.MixedCommitLedger
+import SP1Clean.Proofs.Completeness.MixedCommitDeclarations
 import SP1Clean.Proofs.Completeness.SnapshotReadDirections
 import SP1Clean.Proofs.Completeness.MixedSnapshotMembership
 import SP1Clean.Proofs.Completeness.MixedTargetMemory

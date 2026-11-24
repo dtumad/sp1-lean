@@ -93,7 +93,7 @@ def select (deferred : Bool) : ExecutionEvent → Option CoreSyscallEvent
 /-- Bank calls in the original execution order. -/
 def calls (deferred : Bool) (events : List ExecutionEvent) := events.filterMap (select deferred)
 
-private theorem select_iff (deferred : Bool) (event : ExecutionEvent) (call : CoreSyscallEvent) :
+theorem select_iff (deferred : Bool) (event : ExecutionEvent) (call : CoreSyscallEvent) :
     select deferred event = some call ↔ event = .syscall call ∧ call.rawCode = (bankKind deferred).code := by
   cases event with
   | ordinary => simp [select]
