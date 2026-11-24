@@ -72,6 +72,16 @@ theorem supervisor_values (image : ProgramImage) (source target : ExecutionSnaps
     OrderedBoundary.channel,SnapshotMemoryEnsemble.channelName,OrderedFinalProvider.channelName,
     stateChannel,byteChannel,exitChannel,circuit_norm]
 
+/-- Exactly twelve range checks authenticate the split public clock and program-counter limbs. -/
+theorem supervisor_count (image : ProgramImage) (source target : ExecutionSnapshot)
+    (finish : HostHintQueue.State F) (env : Environment F) :
+    ((base image source target finish).verifierOperations.interactionValuesWith byteChannel.toRaw env).length = 12 := by
+  rw [supervisor_values]
+  simp only [Operations.interactionValuesWith,List.length_map,Operations.interactionsWith]
+  change ((((sp1StateVerifierProgram (p := SP1Prime)).main (varFromOffset SP1PublicIO 0)).circuitOperations.interactions).filter _).length = 12
+  rw [state_sites]
+  simp [sp1StateVerifierMain,circuit_norm,stateChannel,byteChannel,exitChannel]
+
 /-- Each real Byte read of the original supervisor is a unit demand whose complete payload
 is admitted by the released providers at the authenticated public header. -/
 theorem supervisor_readers (image : ProgramImage) (source target : ExecutionSnapshot)
