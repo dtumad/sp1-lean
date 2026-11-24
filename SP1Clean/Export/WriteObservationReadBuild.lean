@@ -57,7 +57,8 @@ theorem counted_packet_tables {events : List ExecutionEvent} (run : AdmissibleEx
   obtain ⟨hq, qh, readBus⟩ := pays inputs emitted
   have hc : WitnessGeneration.demandHeight (allocated sourceRows requests).length ≤ UInt64.size :=
     (supply_fits w priorFit requests).trans (by decide)
-  obtain ⟨cc, cg, qc, qg, readback, versions, _, _⟩ := counted_tables w checked bounded reads routed data hc hq
+  obtain ⟨cc, cg, qc, qg, readback, versions, _, _⟩ := counted_tables w
+    (fun id => (originalSlot image source target final id).table_constraints w checked) bounded reads routed data hc hq
   refine ⟨hc, hq, hp, hs, hw, ?_, ?_, readback, versions, readBus, headers, cursor⟩
   · intro t mem
     simp only [List.mem_cons, List.not_mem_nil, or_false] at mem

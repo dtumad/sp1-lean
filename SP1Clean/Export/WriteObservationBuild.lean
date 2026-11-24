@@ -81,7 +81,7 @@ theorem installed_sources (w : EnsembleWitness (base image source target final))
 /-- A successful deterministic counted route generates the two physical components and both
 of their raw private balances against the real installed supervisor. Coverage and clock bounds
 of a generated supervisor are separate compiler obligations. -/
-theorem counted_tables (w : EnsembleWitness (base image source target final)) (checked : w.Constraints)
+theorem counted_tables (w : EnsembleWitness (base image source target final)) (checked : ∀ id, (raw w id).Constraints)
     (bounded : ∀ r ∈ live (AccessInventory.records (raw w)), Bounded r) (reads : List (Read F))
     {requests : List (Request (live (AccessInventory.records (raw w))).length F)}
     (routed : route? (live (AccessInventory.records (raw w))) reads = some requests)
@@ -94,9 +94,8 @@ theorem counted_tables (w : EnsembleWitness (base image source target final)) (c
       LogUpBalanced ((installSources w).interactionsWith readbackChannel.toRaw ++ supply.interactionsWith readbackChannel.toRaw) ∧
       LogUpBalanced (supply.interactionsWith versionChannel.toRaw ++ observer.interactionsWith versionChannel.toRaw) ∧
       inputs.map Inputs.read = reads ∧ inputs.length = reads.length := by
-  have valid id : (raw w id).Constraints := (originalSlot image source target final id).table_constraints w checked
   obtain ⟨supply, guarantee, probe, probeGuarantee, incoming, versions, emitted, count⟩ :=
-    physical_tables (raw w) (raw_registered w) valid bounded reads routed data supplyFits probeFits
+    physical_tables (raw w) (raw_registered w) checked bounded reads routed data supplyFits probeFits
   refine ⟨supply, guarantee, probe, probeGuarantee, ?_, versions, emitted, count⟩
   let table := Counted.table (allocated (live (AccessInventory.records (raw w))) requests) data supplyFits
   have perm : ((installSources w).interactionsWith readbackChannel.toRaw ++ table.interactionsWith readbackChannel.toRaw).Perm
