@@ -38,9 +38,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   rw [← c16] at R0 R1 R2
   rw [hr1eq, one_mul] at hgc0 hgc1 hgc2 hgc3
   simp only [sub_zero] at hgc3
-  have Rb0 := (byteRowSpec_range _ sixteen_lt).mp R0
-  have Rb1 := (byteRowSpec_range _ sixteen_lt).mp R1
-  have Rb2 := (byteRowSpec_range _ sixteen_lt).mp R2
+  have Rb0 := (byteRowSpec_u16 _).mp R0
+  have Rb1 := (byteRowSpec_u16 _).mp R1
+  have Rb2 := (byteRowSpec_u16 _).mp R2
   have hraw : RawSpec input_a input_b (⟨input_cols_value⟩ : Circuits.Types.AddrAddOperation (ZMod p)) := by
     simp only [RawSpec]
     exact ⟨bool_of_mul_pred hgc0, bool_of_mul_pred hgc1, bool_of_mul_pred hgc2,
@@ -56,9 +56,9 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   have key (hneg : input_is_real = 1) := h_spec hneg
   simp only [circuit_norm, byteChannel]
   refine ⟨fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, ?_⟩
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.2.2.1
   · rcases hbin with h0 | h1
     · simp [h0]
     · obtain ⟨heq, hrng0, hrng1, hrng2, hfit⟩ := h_spec h1

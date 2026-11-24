@@ -242,7 +242,7 @@ lemma carryNat_le_one (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
 width-16 `Range` row on a populate value with a known `< 2^16` bound. -/
 theorem byteRow_range16 {x : ZMod p} (h : x.val < 2 ^ 16) :
     ByteRowSpec (⟨6, x, 16, 0⟩ : ByteRow (ZMod p)) := by
-  simpa only [Nat.cast_ofNat] using (byteRowSpec_range x sixteen_lt).mpr h
+  simpa only [Nat.cast_ofNat] using (byteRowSpec_u16 x).mpr h
 
 /-- Every committed carry cell is boolean. -/
 lemma populateCarry_bool (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}

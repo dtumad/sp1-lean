@@ -50,7 +50,7 @@ theorem val_lt_of_byteRangePull_guarantee
     dsimp only [Channel.pulledIf, pulledIf]
     simp only [ProvableStruct.eval_eq_eval, ProvableStruct.structEvalLiteralProc, Expression.eval]
   rw [msgEq] at spec
-  exact (byteRowSpec_range _ sixteen_lt).mp spec
+  exact (byteRowSpec_u16 _).mp spec
 
 /-- The addition gadget's second and third Byte `Range 16` pulls bound its upper result limbs on
 an active row.  Only the finished Byte channel is consumed — not the gadget's `Spec` — so the

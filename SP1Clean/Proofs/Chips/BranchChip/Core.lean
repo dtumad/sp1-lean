@@ -86,9 +86,9 @@ theorem soundness :
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
     rw [← c14] at h0
     rw [← c16] at h1 h2
-    have r0 := (byteRowSpec_range _ SP1Clean.BranchChip.h14p).mp h0
-    have r1 := (byteRowSpec_range _ SP1Clean.sixteen_lt).mp h1
-    have r2 := (byteRowSpec_range _ SP1Clean.sixteen_lt).mp h2
+    have r0 := (byteRowSpec_range (n := 14) _ (by decide)).mp h0
+    have r1 := (byteRowSpec_u16 _).mp h1
+    have r2 := (byteRowSpec_u16 _).mp h2
     apply Word.isU64_of_cases (val_lt_65536_of_mul_inv_four_lt r0) r1 r2
     change (0 : ZMod p).val < 2 ^ 16
     simp
@@ -176,7 +176,7 @@ theorem soundness :
     simp only [byteChannel] at hguar
     rw [← c14] at hguar
     have halign := val_mod_four_of_mul_inv_four_lt
-      ((byteRowSpec_range _ SP1Clean.BranchChip.h14p).mp hguar)
+      ((byteRowSpec_range (n := 14) _ (by decide)).mp hguar)
     simpa only [Vector.getElem_map, Vector.getElem_mapRange,
       circuit_norm] using halign
   · and_intros <;> first | exact h_bin | exact h_clk
@@ -672,7 +672,7 @@ theorem completeness :
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hnp0]
     rw [← c14]
-    exact (byteRowSpec_range _ SP1Clean.BranchChip.h14p).mpr hranges.1
+    exact (byteRowSpec_range (n := 14) _ (by decide)).mpr hranges.1
   · intro hneg
     have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
@@ -680,7 +680,7 @@ theorem completeness :
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hnp1]
     rw [← c16]
-    exact (byteRowSpec_range _ SP1Clean.sixteen_lt).mpr hranges.2.1
+    exact (byteRowSpec_u16 _).mpr hranges.2.1
   · intro hneg
     have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
@@ -688,6 +688,6 @@ theorem completeness :
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hnp2]
     rw [← c16]
-    exact (byteRowSpec_range _ SP1Clean.sixteen_lt).mpr hranges.2.2
+    exact (byteRowSpec_u16 _).mpr hranges.2.2
 
 end SP1Clean.BranchChip

@@ -532,8 +532,7 @@ end ByteChip
 
 /-! ## The complete fixed-width range-provider family
 
-Stated once at an arbitrary compile-time width `n`; `componentFor` indexes the complete SP1
-preprocessed profile by `Fin 17`. -/
+The width indexes the 17 row families in SP1’s preprocessed profile. -/
 
 namespace RangeChip
 
@@ -543,9 +542,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 def ofEntry (e : TraceGen.RangeEntry) : Inputs (ZMod p) :=
   ⟨(e.a : ZMod p), (e.multiplicity : ZMod p)⟩
 
-/-- The fixed-width range provider as a flat-AIR component. -/
-def component (n : ℕ) (hn : 2 ^ n < p) : Component (ZMod p) := { circuit := circuit n hn, generation := generation n, Assumptions := (circuit n hn).Assumptions }
-
 /-- The flat-AIR component at one width in SP1's complete `0, …, 16` profile. -/
 def componentFor (width : Width) : Component (ZMod p) := { circuit := circuitFor width, generation := generation width, Assumptions := (circuitFor width).Assumptions }
 
@@ -553,52 +549,52 @@ def componentFor (width : Width) : Component (ZMod p) := { circuit := circuitFor
 def traceInputs (entries : List TraceGen.RangeEntry) : List (Inputs (ZMod p)) :=
   entries.map ofEntry
 
-theorem proverAssumptions_of_entry {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
-    {e : TraceGen.RangeEntry} (h : e.WellFormed n)
+theorem proverAssumptions_of_entry (width : Width)
+    {e : TraceGen.RangeEntry} (h : e.WellFormed width.val)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (circuit n hn).ProverAssumptions (ofEntry (p := p) e) data hint :=
-  val_natCast_lt h (Nat.pow_le_pow_right (by norm_num) (by omega))
+    (circuitFor width).ProverAssumptions (ofEntry (p := p) e) data hint :=
+  val_natCast_lt h (Nat.pow_le_pow_right (by norm_num) (by have := width.isLt; omega))
 
-theorem proverAssumptions_of_mem_traceInputs {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
-    {entries : List TraceGen.RangeEntry} (h : ∀ e ∈ entries, e.WellFormed n)
+theorem proverAssumptions_of_mem_traceInputs (width : Width)
+    {entries : List TraceGen.RangeEntry} (h : ∀ e ∈ entries, e.WellFormed width.val)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∀ input ∈ traceInputs (p := p) entries,
-      (circuit n hn).ProverAssumptions input data hint := by
+      (circuitFor width).ProverAssumptions input data hint := by
   intro input hin
   obtain ⟨e, he, rfl⟩ := List.mem_map.mp hin
-  exact proverAssumptions_of_entry hn hle (h e he) data hint
+  exact proverAssumptions_of_entry width (h e he) data hint
 
-theorem traceTable_constraints {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
+theorem traceTable_constraints (width : Width)
     (entries : List TraceGen.RangeEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (h : ∀ e ∈ entries, e.WellFormed n)
+    (h : ∀ e ∈ entries, e.WellFormed width.val)
     (bounded : (traceInputs (p := p) entries).length ≤ UInt64.size)
-    (consistent : data.tables (component (p := p) n hn).circuit.name (size (component (p := p) n hn).Input) =
+    (consistent : data.tables (componentFor (p := p) width).circuit.name (size (componentFor (p := p) width).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
-    (Table.build (component (p := p) n hn) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
+    (Table.build (componentFor (p := p) width) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
   Table.build_constraints _ _ _ _ bounded (by trivial) consistent
-    (proverAssumptions_of_mem_traceInputs hn hle h data hint)
+    (proverAssumptions_of_mem_traceInputs width h data hint)
 
-theorem traceTable_guarantees {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
+theorem traceTable_guarantees (width : Width)
     (entries : List TraceGen.RangeEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (h : ∀ e ∈ entries, e.WellFormed n)
+    (h : ∀ e ∈ entries, e.WellFormed width.val)
     (bounded : (traceInputs (p := p) entries).length ≤ UInt64.size)
-    (consistent : data.tables (component (p := p) n hn).circuit.name (size (component (p := p) n hn).Input) =
+    (consistent : data.tables (componentFor (p := p) width).circuit.name (size (componentFor (p := p) width).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
-    (Table.build (component (p := p) n hn) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
+    (Table.build (componentFor (p := p) width) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
   Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
-    (proverAssumptions_of_mem_traceInputs hn hle h data hint)
+    (proverAssumptions_of_mem_traceInputs width h data hint)
 
-theorem traceTable_interactionsWith {n : ℕ} (hn : 2 ^ n < p)
+theorem traceTable_interactionsWith (width : Width)
     (entries : List TraceGen.RangeEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (channel : RawChannel (ZMod p))
     (bounded : (traceInputs (p := p) entries).length ≤ UInt64.size)
-    (consistent : data.tables (component (p := p) n hn).circuit.name (size (component (p := p) n hn).Input) =
+    (consistent : data.tables (componentFor (p := p) width).circuit.name (size (componentFor (p := p) width).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
-    (Table.build (component (p := p) n hn) (traceInputs entries) data
+    (Table.build (componentFor (p := p) width) (traceInputs entries) data
         hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) entries).flatMap fun input =>
-        (component (p := p) n hn).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p) n hn).buildRow input data hint) data) :=
+        (componentFor (p := p) width).operations.interactionValuesWith channel
+          (Environment.fromArray ((componentFor (p := p) width).buildRow input data hint) data) :=
   Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end RangeChip

@@ -62,11 +62,6 @@ theorem eval_clk1 {F : Type} [FiniteField F]
 
 instance [Fact (2 ^ 17 < p)] : Fact (p > 2) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
-omit [Fact p.Prime] in
-/-- `2 ^ 13 < p`, from which `13 < p` (the `Range` width-column round-trip in `byteRowSpec_range`)
-follows. -/
-lemma hn13 [Fact (2 ^ 17 < p)] : 2 ^ 13 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-
 /-- Current-state message emitted by the reader.  Shared by `main` and its exposed-channel interface. -/
 @[circuit_norm] def currentMsg (input : Var Inputs (ZMod p)) : StateMsg (Expression (ZMod p)) :=
   ⟨input.cols.clk_high, input.cols.clk_0_16 + input.cols.clk_16_24 * 65536,
@@ -145,26 +140,24 @@ def ProverAssumptionsD (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
 theorem soundness [Fact (2 ^ 17 < p)] :
     GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD SpecD := by
   circuit_proof_start
-  have h13p : (13 : ℕ) < p := lt_trans (Nat.lt_two_pow_self) hn13
   simp only [circuit_norm, AssumptionsD, SpecD, Spec, Assumptions, byteChannel, stateChannel]
     at h_holds h_assumptions ⊢
   obtain ⟨-, h_b1, h_b2⟩ := h_holds
   refine ⟨fun hr1 => ?_, h_assumptions⟩
-  exact ⟨(byteRowSpec_range _ h13p).mp (by rw [Nat.cast_ofNat]; exact h_b1 hr1),
+  exact ⟨(byteRowSpec_range (n := 13) _ (by decide)).mp (by rw [Nat.cast_ofNat]; exact h_b1 hr1),
     ((byteRowSpec_u8range_pair _ _).mp (h_b2 hr1)).1⟩
 
 theorem completeness [Fact (2 ^ 17 < p)] :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main ProverAssumptionsD
       (fun _ _ _ => True) := by
   circuit_proof_start
-  have h13p : (13 : ℕ) < p := lt_trans (Nat.lt_two_pow_self) hn13
   simp only [ProverAssumptionsD, Assumptions, Spec] at h_assumptions
   obtain ⟨h_bin, h_spec⟩ := h_assumptions
   simp only [circuit_norm, byteChannel, stateChannel]
   refine ⟨?_, ?_, ?_⟩
   · rcases h_bin with h | h <;> simp only [h, sub_self, mul_zero, zero_mul]
   · intro hneg
-    simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ h13p).mpr (h_spec hneg).1
+    simpa only [Nat.cast_ofNat] using (byteRowSpec_range (n := 13) _ (by decide)).mpr (h_spec hneg).1
   · intro hneg
     obtain ⟨_, hb2⟩ := h_spec hneg
     exact (byteRowSpec_u8range_pair _ _).mpr ⟨hb2, by rw [ZMod.val_zero]; norm_num⟩

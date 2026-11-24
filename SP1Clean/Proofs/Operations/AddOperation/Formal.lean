@@ -34,9 +34,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   have R0 := hr0 hneg; have R1 := hr1 hneg; have R2 := hr2 hneg; have R3 := hr3 hneg
   rw [← c16] at R0 R1 R2 R3
   rw [hr1eq, one_mul] at hgc0 hgc1 hgc2 hgc3
-  have bounded : Word.isU64 input_cols_value := Word.isU64_of_cases ((byteRowSpec_range _ sixteen_lt).mp R0)
-    ((byteRowSpec_range _ sixteen_lt).mp R1) ((byteRowSpec_range _ sixteen_lt).mp R2)
-    ((byteRowSpec_range _ sixteen_lt).mp R3)
+  have bounded : Word.isU64 input_cols_value := Word.isU64_of_cases ((byteRowSpec_u16 _).mp R0)
+    ((byteRowSpec_u16 _).mp R1) ((byteRowSpec_u16 _).mp R2)
+    ((byteRowSpec_u16 _).mp R3)
   refine ⟨bounded, addSemantics_of_carries ha hb bounded ?_⟩
   intro i
   fin_cases i
@@ -53,10 +53,10 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     Word.lt_cases_of_isU64 (h_spec hneg).1
   simp only [circuit_norm, byteChannel]
   refine ⟨fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, ?_⟩
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.2
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.2.2
   · rcases hbin with h0 | h1
     · simp [h0]
     · obtain ⟨hv, hbv⟩ := h_spec h1

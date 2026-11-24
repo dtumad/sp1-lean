@@ -179,7 +179,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
   dsimp only at hr1 ⊢
   rw [hr1, one_mul] at a1 a2 a3
   refine ⟨bool_of_mul_pred a1, a2, ?_,
-    (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact b4 (by rw [hr1])),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact b4 (by rw [hr1])),
     ((byteRowSpec_u8range_pair _ _).mp (b5 (by rw [hr1]))).1, h_mem (by rw [hr1])⟩
   simp only [selCur, selPrev]; linear_combination a3
 
@@ -212,7 +212,7 @@ theorem completeness :
     · rw [h1, one_mul]; rcases hcl with h | h <;> rw [h] <;> ring
     · rw [h1, one_mul]; linear_combination ha2
     · rw [h1, one_mul]; linear_combination ha3
-    · intro _; simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ sixteen_lt).mpr hd_low
+    · intro _; simpa only [Nat.cast_ofNat] using (byteRowSpec_u16 _).mpr hd_low
     · intro _; exact (byteRowSpec_u8range_pair _ _).mpr ⟨hd_high, by rw [ZMod.val_zero]; norm_num⟩
     · intro _; exact ⟨hisu, hclk⟩
 

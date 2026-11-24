@@ -162,7 +162,6 @@ theorem Readers.CPUState.bounds_of_byteGuarantees
     · simp only [Readers.CPUState.circuit, Readers.CPUState.main, circuit_norm,
         second, List.mem_cons]
     · rfl
-  have h13p : (13 : ℕ) < p := lt_trans (Nat.lt_two_pow_self) Readers.CPUState.hn13
   have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = 1 := by
     simpa only [first, circuit_norm] using real
   have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = 1 := by
@@ -190,7 +189,7 @@ theorem Readers.CPUState.bounds_of_byteGuarantees
   rw [firstMsgEq] at firstSpec
   rw [secondMsgEq] at secondSpec
   constructor
-  · have range := (byteRowSpec_range _ h13p).mp firstSpec
+  · have range := (byteRowSpec_range (n := 13) _ (by decide)).mp firstSpec
     exact range
   · have range := ((byteRowSpec_u8range_pair _ _).mp secondSpec).1
     exact range
@@ -268,7 +267,7 @@ theorem Readers.RegisterAccessTimestamp.bounds_of_byteGuarantees
   rw [firstMsgEq] at firstSpec
   rw [secondMsgEq] at secondSpec
   constructor
-  · exact (byteRowSpec_range _ sixteen_lt).mp firstSpec
+  · exact (byteRowSpec_u16 _).mp firstSpec
   · exact ((byteRowSpec_u8range_pair _ _).mp secondSpec).1
 
 /-- The generic RAM `MemoryAccess` reader's two Byte pulls range-check its explicit 16/8-bit
@@ -328,7 +327,7 @@ theorem Readers.MemoryAccess.diffBounds_of_byteGuarantees
       Expression.eval]
   rw [firstMsgEq] at firstSpec
   rw [secondMsgEq] at secondSpec
-  exact ⟨(byteRowSpec_range _ sixteen_lt).mp firstSpec,
+  exact ⟨(byteRowSpec_u16 _).mp firstSpec,
     ((byteRowSpec_u8range_pair _ _).mp secondSpec).1⟩
 
 /-- The retained RAM reader's three equality constraints and two Byte pulls imply exactly its

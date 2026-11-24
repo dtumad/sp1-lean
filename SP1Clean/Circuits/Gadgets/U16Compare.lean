@@ -115,7 +115,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   rw [← c16] at R
   refine compare_of_raw ha hb ?_
   simp only [RawSpec]
-  exact ⟨bool_of_mul_pred hgc, (byteRowSpec_range _ sixteen_lt).mp R⟩
+  exact ⟨bool_of_mul_pred hgc, (byteRowSpec_u16 _).mp R⟩
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
@@ -130,7 +130,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     obtain ⟨ha, hb⟩ := hab hr1
     have hbit := hbiteq hr1
     rw [← c16]
-    apply (byteRowSpec_range _ sixteen_lt).mpr
+    apply (byteRowSpec_u16 _).mpr
     rw [hbit]
     by_cases hlt : input_a.val < input_b.val
     · rw [ite_eq_left hlt]

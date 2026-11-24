@@ -180,8 +180,7 @@ def rangeAggregateTable : Table (ZMod SP1Prime) :=
 
 theorem rangeAggregateTable_constraints : rangeAggregateTable.Constraints := by
   refine RangeChip.traceTable_constraints
-    (RangeChip.two_pow_lt (Nat.le_of_lt_succ rangeWidth8.isLt))
-    (Nat.le_of_lt_succ rangeWidth8.isLt) [rangeAggregate] (data (RangeChip.componentFor rangeWidth8) (RangeChip.traceInputs [rangeAggregate])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
+    rangeWidth8 [rangeAggregate] (data (RangeChip.componentFor rangeWidth8) (RangeChip.traceInputs [rangeAggregate])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
   intro e he
   simp only [List.mem_singleton] at he
   subst e

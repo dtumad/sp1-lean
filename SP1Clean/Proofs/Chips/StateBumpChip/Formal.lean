@@ -20,10 +20,6 @@ open SP1Clean.Channels (stateChannel byteChannel StateMsg)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-omit [Fact p.Prime] in
-/-- `13 < p`, the `Range` width-column round-trip bound (from `2^17 < p`). -/
-private lemma h13p : (13 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-
 theorem soundness :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) main
       (fun _ _ => True) (fun input _ _ => Spec input) := by
@@ -48,13 +44,13 @@ theorem soundness :
   · linear_combination hc2
   · rw [hr1, one_mul] at h_clkhi h_clklo
     have hneg : input_is_real = 1 := by rw [hr1]
-    refine ⟨(byteRowSpec_range _ h13p).mp (by rw [Nat.cast_ofNat]; exact b13 hneg),
+    refine ⟨(byteRowSpec_range (n := 13) _ (by decide)).mp (by rw [Nat.cast_ofNat]; exact b13 hneg),
       ((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).1,
       ((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).2,
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact b16 hneg),
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact bpc0 hneg),
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact bpc1 hneg),
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact bpc2 hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact b16 hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact bpc0 hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact bpc1 hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact bpc2 hneg),
       ?_, ?_⟩
     · linear_combination h_clkhi
     · linear_combination h_clklo
@@ -88,15 +84,15 @@ theorem completeness :
     obtain ⟨r13, r1624, r2432, r3248, rpc0, rpc1, rpc2, eqhi, eqlo⟩ := h_gated h1
     refine ⟨by rw [h1, sub_self, mul_zero],
       fun _ => trivial,
-      fun _ => (byteRowSpec_range _ h13p).mpr r13,
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr r3248,
+      fun _ => (byteRowSpec_range (n := 13) _ (by decide)).mpr r13,
+      fun _ => (byteRowSpec_u16 _).mpr r3248,
       fun _ => (byteRowSpec_u8range_pair _ _).mpr ⟨r1624, r2432⟩,
       ?_, by rw [h1, one_mul]; linear_combination eqhi,
       by rw [h1, one_mul]; linear_combination eqlo,
       ?_, ?_, ?_, hb2e,
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr rpc0,
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr rpc1,
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr rpc2⟩
+      fun _ => (byteRowSpec_u16 _).mpr rpc0,
+      fun _ => (byteRowSpec_u16 _).mpr rpc1,
+      fun _ => (byteRowSpec_u16 _).mpr rpc2⟩
     · rcases h_isclk with h | h <;> simp [h]
     · rw [hb0e]; rcases hb0 with h | h <;> simp [h]
     · rw [hb1e]; rcases hb1 with h | h <;> simp [h]

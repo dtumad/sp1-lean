@@ -87,13 +87,13 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl0 : (env.get (i₀+4+6+3+4+4)).val < 2 ^ S := by
       have hb := hbyte3 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have hll1 : (env.get (i₀+4+6+3+4+1)).val < 2 ^ (16 - S) := by
       have hb := hbyte4 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hs0sel : env.get (i₀+4+6+3) * (env.get (i₀+4+4) - 0) = 0 := by
       rw [hsll0] at hsu0sel; linear_combination hsu0sel
     have hs1sel : env.get (i₀+4+6+3+1) * (env.get (i₀+4+4) - 1) = 0 := by
@@ -124,28 +124,28 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl0 : (env.get (i₀+4+6+3+4+4)).val < 2 ^ S := by
       have hb := hbyte3 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have hll1 : (env.get (i₀+4+6+3+4+1)).val < 2 ^ (16 - S) := by
       have hb := hbyte4 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl1 : (env.get (i₀+4+6+3+4+4+1)).val < 2 ^ S := by
       have hb := hbyte5 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have hll2 : (env.get (i₀+4+6+3+4+2)).val < 2 ^ (16 - S) := by
       have hb := hbyte6 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl2 : (env.get (i₀+4+6+3+4+4+2)).val < 2 ^ S := by
       have hb := hbyte7 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have hll3 : (env.get (i₀+4+6+3+4+3)).val < 2 ^ (16 - S) := by
       have hb := hbyte8 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl3 : (env.get (i₀+4+6+3+4+4+3)).val < 2 ^ S := by
       have hb := hbyte9 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have hlr0 : env.get (i₀+4+6+3+4+4+4) = env.get (i₀+4+6+3+4) * env.get (i₀+4+6+2) := by
       linear_combination hreass0
     have hlr1 : env.get (i₀+4+6+3+4+4+4+1) = env.get (i₀+4+6+3+4+1) * env.get (i₀+4+6+2) + env.get (i₀+4+6+3+4+4) := by
@@ -212,20 +212,20 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl0 : (env.get (i₀+4+6+3+4+4)).val < 2 ^ S := by
       have hb := hbyte3 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have hll1 : (env.get (i₀+4+6+3+4+1)).val < 2 ^ (16 - S) := by
       have hb := hbyte4 hneg; rw [hwidth_ll] at hb
-      exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := 16 - S) _ (by omega)).mp hb
     have hhl1 : (env.get (i₀+4+6+3+4+4+1)).val < 2 ^ S := by
       have hb := hbyte5 hneg; rw [hwidth_hl] at hb
-      exact (byteRowSpec_range _ (show S < p by omega)).mp hb
+      exact (byteRowSpec_range (n := S) _ (by omega)).mp hb
     have h_diff : ((input_adapter_op_c_memory_prev_value[0] - (env.get (i₀+4) + env.get (i₀+4+1)*2 + env.get (i₀+4+2)*4
         + env.get (i₀+4+3)*8 + env.get (i₀+4+4)*16 + env.get (i₀+4+5)*32)) * (64:ZMod p)⁻¹).val < 1024 := by
       have hb := hbyte1 hneg
-      have hbd := (byteRowSpec_range _ (show (10:ℕ) < p by omega)).mp hb
+      have hbd := (byteRowSpec_range (n := 10) _ (by decide)).mp hb
       rw [show (2:ℕ)^10 = 1024 from by norm_num] at hbd
       convert hbd using 3
       ring

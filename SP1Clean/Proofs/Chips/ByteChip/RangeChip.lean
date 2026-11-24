@@ -26,15 +26,10 @@ production providers. Their message coverage matches SP1, but their physical lay
 
 ## Fixed-width family
 
-SP1's `bits` is a runtime column (`≤ 16`), so a fixed `Gadgets.ToBits.rangeCheck n` does not directly
-apply to the genuinely variable-width row. This module builds the **fixed-width family**: a provider
-`circuit n hn` parameterized by a *compile-time* width `n` (with `2^n < p`). For each fixed `n` it is a
-faithful `RangeChip` provider — it pushes exactly SP1's `⟨6, a, (n : F), 0⟩` rows for `a < 2^n`. The
-indexed family `circuitFor : Fin 17 → GeneralFormalCircuit …` covers **every** preprocessed width
-without duplicating seventeen declarations. `allWidths = List.finRange 17` is the canonical table
-order. A genuinely variable-`bits` provider (one circuit serving all widths at once) is a separate,
-harder construction; the indexed family has the same message-level coverage while retaining fixed
-bit-decomposition circuits.
+SP1's preprocessed `bits` column enumerates the widths from zero through sixteen. Each
+`circuitFor width` proves bit decomposition at that width and publishes exactly the rows
+`⟨6, a, width, 0⟩` with `a < 2^width`. The verifier installs the fixed-width circuits in
+the order `allWidths = List.finRange 17`.
 
 Sibling: `Proofs/Chips/ByteChip/ByteChip.lean` (the `ByteChip` provider, opcodes 0..5 over `(b,c)`). -/
 
@@ -77,34 +72,25 @@ def main (n : ℕ) (hn : 2 ^ n < p) (input : Var Inputs (ZMod p)) : Circuit (ZMo
   byteChannel.pushIf input.multiplicity
     (⟨6, input.a, Expression.const ((n : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))
 
-/-- The `RangeChip` provider at a fixed width `n`: pushes `⟨6, a, n, 0⟩` for an in-circuit
-range-checked `a < 2^n`. `Spec` is `a.val < 2^n`; soundness derives it from the `rangeCheck` subcircuit
-and discharges the push's `ByteRowSpec` requirement via `byteRowSpec_range`. -/
-def circuit (n : ℕ) (hn : 2 ^ n < p) : GeneralFormalCircuit (ZMod p) Inputs unit where
-  name := s!"sp1.native.range.{n}"
-  main := main n hn
-  Spec input _ _ := input.a.val < 2 ^ n
-  ProverAssumptions input _ _ := input.a.val < 2 ^ n
-  channelsWithRequirements := [byteChannel.toRaw]
-  soundness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    have hnp : n < p := lt_trans Nat.lt_two_pow_self hn
-    exact ⟨h_holds, fun _ => (byteRowSpec_range input_a hnp).mpr h_holds⟩
-  completeness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    exact h_assumptions
-
-/-! ## The complete fixed-width profile -/
-
 /-- A width supported by SP1's preprocessed range table: exactly `0, …, 16`. -/
 abbrev Width := Fin 17
 
 /-- The canonical increasing order of all fixed-width provider tables. -/
 def allWidths : List Width := List.finRange 17
 
-/-- The native fixed-width provider selected by an SP1-supported width. -/
-def circuitFor (width : Width) : GeneralFormalCircuit (ZMod p) Inputs unit :=
-  circuit width.val (two_pow_lt (Nat.le_of_lt_succ width.isLt))
+/-- The native provider associated with this width in the released preprocessed Range table. -/
+def circuitFor (width : Width) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := s!"sp1.native.range.{width.val}"
+  main := main width.val (two_pow_lt (Nat.le_of_lt_succ width.isLt))
+  Spec input _ _ := input.a.val < 2 ^ width.val
+  ProverAssumptions input _ _ := input.a.val < 2 ^ width.val
+  channelsWithRequirements := [byteChannel.toRaw]
+  soundness := by
+    circuit_proof_start [Gadgets.ToBits.rangeCheck]
+    exact ⟨h_holds,fun _ => (byteRowSpec_range input_a (Nat.le_of_lt_succ width.isLt)).mpr h_holds⟩
+  completeness := by
+    circuit_proof_start [Gadgets.ToBits.rangeCheck]
+    exact h_assumptions
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Every supported width uses bit constraints, with no static lookup dependency. -/

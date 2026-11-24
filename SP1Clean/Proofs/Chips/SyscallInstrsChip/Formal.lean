@@ -283,16 +283,13 @@ theorem completeness :
          ⟨h_bytes hneg 2, h_bytes hneg 3⟩))
   all_goals (intro hneg
              have hr : input_is_real = 1 := hneg
-             have h16 : (16 : ℕ) < p := by
-               have : (2 : ℕ) ^ 17 < p := Fact.out
-               omega
              have hu : Word.isU64 input_op_a_value :=
                (h_pull hr).2.2.2.2.2.2.2.2.2.2.2
              first
-               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 0)
-               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 1)
-               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 2)
-               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 3))
+               | simpa [byteChannel] using (byteRowSpec_u16 _).mpr (hu 0)
+               | simpa [byteChannel] using (byteRowSpec_u16 _).mpr (hu 1)
+               | simpa [byteChannel] using (byteRowSpec_u16 _).mpr (hu 2)
+               | simpa [byteChannel] using (byteRowSpec_u16 _).mpr (hu 3))
 
 
 /-! ## The bundled `circuit`

@@ -153,7 +153,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   rw [← c16] at R
   refine msb_of_raw (ha hr1eq) ?_
   simp only [RawSpec]
-  exact ⟨bool_of_mul_pred hgc, (byteRowSpec_range _ sixteen_lt).mp R⟩
+  exact ⟨bool_of_mul_pred hgc, (byteRowSpec_u16 _).mp R⟩
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
@@ -171,7 +171,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       rw [two_mul, ZMod.val_add_of_lt (by omega)]; omega
     have hmsb := hmsbeq hr1
     rw [← c16]
-    apply (byteRowSpec_range _ sixteen_lt).mpr
+    apply (byteRowSpec_u16 _).mpr
     rw [hmsb]
     by_cases hge : input_a.val ≥ 32768
     · rw [ite_eq_left hge, one_mul]
