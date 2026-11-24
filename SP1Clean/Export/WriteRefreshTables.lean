@@ -162,7 +162,7 @@ theorem bumpTables_registerMemory (regs : List MemoryBumpEvent) (states : List S
     Soundness.consumedMessages ledger = regs.map (fun e => (MemoryHistoryAccess.ofMemoryBump e).pulledEntry.toMemoryMsg) ∧
       Soundness.producedMessages ledger = regs.map (fun e => (MemoryHistoryAccess.ofMemoryBump e).pushedEntry.toMemoryMsg) := by
   intro t ledger
-  have sides := Soundness.memoryBumpRows_projection t t.data rfl (bumpTables_registerConstraints _ _ _ _ _ valid)
+  have sides := Soundness.memoryBumpRows_projection t t.data rfl (bumpTables_registerValid _ _ _ _ _ valid).1
   have decoded : Soundness.activeSystemRows t (Soundness.memoryBumpRow t.data) (·.is_real) = regs.map memoryBumpCols := by
     have roundtrip (row : MemoryBumpChip.Inputs Fp) :
         Soundness.memoryBumpRow t.data (memory.buildRow row t.data (ProverHint.empty _)) = row :=

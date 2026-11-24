@@ -70,13 +70,17 @@ private theorem padded_valid {α : Type} (rows : List α) (padding : α) (P : α
 
 /-- The generated register refresh table satisfies its installed constraints for every
 well-formed event, including its canonical disabled padding. -/
-theorem bumpTables_registerConstraints (registers : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
+theorem bumpTables_registerValid (registers : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
     (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size)
     (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) (valid : ∀ e ∈ registers, e.WellFormed) :
-    (bumpTables registers states data mh sh).1.Constraints := by
+    (bumpTables registers states data mh sh).1.Constraints ∧ (bumpTables registers states data mh sh).1.Guarantees := by
+  have rows := padded_valid _ _ (MemoryBumpChip.Spec (p := SP1Prime)) (memoryBumpTraceInputs_spec valid) MemoryBumpChip.spec_paddingInputs
   dsimp only [bumpTables]
-  apply Table.build_constraints
-  exact padded_valid _ _ (MemoryBumpChip.Spec (p := SP1Prime)) (memoryBumpTraceInputs_spec valid) MemoryBumpChip.spec_paddingInputs
+  constructor
+  · apply Table.build_constraints
+    exact rows
+  · apply Table.build_guarantees
+    exact rows
 
 /-- The construction simultaneously satisfies both circuits on one
 shared prover input. Their heights are the ones charged by the 44-component preset. -/
@@ -103,10 +107,9 @@ theorem bump_constructed_tables (ctx : Context) {events : List ExecutionEvent}
   refine ⟨inputs, routed, height _ mem, height _ (by omega), rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact (List.length_map ..).trans (memory_height (MixedBumpInput.memoryRows inputs))
   · exact (List.length_map ..).trans (state_height (MixedBumpInput.stateRows inputs))
-  · exact bumpTables_registerConstraints _ _ _ _ _ mv
+  · exact (bumpTables_registerValid _ _ _ _ _ mv).1
+  · exact (bumpTables_registerValid _ _ _ _ _ mv).2
   all_goals dsimp only [bumpTables]
-  · apply Table.build_guarantees
-    exact padded_valid _ _ MemoryBumpChip.Spec (memoryBumpTraceInputs_spec mv) MemoryBumpChip.spec_paddingInputs
   · apply Table.build_constraints
     exact padded_valid _ _ StateBumpChip.Spec (stateBumpTraceInputs_spec sv) StateBumpChip.spec_paddingInputs
   · apply Table.build_guarantees
