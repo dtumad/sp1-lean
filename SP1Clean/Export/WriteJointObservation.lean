@@ -1,5 +1,5 @@
 import SP1Clean.Export.InstalledImmutableLedger
-import SP1Clean.Export.WriteFundedInstallation
+import SP1Clean.Export.WriteObserverRows
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteMixedControlTables
 import SP1Clean.Export.WriteInstalledEffectJoins
@@ -56,13 +56,6 @@ theorem joint_publicInput (w : EnsembleWitness (base image source target final))
     (withPublicChecks (build w suffix registered)).publicInput = w.publicInput :=
   (withPublicChecks_publicInput (build w suffix registered)).trans (build_publicInput w suffix registered)
 
-/-- The three generated effect consumers surrounding the fixed stream-metadata source. -/
-def effectMiddle {events : List ExecutionEvent} {entries : List Entry} {streams : WriteStreams}
-    (cap : EffectFits events entries streams) (data : ProverData F) (metadata : Table F) : List (Table F) :=
-  [WriteEffects.requestTable ((inputs entries).dispatches.map WriteEffects.Dispatch.request) data cap.requests,
-   WriteEffects.octetTable (entries.flatMap Entry.decoderRows) data cap.decoders, metadata,
-   WriteEffects.dispatchTable (inputs entries).dispatches data cap.dispatches]
-
 /-- Exact padded demand for a buffer header, decoded word, classified request or placement handoff. -/
 def effectDemandHeight {entries : List Entry} (r : Fin 4) : Nat :=
   let calls := WitnessGeneration.demandHeight (inputs entries).packets.length
@@ -103,7 +96,8 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
           ∃ reg : suffix.map Table.component = tables ctx.source ctx.target,
             let pre := build w suffix reg
             let full := withPublicChecks pre
-            (∀ t ∈ (full.tables.drop (installSources w).tables.length).take front.length, t.Constraints ∧ t.Guarantees) ∧
+            (∀ t ∈ suffix, t.Constraints ∧ t.Guarantees) ∧
+            (∀ t ∈ full.tables.drop (installSources w).tables.length, t.Constraints ∧ t.Guarantees) ∧
             (∀ id, WriteMixedHostTables.InstalledAt pre id (WriteMixedHostTables.table release.1 data id)) ∧
             (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
             (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
@@ -137,7 +131,7 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   intro final header
   unfold ObservationAllocation
   intro release uses hints close
-  obtain ⟨rows,routed,packets,observed,requests,_,hc,hq,hp,hs,hw,physical,_,_,_,_,_,_,_,install⟩ := counted_packet_tables release data hint
+  obtain ⟨rows,routed,packets,observed,requests,_,hc,hq,hp,hs,hw,physical,frontGood,_,_,_,_,_,_,install⟩ := counted_packet_tables release data hint
   let generated := WriteMixedSourceTables.compiledSource release routed data hint packets
   let batch := WriteBuffer.packetRows (p := SP1Prime) events packets
   let sources := live (records generated)
@@ -177,12 +171,24 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     rw [List.map_append,pfront,ptail,List.take_append_drop]
   refine ⟨reg,?_⟩
   intro pre full
-  obtain ⟨frontValid,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets fixed) tail ptail
+  obtain ⟨_,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets fixed) tail ptail
+  have plansGood : ∀ t ∈ plans, t.Constraints ∧ t.Guarantees := by
+    intro t member
+    rcases List.mem_cons.mp member with rfl | last
+    · exact ⟨planGood,planGuar⟩
+    · obtain rfl := List.mem_singleton.mp last
+      exact ⟨closeGood,closeGuar⟩
+  have suffixGood : ∀ t ∈ suffix, t.Constraints ∧ t.Guarantees := by
+    intro t member
+    rcases List.mem_append.mp member with first | rest
+    · exact frontGood _ first
+    · exact fundedSuffix_valid s data paid.toChecked effects hints plans
+        (effectMiddle_valid cap data metadata realized ⟨md.constraints,md.guarantees⟩) hintGood plansGood t rest
   have endpoints := installed_endpoint_ledgers w suffix reg (s.groups data) plan _ _ rfl rfl rfl rfl
   obtain ⟨nodeLedger,wordLedger,cursorLedger⟩ := installed_immutable_ledgers release routed data hint (inputs entries).packets header remaining
     suffix reg s rfl rfl rfl
   obtain ⟨_,nodePaid,wordPaid⟩ := InstalledAssembly.native_immutable_queue release.1 data collected s paid.toChecked
-  refine ⟨frontValid,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
+  refine ⟨suffixGood,installed_observer_rows w suffix reg suffixGood,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
     MixedHaltPadding.receipt release.1.1.2,?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)

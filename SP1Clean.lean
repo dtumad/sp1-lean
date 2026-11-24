@@ -43,6 +43,7 @@ import SP1Clean.Soundness.HintQueueClock
 import SP1Clean.Export.WriteFundedInstallation
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteInstalledMetadata
+import SP1Clean.Export.WriteObserverRows
 import SP1Clean.Export.WriteJointObservation
 import SP1Clean.Export.NativeShardBoundary
 import SP1Clean.Export.CommitmentReaders
