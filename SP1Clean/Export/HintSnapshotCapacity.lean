@@ -57,18 +57,31 @@ theorem admissible_hint_snapshot_tables {image : ProgramImage} {source target : 
   have sealValid := Seal.tableFor_valid target.host.io.hints (HostHintQueue.State.encode (p := SP1Prime) clock.toNat cursor.2 cursor.1.size) data
   exact ⟨sealValid.1, sealValid.2, tableFor_closed read _ data clock⟩
 
+private theorem snapshot_height_of_words (hints : List Bytes) (fit : fits hints = true) (n : Nat)
+    (rows : wordRows hints ≤ 2 ^ n) : (inventory (p := SP1Prime) hints).height ≤ 2 ^ n := by
+  apply Nat.pow_le_pow_right (by decide : 0 < 2)
+  apply (Nat.clog_le_iff_le_pow (by decide : 1 < 2)).mpr
+  change (schedule (p := SP1Prime) hints).length ≤ _
+  simpa only [schedule_length, fit, ↓reduceIte] using rows
+
+/-- The native outgoing boundary budget bounds its actual fixed reader height by 2^28. -/
+theorem native_hint_snapshot_height {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) :
+    (inventory (p := SP1Prime) target.host.io.hints).height ≤ 2 ^ 28 := by
+  apply snapshot_height_of_words _ (admissible_hint_snapshot_fits run)
+  have uses := (boundary_words target.realize).trans (run.2.2.2.2.1 .boundaryBytes)
+  change 8 * wordRows target.host.io.hints + 125 ≤ SP1Prime - 1 at uses
+  have fieldSize : SP1Prime - 1 < 8 * 2^28 := by decide
+  omega
+
 /-- The installed shard preset pays for every physical row of the new outgoing queue reader. -/
 theorem fixedProviderPreset_hint_snapshot_height (ctx : Context) {events : List ExecutionEvent}
     (run : AdmissibleExecution ctx.limits SP1Prime ctx.image ctx.source ctx.target events)
     (preset : ctx.limits.LE fixedProviderPreset) :
     (HostHintSnapshot.inventory (p := SP1Prime) ctx.target.host.io.hints).height ≤ 2 ^ 26 := by
+  apply snapshot_height_of_words _ (admissible_hint_snapshot_fits (run.mono (preset.trans fixedProviderPreset_le_native)))
   have uses := (boundary_words ctx.target.realize).trans ((run.mono preset).2.2.2.2.1 .boundaryBytes)
   change 8 * wordRows ctx.target.host.io.hints + 125 ≤ 2 ^ 29 + 124 at uses
-  have fits := admissible_hint_snapshot_fits (run.mono (preset.trans fixedProviderPreset_le_native))
-  apply Nat.pow_le_pow_right (by decide : 0 < 2)
-  apply (Nat.clog_le_iff_le_pow (by decide : 1 < 2)).mpr
-  change (schedule (p := SP1Prime) ctx.target.host.io.hints).length ≤ _
-  simp only [schedule_length, fits, ↓reduceIte]
   omega
 
 /-- Exact additional occurrences contributed by the two outgoing queue tables on every raw
