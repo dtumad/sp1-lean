@@ -44,16 +44,19 @@ private theorem published (w : EnsembleWitness (native image source target)) (ok
   obtain ⟨reply,found,_,size⟩ := hook_reply w ok fit raw d md route
   exact ⟨reply,found,size⟩
 
+/-- A slice of the named endpoint stream whose occupied bytes are all backed by the original guest memory. -/
+def StreamSliceAt (w : EnsembleWitness (native image source target)) (d : Dispatch F) (key : StreamKey) (offset length : Nat) : Prop :=
+  ∃ stream, key.contents (.fromEndpoints source.host target.host) = some stream ∧
+    (∀ r, key = .request r → stream.length = length) ∧
+    let slice := (stream.drop offset).take length
+    slice.length = length ∧ ∀ i : Fin slice.length, GuestByteAt w d i.val slice[i.val]
+
 /-- The complete selected public slice has precisely x12 bytes. All of those bytes are
 sampled from the incoming guest memory at x11 plus their index. A hook owns its full
 request input, including an empty input. -/
 def PublicSliceAt (w : EnsembleWitness (native image source target)) (d : Dispatch F) : Prop :=
   let counters := StreamCounts.ofCursor d.previous
-  ∀ key, destinationKey d.route counters.hooks = some key →
-    ∃ stream, key.contents (.fromEndpoints source.host target.host) = some stream ∧
-      (∀ r, key = .request r → stream.length = Address.toNat d.length) ∧
-      let slice := (stream.drop (counters.offset d.route)).take (Address.toNat d.length)
-      slice.length = Address.toNat d.length ∧ ∀ i : Fin slice.length, GuestByteAt w d i.val slice[i.val]
+  ∀ key, destinationKey d.route counters.hooks = some key → StreamSliceAt w d key (counters.offset d.route) d.request.header.length.toNat
 
 /-- The selected destination for each physical CPU WRITE is determined by its released
 semantic descriptor. Both partial ends of each source word use real occupied public bytes. -/
@@ -63,6 +66,7 @@ theorem native_public_slice (w : EnsembleWitness (native image source target)) (
   intro key selected
   obtain ⟨stream,found,requestLength⟩ := published w ok fit raw d md selected
   have valid := (physical_dispatch_valid w ok fit raw d md).1
+  rw [valid.guest_length]
   have released := (native_dispatch_origin w ok fit raw d md).1
   obtain ⟨start,tag,owner,hint,keep,fixed⟩ := valid.public_coordinates released selected
   let basePos := (StreamCounts.ofCursor d.previous).offset d.route
@@ -122,11 +126,12 @@ theorem native_hook_request (w : EnsembleWitness (native image source target)) (
   rw [found,Option.map_some] at pub
   obtain rfl := Option.some.inj pub
   have zeros : (StreamCounts.ofCursor d.previous).offset d.route = 0 := by rw [route]; rfl
-  have slice : (reply.request.input.drop ((StreamCounts.ofCursor d.previous).offset d.route)).take (Address.toNat d.length) = reply.request.input := by
-    rw [zeros,List.drop_zero,← size,List.take_length]
+  have fullLength := size.trans (physical_dispatch_valid w ok fit raw d md).1.guest_length.symm
+  have slice : (reply.request.input.drop ((StreamCounts.ofCursor d.previous).offset d.route)).take d.request.header.length.toNat = reply.request.input := by
+    rw [zeros,List.drop_zero,← fullLength,List.take_length]
   let observedBytes (bytes : Bytes) := ∀ i : Fin bytes.length, GuestByteAt w d i.val bytes[i.val]
   change observedBytes _ at guest
   rw [slice] at guest
-  exact ⟨reply,input,journal,descriptor,size.trans (physical_dispatch_valid w ok fit raw d md).1.guest_length.symm,guest⟩
+  exact ⟨reply,input,journal,descriptor,fullLength,guest⟩
 
 end SP1Clean.Export.WriteObservationAssembly
