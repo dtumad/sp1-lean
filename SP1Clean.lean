@@ -157,6 +157,8 @@ import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
 import SP1Clean.Proofs.Completeness.WriteBufferBatch
+import SP1Clean.Proofs.Completeness.WriteBufferAssembly
+import SP1Clean.Proofs.Completeness.WriteBufferFootprint
 import SP1Clean.Proofs.Completeness.WriteBufferRows
 import SP1Clean.Proofs.Completeness.WriteBufferTables
 import SP1Clean.Proofs.Completeness.WriteProbeDemand
