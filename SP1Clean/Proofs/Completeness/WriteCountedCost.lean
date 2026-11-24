@@ -15,9 +15,11 @@ open Circuit Air.Flat Soundness Channels AccessInventory
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
+/-- Use the original instruction registry’s physical input columns. -/
 local instance (id : InstructionChipId) : ProvableType (supportedChipFor (p := p) id).kind.Inputs :=
   (supportedChipFor (p := p) id).kind.provableInputs
 
+/-- Use the matching original instruction output columns when projecting Memory operations. -/
 local instance (id : InstructionChipId) : ProvableType (supportedChipFor (p := p) id).kind.Cols :=
   (supportedChipFor (p := p) id).kind.provableCols
 

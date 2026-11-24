@@ -12,6 +12,7 @@ open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
+/-- Physical packet input paired with its activity cell. -/
 abbrev Row := ProvablePair Inputs field
 
 /-- These are precisely the three signed occurrences of a physical packet row, including padding. -/
