@@ -67,6 +67,9 @@ import SP1Clean.Native.Operations.WriteSliceSource
 import SP1Clean.Native.Operations.WriteStart
 import SP1Clean.Proofs.Operations.QueueAllocationEdges
 import SP1Clean.Proofs.Operations.WriteDispatch
+import SP1Clean.Proofs.Operations.WriteAllocationTickets
+import SP1Clean.Proofs.Operations.WriteMetadataRows
+import SP1Clean.Proofs.Operations.WritePlacementPlans
 import SP1Clean.Proofs.Operations.WriteAllocation
 import SP1Clean.Proofs.Operations.WriteAllocationWords
 import SP1Clean.Proofs.Operations.WriteGroup

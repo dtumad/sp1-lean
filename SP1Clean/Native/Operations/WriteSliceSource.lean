@@ -16,14 +16,17 @@ variable {p : Nat} [Fact p.Prime]
 def planTable : StaticTable (ZMod p) SlicePlan := .ofRows "sp1.native.write_slice_plan" slicePlans
 
 omit [Fact p.Prime] in
-private theorem plan_height : (planTable (p := p)).height < UInt64.size := by
+/-- The fixed plan inventory has 352 legal windows and occupies 512 physical rows. -/
+theorem planTable_height : (planTable (p := p)).height = 512 := by
   have rows : (planTable (p := p)).length = 352 := by
     change (slicePlans (p := p)).length = 352
     simp only [slicePlans, List.length_flatMap, List.length_map, List.length_range]
     decide
-  have edge := (planTable (p := p)).height_lt_double
-  norm_num [UInt64.size] at *
-  omega
+  rw [StaticTable.height, rows]
+  decide
+
+omit [Fact p.Prime] in
+private theorem plan_height : (planTable (p := p)).height < UInt64.size := by rw [planTable_height]; decide
 
 /-- Preallocated provider of lane masks for grouped word placement. -/
 def planComponent : Component (ZMod p) :=

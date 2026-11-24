@@ -89,6 +89,23 @@ private theorem lookup_funding {image : ProgramImage} {source target : Execution
     rw [rawW,balanceOf_append,WitnessGeneration.guarded_emit_sum HostHintQueue.wordChannel w (fun r => r.wordReads) (fun r => r.word),wEmit]
     exact (balanceOf_append ..).symm.trans (wordPaid msg)
 
+/-- Requests above the immutable incoming frontier on the same replay used by both fixed providers. -/
+noncomputable def freshDemand {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) : Demand :=
+  let cursor := finalCursor run
+  (collect (history image source events) (snapshot cursor.1 cursor.2 target.host.io.hints)).select
+    (fun ptr => source.host.io.hints.length < ptr)
+
+/-- Any six-table construction on the actual fresh demand has its immutable publication
+columns funded by precisely the corresponding readers, independently of its block funding. -/
+theorem freshDemand_funded {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) (data : ProverData F)
+    {entries : List Entry} (emitted : native? image source events (freshDemand run).readers = some entries)
+    (s : SixTables entries source.host target.host) : AllocationReads s (freshDemand run) data := by
+  obtain ⟨cursor,done,auth,_⟩ := native_demand run
+  cases Option.some.inj (done.symm.trans (finalCursor_done run))
+  exact lookup_funding run (finalCursor_done run) _ auth data emitted
+
 /-- A native execution generates all six allocation/placement tables on the same collection, with both immutable
 reader columns derived from the actual demands. The independent block, contents and cursor proofs remain on these tables. -/
 theorem native_funded_allocations {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}

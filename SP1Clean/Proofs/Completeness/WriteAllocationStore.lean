@@ -47,6 +47,17 @@ private theorem queue_clock_before {policy : HostPolicy} {program : Soundness.Ta
       simp only [advanceQueueClock]
       split <;> omega
 
+/-- The actual final queue-access clock fits the released state encoding, including a
+segment whose queue carried the initial zero clock throughout. -/
+theorem final_queue_clock_fits {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) :
+    events.foldl advanceQueueClock 0 < 2^48 := by
+  have order := queue_clock_before run.1.2 0 (Or.inl rfl)
+  have stop := run.2.2.2.2.2.1
+  change target.clock < 2^48 at stop
+  change events.foldl advanceQueueClock 0 = 0 ∨ events.foldl advanceQueueClock 0 < target.clock at order
+  omega
+
 private theorem write_advances {current next : ExecutionState} {route : WriteRoute} {bytes : Bytes}
     {call : CoreSyscallEvent} (effect : route.Effect current.host bytes next.host) (write : call.rawCode = SyscallKind.write.code)
     (cursor : Store × Nat) :
