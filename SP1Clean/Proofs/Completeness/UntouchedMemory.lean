@@ -138,22 +138,31 @@ private theorem value_at_zero_frontier {limits : ResourceLimits} {p : ℕ} {imag
         have kept := host step prior zero
         exact kept.2.trans (ih beforeBuilt kept.1)
 
-private theorem ordinary_register_untouched {policy : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
-    {view : SP1TransitionView} {plan : InstructionAccessPlan}
-    (step : ExecutionStep policy program source .ordinary target)
+private theorem ordinary_register_frame {policy : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
+    {view : SP1TransitionView} (step : ExecutionStep policy program source .ordinary target)
     (cfg : SailConfigured source.sail) (loaded : RomLoaded program source.sail)
     (projected : projectSP1Transition? program ⟨source.sail, ⟨.ordinary, target.sail⟩⟩ = some view)
-    (compiled : instructionAccessPlan? view.decoded source.sail target.sail = some plan)
-    (index : BitVec 5) (fresh : MemLoc.reg index ∉ plan.map PlannedTouch.loc) :
-    locContent target.sail (.reg index) = locContent source.sail (.reg index) := by
+    (index : BitVec 5) (other : instructionDestination? view.decoded ≠ some index) :
+    target.sail.get_reg? index = source.sail.get_reg? index := by
   cases step with
   | @ordinary next _ _ normal permitted =>
     obtain ⟨pc, word, instr, atPc, fetched, decode, checked⟩ := permitted
     have actual := decodeLocated?_eq_some_of (located := ⟨source.sail, ⟨.ordinary, next⟩⟩) atPc fetched (decode source.sail cfg)
     have same := Option.some.inj ((projectSP1Transition?_decode projected).symm.trans actual)
-    rw [same] at compiled
-    exact (Advance.permitted_normal_frame cfg loaded atPc fetched decode checked normal).2.2.2 index
-      (fun selected => fresh (instructionAccessPlan_destination selected compiled))
+    rw [same] at other
+    exact (Advance.permitted_normal_frame cfg loaded atPc fetched decode checked normal).2.2.2 index other
+
+/-- The actual compiled ordinary plan consumes the incoming Sail words and produces the complete
+outgoing register and RAM image, including aliasing operand roles and read-only accesses. -/
+theorem ordinary_plan_values {policy : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
+    {view : SP1TransitionView} {plan : InstructionAccessPlan}
+    (step : ExecutionStep policy program source .ordinary target) (cfg : SailConfigured source.sail)
+    (loaded : RomLoaded program source.sail) (encoded : ordinaryEncodedAt program source.sail)
+    (projected : projectSP1Transition? program ⟨source.sail, ⟨.ordinary, target.sail⟩⟩ = some view)
+    (compiled : instructionAccessPlan? view.decoded source.sail target.sail = some plan) :
+    plan.RunsFrom (locContent source.sail) (locContent target.sail) :=
+  instructionAccessPlan_runs compiled (ordinary_register_frame step cfg loaded projected)
+    (ordinary_ram_untouched step cfg loaded encoded projected compiled)
 
 private theorem syscall_register_frontier_zero {policy : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
     {call : CoreSyscallEvent} (step : ExecutionStep policy program source (.syscall call) target)
@@ -179,7 +188,8 @@ theorem admissibleExecution_untouched {limits : ResourceLimits} {p : ℕ} {image
       (fun step prior => syscall_ram_frontier_zero step prior cell) built zero
   | reg index =>
     exact value_at_zero_frontier execution (.reg index)
-      (fun step cfg loaded _ projected compiled => ordinary_register_untouched step cfg loaded projected compiled index)
+      (fun step cfg loaded _ projected compiled fresh => ordinary_register_frame step cfg loaded projected index
+        (fun selected => fresh (instructionAccessPlan_destination selected compiled)))
       (fun step prior => syscall_register_frontier_zero step prior index) built zero
 
 end SP1Clean.TraceGen
