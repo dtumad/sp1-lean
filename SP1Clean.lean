@@ -86,6 +86,7 @@ import SP1Clean.Proofs.Completeness.MixedCommitHistory
 import SP1Clean.Proofs.Completeness.MixedCommitTables
 import SP1Clean.Proofs.Completeness.MixedCommitLedger
 import SP1Clean.Proofs.Completeness.MixedSnapshotMembership
+import SP1Clean.Proofs.Completeness.FixedProgramReads
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
