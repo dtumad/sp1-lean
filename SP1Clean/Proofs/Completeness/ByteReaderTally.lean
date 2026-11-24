@@ -87,6 +87,18 @@ theorem unit_guarantee_servable {i : Interaction (ZMod p)} (onByte : i.channel =
     rfl
   exact eq ▸ admitted
 
+/-- A generated reader's own requirements establish binary activity, so its own guarantees
+admit the message whenever its physical multiplicity is nonzero. -/
+theorem checked_reader {i : Interaction (ZMod p)} (onByte : i.channel = byteChannel.toRaw)
+    (pull : i.direction = .pull) (data : ProverData (ZMod p)) (requirements : i.Requirements data)
+    (honest : i.Guarantees data) (active : i.mult ≠ 0) : ByteServable (messageKey i.msg) := by
+  apply unit_guarantee_servable onByte pull _ data honest
+  rcases i with ⟨ch,dir,m,msg,arity⟩
+  change ch = _ at onByte
+  change dir = _ at pull
+  subst ch dir
+  exact (show m = 0 ∨ m = 1 from requirements).resolve_left active
+
 omit [Fact (2^25 < p)] in
 /-- All keys the native generator actually selects are valid if each original active reader
 has its proper byte-channel guarantee. -/
