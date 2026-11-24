@@ -76,28 +76,9 @@ private def hostUsed (source target : ExecutionSnapshot) (ch : RawChannel F) (i 
 private def hostSupport (source target : ExecutionSnapshot) (ch : RawChannel F) : List (Fin 35) :=
   (List.finRange 35).filter (hostUsed source target ch)
 
-private theorem host_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
-    (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw ∨ ch = HintReadWordChip.stateChannel.toRaw) :
-    (supervisor w).interactionsWith ch =
+private theorem auxiliary_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F) :
+    (hostRows w).flatMap (·.interactionsWith ch) =
       (hostSupport source target ch).flatMap (fun i => (hintHostTable w i).interactionsWith ch) := by
-  let host := hostWitness (original w)
-  have registered : ch ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: HostFinalMemory.sourceChannels target.sail.memorySnapshot) := by
-    rcases which with rfl | rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
-  have fresh : ch ∉ (LocalCore.baseEnsemble (p := SP1Prime) image source).channels := by
-    apply LocalCore.not_mem_baseEnsemble_channels
-    rcases which with rfl | rfl | rfl <;> simp [LocalCore.baseChannelNames, nodeChannel, wordChannel, HintReadWordChip.stateChannel, Channel.toRaw]
-  have split := HostLocalCore.interactions_split_new host ch registered fresh
-    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,WritePermissionProvider.channel,Channel.toRaw])
-    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,StaticTable.channel,ProgramImage.writePermissionTable,StaticTable.ofRows,Channel.toRaw])
-  have quiet : (HostLocalCore.hostCallTable host).interactionsWith ch = [] := by
-    apply Table.interactionsWith_nil_of_channel_not_mem
-    rw [HostLocalCore.hostCallTable_component]
-    intro used
-    have found := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    rcases which with rfl | rfl | rfl <;> exact Bool.noConfusion (show false = true from found)
-  have transport := host_protocol_ledger (original w) ch (by rcases which with rfl | rfl | rfl <;> simp)
-  change (original w).interactionsWith ch = _
-  rw [← transport,split,quiet,List.nil_append]
   have rows : hostRows w = (List.finRange 35).map (hintHostTable w) := by
     apply List.ext_getElem
     · simp [host_size]
@@ -120,6 +101,40 @@ private theorem host_ledger (w : EnsembleWitness (preprocessing image source tar
           exact Bool.noConfusion ((List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) present)).symm.trans yes)
         simp [yes,ih,empty]
   exact select _
+
+/-- Only the original HALT table can publish the optional host-terminal word. -/
+theorem halt_auxiliary (w : EnsembleWitness (preprocessing image source target final)) :
+    (HostLocalCore.auxiliaryTables (hostWitness (supervisor w))).flatMap
+      (·.interactionsWith HostExitBoundary.channel.toRaw) =
+      (hintHostTable w 1).interactionsWith HostExitBoundary.channel.toRaw := by
+  let ch := (HostExitBoundary.channel (p := SP1Prime)).toRaw
+  change (hostRows w).flatMap (·.interactionsWith ch) = (hintHostTable w 1).interactionsWith ch
+  have mask : hostSupport source target ch = [1] := rfl
+  simpa only [mask, List.flatMap_cons, List.flatMap_nil, List.append_nil] using auxiliary_ledger w ch
+
+private theorem host_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
+    (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw ∨ ch = HintReadWordChip.stateChannel.toRaw) :
+    (supervisor w).interactionsWith ch =
+      (hostSupport source target ch).flatMap (fun i => (hintHostTable w i).interactionsWith ch) := by
+  let host := hostWitness (original w)
+  have registered : ch ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: HostFinalMemory.sourceChannels target.sail.memorySnapshot) := by
+    rcases which with rfl | rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
+  have fresh : ch ∉ (LocalCore.baseEnsemble (p := SP1Prime) image source).channels := by
+    apply LocalCore.not_mem_baseEnsemble_channels
+    rcases which with rfl | rfl | rfl <;> simp [LocalCore.baseChannelNames, nodeChannel, wordChannel, HintReadWordChip.stateChannel, Channel.toRaw]
+  have split := HostLocalCore.interactions_split_new host ch registered fresh
+    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,WritePermissionProvider.channel,Channel.toRaw])
+    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,StaticTable.channel,ProgramImage.writePermissionTable,StaticTable.ofRows,Channel.toRaw])
+  have quiet : (HostLocalCore.hostCallTable host).interactionsWith ch = [] := by
+    apply Table.interactionsWith_nil_of_channel_not_mem
+    rw [HostLocalCore.hostCallTable_component]
+    intro used
+    have found := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
+    rcases which with rfl | rfl | rfl <;> exact Bool.noConfusion (show false = true from found)
+  have transport := host_protocol_ledger (original w) ch (by rcases which with rfl | rfl | rfl <;> simp)
+  change (original w).interactionsWith ch = _
+  rw [← transport,split,quiet,List.nil_append]
+  exact auxiliary_ledger w ch
 
 /-- The two original metadata consumers and the incoming fixed node source, in physical order. -/
 theorem original_hint_nodes (w : EnsembleWitness (preprocessing image source target final)) :

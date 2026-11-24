@@ -90,7 +90,7 @@ private theorem commit_projection (deferred selected : Bool) (slot : Fin 8)
 private theorem quiet_projection (deferred : Bool) (receiver : HostLocalHandoff.Receiver (p := p))
     (member : receiver ∈ [HostCallReceivers.halt, HostCallReceivers.profileNoop true]) (env : Environment (ZMod p))
     (constraints : receiver.component.operations.ConstraintsHold env)
-    (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
+    (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) (active : env receiver.activity = 1) :
     stamped deferred (receiver.message env) = none := by
   rcases List.mem_cons.mp member with rfl | member
   · have spec := HostHaltChip.row_spec_of_byte env
@@ -100,7 +100,7 @@ private theorem quiet_projection (deferred : Bool) (receiver : HostLocalHandoff.
     cases deferred <;> simp [stamped, bankCall?, spec.1, bankKind, SyscallKind.code, Word.toBitVec64, Word.toNat]
   · have same := List.mem_singleton.mp member
     subst receiver
-    obtain ⟨kind, _, spec⟩ := HostCallReceivers.profileNoop_spec true env constraints
+    obtain ⟨kind, _, spec⟩ := HostCallReceivers.profileNoop_spec true env constraints active
     have three : (3 : ZMod p).val = 3 := ZMod.val_natCast_of_lt
       (lt_trans (by decide : 3 < 2 ^ 17) (Fact.out (p := 2 ^ 17 < p)))
     rw [HostCallReceivers.profileNoop_message true]
@@ -133,8 +133,8 @@ private theorem control_projection (deferred : Bool) (tables : List (Table (ZMod
   have quiet := messages_project _ _ (sliced 0 2)
     (fun table member => constraints table (List.mem_of_mem_drop (List.mem_of_mem_take member)))
     (fun table member => bytes table (List.mem_of_mem_drop (List.mem_of_mem_take member)))
-    (stamped deferred) (fun _ => none) (fun receiver member env checked bytes _ =>
-      quiet_projection deferred receiver member env checked bytes)
+    (stamped deferred) (fun _ => none) (fun receiver member env checked bytes active =>
+      quiet_projection deferred receiver member env checked bytes active)
   simp only [List.drop_zero] at quiet
   have commits (selected : Bool) := messages_project _ _ (sliced (if selected then 10 else 2) 8)
     (fun table member => constraints table (List.mem_of_mem_drop (List.mem_of_mem_take member)))

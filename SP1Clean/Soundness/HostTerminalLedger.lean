@@ -44,6 +44,11 @@ private theorem commit_exit_silent (deferred : Bool) (slot : Fin 8) :
     CommitmentDeclaration.channel, HostCommitChip.stateChannel, byteChannel, publicValuesChannel,
     circuit_norm]
 
+private theorem noop_exit_silent :
+    HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.profileNoop (p := p) true).component.circuit.channels := by
+  change HostExitBoundary.channel.toRaw ∉ [HostCallChip.channel.toRaw, HostCallChip.channel.toRaw]
+  simp [HostExitBoundary.channel, HostCallChip.channel, Channel.toRaw]
+
 private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
@@ -70,13 +75,8 @@ private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     simp only [HostCallReceivers.halt, Operations.interactionValuesWith, Component.interactionsWith_eq]
     exact (HostHaltChip.terminal_values _ _ env).trans (by
       rw [arg, eval_varFromOffset_valueFromOffset])
-  · obtain ⟨kind, _, valid⟩ := HostCallReceivers.profileNoop_spec true env constraints
-    have silent : HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.profileNoop (p := p) true).component.circuit.channels := by
-      intro used
-      have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-      change false = true at present
-      contradiction
-    rw [values_silent _ env silent]
+  · obtain ⟨kind, _, valid⟩ := HostCallReceivers.profileNoop_spec true env constraints active
+    rw [values_silent _ env noop_exit_silent]
     rw [HostCallReceivers.profileNoop_message true]
     have three : (3 : ZMod p).val = 3 :=
       ZMod.val_natCast_of_lt (show (3 : ℕ) < p by have := Fact.out (p := 2 ^ 17 < p); omega)
@@ -112,7 +112,7 @@ private theorem inactive_control_silent (receiver : HostLocalHandoff.Receiver (p
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
   rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
   · exact False.elim (inactive rfl)
-  · exact False.elim (inactive rfl)
+  · exact values_silent _ env noop_exit_silent
   · exact values_silent _ env (commit_exit_silent false slot)
   · exact values_silent _ env (commit_exit_silent true slot)
 

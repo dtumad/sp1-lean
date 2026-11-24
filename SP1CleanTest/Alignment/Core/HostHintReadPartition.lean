@@ -579,7 +579,7 @@ private def cpuInstructions (messages : List (HostCallChip.Message Fp))
 
 private def cpuHandoff (messages : List (HostCallChip.Message Fp)) : Bool :=
   if bounded : messages.length + 2 ≤ UInt64.size then
-  let enters := StaticMembership.buildTable (HostCallReceivers.noop (p := SP1Prime) .enter).component [enterCall 4, enterCall 1]
+  let enters := StaticMembership.buildTable (HostCallReceivers.profileNoop (p := SP1Prime) false).component [(enterCall 4, 1), (enterCall 1, 1)]
     [] (ProverData.empty Fp) (ProverHint.empty Fp) (by decide)
   HintReadFixtures.balanced (callLedger (physicalInteractions (cpuInstructions messages bounded :: enters :: cpuQueueTables)))
   else false
