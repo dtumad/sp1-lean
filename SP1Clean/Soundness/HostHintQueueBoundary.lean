@@ -421,6 +421,28 @@ theorem extraTables_eq
   rw [List.drop_drop, List.drop_drop]
   exact projected_drop witness 86 (by decide)
 
+/-- The original queue ledger has exactly the three handler families and the published
+boundary pair. This permutation remains available when an outer ensemble adds new queue edges. -/
+theorem queue_ledger
+    (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames channelNames availableTableChannels boundaryChannels))
+    (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels) :
+    (witness.interactionsWith stateChannel.toRaw).Perm
+      ((queueTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) ++
+        [stateChannel.pushedValue (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints),stateChannel.pulledValue final]) := by
+  have registered := auxiliary_channel_registered image source HostCallReceivers.available resources channels
+    (names := availableNames) (channelNames := channelNames) (tableChannels := availableTableChannels) HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw
+    (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
+  have ledger := interactions_split witness stateChannel.toRaw registered
+  have extra : (extraTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
+    apply List.flatMap_eq_nil_iff.mpr
+    intro table member
+    apply table.interactionsWith_nil_of_channel_not_mem
+    apply silent table.component
+    rw [← extraTables_components (projected witness)]
+    exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+  rwa [queue_interactions,extra,List.append_nil,ClosedVerifier.interactionsWith,ClosedVerifier.operations,
+    HostBoundary.closed_main,SP1Clean.HostBoundary.queue_values] at ledger
+
 /-- The complete queue ledger includes the verifier's endpoints and each physical handler row. -/
 theorem queue_balanced
     (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames channelNames availableTableChannels boundaryChannels))
@@ -432,21 +454,9 @@ theorem queue_balanced
   have registered := auxiliary_channel_registered image source HostCallReceivers.available resources channels
     (names := availableNames) (channelNames := channelNames) (tableChannels := availableTableChannels) HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw
     (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
-  have ledger := BalancedInteractions.of_perm
-    (balanced stateChannel.toRaw (List.mem_append_left _ registered)
-      (visible_of_name _ (of_decide_eq_true rfl)))
-    (interactions_split witness stateChannel.toRaw registered)
-  have extra : (extraTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
-    apply List.flatMap_eq_nil_iff.mpr
-    intro table member
-    apply table.interactionsWith_nil_of_channel_not_mem
-    apply silent table.component
-    rw [← extraTables_components (projected witness)]
-    exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  rw [queue_interactions, extra, List.append_nil,
-    ClosedVerifier.interactionsWith, ClosedVerifier.operations, HostBoundary.closed_main,
-    SP1Clean.HostBoundary.queue_values] at ledger
-  exact BalancedInteractions.of_perm ledger (List.perm_append_comm ..)
+  exact BalancedInteractions.of_perm
+    (balanced stateChannel.toRaw (List.mem_append_left _ registered) (visible_of_name _ (of_decide_eq_true rfl)))
+    ((queue_ledger witness silent).trans (List.perm_append_comm ..))
 
 /-- Every actual queue-handler row lies on the uniquely anchored path. Record authentication
 is retained for dynamic providers; this version covers resources without additional queue edges. -/
