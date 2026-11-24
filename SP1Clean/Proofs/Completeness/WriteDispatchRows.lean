@@ -67,23 +67,66 @@ def countDelta (route : WriteRoute) (length : Nat) : Nat :=
   | .hook _ => 1
   | .ignored | .hint => 0
 
-/-- Populate the original dispatcher using the entire host prefix, including the actual
-returned buffer count and the allocation frontier even when old nodes have been consumed. -/
-def dispatchRow (fd address length : BitVec 64) (callClock previousClock : Nat) (earlier : WriteStreams)
-    (host : HostState) (store : HintQueue.Store) : Dispatch F :=
+/-- The four stream lengths carried between successive dispatches. -/
+structure StreamCounts where
+  /-- Bytes written to stdout during this shard. -/
+  stdout : Nat
+  /-- Bytes written to stderr during this shard. -/
+  stderr : Nat
+  /-- Bytes appended to the public-values stream. -/
+  publicValues : Nat
+  /-- Replies consumed by WRITE hooks. -/
+  hooks : Nat
+deriving Inhabited
+
+/-- Project a complete stream transcript to the four physical cursor positions. -/
+def StreamCounts.ofStreams (s : WriteStreams) : StreamCounts :=
+  ⟨s.stdout.length,s.stderr.length,s.publicOutput.length,s.hooks.length⟩
+
+/-- The existing dispatch encoding with its natural positions already computed. -/
+def dispatchColumns (fd address length : BitVec 64) (callClock previousClock : Nat) (incoming : StreamCursor F)
+    (offset count : Nat) (host : HostState) (store : HintQueue.Store) : Dispatch F :=
   let route := WriteRoute.ofDescriptor fd
-  let offset := destinationOffset route earlier
-  let count := previousCount route earlier
   let delta := countDelta route length.toNat
   let pred := address.toNat - 1
   let pack := effectRows (p := SP1Prime) callClock fd address length []
-  { request := pack.1, flags := routeFlags route, previous := finalCursor previousClock earlier
+  { request := pack.1, flags := routeFlags route, previous := incoming
     clockGap := Address.ofNat (callClock - previousClock), nextClock := Address.ofNat (callClock + 1)
     payloadLength := Address.ofNat length.toNat, basePosition := Address.ofNat offset
     baseCounter := Address.ofNat count, delta := Address.ofNat delta, beforeAddress := Address.ofNat pred
     lastAddress := Address.ofNat (pred + length.toNat), endPosition := Address.ofNat (offset + length.toNat)
     nextCounter := Address.ofNat (count + delta), pointer := Address.ofNat (store.size + 1)
     returned := Address.ofNat ((host.replies.head?.map (·.hints.length)).getD 0) }
+
+/-- Construct the original dispatch row directly from running stream lengths. -/
+def StreamCounts.dispatch (earlier : StreamCounts) (fd address length : BitVec 64) (callClock previousClock : Nat)
+    (host : HostState) (store : HintQueue.Store) : Dispatch F :=
+  let route := WriteRoute.ofDescriptor fd
+  let offset := match route with
+    | .stdout => earlier.stdout
+    | .stderr => earlier.stderr
+    | .publicValues => earlier.publicValues
+    | _ => 0
+  let count := match route with
+    | .hook _ => earlier.hooks
+    | _ => offset
+  let incoming : StreamCursor F := ⟨Address.ofNat previousClock,Address.ofNat earlier.stdout,Address.ofNat earlier.stderr,
+    Address.ofNat earlier.publicValues,Address.ofNat earlier.hooks⟩
+  dispatchColumns fd address length callClock previousClock incoming offset count host store
+
+/-- Populate the dispatcher from the semantic host transcript, including the actual reply count
+and the allocation frontier after previously consumed nodes. -/
+def dispatchRow (fd address length : BitVec 64) (callClock previousClock : Nat) (earlier : WriteStreams)
+    (host : HostState) (store : HintQueue.Store) : Dispatch F :=
+  let route := WriteRoute.ofDescriptor fd
+  dispatchColumns fd address length callClock previousClock (finalCursor previousClock earlier)
+    (destinationOffset route earlier) (previousCount route earlier) host store
+
+/-- Running counters encode exactly the original dispatch row derived from the full transcript. -/
+theorem StreamCounts.dispatch_ofStreams (earlier : WriteStreams) (fd address length : BitVec 64) (clk prev : Nat)
+    (host : HostState) (store : HintQueue.Store) :
+    (ofStreams earlier).dispatch fd address length clk prev host store = dispatchRow fd address length clk prev earlier host store := by
+  cases route : WriteRoute.ofDescriptor fd <;> simp [dispatch,dispatchRow,ofStreams,finalCursor,previousCount,destinationOffset,route]
 
 /-- The dispatch ticket uses the low three little-endian limbs of the observed x12. -/
 theorem dispatchRow_length (fd address len : BitVec 64) (clk prev : Nat) (earlier : WriteStreams)
