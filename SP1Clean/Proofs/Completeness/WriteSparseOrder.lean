@@ -301,15 +301,15 @@ theorem orderLedger_lengths (snapshot : MemorySnapshot) (rows : List (Terminal (
 /-- The two concrete order verifiers and seals for the sparse register/RAM construction.
 Each signed cursor ledger closes at its fixed endpoints and has the exact combined row cost. -/
 theorem compiled_order (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (env : Environment (ZMod p)) :
     let rows := terminals snapshot stream requested data hint
     let start := SnapshotMemoryEnsemble.channelName
     let finish := OrderedFinalProvider.channelName
     let startSeal := terminalTable start (by decide) rows data
     let endSeal := terminalTable finish (by decide) rows data
-    let first := fun ram => initialTable snapshot ram rows data (terminal_count_fit ram snapshot stream requested (canonical_addresses guest) data hint)
-    let last := fun ram => finalTable ram rows data (terminals_fit ram snapshot stream requested (canonical_addresses guest) data hint)
+    let first := fun ram => initialTable snapshot ram rows data (terminal_count_fit ram snapshot stream requested guest.canonical data hint)
+    let last := fun ram => finalTable ram rows data (terminals_fit ram snapshot stream requested guest.canonical data hint)
     let incoming := orderLedger start (first false) (first true) startSeal env
     let outgoing := orderLedger finish (last false) (last true) endSeal env
     startSeal.Constraints ∧ startSeal.Guarantees ∧ endSeal.Constraints ∧ endSeal.Guarantees ∧
@@ -317,8 +317,8 @@ theorem compiled_order (snapshot : MemorySnapshot) (stream : List MemoryHistoryA
   have bounded := fun r hr => (terminals_valid snapshot stream requested guest data hint r hr).key_lt
   have start := terminalTable_valid SnapshotMemoryEnsemble.channelName (by decide) _ bounded data
   have finish := terminalTable_valid OrderedFinalProvider.channelName (by decide) _ bounded data
-  let fit := fun ram => terminal_count_fit ram snapshot stream requested (canonical_addresses guest) data hint
-  let fitFinal := fun ram => terminals_fit ram snapshot stream requested (canonical_addresses guest) data hint
+  let fit := fun ram => terminal_count_fit ram snapshot stream requested guest.canonical data hint
+  let fitFinal := fun ram => terminals_fit ram snapshot stream requested guest.canonical data hint
   exact ⟨start.1, start.2, finish.1, finish.2, initial_order_balanced snapshot _ data fit env, final_order_balanced _ data fitFinal env,
     orderLedger_lengths snapshot _ data fit fitFinal env⟩
 

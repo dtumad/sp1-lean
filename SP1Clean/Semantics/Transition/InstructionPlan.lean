@@ -489,6 +489,110 @@ theorem branchPlan_pulled {source target : SailState} {plan : InstructionAccessP
   cases generated
   rfl
 
+private def afterWrites (source target : SailState) (destination : Option (BitVec 5)) (memory : Option RamCell) : LocationValues
+  | .reg index => if destination = some index then target.get_reg? index else source.get_reg? index
+  | .ram cell => if memory = some cell then locContent target (.ram cell) else locContent source (.ram cell)
+
+private theorem after_no_writes (source target : SailState) : afterWrites source target none none = locContent source := by
+  funext loc
+  cases loc <;> rfl
+
+private theorem readback_step (source target : SailState) (memory : Option RamCell) (slot : AccessSlot)
+    {index : BitVec 5} {value : BitVec 64} (read : source.get_reg? index = some value) :
+    InstructionAccessPlan.applyTouch? (afterWrites source target none memory) (registerReadback slot index value) =
+      some (afterWrites source target none memory) := by
+  have same : afterWrites source target none memory (.reg index) = some value := read
+  simp only [InstructionAccessPlan.applyTouch?, registerReadback, same, ↓reduceIte, Option.some.injEq]
+  exact Function.update_eq_self_iff.mpr same.symm
+
+private theorem destination_step (source target : SailState) (memory : Option RamCell) {index : BitVec 5} {prior post : BitVec 64}
+    (read : source.get_reg? index = some prior) (generated : destinationPost? target index prior = some post) :
+    InstructionAccessPlan.applyTouch? (afterWrites source target none memory) (registerDestination index prior post) =
+      some (afterWrites source target (some index) memory) := by
+  have pushed : target.get_reg? index = some post := by
+    by_cases zero : index = 0
+    · rw [zero] at read generated ⊢
+      simp only [SailState.get_reg?, ↓reduceIte, Option.some.injEq] at read ⊢
+      simpa only [destinationPost?, ↓reduceIte, Option.some.injEq, ← read] using generated
+    · simpa only [destinationPost?, zero, ↓reduceIte] using generated
+  have same : afterWrites source target none memory (.reg index) = some prior := read
+  simp only [InstructionAccessPlan.applyTouch?, registerDestination, same, ↓reduceIte, Option.some.injEq]
+  funext loc
+  cases loc with
+  | reg i =>
+    by_cases equal : i = index
+    · subst i; simpa only [Function.update_self, afterWrites, ↓reduceIte] using pushed.symm
+    · simp [Function.update_of_ne, afterWrites, equal, Ne.symm equal]
+  | ram => simp [Function.update_of_ne, afterWrites]
+
+private theorem ram_step (source target : SailState) {cell : RamCell} {prior post : BitVec 64}
+    (read : ramWord64? source cell.baseAddr = some prior) (stored : ramWord64? target cell.baseAddr = some post) :
+    InstructionAccessPlan.applyTouch? (afterWrites source target none none) (ramAccess cell prior post) =
+      some (afterWrites source target none (some cell)) := by
+  have same : afterWrites source target none none (.ram cell) = some prior := read
+  simp only [InstructionAccessPlan.applyTouch?, ramAccess, same, ↓reduceIte, Option.some.injEq]
+  funext loc
+  cases loc with
+  | reg => simp [Function.update_of_ne, afterWrites]
+  | ram c =>
+    by_cases equal : c = cell
+    · subst c; simpa only [Function.update_self, afterWrites, locContent, ↓reduceIte] using stored.symm
+    · simp [Function.update_of_ne, afterWrites, equal, Ne.symm equal]
+
+private theorem runs_after {plan : InstructionAccessPlan} {touch : PlannedTouch} {initial middle final : LocationValues}
+    (step : InstructionAccessPlan.applyTouch? initial touch = some middle) (tail : plan.RunsFrom middle final) :
+    InstructionAccessPlan.RunsFrom (touch :: plan) initial final := by
+  simpa only [InstructionAccessPlan.RunsFrom, InstructionAccessPlan.run_cons, step, Option.bind_some] using tail
+
+private theorem runs_from_writes {source target : SailState} {plan : InstructionAccessPlan}
+    {destination : Option (BitVec 5)} (memory : Option RamCell)
+    (held : ∀ index, destination ≠ some index → target.get_reg? index = source.get_reg? index)
+    (frame : ∀ cell, MemLoc.ram cell ∉ plan.map PlannedTouch.loc → locContent target (.ram cell) = locContent source (.ram cell))
+    (touched : ∀ cell, MemLoc.ram cell ∈ plan.map PlannedTouch.loc ↔ memory = some cell)
+    (runs : plan.RunsFrom (afterWrites source target none none) (afterWrites source target destination memory)) :
+    plan.RunsFrom (locContent source) (locContent target) := by
+  have finish : afterWrites source target destination memory = locContent target := by
+    funext loc
+    cases loc with
+    | reg i =>
+      by_cases same : destination = some i
+      · simp [afterWrites, same, locContent]
+      · simpa [afterWrites, same, locContent] using (held i same).symm
+    | ram c =>
+      by_cases same : memory = some c
+      · simp [afterWrites, same]
+      · simpa [afterWrites, same] using (frame c (fun mem => same ((touched c).mp mem))).symm
+  rwa [after_no_writes, finish] at runs
+
+/-- The canonical plan runs on the actual incoming location image. Read-back aliases preserve that
+image until the destination role. The RAM and register writes match the actual outgoing image. -/
+theorem instructionAccessPlan_runs {source target : SailState} {plan : InstructionAccessPlan} {decoded : instruction}
+    (generated : instructionAccessPlan? decoded source target = some plan)
+    (registers : ∀ index, instructionDestination? decoded ≠ some index → target.get_reg? index = source.get_reg? index)
+    (ramFrame : ∀ cell, MemLoc.ram cell ∉ plan.map PlannedTouch.loc → locContent target (.ram cell) = locContent source (.ram cell)) :
+    plan.RunsFrom (locContent source) (locContent target) := by
+  have shape := byShape_of_extracted generated
+  clear generated
+  cases decoded <;> rename_i ops <;> cases ops <;>
+    simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?, loadPlan?, storePlan?,
+      Option.map_eq_some_iff, Option.bind_eq_bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at shape
+  all_goals
+    obtain ⟨cert, made, rfl⟩ := shape
+    repeat' obtain ⟨_, _, made⟩ := made
+  all_goals
+    dsimp only [CertifiedInstructionPlan.plan] at ramFrame ⊢
+    dsimp only [instructionDestination?] at registers
+    first
+      | apply runs_from_writes none registers ramFrame
+        case touched => intro c; solve | simp [registerReadback, registerDestination]
+      | apply runs_from_writes (some _) registers ramFrame
+        case touched => intro c; simp [ramAccess, registerReadback, registerDestination, eq_comm]; rfl
+    repeat' first
+      | apply runs_after (readback_step source target _ _ (by assumption))
+      | apply runs_after (destination_step source target _ (by assumption) (by assumption))
+      | apply runs_after (ram_step source target (by assumption) (by assumption))
+    rfl
+
 /-- Constructor form of readiness, useful when the compiler retains the extracted plan. -/
 theorem InstructionPlanReady.of_generated {decoded : instruction} {source target : SailState}
     {plan : InstructionAccessPlan}
