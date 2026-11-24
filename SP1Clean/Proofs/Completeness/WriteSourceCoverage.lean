@@ -1,3 +1,4 @@
+import SP1Clean.Native.Operations.WriteProbeAccess
 import SP1Clean.Proofs.Completeness.WriteCountedRouting
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
 
@@ -35,6 +36,41 @@ theorem covers_record (r : Readback (ZMod p)) (bounded : Bounded r)
     simpa only [low, Address.toNat_ofNat _ fits] using within.1
   · change Address.toNat (Address.ofNat clock) ≤ Address.toNat (ClockParts.split r.currentHigh r.currentLow).address
     simpa only [high, Address.toNat_ofNat _ fits] using within.2
+
+/-- A canonical split-clock Memory entry covers its exact field-encoded address and value up to
+the physical receipt's closing clock. This applies to original accesses and to finalizers. -/
+theorem covers_compiled_entry (entry : MemRecordEntry) (last time : ℕ) (legal : ValidKey entry.addr)
+    (lo : entry.clk ≤ time) (hi : time ≤ last) (fits : last < 2 ^ 48) :
+    let receipt := AccessSupply.atClock (F := ZMod p) ((last / 2 ^ 24 : ℕ), (last % 2 ^ 24 : ℕ)) entry.toMemoryMsg
+    Covers receipt ⟨Address.ofNat entry.addr, Address.ofNat time, Target.bitVecToWord (BitVec.ofNat 64 entry.value)⟩ := by
+  intro receipt
+  have characteristic := Fact.out (p := 2 ^ 24 < p)
+  have bounded : Bounded receipt := by
+    change ((entry.clk / 2 ^ 24 : ℕ) : ZMod p).val < _ ∧ ((entry.clk % 2 ^ 24 : ℕ) : ZMod p).val < _ ∧
+      ((last / 2 ^ 24 : ℕ) : ZMod p).val < _ ∧ ((last % 2 ^ 24 : ℕ) : ZMod p).val < _
+    repeat' rw [ZMod.val_natCast_of_lt (by omega)]
+    omega
+  have key : receipt.key = Address.ofNat entry.addr := rfl
+  have addressFits : entry.addr < 2 ^ 48 := by
+    rcases legal with reg | ram
+    · omega
+    · exact ram.2.1
+  have decode (n : ℕ) (small : n < 2 ^ 48) :
+      clkNat ((n / 2 ^ 24 : ℕ) : ZMod p) ((n % 2 ^ 24 : ℕ) : ZMod p) = n := by
+    unfold clkNat
+    repeat' rw [ZMod.val_natCast_of_lt (by omega)]
+    omega
+  have value : receipt.value = Target.bitVecToWord (BitVec.ofNat 64 entry.value) :=
+    Word.eq_of_toBitVec64_eq (wordOfNat_isU64 _) (Target.isU64_bitVecToWord _)
+      ((toBitVec64_wordOfNat _).trans (Target.toBitVec64_bitVecToWord _).symm)
+  have within : clkNat receipt.previousHigh receipt.previousLow ≤ time ∧ time ≤ clkNat receipt.currentHigh receipt.currentLow := by
+    change clkNat ((entry.clk / 2 ^ 24 : ℕ) : ZMod p) ((entry.clk % 2 ^ 24 : ℕ) : ZMod p) ≤ _ ∧
+      _ ≤ clkNat ((last / 2 ^ 24 : ℕ) : ZMod p) ((last % 2 ^ 24 : ℕ) : ZMod p)
+    rw [decode _ (by omega), decode last fits]
+    exact ⟨lo, hi⟩
+  have result := covers_record receipt bounded (key ▸ Address.bounded_ofNat _) (by rwa [key, Address.toNat_ofNat _ addressFits])
+    (wordOfNat_isU64 _) time (hi.trans_lt fits) within
+  rwa [key, value] at result
 
 /-- Each extra key requested from the real snapshot has a concrete original finalizer row
 that supplies the entire time range as a source for the counted table. Both boundary rows

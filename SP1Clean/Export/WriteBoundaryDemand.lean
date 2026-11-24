@@ -1,5 +1,5 @@
 import SP1Clean.Export.WriteBoundaryBuild
-import SP1Clean.Proofs.Completeness.MixedMemoryValues
+import SP1Clean.Proofs.Completeness.MixedMemorySelection
 import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.WriteBufferBatch
 
@@ -125,6 +125,62 @@ theorem compiled_sparse_read {image : ProgramImage} {source target : ExecutionSn
     have zero := MixedMemoryHistory.zero_of_absent run routed absent before
     omega
   · exact covered
+
+/-- Each read of each actual WRITE is already funded by a live installed finalizer, or it is
+precisely the prior word of an actual compiled row at a clock covered by that row. This includes
+both the otherwise untouched case and exhaustion of a nonempty Memory history. -/
+theorem compiled_read_source {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {packets : List WriteObservations.Packet}
+    (collected : WriteObservations.packets? (policy SP1Prime image) image.program source.realize events = some packets)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
+    {cut : ℕ} {read : Read F} (member : (cut, read) ∈ readDemand (packetRows events packets))
+    (endQueue : HostHintQueue.State F) (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F)
+    (suffix : List (Table F)) (registered) :
+    let stream := MixedMemoryHistory.stream image source events rows
+    let w := build image source target endQueue stream (demandKeys events packets) (MixedMemoryHistory.canonical run routed)
+      data hint header suffix registered
+    (∃ r ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers r read) ∨
+    (∃ (i : Fin rows.length) (before : ExecutionState) (a : MemoryHistoryAccess) (call : CoreSyscallEvent),
+      events[cut]? = some (.syscall call) ∧ call.rawCode = SyscallKind.write.code ∧
+      executionTrajectory (policy SP1Prime image) image.program source.realize events i.val = some before ∧
+      a ∈ MixedMemoryHistory.batch image source events rows i ∧ ValidKey a.loc.busAddress ∧
+      a.previous ≤ call.clock ∧ call.clock ≤ before.clock ∧ before.clock < 2 ^ 48 ∧
+      read = ⟨Address.ofNat a.loc.busAddress, Address.ofNat call.clock, Target.bitVecToWord a.pulled⟩) := by
+  intro tape w
+  by_cases occupied : Address.toNat read.key ∈ (memoryInitialEntries tape).map MemRecordEntry.addr
+  swap
+  · exact Or.inl (compiled_sparse_read run collected routed member endQueue occupied data hint header suffix registered)
+  obtain ⟨call, current, frontier, loc, present, write, atTime, atCut, legal, key, clock, bounded, observed⟩ := readDemand_at run collected member
+  have canonical := valid_location loc legal
+  have keyNat : Address.toNat read.key = loc.busAddress := by rw [key, Address.toNat_ofNat _ (MemLoc.busAddress_lt_two_pow_48 canonical)]
+  rw [memoryInitialEntries_addresses, keyNat] at occupied
+  obtain ⟨other, used, equal⟩ := List.mem_map.mp occupied
+  obtain ⟨r, inTape, whereAt⟩ := mem_touchedMemoryLocations.mp used
+  have locEq := MemLoc.busAddress_injective_of_canonical (whereAt ▸ MixedMemoryHistory.canonical run routed r inTape) canonical equal
+  have touched : loc ∈ touchedMemoryLocations tape := locEq ▸ used
+  have encoded (v : BitVec 64) (held : locContent current.sail loc = some v) :
+      read = ⟨Address.ofNat loc.busAddress, Address.ofNat current.clock, Target.bitVecToWord v⟩ := by
+    have value := Word.eq_of_toBitVec64_eq bounded (Target.isU64_bitVecToWord _)
+      ((Option.some.inj (observed.symm.trans held)).trans (Target.toBitVec64_bitVecToWord _).symm)
+    cases read
+    congr
+  rcases MixedMemoryHistory.select_at_cut run routed atCut loc touched with later | finished
+  · obtain ⟨i, before, a, prior, listed, same, lower, upper, fits, word⟩ := later
+    exact Or.inr ⟨i, before, a, call, present, write, prior, listed, same ▸ legal, atTime ▸ lower, atTime ▸ upper,
+      fits, by rw [same, atTime]; exact encoded _ word⟩
+  · obtain ⟨history, listed, same, prior, word⟩ := finished
+    obtain ⟨state, f, path, reached, _⟩ := admissibleExecution_mixedAccessPrefix run cut
+    cases Option.some.inj (atCut.symm.trans reached)
+    have final := run.1.2.clock_at present path
+    change current.clock + _ ≤ target.clock at final
+    have limit : target.clock < 2 ^ 48 := run.2.2.2.2.2.1
+    obtain ⟨record, live, cover⟩ := build_terminal_covers image source target endQueue tape (demandKeys events packets)
+      (MixedMemoryHistory.canonical run routed) data hint header suffix registered history listed (same ▸ legal)
+      current.clock prior (by omega)
+    rw [same] at cover
+    exact Or.inl ⟨record, live, encoded _ word ▸ cover⟩
 
 /-- One admissible mixed execution generates both source and demand inventories. Every otherwise
 untouched request is funded on each canonical supervisor built with their six registered boundary tables. -/
