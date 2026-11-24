@@ -11,6 +11,7 @@ public import ToClean.Circuit.ReceiptList
 public import ToClean.Circuit.Guarded
 public import ToClean.Air.RowProjection
 public import ToClean.Air.EnsembleProjection
+import ToClean.Air.EnsembleRelabel
 public import ToClean.Air.ExpressionScope
 public import ToClean.Air.TableSlot
 public import ToClean.Air.FixedPrefix
