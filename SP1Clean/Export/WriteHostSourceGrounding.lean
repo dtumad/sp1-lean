@@ -331,7 +331,7 @@ private theorem word_table_pair (witness : EnsembleWitness (HostObserved.ensembl
   let host := hostWitness witness
   have member := (List.of_mem_zip paired).2
   have left := host.same_data table (HostHintReadLocal.wordTables_mem host table member)
-  have right := witness.same_data (raw witness (.host (.word last))) ((originalSlot (.host (.word last))).table_mem witness)
+  have right := witness.same_data (raw witness (.host (.word last))) ((originalSlot image source target final (.host (.word last))).table_mem witness)
   have component := (List.forall₂_zip (HostHintReadLocal.wordTables_aligned host) paired).symm
   have actual := raw_registered witness (.host (.word last))
   change (raw witness (.host (.word last))).component = (HintReadCoverage.view last).component at actual

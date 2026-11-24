@@ -32,10 +32,10 @@ private theorem verifier_byte (data : ProverData F) :
     exact HostObserved.verifier_byte_requirements (image := image) (source := source) (target := target) (final := final) data
   exact verifier_of_eq ((appended image source target final).verifier.trans (verifier_eq image source target final)) old
 
-private theorem suffix_byte (c : Component F) (member : c ∈ tables source.host target.host)
+private theorem suffix_byte (c : Component F) (member : c ∈ tables source target)
     (env : Environment F) (checked : c.operations.ConstraintsHold env) : c.operations.ChannelRequirements byteChannel.toRaw env := by
   apply Operations.requirements_of_not_mem _ _ _ (c.inChannelsOrRequirements_of_constraints env checked) _
-  have absent : (byteChannel (p := SP1Prime)).name ∉ (tables source.host target.host).flatMap
+  have absent : (byteChannel (p := SP1Prime)).name ∉ (tables source target).flatMap
       (fun t => t.circuit.channelsWithRequirements.map RawChannel.name) := of_decide_eq_true rfl
   exact fun used => absent (List.mem_flatMap.mpr ⟨c, member, List.mem_map_of_mem used⟩)
 
@@ -98,15 +98,12 @@ theorem hint_word_bytes (w : EnsembleWitness (preprocessing image source target 
 both original hint-word tables using the complete native Byte ledger. -/
 theorem assembled_hint_word_bytes (w : EnsembleWitness (assembly image source target final))
     (checked : w.Constraints) (fit : w.InteractionsFit .logUp) (balanced : w.Balanced .logUp) (last : Bool) :
-    let observed := (WriteEffects.checker source.host target.host).project
-      (ens := preprocessing image source target final) w
-    (raw (supervisor observed) (.host (.word last))).ChannelGuarantees byteChannel.toRaw := by
-  let checker := WriteEffects.checker (p := SP1Prime) source.host target.host
+    (raw (supervisor (observed w)) (.host (.word last))).ChannelGuarantees byteChannel.toRaw := by
   let seen := preprocessing image source target final
   let span : TableSlot seen.tables WriteBuffer.spanComponent := slot image source target final 3
   have registered : byteChannel.toRaw ∈ seen.channels := seen.tables_channels _ (span.component_eq ▸ List.getElem_mem span.index.isLt)
     (show byteChannel.toRaw ∈ WriteBuffer.spanComponent.circuit.channels from List.mem_cons_self)
-  have funded := ((checker.project_balanced_iff (ens := seen) w).mp (EnsembleWitness.balancedChannels_of_balanced fit balanced)).1
-  exact hint_word_bytes (checker.project (ens := seen) w) ((checker.project_constraints w).mp checked) (funded _ registered) last
+  exact hint_word_bytes (observed w) ((observed_constraints w).mp checked)
+    (observed_balance w fit balanced _ registered (of_decide_eq_true rfl)) last
 
 end SP1Clean.Export.WriteObservationAssembly

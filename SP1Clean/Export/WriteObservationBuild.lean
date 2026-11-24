@@ -24,39 +24,39 @@ attribute [local irreducible] base withSources preprocessing
 /-- Assemble the complete observer suffix against the actual original supervisor. All arrays
 are canonically rebound to the shared public header and full list of tables. -/
 def build (original : EnsembleWitness (base image source target final)) (suffix : List (Table F))
-    (registered : suffix.map (·.component) = tables source.host target.host) :
+    (registered : suffix.map (·.component) = tables source target) :
     EnsembleWitness (preprocessing image source target final) :=
   (appended image source target final).extend (installSources original) suffix registered
 
 theorem build_heights (original : EnsembleWitness (base image source target final)) (suffix : List (Table F))
-    (registered : suffix.map (·.component) = tables source.host target.host) :
+    (registered : suffix.map (·.component) = tables source target) :
     (build original suffix registered).heights = original.heights ++ suffix.map (·.length) := by
   change ((appended image source target final).extend _ _ _).heights = _
   rw [Ensemble.AppendedTables.extend_heights]
   exact congrArg (fun hs => hs ++ suffix.map (·.length)) ((sameRows image source target final).symm.heights original)
 
 theorem build_ledger (original : EnsembleWitness (base image source target final)) (suffix : List (Table F))
-    (registered : suffix.map (·.component) = tables source.host target.host) (ch : RawChannel F) :
+    (registered : suffix.map (·.component) = tables source target) (ch : RawChannel F) :
     (build original suffix registered).interactionsWith ch =
       (installSources original).interactionsWith ch ++ suffix.flatMap (·.interactionsWith ch) :=
   (appended image source target final).extend_ledger _ suffix registered ch
 
 /-- Every suffix row uses its local circuit assertions and structural channels. -/
-theorem suffix_lookupFree (s t : HostState) : LookupFree (tables s t) := by
-  simp only [tables, LookupFree.cons_iff, LookupFree.nil, and_true]
-  refine ⟨Counted.supply_lookupFree, Counted.probe_lookupFree, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+theorem suffix_lookupFree (source target : ExecutionSnapshot) : LookupFree (tables source target) := by
+  let rest := (tables source target).drop 7
+  change LookupFree (ReadbackSupply.component :: WriteProbe.component :: WritePacket.component ::
+    WriteBuffer.spanComponent :: WriteBuffer.wordComponent :: WriteEffects.requestComponent :: WriteEffects.wordComponent :: rest)
+  simp only [LookupFree.cons_iff]
+  refine ⟨Counted.supply_lookupFree, Counted.probe_lookupFree, ?_, ?_, ?_, ?_, ?_, effect_lookupFree source target⟩
   all_goals apply Component.lookups_eq_nil_of_main; intro input offset
   · exact Guarded.main_lookups WritePacket.circuit WritePacket.guardSupported input offset
   · exact Guarded.main_lookups WriteBuffer.spanCircuit WriteBuffer.spanGuardSupported input offset
   · exact Guarded.main_lookups WriteBuffer.stepCircuit WriteBuffer.stepGuardSupported input offset
   · exact Guarded.main_lookups WriteEffects.requestCircuit WriteEffects.requestGuardSupported input offset
   · exact Guarded.main_lookups WriteEffects.wordCircuit WriteEffects.wordGuardSupported input offset
-  · rfl
-  · exact Guarded.main_lookups WriteEffects.laneCircuit WriteEffects.laneGuardSupported input offset
-  · exact Guarded.main_lookups WriteEffects.byteStepCircuit WriteEffects.byteStepGuardSupported input offset
 
 theorem build_constraints (w : EnsembleWitness (base image source target final)) (suffix : List (Table F))
-    (registered : suffix.map (·.component) = tables source.host target.host) (prior : w.Constraints)
+    (registered : suffix.map (·.component) = tables source target) (prior : w.Constraints)
     (added : ∀ t ∈ suffix, t.Constraints) : (build w suffix registered).Constraints := by
   let placement := appended image source target final
   apply placement.extend_constraints (installSources w) suffix registered _ (installSources_constraints w prior) added
