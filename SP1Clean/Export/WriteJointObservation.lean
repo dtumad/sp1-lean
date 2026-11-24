@@ -3,6 +3,7 @@ import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteMixedFixedResources
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteEndpointJoins
+import SP1Clean.Export.WritePublicPermissions
 import SP1Clean.Export.WriteInstalledMetadata
 import SP1Clean.Proofs.Completeness.WriteStreamTerminal
 import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
@@ -95,6 +96,7 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
             (∀ t ∈ (full.tables.drop (installSources w).tables.length).take front.length, t.Constraints ∧ t.Guarantees) ∧
             (∀ id, WriteMixedHostTables.InstalledAt pre id (WriteMixedHostTables.table release.1 data id)) ∧
             (∀ d, LogUpBalanced (full.interactionsWith (HostCommitChip.stateChannel d).toRaw)) ∧
+            LogUpBalanced (full.interactionsWith WritePermissionProvider.channel.toRaw) ∧
             (∀ ch ∈ readProtocols, LogUpBalanced (full.interactionsWith ch)) ∧
             (∀ ch ∈ fundedProtocols, LogUpBalanced (full.interactionsWith ch) ∧
               (Balance.logUp (F := F)).fits (full.interactionsWith ch).length = true ∧ BalancedInteractions (full.interactionsWith ch)) ∧
@@ -158,11 +160,12 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   intro pre full
   obtain ⟨frontValid,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets remaining) tail ptail
   have endpoints := installed_endpoint_ledgers w suffix reg (s.groups data) plan _ _ rfl rfl rfl rfl
-  refine ⟨frontValid,banks,?_,?_,?_,?_,?_,?_,?_⟩
+  refine ⟨frontValid,banks,?_,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)
     rw [public_bank pre d _ (banks (.bank d none))]
     exact bankPaid d
+  · exact WriteMixedPermissionLedger.public_balanced release routed data hint (inputs entries).packets header remaining suffix reg
   · intro ch member
     change LogUpBalanced ((withPublicChecks pre).interactionsWith ch)
     rw [public_read pre ch member]
