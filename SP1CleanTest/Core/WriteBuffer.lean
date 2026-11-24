@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Operations.WriteBufferPhysical
+import SP1Clean.Proofs.Completeness.WriteGroupRows
 import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 import ToClean.Air.EnsembleCheck
@@ -106,6 +107,31 @@ theorem rejectsChangedEffects :
 theorem excludesOverflow :
     [(2 ^ 48, 1), (2 ^ 48 - 1, 2), (2 ^ 48 + 1, 0), (65536, 2 ^ 64 - 65536)].all
       (fun (address, length) => !(evalRow spanComponent (Span.populate (header 7 address length), 1)).1) = true := by
+  native_decide
+
+private def acrossBlocks : WriteEffects.Group F :=
+  let octets : WriteEffects.Octets F := ⟨Address.ofNat 65536, Address.ofNat 17, #v[90,91,92,93,7,8,9,10]⟩
+  WriteEffects.Group.populate octets 1 (Address.ofNat 0) 4 4 7 ((List.range 11).map (BitVec.ofNat 8))
+
+/-- An unaligned output crosses at byte seven and ends in a three-byte final block.
+Changing the second block's first lane or using its padded fourth lane is rejected. -/
+theorem groupedCrossing :
+    let row := acrossBlocks
+    [(evalRow WriteEffects.groupComponent (row,1)).1,
+     (evalRow WriteEffects.groupComponent ({row with right := row.right.set 0 77},1)).1,
+     (evalRow WriteEffects.groupComponent ({row with rightSize := 2},1)).1] = [true,false,false] := by
+  native_decide
+
+/-- Disabled rows and ignored writes retain both syntactic block occurrences. Only a
+nonempty observed destination funds them, even when the input word crosses the boundary. -/
+theorem groupedBlockCounts :
+    let row := acrossBlocks
+    let counts := fun (r : WriteEffects.Group F) (active : F) =>
+      ((evalRow WriteEffects.groupComponent (r,active)).2.filter
+        (fun e => e.channel.name == (WriteEffects.blockChannel (p := SP1Prime)).name)).map (·.mult)
+    let ignored := {row with ignored := 1, previous := {row.previous with sink := 0}}
+    counts row 1 = [1,1] ∧ counts row 0 = [0,0] ∧
+      (evalRow WriteEffects.groupComponent (ignored,1)).1 = true ∧ counts ignored 1 = [0,0] := by
   native_decide
 
 end SP1CleanTest.Core.WriteBuffer

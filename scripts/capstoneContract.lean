@@ -1,3 +1,5 @@
+import SP1Clean.Proofs.Completeness.WritePlacementCapacity
+import SP1Clean.Proofs.Completeness.WriteWindowTape
 import SP1Clean.Export.InstalledBoundaryGrowth
 import SP1Clean.FormalModel.Contracts.StockPublicOutput
 import Lean
@@ -175,6 +177,19 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
   ``SP1Clean.TraceGen.WriteObservations.packets_at,
   ``SP1Clean.Export.WriteObservationAssembly.statement_iff,
+  ``SP1Clean.Export.WriteObservationAssembly.table_count,
+  ``SP1Clean.Export.WriteObservationAssembly.queue_slots,
+  ``SP1Clean.Export.WriteObservationAssembly.withCursors_ledger,
+  ``SP1Clean.Export.WriteObservationAssembly.effect_lookupFree,
+  ``SP1Clean.WriteEffects.groups_of_admissibleExecution,
+  ``SP1Clean.WriteEffects.placement_occurrences,
+  ``SP1Clean.WriteEffects.admissible_placement_heights,
+  ``SP1Clean.WriteEffects.admissible_fixed_heights,
+  ``SP1Clean.WriteEffects.Group.populate_valid,
+  ``SP1Clean.WriteEffects.Group.populate_match_iff,
+  ``SP1Clean.WriteEffects.block_authenticates,
+  ``SP1Clean.WriteEffects.metadata_available,
+  ``SP1Clean.WriteEffects.group_ledger,
   ``SP1Clean.Export.WriteObservationAssembly.statement_iff_of_execution,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_stream_height,
   ``SP1Clean.TraceGen.admissibleExecution_hintSnapshot,

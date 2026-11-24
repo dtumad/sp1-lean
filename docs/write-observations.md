@@ -127,13 +127,24 @@ the host-effect receivers. [Physical components](../SP1Clean/Proofs/Operations/W
 
 ## Native stream and queue endpoints
 
-The native observer decorates 31 of the supervisor’s 98 tables. Its packet, span, word and
-lane tables join memory observations by the full incoming clock and address. A selected
-byte also carries its destination position. For each active fixed transcript record, the
-public source and target snapshots determine the bytes, hook ordinal and metadata. The
-public checker enforces the three output prefixes, the consumed reply prefix, the matching
-request suffix, and representability of every fixed record. Every resource-admissible mixed
-execution satisfies these checks. [Observer assembly](../SP1Clean/Export/WriteObservationAssembly.lean) · [Execution theorem](../SP1Clean/Proofs/Completeness/WriteStreamExecution.lean)
+The native observer decorates 31 of the supervisor’s 98 tables and registers 15 additional
+tables. Its classified WRITE header opens a guest interval at the incoming ECALL clock.
+Each grouped word consumes its original eight observed lanes. The receipt checks the selected
+lanes against one or two aligned destination blocks and checks the last block's actual extent.
+This preserves empty and ignored writes, repeated positions, and writes crossing a block
+boundary. The public verifier seeds all four chronological counters and requires the final
+stdout, stderr, public-output and hook positions from the two snapshots. Hook metadata includes
+the supplied reply's descriptor, request length and number of returned hints. Fresh node
+allocation during WRITE and the corresponding arbitrary-witness host theorem remain open.
+[Observer assembly](../SP1Clean/Export/WriteObservationAssembly.lean) · [Grouped row construction](../SP1Clean/Proofs/Completeness/WriteGroupRows.lean) · [Rows from an admitted WRITE](../SP1Clean/Proofs/Completeness/WriteWindowTape.lean)
+
+At the native read and tick limits the call demand pads to at most `2^16` rows and grouped
+word demand to at most `2^28`. Each word emits two physical block occurrences. Decoding
+and dispatch spend four shared SP1 Byte occurrences per padded word and per padded call,
+respectively. Fixed payload blocks and metadata rows fit heights `2^29` and `2^30` under the
+existing endpoint budgets. These bounds measure this fragment. Other components on the same
+channel also contribute to the complete assembly total.
+[Joint occurrence formula](../SP1Clean/Proofs/Completeness/WritePlacementCapacity.lean) · [Paid fixed heights](../SP1Clean/Proofs/Completeness/WriteFixedDataCapacity.lean)
 
 To recover the outgoing hints, follow the final private head through the persistent store.
 Each node lookup fixes its tail and length. Each word lookup fixes eight bytes and the
