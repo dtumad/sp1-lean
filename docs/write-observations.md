@@ -97,8 +97,8 @@ When this total fits the prime field, raw receipt balance and the supplier’s p
 trace each positive version to a specific original source. All original guest Memory multiplicities and padding are preserved. At canonical
 ordinary-block data, mixed execution constructs each protected ordinary table with one to
 three predecessor occurrences on every physical row. ECALL contributes three and each
-HINT_READ word contributes one. Installing the whole group alongside the packet, span and
-probe components still requires closing their combined ledgers at assembly data.
+HINT_READ word contributes one. The observer installs each publisher at its original physical position. Projecting an accepted native
+witness back to the supervisor still requires recovering its State and Memory histories alongside the eighth host receiver.
 [Source inventory](../SP1Clean/Soundness/WriteAccessInventory.lean) · [Mixed ordinary construction](../SP1Clean/Proofs/Completeness/WriteOrdinaryTables.lean) · [Mixed refresh construction](../SP1Clean/Export/WriteRefreshTables.lean)
 
 ## Read-only probe demand
@@ -124,3 +124,24 @@ the interval to occur exactly once. An empty unaligned buffer observes its conta
 word. An empty aligned buffer at `2^48` has no word rows and preserves the one-past
 endpoint. The span and word rows forward the complete checked header and raw word to
 the host-effect receivers. [Physical components](../SP1Clean/Proofs/Operations/WriteBufferPhysical.lean) · [Exact coverage](../SP1Clean/Soundness/WriteBufferCoverage.lean) · [Table construction](../SP1Clean/Proofs/Completeness/WriteBufferTables.lean)
+
+## Native stream and queue endpoints
+
+The native observer decorates 31 of the supervisor’s 98 tables. Its packet, span, word and
+lane tables join memory observations by the full incoming clock and address. A selected
+byte also carries its destination position. For each active fixed transcript record, the
+public source and target snapshots determine the bytes, hook ordinal and metadata. The
+public checker enforces the three output prefixes, the consumed reply prefix, the matching
+request suffix, and representability of every fixed record. Every resource-admissible mixed
+execution satisfies these checks. [Observer assembly](../SP1Clean/Export/WriteObservationAssembly.lean) · [Execution theorem](../SP1Clean/Proofs/Completeness/WriteStreamExecution.lean)
+
+To recover the outgoing hints, follow the final private head through the persistent store.
+Each node lookup fixes its tail and length. Each word lookup fixes eight bytes and the
+last-word flag, including the padding word of an empty hint. Reaching pointer zero after
+the last target buffer establishes equality of the complete queue. This permits a final
+head or allocation frontier larger than the queue length after a pop.
+[Snapshot lookup characterization](../SP1Clean/Semantics/Host/HintQueueSnapshot.lean)
+
+The full native acceptance theorem still needs to connect consecutive WRITE clocks, close
+all per-stream positions, and connect the final queue walk to the physical host state and
+node providers. The stock SDK digest statement above applies independently.

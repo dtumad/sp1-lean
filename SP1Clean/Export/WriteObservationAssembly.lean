@@ -1,7 +1,7 @@
 import SP1Clean.Export.WriteSourceInstallation
 import SP1Clean.Proofs.Chips.WritePacket.Ledger
 import SP1Clean.Proofs.Operations.WriteProbeLedger
-import SP1Clean.Proofs.Operations.WriteEffects
+import SP1Clean.Proofs.Operations.WritePlacement
 import SP1Clean.Native.Operations.WriteStreamSource
 import SP1Clean.Proofs.Completeness.WriteStreamExecution
 
@@ -9,8 +9,8 @@ import SP1Clean.Proofs.Completeness.WriteStreamExecution
 
 The supervisor reads x12 and guest memory at the incoming ECALL clock. This installation
 binds the physical sources, the counted version supply, packet and ordered buffer rows,
-and the inputs to host dispatch. The fixed stream provider depends on the two host snapshots.
-The chronological consumer of the classified requests, decoded octets and fixed records
+the classified requests, and the position-keyed guest bytes. The fixed stream provider depends on the two host snapshots.
+The chronological consumer of the packet positions, requests and allocated queue nodes
 is a further installation.
 -/
 
@@ -25,13 +25,14 @@ private abbrev F := ZMod SP1Prime
 def channels : List (RawChannel F) :=
   [versionChannel.toRaw, readChannel.toRaw, WritePacket.channel.toRaw, WriteBuffer.channel.toRaw,
    WriteBuffer.effectHeaderChannel.toRaw, WriteBuffer.wordChannel.toRaw, WriteEffects.requestChannel.toRaw,
-   WriteEffects.octetsChannel.toRaw, WriteEffects.recordChannel.toRaw]
+   WriteEffects.octetsChannel.toRaw, WriteEffects.recordChannel.toRaw, WriteEffects.byteChannel.toRaw,
+   WriteEffects.positionChannel.toRaw, WriteEffects.nodeByteChannel.toRaw]
 
 /-- Packet and preprocessing components in physical order. -/
 def tables (source target : HostState) : List (Component F) :=
   [ReadbackSupply.component, WriteProbe.component, WritePacket.component, WriteBuffer.spanComponent,
     WriteBuffer.wordComponent, WriteEffects.requestComponent, WriteEffects.wordComponent,
-    WriteEffects.streamComponent source target]
+    WriteEffects.streamComponent source target, WriteEffects.laneComponent, WriteEffects.byteStepComponent]
 
 private def protocols : List (RawChannel F) :=
   HostCallChip.channel.toRaw :: byteChannel.toRaw :: readbackChannel.toRaw :: channels
@@ -50,16 +51,20 @@ private theorem tables_registered (source target : HostState) (c : Component F) 
   let octets := (WriteEffects.octetsChannel (p := SP1Prime)).toRaw
   let record := (WriteEffects.recordChannel (p := SP1Prime)).toRaw
   let byte := (byteChannel (p := SP1Prime)).toRaw
+  let lane := (WriteEffects.byteChannel (p := SP1Prime)).toRaw
+  let position := (WriteEffects.positionChannel (p := SP1Prime)).toRaw
+  let node := (WriteEffects.nodeByteChannel (p := SP1Prime)).toRaw
   have declarations : (tables source target).map (·.circuit.channels) =
       [[readback, versions], [versions, read], [calls, read, packet],
        [byte, byte, byte, byte, byte, byte, packet, cursor, cursor, header],
-       [byte, cursor, read, cursor, word], [header, request], [word, byte, octets], [record]] := by rfl
+       [byte, cursor, read, cursor, word], [header, request], [word, byte, octets], [record],
+       [octets, lane], [position, lane, byte, byte, record, record, node, position]] := by rfl
   have actual := List.mem_map_of_mem (f := fun t : Component F => t.circuit.channels) member
   rw [declarations] at actual
-  change c.circuit.channels ⊆ [calls, byte, readback, versions, read, packet, cursor, header, word, request, octets, record]
+  change c.circuit.channels ⊆ [calls, byte, readback, versions, read, packet, cursor, header, word, request, octets, record, lane, position, node]
   intro ch used
   simp only [List.mem_cons, List.not_mem_nil, or_false] at actual
-  rcases actual with h | h | h | h | h | h | h | h <;> rw [h] at used <;>
+  rcases actual with h | h | h | h | h | h | h | h | h | h <;> rw [h] at used <;>
     simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢ <;> tauto
 
 variable (image : ProgramImage) (source target : ExecutionSnapshot) (final : HostHintQueue.State F)
@@ -92,7 +97,8 @@ private theorem freshChannels :
 
 private def tableNames := ["sp1.native.write_readback_supply", "sp1.native.write_probe.row",
     "sp1.native.write_packet_header", "sp1.native.write_buffer_span", "sp1.native.write_buffer_word",
-    "sp1.native.write_route", "sp1.native.write_octets", "sp1.native.write_fixed_stream.source"]
+    "sp1.native.write_route", "sp1.native.write_octets", "sp1.native.write_fixed_stream.source",
+    "sp1.native.write_byte_lanes", "sp1.native.write_position"]
 
 private theorem table_names (a b : HostState) : (tables a b).map (·.circuit.name) = tableNames := rfl
 
@@ -113,7 +119,7 @@ private theorem freshTables :
     intro a old b added equal
     subst b
     simp only [tableNames, List.mem_cons, List.not_mem_nil, or_false] at added
-    rcases added with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases added with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       revert old <;> exact of_decide_eq_true rfl
 
 private theorem protocols_registered : protocols ⊆ channels ++ (decorated image source target final).channels := by
@@ -150,20 +156,20 @@ def preprocessing : Ensemble F SP1PublicIO :=
       · exact List.mem_append_right _ (old.tables_channels c oldRow used)
       · exact protocols_registered image source target final (tables_registered _ _ c newRow used) }
 
-/-- The 98 supervisor components retain their positions; eight packet and effect tables follow. -/
-theorem table_count : (preprocessing image source target final).tables.length = 106 := by
+/-- The 98 supervisor components retain their positions; ten packet and effect tables follow. -/
+theorem table_count : (preprocessing image source target final).tables.length = 108 := by
   change ((withSources image source target final).tables ++ tables source.host target.host).length = _
   rw [List.length_append, WriteSourceRegistry.tables_eq, List.length_mapIdx, base_length]
   rfl
 
 /-- Read an observation component at its physical suffix position without consulting a name or a hint. -/
-def slot (index : Fin 8) : TableSlot (preprocessing image source target final).tables
+def slot (index : Fin 10) : TableSlot (preprocessing image source target final).tables
     (tables source.host target.host)[index.val] :=
   (TableSlot.ofIndex (tables source.host target.host) ⟨index.val, index.isLt⟩).appendRight
     (withSources image source target final).tables
 
 /-- Check the public host endpoints used by the fixed stream provider. This stage still
-exports requests, octets and fixed records for the chronological WRITE consumer. -/
+exposes packet positions and node bytes to the chronological WRITE consumer. -/
 def assembly : Ensemble F SP1PublicIO :=
   (WriteEffects.checker source.host target.host).install (preprocessing image source target final)
 

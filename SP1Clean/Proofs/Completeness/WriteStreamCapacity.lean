@@ -30,7 +30,8 @@ private theorem count_indexed {α β : Type} (xs : List α) (rows : α × Nat �
     simp only [List.map_cons, List.sum_cons]
     exact Nat.add_le_add (bound y.1 y.2) ih
 
-private theorem count_queries (s : WriteStreams) : (queries s).length ≤ streamCost s := by
+/-- Each physical query is charged to a stream header, an output byte or an input reply. -/
+theorem queries_length_le (s : WriteStreams) : (queries s).length ≤ streamCost s := by
   unfold queries streamCost
   simp only [List.length_append, byteQueries, List.length_cons, List.length_map, List.length_range]
   have each (reply : HookReply) (r : Nat) :
@@ -68,7 +69,7 @@ private theorem sane_bytes {s : WriteStreams} {key : StreamKey} {bytes : Bytes} 
 
 /-- The endpoint byte measure rules out all missing lookups and every coordinate/metadata wrap. -/
 theorem inventoryOK_of_cost (s : WriteStreams) (bytes : streamCost s < 2^48) : inventoryOK s = true := by
-  refine (inventoryOK_iff _).mpr ⟨(count_queries s).trans_lt bytes, ?_⟩
+  refine (inventoryOK_iff _).mpr ⟨(queries_length_le s).trans_lt bytes, ?_⟩
   intro q member
   simp only [queries, List.mem_append] at member
   unfold streamCost at bytes

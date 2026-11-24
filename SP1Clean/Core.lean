@@ -48,6 +48,11 @@ import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.WriteEffects
+import SP1Clean.FormalModel.Contracts.WritePlacement
+import SP1Clean.Native.Operations.AddressSum
+import SP1Clean.Native.Operations.WriteByteStep
+import SP1Clean.Native.Operations.WriteLanes
+import SP1Clean.Proofs.Operations.WritePlacement
 import SP1Clean.Native.Operations.WriteDescriptor
 import SP1Clean.Native.Operations.WriteEffects
 import SP1Clean.Native.Operations.WriteStreamBoundary
@@ -179,6 +184,7 @@ import SP1Clean.Semantics.Host.HintQueue
 import SP1Clean.Semantics.Host.HintQueueSuffix
 import SP1Clean.Semantics.Host.HintQueueEvent
 import SP1Clean.Semantics.Host.HintQueueRecords
+import SP1Clean.Semantics.Host.HintQueueSnapshot
 import SP1Clean.Semantics.Host.HintQueueWordRecords
 import SP1Clean.Semantics.Host.HintQueueWords
 import SP1Clean.Semantics.Host.HostExecution
