@@ -54,6 +54,7 @@ import SP1Clean.FormalModel.Contracts.WritePacket
 import SP1Clean.Native.Chips.WritePacket.Defs
 import SP1Clean.Proofs.Chips.WritePacket.Formal
 import SP1Clean.Proofs.Chips.WritePacket.Ledger
+import SP1Clean.FormalModel.Contracts.WriteBuffer
 import SP1Clean.FormalModel.Contracts.WriteProbe
 import SP1Clean.FormalModel.Contracts.WriteReadback
 import SP1Clean.FormalModel.Contracts.OrdinaryObservation
@@ -390,6 +391,8 @@ import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Circuits.Gadgets.U16toU8Safe
 import SP1Clean.Native.Operations.WordRangeCheck
+import SP1Clean.Native.Operations.WriteBuffer
+import SP1Clean.Native.Operations.WriteCellEndpoint
 import SP1Clean.Native.Operations.WriteProbe
 import SP1Clean.Native.Operations.WriteProbeRegisterBoundary
 import SP1Clean.Native.Operations.WriteProbeReadback
@@ -574,6 +577,10 @@ import SP1Clean.Proofs.Operations.AddressDiv8
 import SP1Clean.Proofs.Operations.AddwOperation.Formal
 import SP1Clean.Proofs.Operations.CommitmentStatement
 import SP1Clean.Proofs.Operations.ClockOrderPopulate
+import SP1Clean.Proofs.Operations.WriteBuffer
+import SP1Clean.Proofs.Operations.WriteBufferLedger
+import SP1Clean.Proofs.Operations.WriteBufferPhysical
+import SP1Clean.Proofs.Operations.WriteCellEndpoint
 import SP1Clean.Proofs.Operations.WriteProbe
 import SP1Clean.Proofs.Operations.WriteProbeLedger
 import SP1Clean.Proofs.Chips.WriteProbeRefresh

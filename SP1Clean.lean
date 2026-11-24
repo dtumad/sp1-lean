@@ -116,11 +116,14 @@ import SP1Clean.Proofs.Completeness.OrdinaryBucketCapacity
 import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
 import SP1Clean.Proofs.Completeness.MixedStateSchedule
 import SP1Clean.Proofs.Completeness.MixedBumpInventory
+import SP1Clean.Soundness.WriteBufferCoverage
 import SP1Clean.Soundness.WriteObservationHistory
 import SP1Clean.Soundness.WriteVersionIntervals
 import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
+import SP1Clean.Proofs.Completeness.WriteBufferRows
+import SP1Clean.Proofs.Completeness.WriteBufferTables
 import SP1Clean.Proofs.Completeness.WriteProbeDemand
 import SP1Clean.Proofs.Completeness.WriteProbeInputs
 import SP1Clean.Proofs.Completeness.WriteProbeTables
@@ -316,6 +319,7 @@ import SP1Clean.Soundness.ProtectedLocalCoreProjection
 import SP1Clean.Soundness.ProtectedLocalCoreRom
 import SP1Clean.Soundness.ProtectedStoreFootprints
 import SP1Clean.Soundness.ProtectedStorePermissions
+import SP1Clean.Soundness.RankedCoverage
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring

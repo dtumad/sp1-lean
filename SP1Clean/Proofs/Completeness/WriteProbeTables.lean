@@ -1,7 +1,6 @@
 import SP1Clean.Proofs.Completeness.WriteProbeInputs
 import SP1Clean.Proofs.Operations.WriteProbeLedger
-import ToClean.Air.TableBuild
-import ToClean.Air.DemandPadding
+import ToClean.Air.GuardedDemandTable
 
 /-! # Building the physical native WRITE observation table
 
@@ -16,39 +15,26 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Honest physical rows in demand order followed by zero-activity padding. -/
 def physicalInputs (inputs : List (Inputs (ZMod p))) : List (RowInput (ZMod p)) :=
-  inputs.map (fun input => (input, 1)) ++ List.replicate (WitnessGeneration.demandPadding inputs.length) 0
+  WitnessGeneration.guardedRows inputs
 
 omit [Fact (2 ^ 17 < p)] in
 theorem physicalInputs_length (inputs : List (Inputs (ZMod p))) :
-    (physicalInputs inputs).length = WitnessGeneration.demandHeight inputs.length := by
-  simp [physicalInputs, WitnessGeneration.add_demandPadding]
+    (physicalInputs inputs).length = WitnessGeneration.demandHeight inputs.length := WitnessGeneration.guardedRows_length inputs
 
 /-- Generate the complete demand-padded table with Clean's ordinary row builder and private inputs. -/
 def table (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (height : WitnessGeneration.demandHeight inputs.length ≤ UInt64.size) : Table (ZMod p) :=
   let rows := physicalInputs inputs
-  Table.build component rows (component.inputData rows data) (.empty _)
-    ((physicalInputs_length inputs).trans_le height) (by trivial) (component.inputData_consistent rows data)
+  Table.ofInputs component rows data ((physicalInputs_length inputs).trans_le height) (fun _ => trivial)
 
 /-- Honest inputs derived from the physical versions produce all flat constraints and guarantees.
 No history oracle, dynamic table, or additional trace event is supplied in the prover data. -/
 theorem table_complete {inputs : List (Inputs (ZMod p))} (honest : ∀ input ∈ inputs, ProverAssumptions input)
     (data : ProverData (ZMod p)) (height : WitnessGeneration.demandHeight inputs.length ≤ UInt64.size) :
     (table inputs data height).Constraints ∧ (table inputs data height).Guarantees := by
-  let rows := physicalInputs inputs
-  have all row (member : row ∈ rows) :
-      guarded.ProverAssumptions row (component.inputData rows data) (ProverHint.empty _) := by
-    rcases List.mem_append.mp member with active | padding
-    · obtain ⟨input, found, rfl⟩ := List.mem_map.mp active
-      exact ⟨Or.inr rfl, fun _ => honest input found⟩
-    · obtain ⟨_, rfl⟩ := List.mem_replicate.mp padding
-      exact ⟨Or.inl rfl, fun impossible => (zero_ne_one impossible).elim⟩
-  unfold table
-  constructor
-  · apply Table.build_constraints
-    exact all
-  · apply Table.build_guarantees
-    exact all
+  exact Table.ofInputs_valid (component (p := p)) (physicalInputs inputs) data
+    ((physicalInputs_length inputs).trans_le height) (fun _ => trivial)
+    (WitnessGeneration.guardedRows_all (F := ZMod p) ProverAssumptions honest)
 
 private theorem table_ledger (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (height : WitnessGeneration.demandHeight inputs.length ≤ UInt64.size) (channel : RawChannel (ZMod p))
@@ -56,16 +42,8 @@ private theorem table_ledger (inputs : List (Inputs (ZMod p))) (data : ProverDat
     (point : ∀ env, component.operations.interactionValuesWith channel env =
         values (valueFromOffset RowInput 0 env)) :
     (table inputs data height).interactionsWith channel = (physicalInputs inputs).flatMap values := by
-  let rows := physicalInputs inputs
-  let own := component.inputData rows data
-  let evaluated := fun physical => component.operations.interactionValuesWith channel (Environment.fromArray physical own)
-  let build := fun input => component.buildRow input own (ProverHint.empty _)
-  change (rows.map build).flatMap evaluated = rows.flatMap values
-  refine (List.flatMap_map build evaluated rows).trans ?_
-  apply List.flatMap_congr
-  intro row _
-  have same := component.rowInput_buildRow row own own (ProverHint.empty _)
-  exact (point _).trans (congrArg values same)
+  exact Table.ofInputs_ledger (component (p := p)) (physicalInputs inputs) data
+    ((physicalInputs_length inputs).trans_le height) (fun _ => trivial) channel values point
 
 /-- The input-side signed ledger preserves every occurrence, including aliased requests and padding. -/
 theorem table_versions (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) (height) :
