@@ -1,7 +1,7 @@
 import SP1Clean.Semantics.Transition.TransitionView
 import SP1Clean.Semantics.Transition.AccessSchedule
 import SP1Clean.Semantics.Execution.ExecutionEncoding
-import SP1Clean.Proofs.Completeness.EventBuckets
+import SP1Clean.Proofs.Completeness.InstructionPredecessors
 
 /-!
 # One-transition instruction-event compilation
@@ -307,7 +307,7 @@ private theorem instructionEventFor?_utype {args : BitVec 20 × regidx × uop}
     (clk pc opcode : ℕ) : (instructionEventFor? id (.UTYPE args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op
@@ -326,7 +326,7 @@ private theorem instructionEventFor?_jal {args : BitVec 21 × regidx}
     (clk pc opcode : ℕ) : (instructionEventFor? id (.JAL args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rd⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   all_goals
@@ -343,7 +343,7 @@ private theorem instructionEventFor?_jalr {args : BitVec 12 × regidx × regidx}
     (clk pc opcode : ℕ) : (instructionEventFor? id (.JALR args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs1, rd⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   all_goals
@@ -360,7 +360,7 @@ private theorem instructionEventFor?_btype {args : BitVec 13 × regidx × regidx
     (clk pc opcode : ℕ) : (instructionEventFor? id (.BTYPE args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs2, rs1, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op
@@ -379,7 +379,7 @@ private theorem instructionEventFor?_itype {args : BitVec 12 × regidx × regidx
     (clk pc opcode : ℕ) : (instructionEventFor? id (.ITYPE args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs1, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op <;> cases flag : regidxIsX0 rd
@@ -398,7 +398,7 @@ private theorem instructionEventFor?_shiftiop {args : BitVec 6 × regidx × regi
     (clk pc opcode : ℕ) : (instructionEventFor? id (.SHIFTIOP args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs1, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op <;> cases flag : regidxIsX0 rd
@@ -417,7 +417,7 @@ private theorem instructionEventFor?_rtype {args : regidx × regidx × regidx ×
     (clk pc opcode : ℕ) : (instructionEventFor? id (.RTYPE args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op <;> cases flag : regidxIsX0 rd
@@ -436,7 +436,7 @@ private theorem instructionEventFor?_load {args : BitVec 12 × regidx × regidx 
     (clk pc opcode : ℕ) : (instructionEventFor? id (.LOAD args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs1, rd, isU, width⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   simp only [loadOpcode] at routed
@@ -456,7 +456,7 @@ private theorem instructionEventFor?_store {args : BitVec 12 × regidx × regidx
     (clk pc opcode : ℕ) : (instructionEventFor? id (.STORE args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs2, rs1, width⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   simp only [storeOpcode] at routed
@@ -475,7 +475,7 @@ private theorem instructionEventFor?_addiw {args : BitVec 12 × regidx × regidx
     (clk pc opcode : ℕ) : (instructionEventFor? id (.ADDIW args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs1, rd⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases flag : regidxIsX0 rd
@@ -494,7 +494,7 @@ private theorem instructionEventFor?_rtypew {args : regidx × regidx × regidx �
     (clk pc opcode : ℕ) : (instructionEventFor? id (.RTYPEW args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op <;> cases flag : regidxIsX0 rd
@@ -513,7 +513,7 @@ private theorem instructionEventFor?_shiftiwop {args : BitVec 5 × regidx × reg
     (clk pc opcode : ℕ) : (instructionEventFor? id (.SHIFTIWOP args) stamped clk pc opcode).isSome := by
   rcases args with ⟨imm, rs1, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases op <;> cases flag : regidxIsX0 rd
@@ -532,7 +532,7 @@ private theorem instructionEventFor?_mul {args : regidx × regidx × regidx × m
     (clk pc opcode : ℕ) : (instructionEventFor? id (.MUL args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, op⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   rcases op with ⟨part, signed1, signed2⟩
@@ -552,7 +552,7 @@ private theorem instructionEventFor?_mulw {args : regidx × regidx × regidx}
     (clk pc opcode : ℕ) : (instructionEventFor? id (.MULW args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases flag : regidxIsX0 rd
@@ -571,7 +571,7 @@ private theorem instructionEventFor?_div {args : regidx × regidx × regidx × B
     (clk pc opcode : ℕ) : (instructionEventFor? id (.DIV args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, isU⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases isU <;> cases flag : regidxIsX0 rd
@@ -590,7 +590,7 @@ private theorem instructionEventFor?_divw {args : regidx × regidx × regidx × 
     (clk pc opcode : ℕ) : (instructionEventFor? id (.DIVW args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, isU⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases isU <;> cases flag : regidxIsX0 rd
@@ -609,7 +609,7 @@ private theorem instructionEventFor?_rem {args : regidx × regidx × regidx × B
     (clk pc opcode : ℕ) : (instructionEventFor? id (.REM args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, isU⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases isU <;> cases flag : regidxIsX0 rd
@@ -628,7 +628,7 @@ private theorem instructionEventFor?_remw {args : regidx × regidx × regidx × 
     (clk pc opcode : ℕ) : (instructionEventFor? id (.REMW args) stamped clk pc opcode).isSome := by
   rcases args with ⟨rs2, rs1, rd, isU⟩
   simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
-  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  simp only [instructionAccessSlots, instructionOperands, List.map_cons, List.map_nil, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
   rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
   repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
   cases isU <;> cases flag : regidxIsX0 rd
@@ -885,10 +885,11 @@ theorem compileInstructionEvent?_accessPlan_generated
   rw [projectSP1Transition?_accesses projected]
   exact compileInstructionEvent?_accessPlan generated
 
-/-- The compiled instruction keeps the full refresh-aware schedule of its canonical access plan. -/
+/-- The routed event retains exactly the schedule applied to its original incoming frontier,
+including all high-window refreshes and the order of aliased operands. -/
 theorem compileInstructionEvent?_schedule {view : SP1TransitionView} {frontier : AccessFrontier}
-    {clock : ℕ} {row : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clock = some row) :
-    row.schedule = scheduleAccessPlan frontier clock row.plan := by
+    {clk : ℕ} {result : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clk = some result) :
+    result.schedule = scheduleAccessPlan frontier clk result.plan := by
   obtain ⟨_, _, _, _, rfl⟩ := compileInstructionEvent?_components generated
   rfl
 
@@ -1581,5 +1582,180 @@ theorem compileInstructionEvent?_branch_fields {view : SP1TransitionView} {front
       exact ⟨rfl, by simpa [ITypeEvent.rs1BV] using values.2, by simpa [ITypeEvent.rs2BV] using values.1, rfl, rfl⟩
     · contradiction
   · contradiction
+
+private theorem predecessor_register {t : StampedTouch} {slot : AccessSlot} {i : BitVec 5}
+    (key : t.touch.operand = (slot, some i)) :
+    operandPredecessor t = ⟨i.toNat, t.touch.pulled.toNat, t.previous, true⟩ := by
+  have reg := congrArg Prod.snd key
+  cases loc : t.touch.loc with
+  | reg index =>
+    change (match t.touch.loc with | .reg j => some j | .ram _ => none) = some i at reg
+    rw [loc] at reg
+    cases Option.some.inj reg
+    simp [operandPredecessor, loc, MemLoc.busAddress]
+  | ram cell => simp [PlannedTouch.operand, loc] at reg
+
+private abbrev OperandsMatch (stamped : List StampedTouch) (decoded : instruction) :=
+  stamped.map (fun t => t.touch.operand) = instructionOperands decoded
+
+private theorem cba_operands {decoded : instruction} {c b a : BitVec 5}
+    (found : cbaRegisters? decoded = some (c, b, a)) :
+    instructionOperands decoded = [(.opC, some c), (.opB, some b), (.opA, some a)] := by
+  cases decoded <;> rename_i args <;> cases args <;> simp only [cbaRegisters?, Option.some.injEq, Prod.mk.injEq] at found
+  all_goals first | contradiction | obtain ⟨rfl, rfl, rfl⟩ := found; rfl
+
+private theorem rType_predecessors {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ}
+    {e : RTypeEvent} (shape : OperandsMatch stamped decoded) (made : rTypeEvent? decoded stamped clk pc opcode = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold rTypeEvent? at made
+  obtain ⟨⟨ci, bi, ai⟩, regs, made⟩ := Option.bind_eq_some_iff.mp made
+  rw [OperandsMatch, cba_operands regs] at shape
+  split at made
+  · split at made
+    · cases made
+      simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true] at shape
+      obtain ⟨c, b, a⟩ := shape
+      simp [RTypeEvent.predecessors, predecessor_register c, predecessor_register b, predecessor_register a]
+    · contradiction
+  · contradiction
+
+private theorem aluReg_predecessors {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ}
+    {e : ALUTypeEvent} (shape : OperandsMatch stamped decoded) (made : aluRegisterEvent? decoded stamped clk pc opcode = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold aluRegisterEvent? at made
+  obtain ⟨⟨ci, bi, ai⟩, regs, made⟩ := Option.bind_eq_some_iff.mp made
+  rw [OperandsMatch, cba_operands regs] at shape
+  split at made
+  · split at made
+    · cases made
+      simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true] at shape
+      obtain ⟨c, b, a⟩ := shape
+      simp [ALUTypeEvent.predecessors, predecessor_register c, predecessor_register b, predecessor_register a]
+    · contradiction
+  · contradiction
+
+private theorem aluImm_predecessors {stamped : List StampedTouch} {clk pc opcode : ℕ} {rs1 rd : regidx}
+    {imm : BitVec 64} {e : ALUTypeEvent}
+    (shape : stamped.map (fun t => t.touch.operand) = [(.opB, some (regidxBits rs1)), (.opA, some (regidxBits rd))])
+    (made : aluImmediateEventOf? stamped clk pc opcode rs1 rd imm = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold aluImmediateEventOf? at made
+  split at made
+  · split at made
+    · cases made
+      simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true] at shape
+      simp [ALUTypeEvent.predecessors, predecessor_register shape.1, predecessor_register shape.2]
+    · contradiction
+  · contradiction
+
+private theorem alu_predecessors {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ} {e : ALUTypeEvent}
+    (shape : OperandsMatch stamped decoded) (made : aluTypeEvent? decoded stamped clk pc opcode = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold aluTypeEvent? at made
+  split at made <;> first | exact aluImm_predecessors shape made | exact aluReg_predecessors shape made
+
+private theorem iInputs_predecessors {width : ℕ} {stamped : List StampedTouch} {clk pc opcode : ℕ} {rs1 rd : regidx}
+    {imm : BitVec width} {e : ITypeEvent}
+    (shape : stamped.map (fun t => t.touch.operand) = [(.opB, some (regidxBits rs1)), (.opA, some (regidxBits rd))])
+    (made : iOperands? stamped clk pc opcode rs1 rd imm = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold iOperands? at made
+  split at made
+  · split at made
+    · cases made
+      simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true] at shape
+      simp [ITypeEvent.predecessors, predecessor_register shape.1, predecessor_register shape.2]
+    · contradiction
+  · contradiction
+
+private theorem iType_predecessors {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ} {e : ITypeEvent}
+    (shape : OperandsMatch stamped decoded) (made : iTypeEvent? decoded stamped clk pc opcode = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold iTypeEvent? at made
+  split at made <;> first | exact iInputs_predecessors shape made | contradiction
+
+private theorem jType_predecessors {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ} {e : JTypeEvent}
+    (shape : OperandsMatch stamped decoded) (made : jTypeEvent? decoded stamped clk pc opcode = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold jTypeEvent? at made
+  split at made
+  · split at made
+    · split at made <;> cases made
+      all_goals
+        simp only [OperandsMatch, instructionOperands, List.map_cons, List.map_nil, List.cons.injEq, and_true] at shape
+        simp [JTypeEvent.predecessors, predecessor_register shape]
+    · contradiction
+  · contradiction
+
+private def RamOperandsMatch (stamped : List StampedTouch) (decoded : instruction) : Prop :=
+  ∀ r ∈ stamped, ∀ b ∈ stamped, r.touch.slot = .ram → b.touch.slot = .opB →
+    ∀ imm, ((∃ rs rd width unsigned, decoded = .LOAD (imm, rs, rd, width, unsigned)) ∨
+      (∃ rs2 rs1 width, decoded = .STORE (imm, rs2, rs1, width))) →
+      r.touch.loc.busAddress = (memoryEffectiveAddress b.touch.pulled imm).toNat / 8 * 8
+
+private theorem ramOperands_of_plan {decoded : instruction} {source target : SailState} {plan : InstructionAccessPlan}
+    (made : instructionAccessPlan? decoded source target = some plan) (frontier : AccessFrontier) (base : ℕ) :
+    RamOperandsMatch (scheduleAccessPlan frontier base plan).stampedTouches decoded := by
+  intro r used b baseMem rSlot bSlot imm memory
+  have present (t : StampedTouch) (m : t ∈ (scheduleAccessPlan frontier base plan).stampedTouches) : t.touch ∈ plan :=
+    scheduleAccessPlan_erase frontier base plan ▸ List.mem_map_of_mem m
+  have kind := (instructionAccessPlan_wellFormed made).locKind _ (present r used)
+  cases loc : r.touch.loc with
+  | reg i => simp [rSlot, loc, AccessSlot.Accepts] at kind
+  | ram cell =>
+    have seen : MemLoc.ram cell ∈ plan.map PlannedTouch.loc := loc ▸ List.mem_map_of_mem (present r used)
+    have address := instructionAccessPlan_ram made seen
+    have read := instructionAccessPlan_memory_base made (present b baseMem) bSlot
+    have small (x : BitVec 64) : x.toNat / 8 < 2 ^ 61 := by have := x.isLt; omega
+    rcases memory with ⟨rs, rd, width, unsigned, rfl⟩ | ⟨rs2, rs1, width, rfl⟩
+    all_goals
+      obtain ⟨word, actual, cellEq⟩ := address
+      obtain rfl := Option.some.inj (actual.symm.trans read)
+      simpa [cellEq, MemLoc.busAddress, memoryRamCell, ramCellOfByteAddress] using small (memoryEffectiveAddress b.touch.pulled imm)
+
+private theorem memory_predecessors {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ} {e : MemoryEvent}
+    (shape : OperandsMatch stamped decoded) (aligned : RamOperandsMatch stamped decoded)
+    (made : memoryEvent? decoded stamped clk pc opcode = some e) :
+    e.predecessors = stamped.map operandPredecessor := by
+  unfold memoryEvent? at made
+  split at made
+  · rename_i original ram b a
+    split at made
+    · rename_i rSlot bSlot aSlot
+      have cell := aligned ram (by simp) b (by simp) rSlot bSlot
+      split at made <;> cases made
+      all_goals
+        specialize cell _ (by first | exact Or.inl ⟨_, _, _, _, rfl⟩ | exact Or.inr ⟨_, _, _, rfl⟩)
+        simp only [OperandsMatch, instructionOperands, List.map_cons, List.map_nil, List.cons.injEq, and_true] at shape
+        rw [List.map_cons, List.map_cons, List.map_cons, List.map_nil,
+          predecessor_register shape.2.1, predecessor_register shape.2.2]
+        simp only [MemoryEvent.predecessors, ITypeEvent.predecessors, memoryOperands, MemoryEvent.addr, sextNat,
+          operandPredecessor, cell, memoryEffectiveAddress, BitVec.toNat_add]
+    · contradiction
+  · contradiction
+
+/-- The complete predecessors in the native table event are exactly those of the scheduled
+Sail plan. This equality preserves order, register aliases, prior words and full timestamps. -/
+theorem compileInstructionEvent?_predecessors {program : GuestProgram} {located : Machine.LocatedTransition}
+    {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ} {result : CompiledInstructionEvent}
+    (projected : projectSP1Transition? program located = some view)
+    (made : compileInstructionEvent? view frontier clk = some result) :
+    result.routed.predecessors = result.stamped.map operandPredecessor := by
+  obtain ⟨plan, event, gotPlan, built, rfl⟩ := compileInstructionEvent?_components made
+  have generated := (projectSP1Transition?_accesses projected).trans gotPlan
+  let stamped := (scheduleAccessPlan frontier clk plan).stampedTouches
+  have shape : OperandsMatch stamped view.decoded := by
+    change stamped.map (PlannedTouch.operand ∘ StampedTouch.touch) = _
+    rw [← List.map_map, scheduleAccessPlan_erase]
+    exact instructionAccessPlan_operands generated
+  have aligned := ramOperands_of_plan generated frontier clk
+  change (RoutedEvent.mk view.chipId event).predecessors = stamped.map operandPredecessor
+  generalize idEq : view.chipId = id at event built ⊢
+  cases id <;> first
+    | exact rType_predecessors shape built
+    | exact iType_predecessors shape built
+    | exact alu_predecessors shape built
+    | exact jType_predecessors shape built
+    | exact memory_predecessors shape aligned built
 
 end SP1Clean.TraceGen

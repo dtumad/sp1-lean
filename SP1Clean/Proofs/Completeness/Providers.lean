@@ -1,3 +1,4 @@
+import SP1Clean.FormalModel.TraceGen.MemoryRecord
 import SP1Clean.Proofs.Chips.ByteChip.ByteChip
 import SP1Clean.Proofs.Chips.ByteChip.RangeChip
 import SP1Clean.Proofs.Chips.ProgramProviderChip
@@ -130,20 +131,6 @@ def RomEntry.WellFormed (e : RomEntry) : Prop := e.opA < 32 ∧ (e.opA0 = 0 ∨ 
 /-- The aggregate fetch count is represented canonically and nonnegatively by `signedVal`. -/
 def RomEntry.MultiplicityFits (p : ℕ) (e : RomEntry) : Prop :=
   2 * e.multiplicity ≤ p
-
-/-- One memory-boundary record: a byte address, the 64-bit value, the access clock, and an explicit
-boolean activity selector. The init side uses `clk = 0` (SP1's memory-init interaction passes
-literal zeros for both clock limbs); the finalize side uses the chain's last access clock. -/
-structure MemRecordEntry where
-  addr : ℕ
-  value : ℕ
-  clk : ℕ
-  multiplicity : Bool
-deriving DecidableEq
-
-/-- An init record is well-formed when its clock is zero, which is what the provider circuit pins
-both limbs to. -/
-def MemRecordEntry.WellFormedInit (e : MemRecordEntry) : Prop := e.clk = 0
 
 end TraceGen
 

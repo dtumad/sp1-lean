@@ -155,6 +155,7 @@ import SP1Clean.FormalModel.TraceGen.GenState
 import SP1Clean.FormalModel.TraceGen.Inputs
 import SP1Clean.FormalModel.TraceGen.InstructionRegistry
 import SP1Clean.FormalModel.TraceGen.Memory
+import SP1Clean.FormalModel.TraceGen.MemoryRecord
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.FormalModel.TraceGen.SailAlu
 import SP1Clean.Math.Address

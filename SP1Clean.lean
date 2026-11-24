@@ -55,6 +55,9 @@ import SP1Clean.Export.WriteSourceRegistry
 import SP1Clean.Export.WriteSourceGrounding
 import SP1Clean.Export.WriteBoundarySourceGrounding
 import SP1Clean.Export.WriteHostSourceGrounding
+import SP1Clean.Export.WriteGeneratedHostSources
+import SP1Clean.Export.WriteGeneratedRamSources
+import SP1Clean.Export.WriteGeneratedRegisterSources
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
@@ -81,6 +84,7 @@ import SP1Clean.Proofs.Completeness.WriteSparseOrder
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
 import SP1Clean.Proofs.Completeness.WriteOrdinaryTables
 import SP1Clean.Soundness.WriteOrdinarySources
+import SP1Clean.Soundness.WriteRegisterPredecessors
 import SP1Clean.Soundness.WriteHostSources
 import SP1Clean.Soundness.WriteAccessInventory
 import SP1Clean.Soundness.WriteProbeConsumers
@@ -155,6 +159,7 @@ import SP1Clean.Proofs.Completeness.ConsumerClosure
 import SP1Clean.Proofs.Completeness.EventBuckets
 import SP1Clean.Proofs.Completeness.FieldClosure
 import SP1Clean.Proofs.Completeness.InstructionEvent
+import SP1Clean.Proofs.Completeness.InstructionPredecessors
 import SP1Clean.Proofs.Completeness.InstructionSuccessor
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
@@ -185,6 +190,7 @@ import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
 import SP1Clean.Proofs.Completeness.MixedSyscallRows
+import SP1Clean.Proofs.Completeness.MixedSyscallTable
 import SP1Clean.Proofs.Completeness.ReleaseInstructionRows
 import SP1Clean.Proofs.Completeness.InstalledInstructionTables
 import SP1Clean.Proofs.Completeness.MixedInstructionTables

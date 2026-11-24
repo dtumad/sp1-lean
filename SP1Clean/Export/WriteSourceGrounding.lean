@@ -88,6 +88,24 @@ private theorem ordinary_upper (id : InstructionChipId) (data : ProverData Fp) (
     (OrdinarySources.incoming_agrees id) (Environment.fromArray physical data)
   exact congrArg (fun s : StateMsg Fp => (s.clk_high, s.clk_low)) same
 
+/-- A unit pull from any decoded ordinary row produces its private receipt on the same
+physical cells at the original incoming State clock. -/
+theorem ordinary_row_predecessor (id : InstructionChipId) (data : ProverData Fp) (cells : Array Fp)
+    {prior : MemoryMsg Fp}
+    (pulled : prior ∈ (⟨supportedChipFor id, cells⟩ : DecodedInstructionRow SP1Prime).consumedMemoryMessages data) :
+    (1, AccessSupply.readback (statePullMessage ((supportedChipFor id).decodeRow data cells)) prior) ∈
+      rowRecords (.ordinary id) (Environment.fromArray cells data) := by
+  have seen := raw_pull pulled
+  rw [DecodedInstructionRow.interactionsWith_raw] at seen
+  have originalPull : memoryChannel.pulledIfValue 1 prior ∈ (original (.ordinary id)).operations.interactionValuesWith
+      memoryChannel.toRaw (Environment.fromArray cells data) := by
+    unfold Operations.interactionValuesWith
+    rw [protected_memory]
+    exact seen
+  have included := ordinary_records_of_pull id _ 1 prior originalPull
+  change (1, AccessSupply.atClock (upper (.ordinary id) (Environment.fromArray cells data)) _) ∈ _ at included
+  rwa [ordinary_upper] at included
+
 /-- Every active predecessor read by every ordinary execution row occurs in the registered
 physical source tape with that row's exact incoming State clock and original Memory word. -/
 theorem ordinary_predecessor (witness : EnsembleWitness (base image source target final))
