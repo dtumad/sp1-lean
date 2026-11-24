@@ -34,28 +34,78 @@ def emit (readers : Readers) (origin : HostState) (dispatchClock queueClock : Na
       allocation.map (fun b => b.rows queueClock current.clock cursor readers)⟩
   | _, _ => none
 
-private def record (entry : Option Entry) (earlier : List Entry) : List Entry :=
+private def record {α : Type} (entry : Option α) (earlier : List α) : List α :=
   match entry with
   | some e => e :: earlier
   | none => earlier
 
-private noncomputable def visit? (image : ProgramImage) (origin : HostState) (readers : Readers) :
-    Nat → Nat → ExecutionState → HintQueue.Store × Nat → List Entry → List ExecutionEvent → Option (List Entry)
+private abbrev Emitter (α : Type) := Nat → Nat → ExecutionState → HintQueue.Store × Nat → ExecutionEvent → Option WriteObservations.Packet → Option α
+
+private noncomputable def visit? {α : Type} (image : ProgramImage) (observe : Emitter α) :
+    Nat → Nat → ExecutionState → HintQueue.Store × Nat → List α → List ExecutionEvent → Option (List α)
   | _, _, _, _, earlier, [] => some earlier.reverse
   | dispatchClock, queueClock, current, cursor, earlier, event :: rest => do
     let hostPolicy := policy SP1Prime image
     let next ← replayStep? hostPolicy image.program current event
     let advanced ← HintQueue.advance? current.host next.host cursor event
     let observation ← WriteObservations.packetAt? current.sail event
-    let entry := emit readers origin dispatchClock queueClock current cursor event observation
-    visit? image origin readers (advanceWriteClock dispatchClock event) (advanceQueueClock queueClock event)
+    let entry := observe dispatchClock queueClock current cursor event observation
+    visit? image observe (advanceWriteClock dispatchClock event) (advanceQueueClock queueClock event)
       next advanced (record entry earlier) rest
 
 /-- Tail-recursive collector carrying the current execution state, persistent store cursor and
 two clocks. The accumulator stores only emitted rows and is reversed once at the endpoint. -/
 noncomputable def collect? (image : ProgramImage) (origin : HostState) (readers : Readers)
     (dispatchClock queueClock : Nat) (source : ExecutionState) (cursor : HintQueue.Store × Nat) (events : List ExecutionEvent) :
-    Option (List Entry) := visit? image origin readers dispatchClock queueClock source cursor [] events
+    Option (List Entry) := visit? image (emit readers origin) dispatchClock queueClock source cursor [] events
+
+private theorem visit_map {α β : Type} (image : ProgramImage) (observe : Emitter α) (f : α → β)
+    (d q : Nat) (source : ExecutionState) (cursor : HintQueue.Store × Nat) (earlier : List α) (events : List ExecutionEvent) :
+    visit? image (fun a b s c e p => (observe a b s c e p).map f) d q source cursor (earlier.map f) events =
+      (visit? image observe d q source cursor earlier events).map (List.map f) := by
+  induction events generalizing d q source cursor earlier with
+  | nil => simp [visit?,List.map_reverse]
+  | cons event rest ih =>
+    simp only [visit?]
+    cases step : replayStep? (policy SP1Prime image) image.program source event with
+    | none => rfl
+    | some next =>
+      simp only [Option.bind_eq_bind, Option.bind_some]
+      cases advanced : HintQueue.advance? source.host next.host cursor event with
+      | none => rfl
+      | some after =>
+        simp only [Option.bind_some]
+        cases observed : WriteObservations.packetAt? source.sail event with
+        | none => rfl
+        | some packet =>
+          have row : record ((observe d q source cursor event packet).map f) (earlier.map f) =
+              (record (observe d q source cursor event packet) earlier).map f := by
+            cases observe d q source cursor event packet <;> rfl
+          simp only [Option.bind_some,row]
+          exact ih _ _ next after (record (observe d q source cursor event packet) earlier)
+
+private def dispatchOnly (origin : HostState) (d : Nat) (_ : Nat) (current : ExecutionState) (cursor : HintQueue.Store × Nat) :
+    ExecutionEvent → Option WriteObservations.Packet → Option (Dispatch F)
+  | .syscall call, some packet => some (dispatchRow call.arg1 call.arg2 packet.1 current.clock d
+      (WriteStreams.fromEndpoints origin current.host) current.host cursor.1)
+  | _, _ => none
+
+/-- The dispatcher-only projection of the shared traversal needs no queue reader multiplicities. -/
+noncomputable def _root_.SP1Clean.WriteEffects.dispatchTape? (image : ProgramImage) (origin : HostState) (d : Nat) (source : ExecutionState)
+    (cursor : HintQueue.Store × Nat) (events : List ExecutionEvent) : Option (List (Dispatch F)) :=
+  visit? image (dispatchOnly origin) d 0 source cursor [] events
+
+/-- The dispatch table consumes precisely the projection of any full collection at these
+clocks, independently of node and word query multiplicities. -/
+theorem dispatch_projection (image : ProgramImage) (origin : HostState) (readers : Readers)
+    (d : Nat) (source : ExecutionState) (cursor : HintQueue.Store × Nat) (events : List ExecutionEvent) :
+    dispatchTape? image origin d source cursor events =
+      (collect? image origin readers d 0 source cursor events).map (List.map Entry.dispatch) := by
+  have project : dispatchOnly origin = fun a b s c e obs => (emit readers origin a b s c e obs).map Entry.dispatch := by
+    funext a b s c e obs
+    cases e <;> cases obs <;> rfl
+  rw [dispatchTape?,project,collect?]
+  exact visit_map image (emit readers origin) Entry.dispatch d 0 source cursor [] events
 
 /-- Proof-oriented characterization at an original event position. -/
 noncomputable def at? (image : ProgramImage) (origin : HostState) (readers : Readers) (dispatchClock queueClock : Nat)
@@ -91,7 +141,7 @@ private theorem visit_spec {image : ProgramImage} (origin : HostState) (readers 
     {packets : List WriteObservations.Packet}
     (reads : WriteObservations.packets? (policy SP1Prime image) image.program source events = some packets) (earlier : List Entry) :
     let entries := events.zipIdx.filterMap (at? image origin readers d q source cursor events)
-    visit? image origin readers d q source cursor earlier events = some (earlier.reverse ++ entries) ∧ entries.map Entry.packet = packets := by
+    visit? image (emit readers origin) d q source cursor earlier events = some (earlier.reverse ++ entries) ∧ entries.map Entry.packet = packets := by
   induction events generalizing source d q cursor packets earlier with
   | nil => cases reads; exact ⟨(congrArg some (List.append_nil _)).symm,rfl⟩
   | cons head rest ih =>
