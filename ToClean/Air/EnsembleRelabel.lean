@@ -1,6 +1,7 @@
 module
 
 public import ToClean.Air.EnsembleProjection
+public import ToClean.Air.LookupFree
 public import ToClean.Air.TableSlot
 
 /-! # Transporting physical witnesses between row-preserving ensembles
@@ -46,13 +47,19 @@ theorem ofDecoration (keep : RawChannel F → Prop) (a b : Ensemble F Public)
     (entries : ∀ i : Fin a.tables.length, Component.SameRows keep a.tables[i.val]
       (b.tables[i.val]'(by rw [length]; exact i.isLt))) : Ensemble.SameRows keep a b :=
   ⟨length.symm, verifier.symm, entries⟩
-
-
 variable {keep : RawChannel F → Prop} {a b : Ensemble F Public} (same : Ensemble.SameRows keep a b)
 
 include same in
 theorem symm : Ensemble.SameRows keep b a :=
   ⟨same.length.symm, same.verifier.symm, fun i => (same.slot ⟨i.val, same.length.symm ▸ i.isLt⟩).symm⟩
+
+include same in
+/-- Row-local lookup inventories agree in every physical slot. -/
+theorem lookupFree (free : LookupFree a.tables) : LookupFree b.tables := by
+  intro c member
+  obtain ⟨i, inside, rfl⟩ := List.mem_iff_getElem.mp member
+  have prior : i < a.tables.length := same.length.symm ▸ inside
+  exact (same.slot ⟨i, prior⟩).lookups.symm.trans (free _ (List.getElem_mem prior))
 
 /-- Relabel the same committed arrays, recomputing their data through the canonical typed API. -/
 def transport (w : EnsembleWitness b) : EnsembleWitness a :=
