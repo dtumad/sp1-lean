@@ -60,6 +60,15 @@ def buildPayload (t : StaticTable F Row) (target : Channel F Row) (valid : ∀ r
     ((t.payloadInputs_length counts).trans_le bounded.le)
     (payloadInputs_fixed t target valid bounded counts _ _) (c.inputData_consistent inputs data)
 
+/-- Filling the count column preserves the physical height of the fixed table. -/
+theorem buildPayload_length (t : StaticTable F Row) (target : Channel F Row) (valid : ∀ row, t.Spec row → ∀ data, target.Guarantees row data) (bounded : t.height < UInt64.size)
+    (counts : Fin t.height → F) (data : ProverData F) :
+    (t.buildPayload target valid bounded counts data).length = t.height := by
+  let c := t.payloadComponent target valid bounded
+  let inputs : List (c.Input F) := t.payloadInputs counts
+  exact (List.length_map (f := fun x => c.buildRow x (c.inputData inputs data) (.empty F)) (as := inputs)).trans
+    (t.payloadInputs_length counts)
+
 /-- The provider permits positive multiplicity only on the first original copy of a row. -/
 theorem buildPayload_valid (t : StaticTable F Row) (target : Channel F Row) (valid : ∀ row, t.Spec row → ∀ data, target.Guarantees row data) (bounded : t.height < UInt64.size)
     (counts : Fin t.height → F) (data : ProverData F)

@@ -54,7 +54,7 @@ theorem native_position {image : ProgramImage} {source target : ExecutionSnapsho
         earlier current.host cursor.1 ∧ entry.dispatch.Valid ∧
       entry.allocation = allocation.map (fun b => b.rows prior current.clock cursor readers) ∧
       ∀ batch, allocation = some batch → AllocatedAt entry batch readers prior current.clock cursor after := by
-  obtain ⟨current,next,length,buffer,cursor,after,reached,stopped,read,stored,advanced,_,_,eligible⟩ := native_store_at run present write
+  obtain ⟨current,next,length,buffer,cursor,after,reached,stopped,read,stored,advanced,_,_,_,eligible⟩ := native_store_at run present write
   obtain ⟨current',_,length',buffer',cursor',atCurrent,_,otherRead,otherStore,valid,_⟩ := native_dispatch_at run present write
   cases Option.some.inj (reached.symm.trans atCurrent)
   cases Option.some.inj (stored.symm.trans otherStore)

@@ -47,6 +47,17 @@ private theorem queue_clock_before {policy : HostPolicy} {program : Soundness.Ta
       simp only [advanceQueueClock]
       split <;> omega
 
+/-- The actual final queue-access clock fits the released state encoding, including a
+segment whose queue carried the initial zero clock throughout. -/
+theorem final_queue_clock_fits {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) :
+    events.foldl advanceQueueClock 0 < 2^48 := by
+  have order := queue_clock_before run.1.2 0 (Or.inl rfl)
+  have stop := run.2.2.2.2.2.1
+  change target.clock < 2^48 at stop
+  change events.foldl advanceQueueClock 0 = 0 ∨ events.foldl advanceQueueClock 0 < target.clock at order
+  omega
+
 private theorem write_advances {current next : ExecutionState} {route : WriteRoute} {bytes : Bytes}
     {call : CoreSyscallEvent} (effect : route.Effect current.host bytes next.host) (write : call.rawCode = SyscallKind.write.code)
     (cursor : Store × Nat) :
@@ -69,6 +80,7 @@ theorem native_store_at {image : ProgramImage} {source target : ExecutionSnapsho
       let earlier := WriteStreams.fromEndpoints source.host current.host
       let bytes := WriteObservations.payload buffer call.arg2.toNat length.toNat
       let route := WriteRoute.ofDescriptor call.arg1
+      after = prepend cursor.1 cursor.2 (route.allocations current.host bytes) ∧
       ∀ batch, batchFor route earlier current.host bytes = some batch →
         let prior := (events.take cut).foldl advanceQueueClock 0
         let row := batch.openRow prior current.clock cursor.1 cursor.2
@@ -108,7 +120,7 @@ theorem native_store_at {image : ProgramImage} {source target : ExecutionSnapsho
   rw [budget] at paid
   have live := post.endpoint_fits run.2.2.2.1 paid.left .liveHintBytes
   change (right.host.io.hints.map List.length).sum ≤ SP1Prime - 1 at live
-  refine ⟨left,right,length,buffer,cursor,after,atCurrent,atNext,read,beforeStore,afterStore,rep,repAfter,?_⟩
+  refine ⟨left,right,length,buffer,cursor,after,atCurrent,atNext,read,beforeStore,afterStore,rep,repAfter,postState,?_⟩
   dsimp only
   intro batch active
   obtain ⟨ticket,buffers⟩ := dispatch_allocation_ticket call.arg1 call.arg2 length left.clock ((events.take cut).foldl advanceWriteClock source.clock)

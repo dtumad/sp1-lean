@@ -53,8 +53,9 @@ private theorem run_cost {host : HostState} {context : HostReadContext} {executi
         HostState.hintEvent, HintQueue.Event.allocations, HostExecution.writeByteCount,
         HostExecution.writeSpans, eq, kind]⟩
 
-private theorem step_cost {e : ExecutionEvent} (step : ExecutionStep policy program source e target)
-    (allowed : event includeVerify e) :
+/-- A single ordinary or non-WRITE host step incurs no allocation charge. Only a successful HINT_READ pops bytes. -/
+theorem step_cost {e : ExecutionEvent} (step : ExecutionStep policy program source e target)
+    (allowed : HostFrameSafe e) :
     ∃ consumed, source.host.io.hints = consumed ++ target.host.io.hints ∧
       source.eventResources policy e .readBytes = 0 ∧ source.eventResources policy e .allocatedHints = 0 ∧
       source.eventResources policy e .writeBytes = (consumed.map fun bytes => (hintWriteBytes bytes).length).sum := by
@@ -62,7 +63,7 @@ private theorem step_cost {e : ExecutionEvent} (step : ExecutionStep policy prog
   | ordinary => exact ⟨[], rfl, rfl, rfl, rfl⟩
   | syscall success =>
     obtain ⟨pc, execution, _, _, ran, rfl, _, rfl⟩ := HostState.step_observations success
-    have safe : execution.kind ≠ .write := fun eq => ne_write allowed (congrArg SyscallKind.code eq)
+    have safe : execution.kind ≠ .write := fun eq => allowed (congrArg SyscallKind.code eq)
     simpa only [ExecutionState.eventResources, HostState.eventResources, ran] using run_cost ran safe
 
 /-- A registered host segment pops exactly an incoming prefix, writes each buffer with its full
@@ -77,7 +78,7 @@ theorem queue_work (path : ExecutionPath policy program source events target)
   induction path with
   | nil => exact ⟨[], rfl, rfl, rfl, rfl⟩
   | @cons before middle after e rest step _ ih =>
-    obtain ⟨first, head, read, allocated, written⟩ := step_cost step (allowed _ (List.mem_cons_self ..))
+    obtain ⟨first, head, read, allocated, written⟩ := step_cost step (hostFrameSafe (allowed _ (List.mem_cons_self ..)))
     obtain ⟨later, tail, reads, allocations, writes⟩ := ih (fun e mem => allowed e (List.mem_cons_of_mem _ mem))
     refine ⟨first ++ later, by rw [head, tail, List.append_assoc], ?_⟩
     rw [executionResources_cons step]

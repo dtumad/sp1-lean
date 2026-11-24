@@ -119,16 +119,19 @@ def closeCircuit (outgoing : StreamCursor (ZMod p)) : GeneralFormalCircuit (ZMod
     obtain ⟨ticket, count, clock⟩ := h_assumptions
     exact ⟨sub_eq_zero.mpr ticket, sub_eq_zero.mpr (count.trans ticket.symm), by simpa using clock⟩
 
+/-- Fixed ticket, counted publication and the six limbs supplied by the terminal witness. -/
+def closeGeneration : WitnessGeneration.PreallocatedMode (ZMod p) CloseInput where
+  channel := closeChannel
+  trigger := .pull
+  height := 1
+  input _ := pure ⟨.fixed 1, .multiplicity,
+    Vector.ofFn (fun i : Fin 3 => .witness (.hintGet "sp1.native.write_output_terminal" 6 0 ⟨i.val,by omega⟩)),
+    Vector.ofFn (fun i : Fin 3 => .witness (.hintGet "sp1.native.write_output_terminal" 6 0 ⟨3 + i.val,by omega⟩))⟩
+  rowOf _ := 0
+
 /-- A singleton preallocation consumes exactly the verifier's final ticket. -/
 def closeComponent (source target : ExecutionSnapshot) : Component (ZMod p) where
   circuit := closeCircuit (finalCursor target.clock (.fromEndpoints source.host target.host))
-  generation := .preallocated {
-    channel := closeChannel
-    trigger := .pull
-    height := 1
-    input _ := pure ⟨.fixed 1, .multiplicity,
-      Vector.ofFn (fun i : Fin 3 => .witness (.hintGet "sp1.native.write_output_terminal" 6 0 ⟨i.val,by omega⟩)),
-      Vector.ofFn (fun i : Fin 3 => .witness (.hintGet "sp1.native.write_output_terminal" 6 0 ⟨3 + i.val,by omega⟩))⟩
-    rowOf _ := 0 }
+  generation := .preallocated closeGeneration
 
 end SP1Clean.WriteEffects

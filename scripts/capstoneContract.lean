@@ -13,6 +13,8 @@ import SP1Clean.Export.WriteInstalledAllocations
 import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
 import SP1Clean.Export.WriteJointObservation
 import SP1Clean.Export.WriteAllocationStoreUnique
+import SP1Clean.Export.WriteDirectLanes
+import SP1Clean.Export.WriteHookCallBuffers
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteObservationReads
@@ -243,6 +245,19 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.installed_funded_write_allocation,
   ``SP1Clean.Export.WriteObservationAssembly.installed_effect_joins,
   ``SP1Clean.Export.WriteObservationAssembly.compiled_observation_allocation,
+  ``SP1Clean.Export.InstalledAssembly.compiled_outgoing_snapshot,
+  ``SP1Clean.WriteEffects.Witness.native_slice_table,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_endpoint_ledgers,
+  ``SP1Clean.TraceGen.HintQueueReaders.finalCursor_done,
+  ``SP1Clean.TraceGen.HintQueueReaders.native_fixed_readers,
+  ``SP1Clean.TraceGen.HintQueueReaders.native_funded_allocations,
+  ``SP1Clean.Export.WriteObservationAssembly.native_block_origin,
+  ``SP1Clean.Export.WriteObservationAssembly.native_direct_group,
+  ``SP1Clean.Export.WriteObservationAssembly.native_returned_bytes,
+  ``SP1Clean.Export.WriteObservationAssembly.native_direct_lanes,
+  ``SP1Clean.Export.WriteObservationAssembly.native_returned_buffer,
+  ``SP1Clean.Export.WriteObservationAssembly.native_hook_batch,
+  ``SP1Clean.WriteEffects.closeTable_valid,
   ``SP1Clean.Export.WriteObservationAssembly.native_allocation_walks,
   ``SP1Clean.Export.WriteObservationAssembly.native_ordered_queue,
   ``SP1Clean.Export.WriteObservationAssembly.native_allocation_frontier,

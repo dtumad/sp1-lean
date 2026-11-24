@@ -143,10 +143,13 @@ theorem octetTable_octets (rows : List (WordRow F)) (data : ProverData F) (fit) 
   simp only [List.map_cons,List.map_nil,Channel.eval_pushed,Channel.pushedValue,Channel.pushedIfValue,mul_one,
     Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
 
-/-- Even an ignored placement consumes its original full octet occurrence. -/
-theorem groupTable_octets (rows : List (Group F)) (data : ProverData F) (fit) :
-    (groupTable rows data fit).interactionsWith octetsChannel.toRaw =
-      (WitnessGeneration.guardedRows rows).map (fun r => octetsChannel.pulledIfValue r.2 r.1.octets) := by
+private theorem groupTable_pull {M : TypeMap} [ProvableType M] (ch : Channel F M)
+    (fieldOf : ∀ {α : Type}, Group α → M α)
+    (raw : ∀ (r : Var Group F) n, ((groupMain r).operations n).interactionsWith ch.toRaw = [(ch.pulled (fieldOf r)).toRaw])
+    (project : ∀ (env : Environment F) (i : Var (ProvablePair Group field) F), eval env (fieldOf i.1) = fieldOf (eval env i).1)
+    (rows : List (Group F)) (data : ProverData F) (fit) :
+    (groupTable rows data fit).interactionsWith ch.toRaw =
+      (WitnessGeneration.guardedRows rows).map (fun r => ch.pulledIfValue r.2 (fieldOf r.1)) := by
   rw [List.map_eq_flatMap]
   apply Table.ofInputs_ledger groupComponent (WitnessGeneration.guardedRows rows) data
     ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
@@ -155,16 +158,33 @@ theorem groupTable_octets (rows : List (Group F)) (data : ProverData F) (fit) :
   let input := varFromOffset I (F := F) 0
   rw [Operations.interactionValuesWith,Component.interactionsWith_eq]
   change ((Guarded.main groupCircuit groupGuardSupported input).operations (size I)).interactionValuesWith _ env =
-    [octetsChannel.pulledIfValue (valueFromOffset I 0 env).2 (valueFromOffset I 0 env).1.octets]
+    [ch.pulledIfValue (valueFromOffset I 0 env).2 (fieldOf (valueFromOffset I 0 env).1)]
   rw [Guarded.main_interactionValuesWith]
   change (((groupMain input.1).operations (size I)).interactionValuesWith _ env).map _ = _
-  have raw : ((groupMain input.1).operations (size I)).interactionsWith octetsChannel.toRaw =
-      [(octetsChannel.pulled input.1.octets).toRaw] := by
-    rw [Operations.interactionsWith,group_ledger]
-    simp [octetsChannel,sliceChannel,positionChannel,blockChannel,circuit_norm]
-  have proj (i : Var I F) : eval env i.1.octets = (eval env i).1.octets := by simp only [I,circuit_norm]
   rw [Operations.interactionValuesWith,raw]
   simp only [List.map_cons,List.map_nil,Channel.eval_pulled,Channel.pulledValue,Channel.pulledIfValue,mul_one,
-    Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
+    Guarded.eval_activity,project,input,eval_varFromOffset_valueFromOffset]
+
+/-- Even an ignored placement consumes its original full octet occurrence. -/
+theorem groupTable_octets (rows : List (Group F)) (data : ProverData F) (fit) :
+    (groupTable rows data fit).interactionsWith octetsChannel.toRaw =
+      (WitnessGeneration.guardedRows rows).map (fun r => octetsChannel.pulledIfValue r.2 r.1.octets) := by
+  apply groupTable_pull octetsChannel Group.octets _ _ rows data fit
+  · intro r n
+    rw [Operations.interactionsWith,group_ledger]
+    simp [octetsChannel,sliceChannel,positionChannel,blockChannel,circuit_norm]
+  · intros
+    simp only [circuit_norm]
+
+/-- Every guest group consumes its own alignment plan, including ignored or empty windows. -/
+theorem groupTable_plans (rows : List (Group F)) (data : ProverData F) (fit) :
+    (groupTable rows data fit).interactionsWith sliceChannel.toRaw =
+      (WitnessGeneration.guardedRows rows).map (fun r => sliceChannel.pulledIfValue r.2 r.1.plan) := by
+  apply groupTable_pull sliceChannel Group.plan _ _ rows data fit
+  · intro r n
+    rw [Operations.interactionsWith,group_ledger]
+    simp [octetsChannel,sliceChannel,positionChannel,blockChannel,circuit_norm]
+  · intros
+    simp only [circuit_norm]
 
 end SP1Clean.WriteEffects

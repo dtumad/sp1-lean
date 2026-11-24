@@ -16,6 +16,18 @@ of requests, and rows that serve no requests remain in the ledger at multiplicit
 
 namespace Air.Flat.ReaderCounts
 
+/-- Ordered, occurrence-preserving source attribution. Applying it to two identical queries
+selects two occurrences in the returned index list. The supplier list remains untouched. -/
+theorem assign {α : Type} {n : Nat} {requests : List α} {eligible : Fin n → Prop} {payload : Fin n → α}
+    (covered : ∀ b ∈ requests, ∃ i, eligible i ∧ payload i = b) :
+    ∃ indices : List (Fin n), indices.map payload = requests ∧ ∀ i ∈ indices, eligible i := by
+  induction requests with
+  | nil => exact ⟨[],rfl,by simp⟩
+  | cons x xs ih =>
+    obtain ⟨i,on,same⟩ := covered x (by simp)
+    obtain ⟨is,mapped,valid⟩ := ih (fun b h => covered b (List.mem_cons_of_mem _ h))
+    exact ⟨i::is,by simp [same,mapped],by simpa only [List.forall_mem_cons] using And.intro on valid⟩
+
 /-- Count uses of each physical index in a single pass through the assigned requests. -/
 def counts {n : Nat} (requests : List (Fin n)) : Vector Nat n :=
   requests.foldl (fun totals i => totals.set i.val (totals[i] + 1)) (Vector.replicate n 0)

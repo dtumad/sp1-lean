@@ -10,6 +10,8 @@ import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.HintSnapshotCapacity
+import SP1Clean.Export.WriteOutgoingSnapshot
+import SP1Clean.Export.WriteEndpointJoins
 import SP1Clean.Export.HintSnapshotWalk
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteInstalledAllocations
@@ -25,6 +27,13 @@ import SP1Clean.Export.WriteAllocationSource
 import SP1Clean.Export.WriteAllocationStorage
 import SP1Clean.Export.WriteAllocationStoreBinding
 import SP1Clean.Export.WriteAllocationStoreUnique
+import SP1Clean.Export.WriteBlockOrigins
+import SP1Clean.Export.WriteAllocationMetadata
+import SP1Clean.Export.WriteReturnedBuffers
+import SP1Clean.Export.WriteDirectLanes
+import SP1Clean.Export.WriteAllocationCalls
+import SP1Clean.Export.WriteHookCallBuffers
+import SP1Clean.Soundness.AllocationPayloadRead
 import SP1Clean.Export.WriteAllocationWordSeeds
 import SP1Clean.Soundness.AllocationWordBytes
 import SP1Clean.Soundness.AllocationWordPartition
@@ -40,6 +49,8 @@ import SP1Clean.Proofs.Completeness.WriteEffectAssembly
 import SP1Clean.Proofs.Completeness.WriteEffectTables
 import SP1Clean.Soundness.AllocationWalks
 import SP1Clean.Proofs.Completeness.WriteAllocationSix
+import SP1Clean.Proofs.Completeness.WriteSlicePlans
+import SP1Clean.Proofs.Completeness.WriteStreamTerminal
 import SP1Clean.Proofs.Completeness.WriteBlockCapacity
 import SP1Clean.Export.WriteObservationProjection
 import SP1Clean.Export.WriteObservationBuild
@@ -144,6 +155,15 @@ import SP1Clean.Proofs.Completeness.MixedTargetChecks
 import SP1Clean.Proofs.Completeness.MixedTargetMembership
 import SP1Clean.Proofs.Completeness.FixedProgramReads
 import SP1Clean.Proofs.Completeness.MixedProgramFetches
+import SP1Clean.Proofs.Completeness.PermissionTables
+import SP1Clean.Proofs.Completeness.MixedPermissionDemand
+import SP1Clean.Proofs.Completeness.HintQueueReaders
+import SP1Clean.Proofs.Completeness.HintQueueFixedReaders
+import SP1Clean.Proofs.Completeness.HintQueuePublicationRange
+import SP1Clean.Proofs.Completeness.HintQueuePublishedHistory
+import SP1Clean.Proofs.Completeness.HintQueueFreshCoverage
+import SP1Clean.Proofs.Completeness.HintQueueAllocationLedgers
+import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming

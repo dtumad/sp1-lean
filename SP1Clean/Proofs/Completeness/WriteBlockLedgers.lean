@@ -32,7 +32,8 @@ private theorem group_values (r : Var Group F) (n : Nat) (env : Environment F) :
   rcases r with ⟨_,⟨_,_,_,_,_⟩,⟨_,_,_,_,_,_,_,_,_,_⟩,_,_,_,_,_,_,_,_,_⟩
   simp only [Group.leftGate,Group.rightGate,Group.block,circuit_norm]
 
-private theorem groupInput_blocks (env : Environment F) :
+/-- The complete two-site block ledger on any physical grouped placement, including padding. -/
+theorem groupInput_blocks (env : Environment F) :
     (groupComponent (p := SP1Prime)).operations.interactionValuesWith blockChannel.toRaw env =
       groupBlocks (groupComponent.rowInput env) := by
   let I := ProvablePair Group field
@@ -91,7 +92,8 @@ private theorem word_block_values (r : Var Row F) (n : Nat) (env : Environment F
   rcases r with ⟨⟨⟨_,_,_,_,_⟩,_,_⟩,_,_,_,⟨_,_⟩,_,_⟩
   simp only [z,Row.hookGate,Row.returned,Row.direct,Payload.used,circuit_norm]
 
-private theorem wordInput_blocks (env : Environment F) (valid : (wordComponent (p := SP1Prime)).operations.ConstraintsHold env)
+/-- The complete two-site block ledger on any constrained physical word environment. -/
+theorem wordInput_blocks (env : Environment F) (valid : (wordComponent (p := SP1Prime)).operations.ConstraintsHold env)
     (binary : IsBool (wordComponent.rowInput env).2) :
     wordComponent.operations.interactionValuesWith blockChannel.toRaw env = blockTraffic (wordComponent.rowInput env) := by
   let I := ProvablePair Row field

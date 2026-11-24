@@ -1,12 +1,16 @@
 import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Proofs.Completeness.MixedTargetMembership
 import SP1Clean.Proofs.Completeness.MixedProgramFetches
+import SP1Clean.Proofs.Completeness.MixedPermissionDemand
+import SP1Clean.Proofs.Completeness.HintQueueFixedReaders
 
 /-! # Installing the counted ROM and snapshot tables
 
 The fixed ROM counts each decoded instruction fetched by the mixed row compiler. The register
 and RAM memberships at both endpoints count their actual signed client ledger. The target
 checkers consume each terminal with its actual outgoing Sail word and snapshot change selector.
+The permission guard and its fixed inventory use each actual store and HINT_READ byte.
+The two incoming hint resources pay their full share of metadata and word reads.
 -/
 
 namespace SP1Clean.Export.WriteMixedFixedResources
@@ -20,6 +24,8 @@ private abbrev F := ZMod SP1Prime
 inductive Index
   | program
   | initial (ram : Bool)
+  | permission (fixed : Bool)
+  | hint (word : Bool)
   | check (ram : Bool)
   | final (ram : Bool)
   deriving DecidableEq
@@ -28,12 +34,14 @@ inductive Index
 def position : Index → ℕ
   | .program => 6
   | .initial ram => if ram then 60 else 59
+  | .permission fixed => if fixed then 62 else 61
+  | .hint word => if word then 87 else 86
   | .check ram => if ram then 95 else 94
   | .final ram => if ram then 97 else 96
 
 /-- Identify the fixed resource at a physical supervisor position. -/
 def indexAt (i : ℕ) : Option Index :=
-  [.program,.initial false,.initial true,.check false,.check true,.final false,.final true].find? (fun id => position id == i)
+  [.program,.initial false,.initial true,.permission false,.permission true,.hint false,.hint true,.check false,.check true,.final false,.final true].find? (fun id => position id == i)
 
 private theorem position_of_indexAt {i : ℕ} {id : Index} (found : indexAt i = some id) : position id = i :=
   eq_of_beq (List.find?_some (p := fun it => position it == i) found)
@@ -44,6 +52,8 @@ variable (image : ProgramImage) (source target : ExecutionSnapshot) (finish : Ho
 def component : Index → Component F
   | .program => FixedProgramProvider.Preprocessed.component image
   | .initial ram => (members source.sail.memorySnapshot ram).component (members_fit source.sail.memorySnapshot ram)
+  | .permission fixed => if fixed then WritePermissionProvider.membershipComponent image else WritePermissionProvider.component image
+  | .hint word => if word then HostHintQueue.sourceWord source.host.io.hints else HostHintQueue.source source.host.io.hints
   | .check ram => MixedTargetMemory.checkComponent target.sail.memorySnapshot ram
   | .final ram => (MixedTargetMemory.targetMembers target.sail.memorySnapshot ram).component (MixedTargetMemory.targetMembers_fit _ ram)
 
@@ -56,6 +66,15 @@ theorem registered_at (id : Index) :
     cases ram <;>
       rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
         List.getElem?_append_left (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide), List.getElem?_set_ne (by decide)] <;> rfl
+  | permission fixed =>
+    cases fixed <;>
+      rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
+        List.getElem?_append_left (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide), List.getElem?_set_ne (by decide)] <;> rfl
+  | hint word =>
+    cases word <;>
+      rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
+        List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide),
+        List.length_set, ProtectedLocalCore.tables_length] <;> rfl
   | check ram =>
     cases ram
     · exact target_check_at image source target finish 0
@@ -72,10 +91,10 @@ def Remaining := (i : Fin (components image source target finish).length) →
   sourceAt (6 + i.val) = none → WriteMixedHostTables.indexAt (6 + i.val) = none →
   indexAt (6 + i.val) = none → { t : Table F // t.component = (components image source target finish)[i] }
 
-/-- Installing the Program and source/target Memory resources leaves 34 original positions. -/
+/-- The counted fixed resources and their endpoint/permission consumers leave 30 original positions. -/
 theorem remaining_count :
     ((List.range' 6 (components image source target finish).length).filter
-      (fun i => (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (indexAt i).isNone)).length = 34 := by
+      (fun i => (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (indexAt i).isNone)).length = 30 := by
   rw [List.length_drop, base_length]
   decide
 
@@ -145,6 +164,8 @@ theorem funded (closing ram : Bool) :
 noncomputable def table : Index → Table F
   | .program => MixedProgramFetches.table run.1 routed data
   | .initial ram => provider run routed data hint packets false ram
+  | .permission fixed => if fixed then MixedPermissionDemand.membershipTable run.1 routed data else MixedPermissionDemand.guardTable run.1 routed data
+  | .hint word => if word then HintQueueReaders.fixedWords run.1 data else HintQueueReaders.fixedNodes run.1 data
   | .check ram => client run routed data hint packets true ram
   | .final ram => provider run routed data hint packets true ram
 
@@ -152,6 +173,8 @@ noncomputable def table : Index → Table F
 theorem table_component (id : Index) : (table run routed data hint packets id).component = component image source target id := by
   cases id with
   | program | initial | final => rfl
+  | permission fixed => cases fixed <;> rfl
+  | hint word => cases word <;> rfl
   | check ram => cases ram <;> rfl
 
 private theorem table_valid (id : Index) :
@@ -159,6 +182,17 @@ private theorem table_valid (id : Index) :
   cases id with
   | program => exact ⟨(MixedProgramFetches.funded run.1 routed data).1,(MixedProgramFetches.funded run.1 routed data).2.1⟩
   | initial ram => exact ⟨(funded run routed data hint packets false ram).1,(funded run routed data hint packets false ram).2.1⟩
+  | permission fixed =>
+    cases fixed
+    · exact MixedPermissionDemand.guard_valid run.1 routed data
+    · have funded := MixedPermissionDemand.membership_funded run.1 routed data
+      exact ⟨funded.1,funded.2.1⟩
+  | hint word =>
+    cases word
+    · have good := HintQueueReaders.fixedNodes_checked run.1 data
+      exact ⟨good.constraints,good.guarantees⟩
+    · have good := HintQueueReaders.fixedWords_checked run.1 data
+      exact ⟨good.constraints,good.guarantees⟩
   | check ram => exact MixedTargetMemory.fromExecution_valid run.1 routed _ data hint ram
   | final ram => exact ⟨(funded run routed data hint packets true ram).1,(funded run routed data hint packets true ram).2.1⟩
 

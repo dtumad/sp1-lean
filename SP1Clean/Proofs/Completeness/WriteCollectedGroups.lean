@@ -183,4 +183,21 @@ theorem placementGroups_length (full : WriteStreams) (entries : List Entry) :
     unfold Entry.placementGroups Entry.directGroups Entry.publicGroups
     by_cases yes : entry.dispatch.flags.direct = 1 <;> simp [yes,fromPacket,packetGroups_length]
 
+private theorem packet_plans (clk address length : Nat) (sink : F) (owner : fields 3 F) (buf : List (BitVec 64))
+    (start : Nat) (destination : Bytes) {g : Group F} (member : g ∈ packetGroups clk address length sink owner buf start destination) :
+    (planTable (p := SP1Prime)).Spec g.plan := by
+  obtain ⟨⟨w,i⟩,_,rfl⟩ := List.mem_map.mp member
+  let word := address / 8 + i
+  have bounds := window_spec address length word
+  apply (slicePlans_iff _).mpr
+  exact ⟨_,_,_,bounds.1,bounds.2.1,Nat.mod_lt _ (by decide : 0 < 8),rfl⟩
+
+/-- Every actual placement, including an empty selected interval, uses one of the fixed
+verifier windows. The ordered packet determines the guest range and destination offset. -/
+theorem Entry.placement_plan (e : Entry) (full : WriteStreams) {g : Group F} (member : g ∈ e.placementGroups full) :
+    (planTable (p := SP1Prime)).Spec g.plan := by
+  unfold Entry.placementGroups Entry.directGroups Entry.publicGroups at member
+  by_cases direct : e.dispatch.flags.direct = 1 <;> simp only [direct,ite_true,ite_false,List.nil_append,List.append_nil] at member
+  all_goals exact packet_plans _ _ _ _ _ _ _ _ member
+
 end SP1Clean.WriteEffects.Witness
