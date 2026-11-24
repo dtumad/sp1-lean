@@ -47,28 +47,41 @@ private theorem input_ledger (I : TypeMap) [ProvableType I] (t : Table F) (ch : 
   simp only [Table.interactionsWith,guardedInputs,List.flatMap_map]
   exact List.flatMap_congr fun row _ => rows (t.environment row)
 
+/-- The complete signed endpoint ledger of guarded source/terminal pairs and guarded
+transitions, as used by both WRITE node allocation and byte placement. Each zero gate is
+checked before its occurrences are removed from the resulting permutation. -/
+theorem gated_walk_endpoints {O R : Type*} {M : TypeMap} [ProvableType M] (ch : Channel F M)
+    (os : List O) (og : O → F) (start finish : O → M F) (rs : List R) (rg : R → F) (src dst : R → M F)
+    (ob : ∀ o ∈ os, IsBool (og o)) (rb : ∀ r ∈ rs, IsBool (rg r))
+    (paid : BalancedInteractions ((os.flatMap fun o => [ch.pushedIfValue (og o) (start o),ch.pulledIfValue (og o) (finish o)]) ++
+      rs.flatMap fun r => [ch.pulledIfValue (rg r) (src r),ch.pushedIfValue (rg r) (dst r)])) :
+    let openers := os.filter fun o => decide (og o = 1)
+    let rows := rs.filter fun r => decide (rg r = 1)
+    (openers.map start ++ rows.map dst).Perm (openers.map finish ++ rows.map src) := by
+  let opening := fun o => (finish o,start o)
+  let step := fun r => (src r,dst r)
+  have switched := List.Perm.flatMap_left os (f := fun o => [ch.pushedIfValue (og o) (start o),ch.pulledIfValue (og o) (finish o)])
+    (g := fun o => [ch.pulledIfValue (og o) (opening o).1,ch.pushedIfValue (og o) (opening o).2])
+    (fun _ _ => List.Perm.swap _ _ [])
+  have live := (BalancedInteractions.of_perm paid (switched.append_right _)).filter_nonzero
+  rw [List.filter_append,ch.gatedPairs_filter_nonzero os og opening ob] at live
+  change BalancedInteractions (_ ++ ((rs.flatMap fun r =>
+    [ch.pulledIfValue (rg r) (step r).1,ch.pushedIfValue (rg r) (step r).2]).filter _)) at live
+  rw [ch.gatedPairs_filter_nonzero rs rg step rb] at live
+  let edges := (os.filter fun o => decide (og o = 1)).map opening ++ (rs.filter fun r => decide (rg r = 1)).map step
+  have grouped := ch.pairedLedger_perm edges id
+  simp only [edges,List.flatMap_append,List.flatMap_map,List.map_append,List.map_map,Function.comp_def,id_eq] at grouped
+  apply (ch.balanced_unit_iff _ _).mp
+  simpa only [List.map_append,List.map_map,Function.comp_def,opening,step,List.append_assoc] using
+    BalancedInteractions.of_perm live grouped
+
 private theorem cursor_perm (os : List (Open F × F)) (ss : List (Step F × F))
     (ob : ∀ r ∈ os, IsBool r.2) (sb : ∀ r ∈ ss, IsBool r.2)
     (paid : BalancedInteractions (os.flatMap openCursors ++ ss.flatMap stepCursors)) :
     ((enabledInputs os).map Open.first ++ (enabledInputs ss).map Step.after).Perm
       ((enabledInputs os).map Open.last ++ (enabledInputs ss).map Step.before) := by
-  let ch := cursorChannel (p := SP1Prime)
-  let opening := fun r : Open F × F => (r.1.last, r.1.first)
-  let step := fun r : Step F × F => (r.1.before, r.1.after)
-  have switched := List.Perm.flatMap_left os (f := openCursors)
-    (g := fun r => [ch.pulledIfValue r.2 (opening r).1,ch.pushedIfValue r.2 (opening r).2])
-    (fun _ _ => List.Perm.swap _ _ [])
-  have live := (BalancedInteractions.of_perm paid (switched.append_right _)).filter_nonzero
-  rw [List.filter_append, ch.gatedPairs_filter_nonzero os Prod.snd opening ob] at live
-  change BalancedInteractions (_ ++ ((ss.flatMap fun r =>
-    [ch.pulledIfValue r.2 (step r).1,ch.pushedIfValue r.2 (step r).2]).filter _)) at live
-  rw [ch.gatedPairs_filter_nonzero ss Prod.snd step sb] at live
-  let edges := (os.filter fun r => decide (r.2 = 1)).map opening ++ (ss.filter fun r => decide (r.2 = 1)).map step
-  have grouped := ch.pairedLedger_perm edges id
-  simp only [edges,List.flatMap_append,List.flatMap_map,List.map_append,List.map_map,Function.comp_def,id_eq] at grouped
-  have ordered := BalancedInteractions.of_perm live grouped
-  apply (ch.balanced_unit_iff _ _).mp
-  simpa only [enabledInputs,List.map_append,List.map_map,Function.comp_def,opening,step,List.append_assoc] using ordered
+  simpa only [enabledInputs,List.map_map,Function.comp_def] using gated_walk_endpoints cursorChannel
+    os Prod.snd (fun o => o.1.first) (fun o => o.1.last) ss Prod.snd (fun r => r.1.before) (fun r => r.1.after) ob sb paid
 
 /-- The lists of allocating calls and fresh nodes decoded from their actual installed slots. -/
 def allocationInputs (w : EnsembleWitness (preprocessing image source target final)) : List (Open F) × List (Step F) :=
