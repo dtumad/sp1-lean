@@ -1,4 +1,4 @@
-import SP1Clean.Export.WriteMixedSourceRecords
+import SP1Clean.Export.WriteMixedReadFunding
 import SP1Clean.Proofs.Completeness.WriteCountedCost
 
 /-! # Supply indices and source validity for the generated WRITE observer

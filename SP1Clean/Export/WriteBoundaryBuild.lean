@@ -124,22 +124,25 @@ theorem finalizer_rows (image : ProgramImage) (source target : ExecutionSnapshot
   rw [List.getElem?_append_left (by change WriteSourceRegistry.position (.finalizer ram) < 6; cases ram <;> decide)] at located
   cases ram <;> exact Option.some.inj located
 
+/-- The concrete register and RAM finalizer arrays for this compiled history and demand set. -/
+def FinalRows (raw : AccessInventory.Source → Table F) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess)
+    (requested : List ℕ) (canonical : MemoryAddressesCanonical stream) (data : ProverData F) (hint : ProverHint F) : Prop :=
+  ∀ ram, (raw (.finalizer ram)).table = (finalTable ram (terminals snapshot stream requested data hint) data
+    (terminals_fit ram snapshot stream requested canonical data hint)).table
+
 /-- Once a touched location has finished its last transfer, the genuine row of its installed
 register or RAM finalizer covers every remaining representable query clock with its posted word. -/
-theorem build_terminal_covers (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
+theorem terminal_covers_of_rows (raw : AccessInventory.Source → Table F) (snapshot : MemorySnapshot)
     (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
-    (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (suffix : List (Table F)) (registered)
+    (data : ProverData F) (hint : ProverHint F) (installed : FinalRows raw snapshot stream requested canonical data hint)
     (history : MemoryLocationHistory) (listed : history ∈ memoryLocationHistories stream) (legal : ValidKey history.loc.busAddress)
     (time : ℕ) (exhausted : history.last.current ≤ time) (fits : time < 2 ^ 48) :
-    let w := build image source target endQueue stream requested canonical data hint header suffix registered
-    ∃ r ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)),
+    ∃ r ∈ Counted.live (AccessInventory.records raw),
       Counted.Covers r ⟨Address.ofNat history.loc.busAddress, Address.ofNat time, Target.bitVecToWord history.last.pushed⟩ := by
-  intro w
   let row := terminalOfEntry (p := SP1Prime) history.finalEntry
-  have terminal : row ∈ terminals source.sail.memorySnapshot stream requested data hint :=
+  have terminal : row ∈ terminals snapshot stream requested data hint :=
     List.mem_mergeSort.mpr (List.mem_append_left _ (List.mem_map_of_mem (List.mem_map_of_mem listed)))
-  have live := final_mem_live_of_rows (WriteSourceRegistry.raw w) _ data _
-    (finalizer_rows image source target endQueue stream requested canonical data hint header suffix registered) row terminal
+  have live := final_mem_live_of_rows raw _ data _ installed row terminal
   refine ⟨finalReadback row.record, live, ?_⟩
   have covered := Counted.covers_compiled_entry (p := SP1Prime) history.finalEntry (2 ^ 48 - 1) time legal exhausted (by omega) (by decide)
   change Counted.Covers (finalReadback row.record)

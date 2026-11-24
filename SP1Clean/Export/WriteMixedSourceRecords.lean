@@ -1,4 +1,5 @@
-import SP1Clean.Export.WriteMixedReadFunding
+import SP1Clean.Export.WriteMixedSourceAssembly
+import SP1Clean.Export.WriteBoundaryDemand
 
 /-! # Original read-back publishers before canonical installation
 
@@ -12,6 +13,31 @@ open Circuit Air.Flat Channels Semantics Soundness TraceGen Machine FormalModel.
 open WriteProbe WriteProbe.AccessInventory WriteProbe.SparseBoundary WriteSourceRegistry
 
 private abbrev F := ZMod SP1Prime
+
+section
+variable {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : ReleaseAdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
+    (finish : HostHintQueue.State F) (data : ProverData F) (hint : ProverHint F)
+    (header : SP1PublicIO F) (remaining : Remaining image source target finish)
+
+/-- Construct the 31 registered Memory sources of one released execution with both incoming
+boundaries and the exact set of addresses requested by its collected WRITE packets. -/
+noncomputable def ofExecution (packets : List WriteObservations.Packet) : EnsembleWitness (base image source target finish) :=
+  build image source target finish rows (HintReadTransfers.history image source events) (heights run routed) data hint remaining
+    (MixedMemoryHistory.stream image source events rows) (WriteBoundaryBuild.demandKeys events packets) (MixedMemoryHistory.canonical run.1 routed) header
+
+/-- All generated Memory sources and incoming boundaries satisfy the canonical global constraints.
+Other generators certify only the remaining non-Memory slots. -/
+theorem ofExecution_constraints (packets : List WriteObservations.Packet)
+    (checked : ∀ i absent, let t := (remaining i absent).1; t.Constraints ∧ t.Guarantees) :
+    (ofExecution run routed finish data hint header remaining packets).Constraints :=
+  WriteBoundaryBuild.build_constraints image source target finish _ _ (MixedMemoryHistory.addresses_in_layout run.1 routed) data hint header _
+    (suffix_registered image source target finish rows _ (heights run routed) data hint remaining)
+    (fun t present => (suffix_valid image source target finish rows data hint remaining run routed checked t present).1)
+
+end
 
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : ReleaseAdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)

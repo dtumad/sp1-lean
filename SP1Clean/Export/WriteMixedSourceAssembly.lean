@@ -117,20 +117,4 @@ theorem raw_rows (stream : List MemoryHistoryAccess) (requested : List ℕ) (can
     show boundary.length = 6 from rfl, show tail[position id - 6]? = _ from suffix_at image source target finish rows words fit data hint remaining id outside] at located
   exact Option.some.inj located
 
-/-- Each positive read-back generated on an actual source row survives canonical installation
-as a positive occurrence at the same physical site in the full supervisor. -/
-theorem mem_live (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
-    (header : SP1PublicIO F) (id : Source) (outside : 6 ≤ position id) (r : Readback F)
-    (generated : ∀ envData, ∃ cells ∈ (table rows words fit data hint id outside).table,
-      (1, r) ∈ rowRecords id (Environment.fromArray cells envData)) :
-    let w := build image source target finish rows words fit data hint remaining stream requested canonical header
-    r ∈ Counted.live (records (raw w)) := by
-  let w := build image source target finish rows words fit data hint remaining stream requested canonical header
-  obtain ⟨cells, occurs, readback⟩ := generated (raw w id).data
-  have actual : cells ∈ (raw w id).table := by
-    rw [show (raw w id).table = _ from raw_rows image source target finish rows words fit data hint remaining stream requested canonical header id outside]
-    exact occurs
-  have site : (1, r) ∈ records (raw w) := List.mem_flatMap.mpr ⟨id, sources_complete id, List.mem_flatMap.mpr ⟨cells, actual, readback⟩⟩
-  exact List.mem_map.mpr ⟨(1,r), List.mem_filter.mpr ⟨site, by simp⟩, rfl⟩
-
 end SP1Clean.Export.WriteMixedSourceTables
