@@ -15,6 +15,7 @@ open Channels Semantics TimedGrounding RankedGrounding
 
 variable {p : ℕ}
 
+/-- A physical access joins the complete predecessor and successor Memory records. -/
 abbrev Pair (p : ℕ) := MemoryMsg (ZMod p) × MemoryMsg (ZMod p)
 
 /-- Select all occurrence-level edges of a single location by their destination record. -/
@@ -88,7 +89,8 @@ one strictly ordered walk between its actual frontier records. -/
 def History (rows : List (Pair p)) (initial final : Option (MemoryMsg (ZMod p))) : Prop :=
   (initial = none ∧ final = none ∧ rows = []) ∨
     ∃ first last path, initial = some first ∧ final = some last ∧ path.Perm rows ∧
-      Walk.IsWalk id first last path ∧ (path.map (fun e => MemoryMsg.timeNat e.2)).Pairwise (· < ·)
+      Walk.IsWalk id first last path ∧ (path.map (fun e => MemoryMsg.timeNat e.2)).Pairwise (· < ·) ∧
+      ∀ e ∈ path, MemoryMsg.timeNat e.1 < MemoryMsg.timeNat e.2
 
 /-- A nonempty history has both authenticated endpoint records, and strictly increasing
 timestamps order every physical edge exactly once. -/
@@ -125,6 +127,6 @@ theorem exists_walk (rows : List (Pair p)) (initial final : Option (MemoryMsg (Z
         endpoints (fun e active => increase e (Multiset.mem_coe.mp active))
       have perm := Multiset.coe_eq_coe.mp all
       exact Or.inr ⟨first, last, path, rfl, rfl, perm, walk, targetRanks_pairwise_of_isWalk id MemoryMsg.timeNat walk
-        (fun e active => increase e (perm.mem_iff.mp active))⟩
+        (fun e active => increase e (perm.mem_iff.mp active)), fun e active => increase e (perm.mem_iff.mp active)⟩
 
 end SP1Clean.Soundness.MemoryRecordChain

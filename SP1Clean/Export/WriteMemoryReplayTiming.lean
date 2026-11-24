@@ -108,7 +108,8 @@ theorem consumed_clock_bounds (valid : image.Valid) (witness : EnsembleWitness (
   exact consumed_of_balance valid core boundary.data _ physical ordering fetch fixed (word_access witness checked bytes) loc
     (execution_memory_balance witness checked packet installed packetChecked balanced cursor wordData bytes ordering memory loc)
 
-private theorem eventFacts_data (event : ExecutionRow SP1Prime) (left right : ProverData Fp)
+/-- Changing prover data preserves the original checked CPU and word-row facts. -/
+theorem eventFacts_setData (event : ExecutionRow SP1Prime) (left right : ProverData Fp)
     (words : List (HintReadCoverage.Row (p := SP1Prime))) : eventFacts left words event = eventFacts right words event := by
   unfold eventFacts wordsAt cpuClock
   rw [event.facts_setData left right, event.edge_setData left right]
@@ -125,7 +126,7 @@ private theorem bounded_of_sources (core : EnsembleWitness (LocalCore.ensemble (
       (∃ prior next, (prior, next) ∈ LocalCore.memoryRefreshes core ∧ record = AccessSupply.atClock (next.clk_high, next.clk_low) prior) ∨
       ∃ prior ∈ FinalMemoryEnsemble.records (LocalCore.finalWitness core), record = finalReadback prior) : Counted.Bounded record := by
   rcases source with ⟨event, active, prior, time, pulled, rfl⟩ | ⟨prior, next, present, rfl⟩ | ⟨prior, present, rfl⟩
-  · rw [eventFacts_data event core.data data words] at pulled
+  · rw [eventFacts_setData event core.data data words] at pulled
     have priorBound := bounded (MemoryMsg.locOf prior) prior (Multiset.mem_add.mpr (Or.inl (Multiset.mem_add.mpr (Or.inr
       (mem_pullsAt.mpr ⟨⟨_, List.mem_map_of_mem (f := eventFacts data words) active, (prior, time), pulled, rfl⟩, rfl⟩)))))
     have high := (LocalCore.executionRows_good_of_orderingChannels core checked ordering active).1.1

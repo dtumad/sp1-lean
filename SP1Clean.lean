@@ -53,6 +53,7 @@ import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
 import SP1Clean.Soundness.MemoryRecordChain
 import SP1Clean.Export.WriteMemoryRecordChain
+import SP1Clean.Export.WritePhysicalCuts
 import SP1Clean.Soundness.WritePacketReceiver
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
 import SP1Clean.Proofs.Completeness.WritePacketInputs
