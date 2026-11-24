@@ -67,7 +67,8 @@ theorem native_position {image : ProgramImage} {source target : ExecutionSnapsho
     earlier current.host cursor.1
   let entry : Entry := ⟨(length,buffer),dispatch,allocation.map (fun b => b.rows prior current.clock cursor readers)⟩
   have emitted : position image source events readers (.syscall call) cut = some entry := by
-    simp [position,at?,reached,stored,WriteObservations.packetAt?,write,read,emit,entry,allocation,earlier,bytes,prior,dispatch]
+    simp [position,at?,reached,stored,WriteObservations.packetAt?,write,read,emit,emitCounts,StreamCounts.dispatch_ofStreams,batchFor,entry,allocation,earlier,bytes,prior,dispatch]
+    rfl
   refine ⟨current,next,cursor,after,length,buffer,entry,reached,stopped,stored,advanced,read,emitted,rfl,rfl,valid,rfl,?_⟩
   intro batch active
   obtain ⟨checked,ticket,outgoing,_,_,same,fits,sizes,publications⟩ := eligible batch active
@@ -88,11 +89,11 @@ theorem native_position_active {image : ProgramImage} {source target : Execution
   have reached := path.replay
   change executionTrajectory (policy SP1Prime image) image.program source.realize events cut = some current at reached
   cases event with
-  | ordinary => simp [position,at?,reached,stored,WriteObservations.packetAt?,emit,WriteObservations.isWriteCall]
+  | ordinary => simp [position,at?,reached,stored,WriteObservations.packetAt?,emit,emitCounts,WriteObservations.isWriteCall]
   | syscall call =>
     by_cases write : call.rawCode = SyscallKind.write.code
     · obtain ⟨_,_,_,_,_,_,entry,_,_,_,_,_,emitted,_,_,valid,_⟩ := native_position run readers present write
       simp [emitted,WriteObservations.isWriteCall,write,valid]
-    · simp [position,at?,reached,stored,WriteObservations.packetAt?,emit,WriteObservations.isWriteCall,write]
+    · simp [position,at?,reached,stored,WriteObservations.packetAt?,emit,emitCounts,WriteObservations.isWriteCall,write]
 
 end SP1Clean.WriteEffects.Witness

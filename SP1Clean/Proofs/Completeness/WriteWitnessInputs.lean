@@ -119,7 +119,7 @@ private theorem opens_at {image : ProgramImage} {source target : ExecutionSnapsh
     · obtain ⟨_,_,_,_,_,_,entry,_,_,_,_,_,emitted,_,_,_,allocated,_⟩ := native_position run readers present write
       rw [emitted,Option.bind_some,allocated]
       cases route : WriteRoute.ofDescriptor call.arg1 <;>
-        simp [opensQueue,WriteObservations.isWriteCall,usesQueue,write,route,batchFor,SyscallKind.code]
+        simp [opensQueue,WriteObservations.isWriteCall,usesQueue,write,route,batchFor,batchAt,SyscallKind.code]
     · have absent := (native_position_active run readers present).1
       cases built : position image source events readers (.syscall call) i <;>
         simp [built,opensQueue,WriteObservations.isWriteCall,write] at absent ⊢

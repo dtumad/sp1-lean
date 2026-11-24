@@ -14,18 +14,22 @@ open Semantics Machine FormalModel.Shard TraceGen WriteEffects
 private abbrev F := ZMod SP1Prime
 
 /-- All queue work authorized by the descriptor, including hooks returning zero buffers. -/
-def batchFor (route : WriteRoute) (earlier : WriteStreams) (host : HostState) (bytes : Bytes) : Option Batch :=
+def batchAt (route : WriteRoute) (hookIndex : Nat) (host : HostState) (bytes : Bytes) : Option Batch :=
   match route with
   | .hint => some (.direct bytes)
-  | .hook _ => some (.hook earlier.hooks.length bytes.length (route.allocations host bytes))
+  | .hook _ => some (.hook hookIndex bytes.length (route.allocations host bytes))
   | _ => none
+
+/-- Characterization of an allocating WRITE using its actual preceding host transcript. -/
+def batchFor (route : WriteRoute) (earlier : WriteStreams) (host : HostState) (bytes : Bytes) : Option Batch :=
+  batchAt route earlier.hooks.length host bytes
 
 /-- The dispatch gate is active exactly once for each allocating call, including an empty hook reply. -/
 theorem dispatch_allocation_gate (fd address len : BitVec 64) (clk previous : Nat) (earlier : WriteStreams)
     (host : HostState) (store : HintQueue.Store) (bytes : Bytes) :
     let row := dispatchRow fd address len clk previous earlier host store
     row.flags.direct + row.flags.hook = if (batchFor (WriteRoute.ofDescriptor fd) earlier host bytes).isSome then (1 : F) else 0 := by
-  cases route : WriteRoute.ofDescriptor fd <;> simp [dispatchRow,route,routeFlags,DispatchFlags.hook,batchFor]
+  cases route : WriteRoute.ofDescriptor fd <;> simp [dispatchRow,dispatchColumns,route,routeFlags,DispatchFlags.hook,batchFor,batchAt]
 
 /-- Every open row consumes the actual call's ticket and prepends precisely the semantic buffers. -/
 theorem dispatch_allocation_ticket (fd address len : BitVec 64) (clk previous : Nat) (earlier : WriteStreams)
@@ -42,10 +46,10 @@ theorem dispatch_allocation_ticket (fd address len : BitVec 64) (clk previous : 
       ((host.replies.head?.map HookReply.hints).getD []).length := by
     cases host.replies <;> rfl
   change row.ticket row.flags = _ ∧ _
-  cases route : WriteRoute.ofDescriptor fd <;> simp [batchFor,route] at active
+  cases route : WriteRoute.ofDescriptor fd <;> simp [batchFor,batchAt,route] at active
   all_goals subst batch
   all_goals simp only [Dispatch.ticket,length]
-  all_goals simp [Dispatch.owner,row,dispatchRow,route,routeFlags,DispatchFlags.hook,
+  all_goals simp [Dispatch.owner,row,dispatchRow,dispatchColumns,route,routeFlags,DispatchFlags.hook,
     Batch.ticket,Batch.buffers,WriteRoute.allocations,threeLimbs,three,size,returns,finalCursor]
   all_goals first | exact ⟨rfl, rfl⟩ | rfl
 
