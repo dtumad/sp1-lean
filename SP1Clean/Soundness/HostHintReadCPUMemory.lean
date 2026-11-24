@@ -106,6 +106,31 @@ private theorem handler_queue_member
     witness.same_data _ (handlerTable_mem witness)
   simp only [Table.environment, shared]
 
+/-- A consumer on the actual HINT_READ cursor belongs to its full CPU call in any
+dispatch ledger that includes the registered hint receiver. -/
+theorem word_cpu_of_received
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (received : HostLocalHandoff.calls witness ⊆ HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data)
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (steps : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
+    (row : HintReadCoverage.Row (p := p))
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
+    ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
+      ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
+        HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
+        ExecutionRow.syscall (HostCallLedger.input env) ∈
+          LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
+        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row := by
+  obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface cursor steps row member
+  obtain ⟨env, active, call, physical, _⟩ := HostQueueCPUOrder.call_cpu_of_received witness received
+    (none, handler) (handler_queue_member witness handler handlerMem)
+  rw [queue_read_call] at call
+  refine ⟨handler, handlerMem, env, active, call, physical, ?_⟩
+  rw [handler_clock] at same
+  exact (wrapper_call_clock witness.data env).trans
+    ((congrArg (fun message : HostCallChip.Message (ZMod p) => (message.clk_high, message.clk_low)) call).trans same)
+
 /-- Every active word belongs to an actual active syscall with the handler's complete call.
 The clock is derived from the two installed ledgers, independently of Memory-value guarantees. -/
 theorem word_cpu
@@ -121,15 +146,9 @@ theorem word_cpu
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
         ExecutionRow.syscall (HostCallLedger.input env) ∈
           LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
-        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row := by
-  obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface cursor steps row member
-  obtain ⟨env, active, call, physical, _⟩ := HostQueueCPUOrder.call_cpu witness interface constraints calls
-    (none, handler) (handler_queue_member witness handler handlerMem)
-  rw [queue_read_call] at call
-  refine ⟨handler, handlerMem, env, active, call, physical, ?_⟩
-  rw [handler_clock] at same
-  exact (wrapper_call_clock witness.data env).trans
-    ((congrArg (fun message : HostCallChip.Message (ZMod p) => (message.clk_high, message.clk_low)) call).trans same)
+        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row :=
+  word_cpu_of_received witness interface (fun _ seen => (HostLocalHandoff.calls_perm_of_balancedChannel witness
+    (resources_hostCall_silent interface) constraints calls).mem_iff.mpr seen) cursor steps row member
 
 /-- An actual handler's active words are exactly its authenticated node's padded write
 inventory. This does not require the current call or its preceding CPU replay to succeed. -/

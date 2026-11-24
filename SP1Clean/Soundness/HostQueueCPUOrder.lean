@@ -93,6 +93,30 @@ private theorem call_mem
   · exact List.getElem_mem _
   · exact List.mem_of_mem_drop member
 
+/-- A physical receiver's complete payload identifies its CPU row in any host ledger
+whose dispatch includes these receiver tables. -/
+theorem call_cpu_of_received
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
+    (received : HostLocalHandoff.calls witness ⊆ HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data)
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
+    ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
+      HostCallLedger.call env = call row ∧
+      ExecutionRow.syscall (HostCallLedger.input env) ∈
+        LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
+      StateMsg.timeNat ((ExecutionRow.syscall (HostCallLedger.input env)).edge witness.data).1 =
+        eventTime row := by
+  have produced := received (call_mem witness row member)
+  obtain ⟨env, active, same⟩ := List.mem_map.mp produced
+  refine ⟨env, active, same, ?_, ?_⟩
+  · apply List.mem_append_right
+    apply List.mem_map.mpr
+    refine ⟨(HostCallLedger.input env), ?_, rfl⟩
+    rw [← HostLocalCore.hostCallTable_projection witness]
+    exact List.mem_map_of_mem (f := fun env => (HostCallLedger.input env)) active
+  · have clock := congrArg (fun message : HostCallChip.Message (ZMod p) =>
+      clkNat message.clk_high message.clk_low) same
+    exact clock.trans (call_time row)
+
 /-- Every queue event is an actual active syscall, with the same complete call, not just a clock.
 The physical environment is retained for subsequent register and Memory grounding. -/
 theorem call_cpu
@@ -105,20 +129,9 @@ theorem call_cpu
       ExecutionRow.syscall (HostCallLedger.input env) ∈
         LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
       StateMsg.timeNat ((ExecutionRow.syscall (HostCallLedger.input env)).edge witness.data).1 =
-        eventTime row := by
-  have registered := call_mem witness row member
-  have produced := (HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
-    constraints balanced).mem_iff.mpr registered
-  obtain ⟨env, active, same⟩ := List.mem_map.mp produced
-  refine ⟨env, active, same, ?_, ?_⟩
-  · apply List.mem_append_right
-    apply List.mem_map.mpr
-    refine ⟨(HostCallLedger.input env), ?_, rfl⟩
-    rw [← HostLocalCore.hostCallTable_projection witness]
-    exact List.mem_map_of_mem (f := fun env => (HostCallLedger.input env)) active
-  · have clock := congrArg (fun message : HostCallChip.Message (ZMod p) =>
-      clkNat message.clk_high message.clk_low) same
-    exact clock.trans (call_time row)
+        eventTime row :=
+  call_cpu_of_received witness (fun _ seen =>
+    (HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface) constraints balanced).mem_iff.mpr seen) row member
 
 /-- Matching a queue event's clock in the CPU inventory recovers its exact physical instruction
 and full call. Clock uniqueness is derived from this ensemble's State/Byte projection. -/

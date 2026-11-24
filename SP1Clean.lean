@@ -32,6 +32,8 @@ import SP1Clean.Export.WriteSourceRegistry
 import SP1Clean.Export.WriteSourceGrounding
 import SP1Clean.Export.WriteBoundarySourceGrounding
 import SP1Clean.Export.WriteHostSourceGrounding
+import SP1Clean.Export.WriteWordOwner
+import SP1Clean.Soundness.WritePacketReceiver
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
