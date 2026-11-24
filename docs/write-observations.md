@@ -138,8 +138,10 @@ the supplied reply's descriptor, request length and number of returned hints. Fo
 execution, the dispatcher gets its incoming clock from the last WRITE, or from the source clock
 when there has been none. Its four counters come from the actual host prefix. Each WRITE
 generates one active physical row, including empty and ignored writes. Its outgoing cursor
-agrees with the post-call snapshot, and demand padding fits the call-count bound.
-[Dispatcher construction](../SP1Clean/Proofs/Completeness/WriteDispatchTable.lean)
+agrees with the post-call snapshot, and demand padding fits the call-count bound. The constructor
+visits each CPU event once, carrying the previous WRITE clock and persistent queue cursor.
+A missing required guest read fails the same replay.
+[Dispatcher construction](../SP1Clean/Proofs/Completeness/WriteDispatchTable.lean) · [Ordered replay](../SP1Clean/Proofs/Completeness/WriteDispatchReplay.lean)
 
 A direct hint or a
 hook emits a queue-allocation ticket. The current registry has no receiver for that ticket.

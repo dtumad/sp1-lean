@@ -14,28 +14,29 @@ open Circuit Air.Flat Semantics Machine FormalModel.Shard TraceGen
 
 private abbrev F := ZMod SP1Prime
 
-/-- Recover a dispatch input at the given execution position. Ordinary events and the seven
-other syscalls contribute no dispatcher input. -/
-noncomputable def dispatchAt? (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent) :
+/-- Inspect one event at an arbitrary cut with the specified incoming dispatch clock and queue.
+The first host state anchors all stream offsets for the shard. -/
+noncomputable def dispatchAt? (image : ProgramImage) (initialHost : HostState)
+    (previous : Nat) (source : ExecutionState) (cursor : HintQueue.Store × Nat) (events : List ExecutionEvent) :
     ExecutionEvent × Nat → Option (Dispatch F)
   | (.ordinary, _) => none
   | (.syscall call, cut) => do
     if call.rawCode ≠ SyscallKind.write.code then none else
     let policy := FormalModel.Shard.policy SP1Prime image
-    let current ← executionTrajectory policy image.program source.realize events cut
+    let current ← executionTrajectory policy image.program source events cut
     let (length, _) ← WriteObservations.read? current.sail call
-    let (store, _) ← HintQueue.storeAfter? policy image.program source.realize (events.take cut) (HintQueue.ofList source.host.io.hints)
-    return dispatchRow call.arg1 call.arg2 length current.clock ((events.take cut).foldl advanceWriteClock source.clock)
-      (WriteStreams.fromEndpoints source.host current.host) current.host store
+    let (store, _) ← HintQueue.storeAfter? policy image.program source (events.take cut) cursor
+    return dispatchRow call.arg1 call.arg2 length current.clock ((events.take cut).foldl advanceWriteClock previous)
+      (WriteStreams.fromEndpoints initialHost current.host) current.host store
 
 /-- Dispatchers appear in source order, indexed by the entire event tape. -/
 noncomputable def dispatchInputs (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent) : List (Dispatch F) :=
-  events.zipIdx.filterMap (dispatchAt? image source events)
+  events.zipIdx.filterMap (dispatchAt? image source.host source.clock source.realize (HintQueue.ofList source.host.io.hints) events)
 
 private theorem dispatchAt_valid {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events)
     {event : ExecutionEvent} {cut : Nat} (present : events[cut]? = some event) :
-    let input := dispatchAt? image source events (event,cut)
+    let input := dispatchAt? image source.host source.clock source.realize (HintQueue.ofList source.host.io.hints) events (event,cut)
     input.isSome = WriteObservations.isWriteCall event ∧ ∀ r ∈ input, r.Valid := by
   cases event with
   | ordinary => simp [dispatchAt?, WriteObservations.isWriteCall]
