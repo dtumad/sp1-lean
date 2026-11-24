@@ -41,6 +41,28 @@ theorem PreallocatedMode.FixedAt.typed_prefix
       using fixed.2 j (by simp; omega) (by simp; omega)
   simpa [ProvableType.fromElements_toElements] using congrArg (fromElements (M := Row)) h
 
+/-- Conversely, evaluating the public prefix provides all required fixed cells. Any values
+can populate the suffix when the program declares its cells private or multiplicity. -/
+theorem PreallocatedMode.fixedAt_of_typed_prefix
+    {mode : PreallocatedMode F (ProvablePair Row Suffix)}
+    {row : Witgen.M F (Row (Witgen.FExpr F))} {i : UInt64}
+    {suffix : Suffix (Cell F)} (value : Suffix F)
+    (program : mode.input .idx = fixedPrefix row suffix)
+    (privateCells : ∀ cell ∈ (toElements suffix).toList, cell.isFixed = false) :
+    mode.FixedAt i (row.evalRow i, value) := by
+  simp only [PreallocatedMode.FixedAt, program, fixedPrefix, Witgen.M.bind_def, Witgen.M.pure_def,
+    toElements, ProvableType.toElements_fromElements, Vector.toList_append, Vector.toList_map]
+  apply List.rel_append
+  · rw [List.forall₂_iff_get]
+    refine ⟨by simp, ?_⟩
+    intro j left right
+    simp [Witgen.M.evalRow, Witgen.eval, Cell.FixedMatches, ProvableType.toElements_fromElements, circuit_norm]
+  · rw [List.forall₂_iff_get]
+    refine ⟨by simp, ?_⟩
+    intro j left right
+    have privateCell := privateCells _ (List.getElem_mem left)
+    cases eq : (toElements suffix).toList[j] <;> simp [eq, Cell.isFixed, Cell.FixedMatches] at *
+
 /-- A typed fixed payload paired with the generator-owned multiplicity cell. -/
 def fixedWithMultiplicity (row : Witgen.M F (Row (Witgen.FExpr F))) :
     Witgen.M F (ProvablePair Row field (Cell F)) := fixedPrefix row (.multiplicity : Cell F)
