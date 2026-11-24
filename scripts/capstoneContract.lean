@@ -6,6 +6,9 @@ import Lean
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Export.WriteObservationAssembly
+import SP1Clean.Proofs.Completeness.WriteAllocationStore
+import SP1Clean.Proofs.Completeness.WriteAllocationWordTables
+import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteObservationReads
@@ -191,6 +194,32 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.statement_iff,
   ``SP1Clean.Export.WriteObservationAssembly.table_count,
   ``SP1Clean.Export.WriteObservationAssembly.queue_slots,
+  ``SP1Clean.Semantics.HintQueue.node?_prepend_at,
+  ``SP1Clean.Export.WriteObservationAssembly.allocation_slots,
+  ``SP1Clean.Export.WriteObservationAssembly.allocation_word_slots,
+  ``SP1Clean.WriteAllocation.open_ledger,
+  ``SP1Clean.WriteAllocation.step_ledger,
+  ``SP1Clean.WriteAllocation.Batch.openRow_valid,
+  ``SP1Clean.WriteAllocation.Batch.steps_at,
+  ``SP1Clean.WriteAllocation.native_allocation_ticket_at,
+  ``SP1Clean.WriteAllocation.native_store_at,
+  ``SP1Clean.WriteAllocation.Batch.publishes_prepend,
+  ``SP1Clean.WriteAllocation.Words.populate_word,
+  ``SP1Clean.WriteAllocation.Words.walk_words,
+  ``SP1Clean.WriteAllocation.Words.populate_hook_available,
+  ``SP1Clean.WriteAllocation.Words.populate_direct_group,
+  ``SP1Clean.WriteAllocation.Words.walk_table_valid,
+  ``SP1Clean.WriteAllocation.Words.word_supply,
+  ``SP1Clean.WriteAllocation.Words.guarded_word_valid,
+  ``SP1Clean.WriteEffects.Witness.native_collect,
+  ``SP1Clean.WriteEffects.Witness.native_position,
+  ``SP1Clean.WriteEffects.Witness.native_inputs,
+  ``SP1Clean.WriteEffects.StreamCounts.advance_correct,
+  ``SP1Clean.WriteEffects.Witness.native_node_count,
+  ``SP1Clean.WriteEffects.Witness.native_word_capacity,
+  ``SP1Clean.WriteEffects.Witness.native_allocation_assembly,
+  ``SP1Clean.WriteEffects.Witness.allocation_occurrences,
+  ``SP1Clean.WriteEffects.Witness.native_private_matches,
   ``SP1Clean.Export.WriteObservationAssembly.withCursors_ledger,
   ``SP1Clean.Export.WriteObservationAssembly.effect_lookupFree,
   ``SP1Clean.WriteEffects.groups_of_admissibleExecution,
