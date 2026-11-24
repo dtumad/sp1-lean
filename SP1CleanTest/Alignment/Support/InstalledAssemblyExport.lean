@@ -17,8 +17,11 @@ open SP1Clean.Export.InstalledAssembly
 /-- Encoded private inputs and their upstream hint-table views. `samples` identifies each physical
 component's first supplied input for mutation tests; it is not the generation hint schema. -/
 structure Prepared where
+  /-- Flattened private input passed to the native and exported witness schedulers. -/
   data : Array Fp
+  /-- Named table slices consumed by the production generation modes. -/
   hints : List HintTable
+  /-- First supplied row per component, retained for targeted fixture mutations. -/
   samples : List HintTable
 
 private def word (message : Array Fp) (offset width : ℕ) : ℕ :=
