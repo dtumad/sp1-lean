@@ -82,6 +82,21 @@ private theorem stream_byte (buffer : List (BitVec 64)) {i : ℕ} (inside : i < 
       simpa only [bytesOf, Vector.length_toList, show (i+1)*8+slot.val-8 = i*8+slot.val by omega] using
         ih shorter
 
+/-- The released byte slice has its requested length, including an unaligned zero-byte read. -/
+theorem payload_length {buffer : List (BitVec 64)} {address length : Nat} (count : buffer.length = wordCount address length) :
+    (payload buffer address length).length = length := by
+  simp only [payload,List.length_take,List.length_drop,stream_length,count,wordCount]
+  omega
+
+/-- Read the real little-endian lane at a selected payload position. -/
+theorem payload_byte {buffer : List (BitVec 64)} {address length index lane pos : Nat}
+    (word : index < buffer.length) (byte : lane < 8) (used : pos < length)
+    (coord : address%8+pos = index*8+lane) :
+    (payload buffer address length)[pos]? = some (Soundness.wordBytes buffer[index])[lane] := by
+  unfold payload
+  rw [List.getElem?_take_of_lt used,List.getElem?_drop,coord]
+  exact stream_byte buffer word ⟨lane,byte⟩
+
 /-- Pack the actual full-word observations without introducing a timestamp transition, and recover
 the very byte list returned by the existing host interpreter. -/
 theorem observe {source : SailState} {address length : ℕ} {expected : Bytes}
