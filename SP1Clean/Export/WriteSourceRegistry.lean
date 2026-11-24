@@ -120,7 +120,7 @@ private theorem final_slot (ram : Bool) :
     rw [List.getElem?_set_self (by simp only [List.length_set, List.length_append, HostFinalMemory.prefix_length]; omega)]
     rfl
 
-private theorem other_boundary_slot (i : ℕ) (inside : i < 6) (reg : i ≠ 3) (ram : i ≠ 4) :
+private theorem prefix_core_slot (i : ℕ) (inside : i < 7) (reg : i ≠ 3) (ram : i ≠ 4) :
     (base image source target final).tables[i]? = (LocalCore.tables (p := SP1Prime) image source)[i]? := by
   rw [outside _ _ _ _ _ (by omega), initial, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
     List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega),
@@ -129,6 +129,12 @@ private theorem other_boundary_slot (i : ℕ) (inside : i < 6) (reg : i ≠ 3) (
   simp only [ProtectedLocalCore.tables]
   rw [List.getElem?_append_left (by simp only [List.length_set, LocalCore.tables_length]; omega),
     List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega)]
+
+/-- The fixed Program provider keeps its exact position after host and receipt installation. -/
+theorem program_at :
+    (base image source target final).tables[6]? = some (FixedProgramProvider.Preprocessed.component image) := by
+  rw [prefix_core_slot _ _ _ _ 6 (by decide) (by decide) (by decide)]
+  rfl
 
 /-- The first six genuine supervisor slots are the two source providers and their seal,
 followed by the two original receipt-publishing finalizers and their own seal. -/
@@ -144,12 +150,12 @@ theorem boundary_prefix :
   by_cases bound : i < 6
   · rw [ite_eq_left bound]
     interval_cases i
-    · rw [other_boundary_slot _ _ _ _ 0 (by decide) (by decide) (by decide)]; rfl
-    · rw [other_boundary_slot _ _ _ _ 1 (by decide) (by decide) (by decide)]; rfl
-    · rw [other_boundary_slot _ _ _ _ 2 (by decide) (by decide) (by decide)]; rfl
+    · rw [prefix_core_slot _ _ _ _ 0 (by decide) (by decide) (by decide)]; rfl
+    · rw [prefix_core_slot _ _ _ _ 1 (by decide) (by decide) (by decide)]; rfl
+    · rw [prefix_core_slot _ _ _ _ 2 (by decide) (by decide) (by decide)]; rfl
     · exact final_slot image source target final false
     · exact final_slot image source target final true
-    · rw [other_boundary_slot _ _ _ _ 5 (by decide) (by decide) (by decide)]; rfl
+    · rw [prefix_core_slot _ _ _ _ 5 (by decide) (by decide) (by decide)]; rfl
   · rw [ite_eq_right bound, List.getElem?_eq_none (by change 6 ≤ i; omega)]
 
 /-- Full component identity, including the executable scheduler and fixed-cell interpretation. -/

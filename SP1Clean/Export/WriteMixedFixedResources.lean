@@ -1,11 +1,12 @@
 import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Proofs.Completeness.MixedSnapshotMembership
+import SP1Clean.Proofs.Completeness.MixedProgramFetches
 
 /-! # Installing the counted source-snapshot membership tables
 
-The fixed register and RAM tables read their multiplicities directly from the two ordered
-initializers compiled for this segment. Their distinct positions in the native supervisor
-are discharged before the remaining original providers are assembled.
+The fixed ROM counts each decoded instruction fetched by the mixed row compiler. The register
+and RAM tables count their actual ordered initializer pulls. All three are installed at their
+original supervisor positions.
 -/
 
 namespace SP1Clean.Export.WriteMixedFixedResources
@@ -15,24 +16,39 @@ open WriteSourceRegistry WriteProbe.SparseBoundary
 
 private abbrev F := ZMod SP1Prime
 
-/-- The actual original register and RAM membership provider positions. -/
-def position (ram : Bool) : ℕ := if ram then 60 else 59
+/-- Verifier-fixed providers constructed from the mixed execution. -/
+inductive Index
+  | program
+  | initial (ram : Bool)
+  deriving DecidableEq
 
-/-- Identify the source-snapshot membership provider installed at a physical index. -/
-def indexAt (i : ℕ) : Option Bool := [false,true].find? (fun ram => position ram == i)
+/-- The actual original position of each fixed resource. -/
+def position : Index → ℕ
+  | .program => 6
+  | .initial ram => if ram then 60 else 59
 
-private theorem position_of_indexAt {i : ℕ} {ram : Bool} (found : indexAt i = some ram) : position ram = i :=
-  eq_of_beq (List.find?_some (p := fun r => position r == i) found)
+/-- Identify the fixed resource at a physical supervisor position. -/
+def indexAt (i : ℕ) : Option Index := [.program,.initial false,.initial true].find? (fun id => position id == i)
+
+private theorem position_of_indexAt {i : ℕ} {id : Index} (found : indexAt i = some id) : position id = i :=
+  eq_of_beq (List.find?_some (p := fun it => position it == i) found)
 
 variable (image : ProgramImage) (source target : ExecutionSnapshot) (finish : HostHintQueue.State F)
 
-/-- The two counted components are exactly the verifier's original fixed tables. -/
-theorem registered_at (ram : Bool) :
-    (base image source target finish).tables[position ram]? =
-      some ((members source.sail.memorySnapshot ram).component (members_fit source.sail.memorySnapshot ram)) := by
-  cases ram <;>
-    rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
-      List.getElem?_append_left (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide), List.getElem?_set_ne (by decide)] <;> rfl
+/-- The original named component for each fixed resource. -/
+def component : Index → Component F
+  | .program => FixedProgramProvider.Preprocessed.component image
+  | .initial ram => (members source.sail.memorySnapshot ram).component (members_fit source.sail.memorySnapshot ram)
+
+/-- The counted components coincide with the fixed tables of the actual original verifier. -/
+theorem registered_at (id : Index) :
+    (base image source target finish).tables[position id]? = some (component image source id) := by
+  cases id with
+  | program => exact program_at image source target finish
+  | initial ram =>
+    cases ram <;>
+      rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
+        List.getElem?_append_left (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide), List.getElem?_set_ne (by decide)] <;> rfl
 
 private abbrev components := (base image source target finish).tables.drop 6
 
@@ -41,10 +57,10 @@ def Remaining := (i : Fin (components image source target finish).length) →
   sourceAt (6 + i.val) = none → WriteMixedHostTables.indexAt (6 + i.val) = none →
   indexAt (6 + i.val) = none → { t : Table F // t.component = (components image source target finish)[i] }
 
-/-- Installing both original source membership tables leaves 39 original positions. -/
+/-- Installing the fixed Program and two source Memory providers leaves 38 original positions. -/
 theorem remaining_count :
     ((List.range' 6 (components image source target finish).length).filter
-      (fun i => (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (indexAt i).isNone)).length = 39 := by
+      (fun i => (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (indexAt i).isNone)).length = 38 := by
   rw [List.length_drop, base_length]
   decide
 
@@ -74,14 +90,14 @@ private noncomputable def counts (ram : Bool) :=
   ReaderCounts.counts ((fixed.readers? ledger).get (funded_readers run routed data hint packets ram))
 
 /-- The complete fixed inventory, including zero-count unused rows and physical padding. -/
-noncomputable def table (ram : Bool) : Table F :=
+private noncomputable def initialProvider (ram : Bool) : Table F :=
   (members source.sail.memorySnapshot ram).buildMembership (members_fit _ ram)
     (fun i => ((counts run routed data hint packets ram)[i] : F)) data
 
 /-- The exact generated provider is locally valid and funds its original initializer ledger. -/
 theorem funded (ram : Bool) :
     let fixed := members source.sail.memorySnapshot ram
-    let t := table run routed data hint packets ram
+    let t := initialProvider run routed data hint packets ram
     t.Constraints ∧ t.Guarantees ∧ t.length = fixed.height ∧
       LogUpBalanced (t.interactionsWith fixed.channel.toRaw ++
         (client run routed data hint packets ram).interactionsWith fixed.channel.toRaw) := by
@@ -91,20 +107,35 @@ theorem funded (ram : Bool) :
     ((client run routed data hint packets ram).interactionsWith (members source.sail.memorySnapshot ram).channel.toRaw) = some indices at selected
   have chosen := Option.some_get (funded_readers run routed data hint packets ram)
   have eqIds := Option.some.inj (chosen.trans selected)
-  simp only [table, counts, eqIds]
+  simp only [initialProvider, counts, eqIds]
   exact valid
 
-/-- Fill both provider slots in the 41-position assembly from their original client tables. -/
+/-- Generate the fixed Program or private snapshot provider from this execution. -/
+noncomputable def table : Index → Table F
+  | .program => MixedProgramFetches.table run.1 routed data
+  | .initial ram => initialProvider run routed data hint packets ram
+
+/-- Every selected table retains its exact original circuit and witness scheduler. -/
+theorem table_component (id : Index) : (table run routed data hint packets id).component = component image source id := by
+  cases id <;> rfl
+
+private theorem table_valid (id : Index) :
+    (table run routed data hint packets id).Constraints ∧ (table run routed data hint packets id).Guarantees := by
+  cases id with
+  | program => exact ⟨(MixedProgramFetches.funded run.1 routed data).1,(MixedProgramFetches.funded run.1 routed data).2.1⟩
+  | initial ram => exact ⟨(funded run routed data hint packets ram).1,(funded run routed data hint packets ram).2.1⟩
+
+/-- Install each generated fixed table at its authenticated position in the supervisor. -/
 noncomputable def install (remaining : Remaining image source target finish) :
     WriteMixedHostTables.Remaining image source target finish :=
   fun i absent old => match found : indexAt (6 + i.val) with
     | none => remaining i absent old found
-    | some ram => ⟨table run routed data hint packets ram, by
-        have atSlot := registered_at image source target finish ram
+    | some id => ⟨table run routed data hint packets id, by
+        have atSlot := registered_at image source target finish id
         rw [position_of_indexAt found, ← List.getElem?_drop, List.getElem?_eq_getElem i.isLt] at atSlot
-        exact (Option.some.inj atSlot).symm⟩
+        exact (table_component run routed data hint packets id).trans (Option.some.inj atSlot).symm⟩
 
-/-- The two generated resource slots independently discharge their local constraints and guarantees. -/
+/-- Each generated resource slot discharges its own local constraints and guarantees. -/
 theorem install_valid (remaining : Remaining image source target finish)
     (checked : ∀ i absent old missing, let t := (remaining i absent old missing).1; t.Constraints ∧ t.Guarantees) :
     ∀ i absent old, let t := (install run routed data hint packets remaining i absent old).1; t.Constraints ∧ t.Guarantees := by
@@ -112,6 +143,6 @@ theorem install_valid (remaining : Remaining image source target finish)
   dsimp only [install]
   split
   · exact checked i absent old _
-  · exact ⟨(funded run routed data hint packets _).1,(funded run routed data hint packets _).2.1⟩
+  · exact table_valid run routed data hint packets _
 
 end SP1Clean.Export.WriteMixedFixedResources
