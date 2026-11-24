@@ -145,6 +145,19 @@ private theorem history_start {loc : MemLoc} {records : List MemoryHistoryAccess
     obtain ⟨prior, chain⟩ := history_links places run
     exact ⟨congrArg Prod.fst prior, chain⟩
 
+/-- The first word actually displaced at an occupied location is its incoming word, including
+when a read at genesis occurs before the first transfer at that location. -/
+theorem Transfers.first_word {f g : AccessFrontier} {s t : LocationValues} {records : List MemoryHistoryAccess}
+    (valid : Transfers f g s t records) (loc : MemLoc) (used : loc ∈ touchedMemoryLocations records) :
+    let nonempty := memoryHistoryAt_ne_nil_of_mem used
+    some ((memoryHistoryAt records loc).head nonempty).pulled = s loc := by
+  have first {xs : List MemoryHistoryAccess} (nonempty : xs ≠ []) (h : IsHandoffChain (f loc, s loc) (xs.map endpoints) (g loc, t loc)) :
+      some (xs.head nonempty).pulled = s loc := by
+    cases xs with
+    | nil => contradiction
+    | cons a rest => exact congrArg Prod.snd h.1
+  exact first _ (valid loc)
+
 /-- Threaded hand-offs from genesis prove the record chronology required by the existing
 per-location boundary and ordered Memory ledger constructors. -/
 theorem Transfers.chronology {final : AccessFrontier} {source target : LocationValues} {records : List MemoryHistoryAccess}

@@ -27,7 +27,8 @@ theorem batch_values {image : ProgramImage} {source target : ExecutionSnapshot} 
   obtain ⟨valid, _, window⟩ := batch_records run routed index prefixAt prefixNext
   exact ⟨before, next, atCut, atNext, valid.post_eq, window⟩
 
-private theorem cut_clock_mono {p : HostPolicy} {program : GuestProgram} {source early late : ExecutionState}
+/-- Increasing the prefix position weakly increases the authentic replay clock, including past the endpoint. -/
+theorem cut_clock_mono {p : HostPolicy} {program : GuestProgram} {source early late : ExecutionState}
     {events : List ExecutionEvent} {i j : ℕ} (ordered : i ≤ j)
     (before : executionTrajectory p program source events i = some early)
     (after : executionTrajectory p program source events j = some late) : early.clock ≤ late.clock := by
