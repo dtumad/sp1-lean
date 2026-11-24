@@ -3,7 +3,7 @@ import SP1Clean.Proofs.Chips.WritePacket.Ledger
 import SP1Clean.Proofs.Operations.WriteProbeLedger
 import SP1Clean.Proofs.Operations.WriteEffects
 import SP1Clean.Native.Operations.WriteStreamSource
-import SP1Clean.Native.Operations.WriteStreamBoundary
+import SP1Clean.Proofs.Completeness.WriteStreamExecution
 
 /-! # Physical WRITE packet and effect inputs in the native supervisor
 
@@ -161,5 +161,28 @@ def slot (index : Fin 8) : TableSlot (preprocessing image source target final).t
     (tables source.host target.host)[index.val] :=
   (TableSlot.ofIndex (tables source.host target.host) ⟨index.val, index.isLt⟩).appendRight
     (withSources image source target final).tables
+
+/-- Check the public host endpoints used by the fixed stream provider. This stage still
+exports requests, octets and fixed records for the chronological WRITE consumer. -/
+def assembly : Ensemble F SP1PublicIO :=
+  (WriteEffects.checker source.host target.host).install (preprocessing image source target final)
+
+/-- The public checker enforces exact ordered endpoint deltas and representable fixed records. -/
+theorem statement_iff (header : SP1PublicIO F) (heights : List ℕ) :
+    (assembly image source target final).Statement .logUp header heights ↔
+      (preprocessing image source target final).Statement .logUp header heights ∧
+        WriteEffects.boundarySpec source.host target.host :=
+  (WriteEffects.checker source.host target.host).statement_iff _
+    (by change 2 < ringChar F; rw [ZMod.ringChar_zmod_n]; decide)
+    (fun _ => WriteEffects.boundarySpec source.host target.host)
+    (WriteEffects.checker_checks source.host target.host) header heights
+
+/-- Every native resource-admissible mixed execution discharges the installed endpoint checker. -/
+theorem statement_iff_of_execution {events : List Machine.ExecutionEvent}
+    (run : FormalModel.Shard.AdmissibleExecution (ResourceLimits.native SP1Prime)
+      SP1Prime image source target events) (header : SP1PublicIO F) (heights : List ℕ) :
+    (assembly image source target final).Statement .logUp header heights ↔
+      (preprocessing image source target final).Statement .logUp header heights := by
+  rw [statement_iff, and_iff_left (WriteEffects.admissible_streams run)]
 
 end SP1Clean.Export.WriteObservationAssembly

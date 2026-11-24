@@ -17,6 +17,8 @@ import SP1Clean.Proofs.Completeness.WriteCountedHints
 import SP1Clean.Proofs.Completeness.WriteCountedRouting
 import SP1Clean.Proofs.Completeness.WriteCountedTables
 import SP1Clean.Proofs.Completeness.WriteEffectRows
+import SP1Clean.Proofs.Completeness.WriteStreamCapacity
+import SP1Clean.Proofs.Completeness.WriteStreamExecution
 import SP1Clean.Proofs.Completeness.WriteSourceCoverage
 import SP1Clean.Proofs.Completeness.WriteSourceCuts
 import SP1Clean.Soundness.WriteSourceActivity
