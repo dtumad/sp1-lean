@@ -11,6 +11,7 @@ import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
 import SP1CleanTest.Core.ProgramExport
 import SP1CleanTest.Core.HintSourceExport
+import SP1CleanTest.Core.HintSnapshotGeneration
 import SP1CleanTest.Core.WritePermissionExport
 import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
 import SP1CleanTest.Alignment.Support.StoppedAssemblyFixture
@@ -402,6 +403,7 @@ private def exportEnsembleFixture : IO Unit := do
       SP1CleanTest.Core.SyscallCodeExport.rustExports ++
       SP1CleanTest.Core.ProgramExport.rustExports ++
       SP1CleanTest.Core.WritePermissionExport.rustExports ++
+      [("hint_target_suffix.rs", SP1CleanTest.Core.HintSnapshotGeneration.rustExport)] ++
       SP1CleanTest.Core.HintSourceExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++

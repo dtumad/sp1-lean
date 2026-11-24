@@ -21,7 +21,7 @@ RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "symbolic_arithmetic_export": 2, "system_export": 4,
     "syscall_export": 7, "host_control_export": 12, "byte_provider_export": 6,
     "ram_export": 5, "syscall_code_export": 3,
-    "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
+    "program_export": 5, "write_permission_export": 3, "hint_source_export": 6,
     "assembly_boundaries_export": 5, "assembly_stopped_export": 5,
     "assembly_hint_read_export": 3, "assembly_halt_export": 3,
     "assembly_commitments_export": 3, "assembly_ordinary_export": 3,
@@ -52,7 +52,7 @@ def artifact_names():
     files += [f"host_{bank}_{slot}.rs" for bank in ["commit", "deferred"] for slot in range(8)]
     files += ["host_hint_length_empty.rs", "host_hint_length.rs", "host_hint_read.rs",
               "host_hints.reference.json"]
-    files += ["hint_sources.reference.json"] + [
+    files += ["hint_target_suffix.rs", "hint_sources.reference.json"] + [
         f"hint_{kind}{suffix}.rs" for kind in ["nodes", "words"] for suffix in ["", "_unused", "_empty"]
     ]
     files += ["installed_assembly.rs", "installed_assembly.reference.json",

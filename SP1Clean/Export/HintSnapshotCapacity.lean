@@ -9,6 +9,7 @@ covers its final padded word, including for empty and eight-byte-aligned hints.
 
 namespace SP1Clean.Export.InstalledAssembly
 open Circuit Air.Flat Semantics Semantics.HintQueue Machine FormalModel.Shard HostHintSnapshot
+open scoped Classical
 
 private theorem words_cost (hints : List Bytes) :
     8 * wordRows hints ≤ (hints.map bytePayloadCost).sum := by
@@ -69,5 +70,41 @@ theorem fixedProviderPreset_hint_snapshot_height (ctx : Context) {events : List 
   change (schedule (p := SP1Prime) ctx.target.host.io.hints).length ≤ _
   simp only [schedule_length, fits, ↓reduceIte]
   omega
+
+/-- Exact additional occurrences contributed by the two outgoing queue tables on every raw
+channel. Height includes all inactive word rows. The singleton has two state and two walk sites. -/
+theorem hint_snapshot_occurrences (hints : List Bytes) (reader terminal : Table (ZMod SP1Prime))
+    (installedReader : reader.component = HostHintSnapshot.component hints)
+    (installedSeal : terminal.component = Seal.component hints) (ch : RawChannel (ZMod SP1Prime)) :
+    let hit := fun (k : RawChannel (ZMod SP1Prime)) => if k = ch then 1 else 0
+    let h := (inventory (p := SP1Prime) hints).height
+    (reader.interactionsWith ch ++ terminal.interactionsWith ch).length =
+      hit HostHintSnapshot.channel.toRaw * (2 * h + 2) + hit HostHintQueue.nodeChannel.toRaw * h +
+      hit HostHintQueue.wordChannel.toRaw * h + hit HostHintQueue.stateChannel.toRaw * 2 := by
+  dsimp only
+  have readerChannels : (HostHintSnapshot.component (p := SP1Prime) hints).operations.interactions.map (·.channel) =
+      [HostHintSnapshot.channel.toRaw, HostHintQueue.nodeChannel.toRaw, HostHintQueue.wordChannel.toRaw, HostHintSnapshot.channel.toRaw] := by
+    rw [Component.interactions_eq]
+    change (((HostHintSnapshot.main hints (varFromOffset HostHintSnapshot.Inputs 0)).operations (size HostHintSnapshot.Inputs)).interactions.map _) = _
+    rw [HostHintSnapshot.ledger]
+    rfl
+  have terminalChannels : (Seal.component (p := SP1Prime) hints).operations.interactions.map (·.channel) =
+      [HostHintQueue.stateChannel.toRaw, HostHintSnapshot.channel.toRaw, HostHintSnapshot.channel.toRaw, HostHintQueue.stateChannel.toRaw] := by
+    rw [Component.interactions_eq]
+    change (((Seal.main hints (varFromOffset Seal.Inputs 0)).operations (size Seal.Inputs)).interactions.map _) = _
+    rw [Seal.ledger]
+    rfl
+  have height : terminal.length = 1 := by
+    have fixed := terminal.fixed_rows_match
+    rw [installedSeal] at fixed
+    exact fixed.1
+  have width (ops : Operations (ZMod SP1Prime)) :
+      (ops.interactionsWith ch).length = (ops.interactions.map (·.channel)).countP (fun k => decide (k = ch)) := by
+    rw [List.countP_map, List.countP_eq_length_filter]
+    rfl
+  simp only [List.length_append, Table.interactionsWith_length, installedReader, installedSeal,
+    Component.channelWidth, width, readerChannels, terminalChannels, List.countP_cons, List.countP_nil,
+    decide_eq_true_eq, height, show reader.length = _ from physical_height hints reader installedReader]
+  ring
 
 end SP1Clean.Export.InstalledAssembly

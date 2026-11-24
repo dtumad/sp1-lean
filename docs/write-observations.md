@@ -164,7 +164,12 @@ signed walk ledger, including padded zero multiplicities. The seal consumes the 
 head, allocation frontier and clock exactly once. The next shard starts from its own
 canonical numbering of that target. The boundary payload covers all padded words,
 giving a physical reader height of at most `2^26` under the fixed-provider preset.
-[Physical reader](../SP1Clean/Native/Operations/HintQueueSnapshot.lean) · [Constructive ledger](../SP1Clean/Proofs/Completeness/HintSnapshotLedger.lean) · [Capacity](../SP1Clean/Export/HintSnapshotCapacity.lean)
+At padded height `h`, these two tables contribute `2h + 2` walk occurrences, `h` node
+occurrences, `h` word occurrences and two state occurrences. The generated Rust fixture
+uses both production source tables to prove and verify an outgoing suffix after a pop.
+The backend rejects a changed tail on its aligned padding word and a changed terminal
+allocation frontier.
+[Physical reader](../SP1Clean/Native/Operations/HintQueueSnapshot.lean) · [Constructive ledger](../SP1Clean/Proofs/Completeness/HintSnapshotLedger.lean) · [Capacity](../SP1Clean/Export/HintSnapshotCapacity.lean) · [Backend fixture](../rust/sp1-comparison/tests/hint_source_export.rs)
 
 The full native acceptance theorem still needs to connect consecutive WRITE clocks, close
 all per-stream positions, and recover the persistent node and word sources for the
