@@ -69,6 +69,25 @@ instance groupGuardSupported : Guarded.Supported (groupCircuit (p := p)) :=
       simp only [groupCircuit,List.mem_cons,List.not_mem_nil,or_false] at required
       rcases required with rfl | rfl <;> exact False.elim (outside (by simp [groupCircuit,groupElaborated,circuit_norm])))
 
+/-- Every enabled physical placement has its semantic coordinates, checked lane correspondence
+and Boolean block gates. The interior input channels carry unconditional local guarantees. -/
+theorem guarded_group_valid (r : Var (ProvablePair Group field) (ZMod p)) (n : Nat) (env : Environment (ZMod p))
+    (checked : (((Guarded.circuit groupCircuit inferInstance).main r).operations n).ConstraintsHold env) :
+    IsBool (eval env r).2 ∧ ((eval env r).2 = 1 → (eval env r).1.Valid) := by
+  let g := Guarded.circuit (groupCircuit (p := p)) inferInstance
+  apply (g.original_full_soundness n env r (fun _ => trivial) checked ?_).1
+  rw [Operations.guarantees_iff _ _ _ (g.in_channels_or_guarantees_full r n env)]
+  intro ch member
+  have known : ch = octetsChannel.toRaw ∨ ch = sliceChannel.toRaw ∨ ch = positionChannel.toRaw ∨ ch = blockChannel.toRaw := by
+    simpa [g,groupCircuit,groupElaborated,groupCoordinatesCircuit,groupCoordinatesElaborated,
+      groupBytesCircuit,groupBytesElaborated,AddressSum.circuit,AddressSum.elaborated,AddressDiv8.circuit,AddressDiv8.elaborated,
+      circuit_norm,List.ofFn_succ,or_comm,or_assoc,or_left_comm] using member
+  rcases known with rfl | rfl | rfl | rfl
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [octetsChannel,Channel.toRaw]) _ _
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [sliceChannel,Channel.toRaw]) _ _
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [positionChannel,Channel.toRaw]) _ _
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [blockChannel,Channel.toRaw]) _ _
+
 /-- Exactly one grouped placement per authentic word, irrespective of dispatch or payload size. -/
 def groupComponent : Component (ZMod p) where
   circuit := Guarded.circuit groupCircuit inferInstance
