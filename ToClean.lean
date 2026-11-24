@@ -51,6 +51,7 @@ public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
 public import ToClean.Air.DemandPadding
 public import ToClean.Air.GuardedDemandTable
+public import ToClean.Air.GuardedLedger
 public import ToClean.Circuit.StaticTable
 public import ToClean.Air.TableBuild
 public import ToClean.Air.LookupFree

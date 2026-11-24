@@ -46,6 +46,19 @@ private theorem pack (x y : ZMod p) (k : ℕ) (fits : x.val + y.val * k < p) :
   have cast : ((x.val + y.val * k : ℕ) : ZMod p) = x + y * (k : ZMod p) := by simp
   rw [← cast, ZMod.val_natCast_of_lt fits]
 
+/-- A bounded split timestamp gives a canonical three-limb address on the observer bus. -/
+theorem ClockParts.address_bounded (parts : ClockParts (ZMod p)) (bound : parts.Bounded) : Address.Bounded parts.address := by
+  obtain ⟨lo, midLo, midHi, hi⟩ := bound
+  have field := Fact.out (p := 2 ^ 24 < p)
+  have mid := pack parts.midLow parts.midHigh 256 (by omega)
+  simp only [Nat.cast_ofNat] at mid
+  intro i
+  fin_cases i
+  · exact lo
+  · change (parts.midLow + parts.midHigh * 256).val < _
+    rw [mid]; omega
+  · exact hi
+
 /-- In either representation, the physical timestamp denotes exactly the same natural. -/
 theorem ClockParts.time (parts : ClockParts (ZMod p)) (bound : parts.Bounded) :
     Address.toNat parts.address = clkNat parts.high24 parts.low24 := by

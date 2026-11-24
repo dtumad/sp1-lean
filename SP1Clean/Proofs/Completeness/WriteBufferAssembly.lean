@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Completeness.WriteBufferTables
 import SP1Clean.Proofs.Completeness.WriteBufferBatch
 import SP1Clean.Math.SP1Field
-import ToClean.Air.MessageFilter
+import ToClean.Air.GuardedLedger
 
 /-! # The batched physical WRITE span and aligned-word tables
 
@@ -32,18 +32,6 @@ theorem packetRows_valid {limits : ResourceLimits} {image : ProgramImage} {sourc
   exact ⟨span, words, consecutive⟩
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem active_sum {I : Type} [Zero I] (rows : List I) (values : I × ZMod p → List (Interaction (ZMod p)))
-    (message : Array (ZMod p)) (inactive : balanceOf (values 0) message = 0) :
-    balanceOf ((WitnessGeneration.guardedRows rows).flatMap values) message =
-      balanceOf (rows.flatMap (fun r => values (r, 1))) message := by
-  have disabled (n : ℕ) : balanceOf ((List.replicate n 0).flatMap values) message = 0 := by
-    induction n with
-    | zero => rfl
-    | succ n ih => rw [List.replicate_succ, List.flatMap_cons, balanceOf_append, inactive, ih, add_zero]
-  simp only [WitnessGeneration.guardedRows, List.flatMap_append, balanceOf_append, List.flatMap_map,
-    disabled, add_zero]
-
-omit [Fact (2 ^ 17 < p)] in
 private theorem one_cursor (r : PacketRows (ZMod p)) (valid : r.Valid) (m : Array (ZMod p)) :
     balanceOf (spanCursors (r.span, 1)) m + balanceOf (r.steps.flatMap (fun w => wordCursors (w, 1))) m = 0 := by
   let edge := fun w : Step (ZMod p) => (w.source, w.target)
@@ -69,7 +57,7 @@ theorem batch_cursor (batch : List (PacketRows (ZMod p))) (valid : ∀ r ∈ bat
     LogUpBalanced ((spanTable (batch.map PacketRows.span) data hs).interactionsWith channel.toRaw ++
       (wordTable (batch.flatMap PacketRows.steps) data hw).interactionsWith channel.toRaw) := by
   intro msg
-  rw [balanceOf_append, spanTable_cursors, wordTable_cursors, active_sum, active_sum]
+  rw [balanceOf_append, spanTable_cursors, wordTable_cursors, WitnessGeneration.guardedRows_balanceOf, WitnessGeneration.guardedRows_balanceOf]
   · clear hs hw
     induction batch with
     | nil => simp [balanceOf]

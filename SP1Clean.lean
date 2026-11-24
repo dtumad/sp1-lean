@@ -45,6 +45,9 @@ import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Soundness.WritePacketReceiver
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
+import SP1Clean.Proofs.Completeness.WritePacketInputs
+import SP1Clean.Proofs.Completeness.WritePacketTables
+import SP1Clean.Proofs.Completeness.WritePacketAssembly
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
