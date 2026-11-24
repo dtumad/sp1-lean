@@ -25,7 +25,8 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot} {finish : Ho
     (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (remaining : Remaining image source target finish)
     (packets : List WriteObservations.Packet)
 
-private theorem original_arrays (id : Index) :
+/-- The original precursor to the WRITE observer has the same generated cells at every protocol slot. -/
+theorem original_arrays (id : Index) :
     let w := WriteMixedSourceTables.ofExecution run routed finish data hint header (install run.1 data remaining) packets
     (w.tables.map Table.table)[position id]? = some (table run.1 data id).table := by
   intro w

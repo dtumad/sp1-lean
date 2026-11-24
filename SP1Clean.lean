@@ -62,6 +62,7 @@ import SP1Clean.Export.WriteMixedHostRegistry
 import SP1Clean.Export.WriteMixedHostTables
 import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Export.WriteMixedHostData
+import SP1Clean.Export.WriteMixedBankBalances
 import SP1Clean.Export.WriteMixedSourceRecords
 import SP1Clean.Export.WriteMixedSourceTables
 import SP1Clean.Export.WriteMixedSupplyCapacity
