@@ -271,21 +271,22 @@ theorem ordered_predecessors (witness : EnsembleWitness (HostObserved.ensemble i
   exact event_predecessor witness checked (perm.mem_iff.mp (List.getElem_mem index.isLt)) core.data pulled
 
 
-/-- The three signed protocols shared by the hint decoder and the native observer retain
+/-- The signed host protocols and original Memory ledger retain
 all physical occurrences when removing the observation, final-memory and queue endpoints. -/
 theorem host_protocol_ledger (witness : EnsembleWitness (HostObserved.ensemble image source target final)) (channel : RawChannel Fp)
-    (protocol : channel ∈ [HostCallChip.channel.toRaw, HintReadWordChip.stateChannel.toRaw, HostHintQueue.wordChannel.toRaw]) :
+    (protocol : channel ∈ [HostCallChip.channel.toRaw, HintReadWordChip.stateChannel.toRaw, HostHintQueue.wordChannel.toRaw, memoryChannel.toRaw]) :
     (hostWitness witness).interactionsWith channel = witness.interactionsWith channel := by
   let memory := HostObserved.baseWitness witness
   let boundary := HostFinalMemory.baseWitness memory
   have names := List.mem_map_of_mem (f := RawChannel.name) protocol
   have different (other : RawChannel Fp) (fresh : other.name ∉ ([HostCallChip.channel.toRaw, HintReadWordChip.stateChannel.toRaw,
-      HostHintQueue.wordChannel.toRaw] : List (RawChannel Fp)).map RawChannel.name) : channel ≠ other :=
+      HostHintQueue.wordChannel.toRaw, memoryChannel.toRaw] : List (RawChannel Fp)).map RawChannel.name) : channel ≠ other :=
     fun same => fresh (same ▸ names)
   have reg : channel ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw ::
       HostFinalMemory.sourceChannels (p := SP1Prime) target.sail.memorySnapshot) := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at protocol
-    rcases protocol with rfl | rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
+    rcases protocol with rfl | rfl | rfl | rfl <;>
+      simp [HostLocalCore.registry, HostFinalMemory.sourceChannels, LocalCore.baseEnsemble, sp1Ensemble_channels]
   have qa := HostHintQueueBoundary.projected_silent_interactions boundary channel (List.mem_append_left _ reg)
     (HostHintQueueBoundary.boundary_silent _ (different _ (by decide)) (different _ (by decide))
       (different _ (by decide)) (different _ (by decide)))

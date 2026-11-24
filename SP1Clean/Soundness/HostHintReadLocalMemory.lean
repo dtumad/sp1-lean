@@ -289,7 +289,7 @@ theorem source_word_touches
 There is no Memory guarantee, host-currentness, or multiplicity premise from the caller. -/
 theorem source_memory_records_perm
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
-    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
+    (constraints : witness.Constraints) (memory : (HostHintQueueBoundary.projected witness).BalancedChannel memoryChannel.toRaw) :
     ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
       (LocalCore.sourceWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
       producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
@@ -298,8 +298,7 @@ theorem source_memory_records_perm
       consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))) :=
   HostLocalCore.memory_records_perm (HostHintQueueBoundary.projected witness)
     (HostHintQueueBoundary.projected_constraints witness constraints)
-    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
-      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])) (source_memoryBinary source)
+    memory (source_memoryBinary source)
 
 /-- All pushes in the installed full Memory interior have bounded low clocks, including
 original instructions, refreshes, wrapper read-backs, and every physical hint word. -/
@@ -347,7 +346,9 @@ theorem source_memory_prior_bound (valid : image.Valid)
     ∀ message ∈ consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness)),
       MemoryMsg.ClkBound message := by
   intro message member
-  have produced := (source_memory_records_perm witness constraints balanced).mem_iff.mpr
+  have produced := (source_memory_records_perm witness constraints
+    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
+      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels]))).mem_iff.mpr
     (List.mem_append_right _ member)
   rcases List.mem_append.mp produced with sourceRecord | push
   · have checked := HostHintQueueBoundary.projected_constraints witness constraints
