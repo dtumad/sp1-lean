@@ -10,19 +10,6 @@ attribute [local instance 2000] FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State F}
 attribute [local irreducible] base withSources preprocessing
 
-private theorem registered : (recordChannel (p := SP1Prime)).toRaw ∈ channels := List.mem_of_getElem? (i := 8) rfl
-
-/-- All signed occurrences on the metadata bus, including the three hook-dispatch reads
-and zero-count reads on inactive or direct allocation rows. -/
-theorem allocation_metadata_ledger (w : EnsembleWitness (preprocessing image source target final)) :
-    let ch := (recordChannel (p := SP1Prime)).toRaw
-    w.interactionsWith ch = [((slot image source target final 7).table w),((slot image source target final 8).table w),
-      ((slot image source target final 16).table w)].flatMap (·.interactionsWith ch) := by
-  let ch := (recordChannel (p := SP1Prime)).toRaw
-  have support : selectedSlots source target ch = [7,8,16] := rfl
-  simpa only [support,List.flatMap_cons,List.flatMap_nil,List.append_nil] using fresh_slots_ledger w ch registered
-    (fun eq => Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq))
-
 private theorem not_supply {a : F} (r : Record F) (bit : IsBool a) : ¬(recordChannel.pulledIfValue a r).Push := by
   intro push
   rcases bit with rfl | rfl
@@ -81,7 +68,7 @@ theorem native_metadata_record (w : EnsembleWitness (assembly image source targe
   let ch := (recordChannel (p := SP1Prime)).toRaw
   have ok := (observed_constraints w).mp checked
   have bytes := (byte_guarantees seen ok (observed_byte_balance w fit raw)).2
-  have balance := observed_balance w fit raw ch (protocol_installed image source target final _ registered) (of_decide_eq_true rfl)
+  have balance := observed_balance w fit raw ch (protocol_installed image source target final _ record_registered) (of_decide_eq_true rfl)
   change BalancedInteractions (seen.interactionsWith ch) at balance
   rw [allocation_metadata_ledger] at balance read
   apply authenticated_pull_of_tables _ recordChannel _ _ balance r read

@@ -89,6 +89,20 @@ theorem fresh_slots_ledger (w : EnsembleWitness (preprocessing image source targ
   rw [projected, EnsembleWitness.interactionsWith_nil_of_not_registered _ _ (protocol_fresh image source target final ch registered),
     List.nil_append]
 
+/-- The WRITE metadata channel is registered on the observer ensemble. -/
+theorem record_registered : (WriteEffects.recordChannel (p := SP1Prime)).toRaw ∈ channels := List.mem_of_getElem? (i := 8) rfl
+
+/-- All signed occurrences on the metadata bus, including the three hook-dispatch reads
+and zero-count reads on inactive or direct allocation rows. -/
+theorem allocation_metadata_ledger (w : EnsembleWitness (preprocessing image source target final)) :
+    let ch := (WriteEffects.recordChannel (p := SP1Prime)).toRaw
+    w.interactionsWith ch = [((slot image source target final 7).table w),((slot image source target final 8).table w),
+      ((slot image source target final 16).table w)].flatMap (·.interactionsWith ch) := by
+  let ch := (WriteEffects.recordChannel (p := SP1Prime)).toRaw
+  have support : selectedSlots source target ch = [7,8,16] := rfl
+  simpa only [support,List.flatMap_cons,List.flatMap_nil,List.append_nil] using fresh_slots_ledger w ch record_registered
+    (fun eq => Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq))
+
 /-- The immutable metadata ledger retains every original supervisor occurrence, both the
 fixed outgoing snapshot's read sites and the fresh node table's counted publications. -/
 theorem hintNode_ledger (w : EnsembleWitness (preprocessing image source target final)) :

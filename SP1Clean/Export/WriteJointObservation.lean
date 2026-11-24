@@ -3,6 +3,7 @@ import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteMixedFixedResources
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteEndpointJoins
+import SP1Clean.Export.WriteInstalledMetadata
 import SP1Clean.Proofs.Completeness.WriteStreamTerminal
 import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
 
@@ -10,8 +11,9 @@ import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
 
 The chronological execution supplies the immutable reader counts, the final private
 queue state, the outgoing walk and its seal, and every alignment plan requested by a
-guest group. The terminal accounts for every CPU tick since the last WRITE. Only the stream
-metadata table remains to be constructed in the native suffix.
+guest group. The fixed stream metadata table counts the actual hook dispatches and allocation
+steps. This constructs all nineteen observer tables. Thirty original supervisor tables and the
+remaining shared-channel checks are still required for whole-assembly completeness.
 -/
 
 namespace SP1Clean.Export.WriteObservationAssembly
@@ -59,7 +61,7 @@ def effectDemandHeight {entries : List Entry} (r : Fin 4) : Nat :=
 
 attribute [local irreducible] base preprocessing assembly withSources WriteMixedSourceTables.ofExecution
 
-/-- One release-encodable run supplies eighteen native observer tables, the Memory and
+/-- One release-encodable run supplies all nineteen native observer tables, the Memory and
 commitment families, the private outgoing queue state and its immutable reader counts.
 The complete slice and queue-walk ledgers keep their exact physical occurrence counts. -/
 noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {events : List ExecutionEvent}
@@ -75,14 +77,15 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
       (routed : routeMixedRows? (policy SP1Prime ctx.image) ctx.image.program AccessFrontier.initial ctx.source.realize events = some rows),
       ∃ packets, WriteObservations.packets? (policy SP1Prime ctx.image) ctx.image.program ctx.source.realize events = some packets ∧
       ∃ front : List (Table F), front.map Table.component = (tables ctx.source ctx.target).take 5 ∧
-      ∃ entries, native? ctx.image ctx.source events uses.readers = some entries ∧
+      ∃ (entries : List Entry) (collected : native? ctx.image ctx.source events uses.readers = some entries),
+      let metadata := Metadata.table release.1 uses.readers collected data
+      metadata.Constraints ∧ metadata.Guarantees ∧
+      metadata.length = (WriteEffects.streamTable (p := SP1Prime) ctx.source.host ctx.target.host).height ∧
       ∃ s : SixTables entries ctx.source.host ctx.target.host, InstalledAssembly.MatchedWriteAllocation s data ∧ HintQueueReaders.AllocationReads s uses data ∧
         ∃ cap : EffectFits events entries (.fromEndpoints ctx.source.host ctx.target.host), cap.Realized data ∧
         ∃ plan : Table F, plan.component = WriteEffects.planComponent ∧ plan.Constraints ∧ plan.Guarantees ∧ plan.length = 512 ∧
           (∀ t ∈ hints, t.Constraints ∧ t.Guarantees) ∧ close.Constraints ∧ close.Guarantees ∧
-        ∀ (header : SP1PublicIO F) (remaining : WriteMixedFixedResources.Remaining ctx.image ctx.source ctx.target final)
-          (metadata : Table F),
-          metadata.component = WriteEffects.streamComponent ctx.source.host ctx.target.host →
+        ∀ (header : SP1PublicIO F) (remaining : WriteMixedFixedResources.Remaining ctx.image ctx.source ctx.target final),
           let plans := [plan,close]
           let w := WriteMixedSourceTables.ofExecution release routed final data hint header (WriteMixedHostTables.install release.1 data (WriteMixedFixedResources.install release routed data hint packets remaining)) packets
           let suffix := front ++ fundedSuffix s data (effectMiddle cap data metadata) hints plans
@@ -99,6 +102,9 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
               (WitnessGeneration.demandHeight (WriteObservations.wordProbes (inputs entries).packets) + 512) ∧
             CheckedLedger (full.interactionsWith HostHintSnapshot.channel.toRaw)
               (2 * (HostHintSnapshot.inventory (p := SP1Prime) ctx.target.host.io.hints).height + 2) ∧
+            CheckedLedger (full.interactionsWith WriteEffects.recordChannel.toRaw)
+              ((WriteEffects.streamTable (p := SP1Prime) ctx.source.host ctx.target.host).height +
+                3 * WitnessGeneration.demandHeight (inputs entries).dispatches.length + WitnessGeneration.demandHeight (inputs entries).nodes.length) ∧
             ∀ r : Fin 4, let ledger := full.interactionsWith (effectProtocols[r.val]'r.isLt)
               ledger.length = 2 * effectDemandHeight (entries := entries) r ∧ LogUpBalanced ledger ∧
                 (Balance.logUp (F := F)).fits ledger.length = true ∧ BalancedInteractions ledger
@@ -128,15 +134,17 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     native_slice_table release.1 readers collected s data
   obtain ⟨hintGood,hintMatch⟩ := outgoingTables_checked run.1 preset data
   obtain ⟨closeGood,closeGuar⟩ := WriteEffects.closeTable_valid release.1 data
-  refine ⟨rows,routed,_,observed,front,physical,entries,collected,s,paid,funding,cap,realized,
+  let metadata := Metadata.table release.1 readers collected data
+  have md := Metadata.checked release.1 readers collected s cap data
+  refine ⟨rows,routed,_,observed,front,physical,entries,collected,md.constraints,md.guarantees,md.height,s,paid,funding,cap,realized,
     plan,planReg,planGood,planGuar,planSize,hintGood,closeGood,closeGuar,?_⟩
-  intro header remaining metadata hm plans w suffix
+  intro header remaining plans w suffix
   have hh : hints.map Table.component = ((tables ctx.source ctx.target).drop 10).take 2 := rfl
   have hplans : plans.map Table.component = ((tables ctx.source ctx.target).drop 13).take 2 := by
     simp only [plans,List.map_cons,List.map_nil,planReg]; rfl
   let effects := effectMiddle cap data metadata
   have he : effects.map Table.component = ((tables ctx.source ctx.target).drop 5).take 4 := by
-    simp only [effects,effectMiddle,List.map_cons,List.map_nil,hm]; rfl
+    simp only [effects,effectMiddle,List.map_cons,List.map_nil]; rfl
   have pfront : front.map Table.component = (tables ctx.source ctx.target).take 5 := physical
   have pe : (front ++ effects).map Table.component = (tables ctx.source ctx.target).take 9 := by
     rw [List.map_append,pfront,he]; rfl
@@ -150,7 +158,7 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   intro pre full
   obtain ⟨frontValid,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets remaining) tail ptail
   have endpoints := installed_endpoint_ledgers w suffix reg (s.groups data) plan _ _ rfl rfl rfl rfl
-  refine ⟨frontValid,banks,?_,?_,?_,?_,?_,?_⟩
+  refine ⟨frontValid,banks,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)
     rw [public_bank pre d _ (banks (.bank d none))]
@@ -160,7 +168,7 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     rw [public_read pre ch member]
     exact readPaid ch member
   · have same : fundedSuffix s data (front ++ effects) hints plans = suffix := by
-      simp only [suffix,fundedSuffix,effects,List.append_assoc]
+      simp only [suffix,fundedSuffix,effects,metadata,readers,List.append_assoc]
     have witness : withPublicChecks (build w (fundedSuffix s data (front ++ effects) hints plans)
         (fundedSuffix_registered s data (front ++ effects) hints plans pe hh hplans)) = full :=
       congrArg withPublicChecks (by congr 1)
@@ -172,6 +180,9 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   · change CheckedLedger ((withPublicChecks (build w suffix reg)).interactionsWith _) _
     rw [endpoints.2]
     simpa only [outgoingTables,List.flatMap_cons,List.flatMap_nil,List.append_nil] using hintMatch
+  · change CheckedLedger ((withPublicChecks (build w suffix reg)).interactionsWith _) _
+    rw [installed_metadata_ledger w suffix reg metadata _ (s.nodes data) rfl rfl rfl]
+    exact ⟨md.count,md.signed,md.fits,md.matched⟩
   · obtain ⟨_,_,_,hspan,hword,hrequest,hoctets⟩ := realized
     exact installed_effect_joins w suffix reg _ _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl hspan hword hrequest hoctets
 
