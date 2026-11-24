@@ -22,6 +22,7 @@ import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WriteObservationSources
 import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteObservationHandoff
+import SP1Clean.Export.WriteHintRecordOrigins
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot
 import SP1Clean.Proofs.Completeness.HintSnapshotTables
