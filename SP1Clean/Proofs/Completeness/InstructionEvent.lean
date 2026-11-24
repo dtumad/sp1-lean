@@ -1758,4 +1758,75 @@ theorem compileInstructionEvent?_predecessors {program : GuestProgram} {located 
     | exact jType_predecessors shape built
     | exact memory_predecessors shape aligned built
 
+/-- The byte footprint of the four physical store families, before any permission lookups. -/
+def RoutedEvent.storeSpan? : RoutedEvent → Option MemorySpan
+  | ⟨.storeByte, e⟩ => some ⟨e.addr, 1⟩
+  | ⟨.storeHalf, e⟩ => some ⟨e.addr, 2⟩
+  | ⟨.storeWord, e⟩ => some ⟨e.addr, 4⟩
+  | ⟨.storeDouble, e⟩ => some ⟨e.addr, 8⟩
+  | _ => none
+
+private def storeSize : Soundness.Opcode → Option ℕ
+  | .SB => some 1 | .SH => some 2 | .SW => some 4 | .SD => some 8 | _ => none
+
+private theorem memoryEvent?_store_avoids {mask : ℕ → Bool} {source : SailState} {decoded : instruction}
+    {stamped : List StampedTouch} {clk pc : ℕ} {key : InstructionRouteKey} {e : MemoryEvent} {n : ℕ}
+    (keyEq : instructionRouteKey decoded = some key) (image : instructionImageOK decoded = true)
+    (checked : InstructionWrite.check mask source.get_reg? decoded = true)
+    (baseRead : ∀ t ∈ stamped, t.touch.slot = .opB →
+      match (generalizing := false) decoded with
+      | .LOAD (_, rs, _, _, _) | .STORE (_, _, rs, _) => source.get_reg? (regidxBits rs) = some t.touch.pulled
+      | _ => True)
+    (width : storeSize key.opcode = some n)
+    (built : memoryEvent? decoded stamped clk pc key.opcode.toNat = some e) : ByteMemory.Avoids mask e.addr n := by
+  unfold memoryEvent? at built
+  split at built
+  · rename_i _ ram b a
+    split at built
+    · rename_i _ bSlot _
+      have observed := baseRead b (by simp) bSlot
+      split at built
+      next imm rs1 rd unsigned w =>
+        cases Option.some.inj keyEq
+        have empty : storeSize (loadOpcode w unsigned) = none := by unfold loadOpcode; split_ifs <;> rfl
+        rw [empty] at width
+        contradiction
+      next imm rs2 rs1 w =>
+        cases Option.some.inj keyEq
+        cases Option.some.inj built
+        obtain ⟨value,atBase,allowed⟩ := (InstructionWrite.check_store_iff _ _ _ _ _ _ image).mp checked
+        cases Option.some.inj (atBase.symm.trans observed)
+        have size : storeSize (storeOpcode w) = some w.toNat := by
+          change storeWidthOK w = true at image
+          simp only [storeWidthOK, Bool.or_eq_true, beq_iff_eq] at image
+          rcases image with ((rfl | rfl) | rfl) | rfl <;> rfl
+        obtain rfl := Option.some.inj (size.symm.trans width)
+        simpa only [memoryOperands, MemoryEvent.addr, memoryEffectiveAddress, sextNat, BitVec.toNat_add] using allowed
+      next => contradiction
+    · contradiction
+  · contradiction
+
+/-- Every byte requested by the generated store row belongs to the permitted decoded write,
+including stores that overwrite the location with its existing value. -/
+theorem compileInstructionEvent?_store_avoids {program : GuestProgram} {located : Machine.LocatedTransition}
+    {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ} {result : CompiledInstructionEvent}
+    (projected : projectSP1Transition? program located = some view)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    {mask : ℕ → Bool} (checked : InstructionWrite.check mask located.source.get_reg? view.decoded = true)
+    {span : MemorySpan} (found : result.routed.storeSpan? = some span) : ByteMemory.Avoids mask span.address span.length := by
+  obtain ⟨_,keyEq,claimed⟩ := projected_instruction_fields projected
+  have plan := compileInstructionEvent?_accessPlan_generated projected generated
+  have image := (projectSP1Transition?_components projected).2.2.2.1
+  have baseRead := fun (t : StampedTouch) (member : t ∈ result.stamped) (slot : t.touch.slot = .opB) =>
+    instructionAccessPlan_memory_base plan
+      (show t.touch ∈ result.plan by rw [← compileInstructionEvent?_stamped_touches generated]; exact List.mem_map_of_mem member) slot
+  obtain ⟨accesses, event, _, built, rfl⟩ := compileInstructionEvent?_components generated
+  generalize eqId : view.chipId = id at event built found claimed
+  cases id <;> try contradiction
+  all_goals
+    cases Option.some.inj found
+    simp only [InstructionChipId.route, InstructionRoute.claims, RdGuard.holds, Bool.and_true,
+      List.contains_iff_mem, List.mem_cons, List.not_mem_nil, or_false] at claimed
+    exact memoryEvent?_store_avoids keyEq image checked baseRead (by rw [claimed]; rfl) built
+
 end SP1Clean.TraceGen
