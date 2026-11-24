@@ -26,22 +26,32 @@ private theorem eval_records (env : Environment (ZMod p)) (row : Var HostHintRea
   cases node
   simp only [HostHintReadChip.Inputs.endStep, circuit_norm, and_self]
 
-/-- The actual handler pulls both its node header and its terminal word record. -/
-theorem handler_records (env : Environment (ZMod p)) (active : env activity = 1) :
+/-- Both physical immutable record sites and their activity before selecting active rows. -/
+theorem handler_record_sites (env : Environment (ZMod p)) :
     handler.operations.interactionValuesWith nodeChannel.toRaw env =
-      [nodeChannel.pulledValue (input env).node] ∧
+      [nodeChannel.pulledIfValue (env activity) (input env).node] ∧
     handler.operations.interactionValuesWith wordChannel.toRaw env =
-      [wordChannel.pulledValue (input env).endStep.word] := by
+      [wordChannel.pulledIfValue (env activity) (input env).endStep.word] := by
   constructor
   all_goals simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
   · change ((HostHintReadChip.guardedCircuit.main (varFromOffset HostHintReadChip.RowInput 0)).operations
       (size HostHintReadChip.RowInput)).interactionValuesWith nodeChannel.toRaw env = _
     rw [HostHintReadChip.guarded_node_values,(eval_records _ _).1,decoded_input]
-    exact congrArg (fun g => [nodeChannel.pulledIfValue g (input env).node]) active
+    rfl
   · change ((HostHintReadChip.guardedCircuit.main (varFromOffset HostHintReadChip.RowInput 0)).operations
       (size HostHintReadChip.RowInput)).interactionValuesWith wordChannel.toRaw env = _
     rw [HostHintReadChip.guarded_word_values,(eval_records _ _).2,decoded_input]
-    exact congrArg (fun g => [wordChannel.pulledIfValue g (input env).endStep.word]) active
+    rfl
+
+/-- The actual handler pulls both its node header and its terminal word record. -/
+theorem handler_records (env : Environment (ZMod p)) (active : env activity = 1) :
+    handler.operations.interactionValuesWith nodeChannel.toRaw env =
+      [nodeChannel.pulledValue (input env).node] ∧
+    handler.operations.interactionValuesWith wordChannel.toRaw env =
+      [wordChannel.pulledValue (input env).endStep.word]  := by
+  have sites := handler_record_sites env
+  rw [active] at sites
+  exact sites
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_word (env : Environment (ZMod p)) (row : Var HintReadWordChip.Inputs (ZMod p))
@@ -50,7 +60,8 @@ private theorem eval_word (env : Environment (ZMod p)) (row : Var HintReadWordCh
   cases ram
   cases last <;> simp only [HintReadWordChip.Inputs.step, circuit_norm]
 
-private theorem consumer_record (row : HintReadCoverage.Row (p := p)) :
+/-- The immutable word site of an arbitrary physical transfer row, including its actual activity. -/
+theorem consumer_record (row : HintReadCoverage.Row (p := p)) :
     (HintReadCoverage.view row.1).component.operations.interactionValuesWith wordChannel.toRaw row.2 =
       [wordChannel.pulledIfValue (HintReadCoverage.rowActivity row)
         ((HintReadCoverage.rowInput row).step row.1).word] := by

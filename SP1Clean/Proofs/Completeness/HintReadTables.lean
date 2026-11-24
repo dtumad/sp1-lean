@@ -136,7 +136,8 @@ theorem wordTable_length (last : Bool) (entries : List Entry) (data : ProverData
   change (_root_.List.map _ (physicalInputs last entries)).length = _
   exact (List.length_map ..).trans (physicalInputs_length last entries)
 
-private theorem table_ledger (last : Bool) (entries : List Entry) (data : ProverData F) (height)
+/-- The complete physical ledger of a generated transfer table for any decoded row-site equation. -/
+theorem wordTable_ledger (last : Bool) (entries : List Entry) (data : ProverData F) (height)
     (channel : RawChannel F) (values : RowInput F → List (Interaction F))
     (point : ∀ env, (HintReadCoverage.component last).operations.interactionValuesWith channel env =
       values (valueFromOffset RowInput 0 env)) :
@@ -159,7 +160,7 @@ theorem wordTable_cursors (last : Bool) (entries : List Entry) (data : ProverDat
     (wordTable last entries data height).interactionsWith stateChannel.toRaw =
       (physicalInputs last entries).flatMap fun row =>
         [stateChannel.pulledIfValue row.2 row.1.previous, stateChannel.pushedIfValue row.2 row.1.next] := by
-  apply table_ledger
+  apply wordTable_ledger
   intro env
   have eq := (HintReadCoverage.view (p := SP1Prime) last).interactions env
   rw [HintReadCoverage.view_activity, Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at eq
@@ -179,7 +180,7 @@ theorem wordTable_memory (last : Bool) (entries : List Entry) (data : ProverData
       (physicalInputs last entries).flatMap fun row =>
         [Channels.memoryChannel.pulledIfValue row.2 row.1.ram.prior,
           Channels.memoryChannel.pushedIfValue row.2 row.1.ram.pushed] := by
-  apply table_ledger
+  apply wordTable_ledger
   intro env
   have eq := HintReadWriteLedger.row_memory_values (p := SP1Prime) (last, env)
   rw [row_activity] at eq
@@ -192,7 +193,7 @@ theorem wordTable_permissions (last : Bool) (entries : List Entry) (data : Prove
       (physicalInputs last entries).flatMap fun row =>
         List.ofFn (fun index : Fin 8 => WritePermissionProvider.channel.pulledIfValue row.2
           (Address.offset row.1.address (index.val : F))) := by
-  apply table_ledger
+  apply wordTable_ledger
   intro env
   have eq := HintReadWriteLedger.row_permission_values (p := SP1Prime) (last, env)
   rw [row_activity] at eq
@@ -210,7 +211,7 @@ theorem wordTable_hostRam (last : Bool) (entries : List Entry) (data : ProverDat
       (physicalInputs last entries).flatMap fun row =>
         [HostRamAccessChip.channel.pushedIfValue row.2 row.1.ram.message,
           HostRamAccessChip.channel.pulledIfValue row.2 row.1.ram.message] := by
-  apply table_ledger
+  apply wordTable_ledger
   intro env
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
   change (((circuit last).main (varFromOffset RowInput 0)).operations (size RowInput)).interactionValuesWith
