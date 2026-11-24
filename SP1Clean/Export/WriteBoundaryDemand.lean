@@ -35,7 +35,7 @@ private theorem valid_location (loc : MemLoc) (legal : ValidKey loc.busAddress) 
 /-- Every actual read at a fresh boundary key either has a previous compiler access at the cut
 or is covered by a positive physical finalizer. The witness is the canonical original supervisor
 containing the compiler's six boundary tables. -/
-theorem readDemand_sparse_source {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+private theorem readDemand_sparse_source {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     {limits : ResourceLimits} (run : AdmissibleExecution limits SP1Prime image source target events)
     {packets : List WriteObservations.Packet}
     (collected : WriteObservations.packets? (policy SP1Prime image) image.program source.realize events = some packets)
@@ -87,14 +87,14 @@ theorem compiled_sparse_read {image : ProgramImage} {source target : ExecutionSn
     (collected : WriteObservations.packets? (policy SP1Prime image) image.program source.realize events = some packets)
     {rows : List MixedCompiledRow} (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
     {cut : ℕ} {read : Read F} (member : (cut, read) ∈ readDemand (packetRows events packets))
-    (endQueue : HostHintQueue.State F) (canonical : MemoryAddressesCanonical (MixedMemoryHistory.stream image source events rows))
+    (endQueue : HostHintQueue.State F)
     (fresh : Address.toNat read.key ∉ (memoryInitialEntries (MixedMemoryHistory.stream image source events rows)).map MemRecordEntry.addr)
     (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (suffix : List (Table F)) (registered) :
-    let w := build image source target endQueue (MixedMemoryHistory.stream image source events rows) (demandKeys events packets) canonical
+    let w := build image source target endQueue (MixedMemoryHistory.stream image source events rows) (demandKeys events packets) (MixedMemoryHistory.canonical run routed)
       data hint header suffix registered
     ∃ record ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers record read := by
   obtain ⟨current, frontier, loc, before, key, _, posted | covered⟩ := readDemand_sparse_source run collected member
-    endQueue _ canonical fresh data hint header suffix registered
+    endQueue _ (MixedMemoryHistory.canonical run routed) fresh data hint header suffix registered
   · have absent : loc ∉ touchedMemoryLocations (MixedMemoryHistory.stream image source events rows) := by
       intro found
       rw [memoryInitialEntries_addresses] at fresh
@@ -102,5 +102,23 @@ theorem compiled_sparse_read {image : ProgramImage} {source target : ExecutionSn
     have zero := MixedMemoryHistory.zero_of_absent run routed absent before
     omega
   · exact covered
+
+/-- One admissible mixed execution generates both source and demand inventories. Every otherwise
+untouched request is funded on each canonical supervisor built with their six registered boundary tables. -/
+theorem sparse_suppliers_of_admissibleExecution {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events) :
+    ∃ packets rows, WriteObservations.packets? (policy SP1Prime image) image.program source.realize events = some packets ∧
+      ∃ routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows,
+        let stream := MixedMemoryHistory.stream image source events rows
+        ∀ endQueue data hint header suffix registered,
+          let w := build image source target endQueue stream (demandKeys events packets) (MixedMemoryHistory.canonical run routed)
+            data hint header suffix registered
+          ∀ cut read, (cut, read) ∈ readDemand (packetRows events packets) →
+            Address.toNat read.key ∉ (memoryInitialEntries stream).map MemRecordEntry.addr →
+              ∃ record ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers record read := by
+  obtain ⟨packets, collected⟩ := WriteObservations.admissible_packets run
+  obtain ⟨rows, routed, _⟩ := admissibleExecution_routeMixedRows run
+  exact ⟨packets, rows, collected, routed, fun endQueue data hint header suffix registered _ _ member fresh =>
+    compiled_sparse_read run collected routed member endQueue fresh data hint header suffix registered⟩
 
 end SP1Clean.Export.WriteBoundaryBuild
