@@ -11,7 +11,7 @@ HINT_LEN variants and the allocation headers share the same physical state ledge
 namespace SP1Clean.Export.WriteObservationAssembly
 open Circuit Air.Flat Semantics Soundness WriteSourceRegistry HostHintQueue WriteAllocation
 private abbrev F := ZMod SP1Prime
-local instance queueDecidableEq : DecidableEq F := FiniteField.instDecidableEq
+attribute [local instance 2000] FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : State F}
 
 /-- HINT_READ and both HINT_LEN families, with the concrete registry identity and the

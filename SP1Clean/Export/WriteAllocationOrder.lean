@@ -10,7 +10,7 @@ Consequently each private walk ends at the outgoing state of its own opening.
 namespace SP1Clean.Export.WriteObservationAssembly
 open Circuit Air.Flat Semantics Soundness WriteSourceRegistry HostHintQueue WriteAllocation
 private abbrev F := ZMod SP1Prime
-local instance physicalQueueDecidableEq : DecidableEq F := FiniteField.instDecidableEq
+attribute [local instance 2000] FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : State F}
 
 /-- Original HINT handlers increase the queue clock while preserving its permanent frontier. -/

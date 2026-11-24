@@ -11,7 +11,30 @@ sealed frontier determine the complete extended store, including popped nodes.
 namespace SP1Clean.Export.WriteObservationAssembly
 open Circuit Air.Flat Semantics Semantics.HintQueue Soundness WriteAllocation
 private abbrev F := ZMod SP1Prime
+attribute [local instance 2000] FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot}
+
+/-- Every physical fresh-node pointer occurs exactly once, including nodes without metadata
+readers. A word's pointer consequently identifies at most one source node. -/
+theorem native_node_pointers_unique (w : EnsembleWitness (native image source target)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
+    ((allocationInputs (observed w)).2.map (fun r => Address.toNat r.node.node.pointer)).Nodup := by
+  obtain ⟨rows,allRows,ids,_⟩ := native_allocation_frontier w checked fit raw
+  apply (allRows.map _).nodup_iff.mp
+  rw [ids]
+  exact List.nodup_range' 1
+
+/-- A positive publication identifies the original enabled row, including its reader count.
+All enabled rows are available through the physical inventory even when their count is zero. -/
+theorem PublishedBy.enabled {Input : TypeMap} [ProvableType Input] {Record : Type}
+    {t : Table F} {count : Input F → F} {payload : Input F → Record} {record : Record}
+    (published : PublishedBy t count payload record) :
+    ∃ input ∈ enabledInputs (guardedInputs Input t), count input ≠ 0 ∧ payload input = record := by
+  obtain ⟨row,member,activity,used,same⟩ := published
+  let decoded := valueFromOffset (ProvablePair Input field) 0 (t.environment row)
+  refine ⟨decoded.1,List.mem_map.mpr ⟨decoded,?_,rfl⟩,used,same⟩
+  exact List.mem_filter.mpr ⟨List.mem_map_of_mem (f := fun x => valueFromOffset (ProvablePair Input field) 0
+    (t.environment x)) member, decide_eq_true activity⟩
 
 /-- Fixed identities, physical tails and the sealed frontier leave exactly one persistent
 store for any supplied payload function. The word cursors determine the physical payloads. -/
