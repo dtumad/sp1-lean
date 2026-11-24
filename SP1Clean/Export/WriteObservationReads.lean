@@ -22,7 +22,8 @@ private theorem channels_installed : (preprocessing image source target final).c
 
 attribute [local irreducible] base withSources preprocessing
 
-private theorem protocol_fresh (ch : RawChannel F) (member : ch ∈ channels) :
+/-- A newly registered observer protocol has no occurrence in the original decorated supervisor. -/
+theorem protocol_fresh (ch : RawChannel F) (member : ch ∈ channels) :
     ch ∉ (withSources image source target final).channels := by
   have names := (preprocessing image source target final).unique_channel_names
   rw [channels_installed, List.map_append, List.nodup_append] at names
