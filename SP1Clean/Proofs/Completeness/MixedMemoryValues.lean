@@ -15,11 +15,13 @@ open MemoryHistoryAccess
 
 private abbrev F := ZMod SP1Prime
 
-private def afterRegisters (source target : SailState) : LocationValues
+/-- Complete intermediate location image after ECALL register retirement and before its host RAM transfers. -/
+def afterRegisters (source target : SailState) : LocationValues
   | .reg r => target.get_reg? r
   | .ram cell => locContent source (.ram cell)
 
-private theorem syscall_register_values {p : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
+/-- The ECALL operand roles consume their input registers and publish their authentic result register. -/
+theorem syscall_register_values {p : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
     {call : CoreSyscallEvent} (step : ExecutionStep p program source (.syscall call) target) :
     (syscallRegisterPlan call).RunsFrom (locContent source.sail) (afterRegisters source.sail target.sail) := by
   obtain ⟨⟨_, code, arg1, arg2, _, result⟩, frame, _⟩ := step.syscall_sail_frame
@@ -40,14 +42,17 @@ private theorem syscall_register_values {p : HostPolicy} {program : GuestProgram
     · simpa only [afterRegisters, Function.update_of_ne (show MemLoc.reg i ≠ .reg 5 by simpa), locContent] using frame i same
   | ram => rfl
 
-private theorem hint_word_values {request : HintReadTransfers.Request} {index : ℕ} {frontier after : AccessFrontier}
+/-- The physical handler word consumes and posts the actual Sail word and frontier timestamp at its canonical destination cell. -/
+theorem hint_word_endpoints {request : HintReadTransfers.Request} {index : ℕ} {frontier after : AccessFrontier}
     {source target : SailState} {store : HintQueue.Store} {entry : Bool × HintReadWordChip.RowInput F}
     (span : HintReadSpan.Domain request.address request.bytes.length) (pos : index < HintQueue.wordCount request.bytes)
     (atWord : request.WordAt index frontier after source target store)
     (found : (request.rows frontier source)[index]? = some entry) :
-    (∃ cell, (hint entry.2).loc = .ram cell) ∧
-      locContent target (hint entry.2).loc = some (hint entry.2).pushed ∧ (hint entry.2).current = request.clock + 1 := by
-  obtain ⟨actual, _, _, _, posted, _, time, _⟩ := atWord
+    let r := hint entry.2
+    r.loc = .ram (request.cell index) ∧ r.loc.busAddress = request.destination index ∧
+      r.previous = frontier r.loc ∧ r.current = after r.loc ∧
+      locContent source r.loc = some r.pulled ∧ locContent target r.loc = some r.pushed ∧ r.current = request.clock + 1 := by
+  obtain ⟨actual, _, _, prior, posted, priorTime, time, finish, _⟩ := atWord
   cases Option.some.inj (actual.symm.trans found)
   let dest := request.destination index
   have low : 2 ^ 16 ≤ dest := by
@@ -56,16 +61,23 @@ private theorem hint_word_values {request : HintReadTransfers.Request} {index : 
     have := span.2.2; unfold HintQueue.wordCount at pos; dsimp [dest, HintReadTransfers.Request.destination]; omega
   have align : dest % 8 = 0 := by
     have := span.2.1; dsimp [dest, HintReadTransfers.Request.destination]; omega
-  let cell : RamCell := BitVec.ofNat 61 (dest / 8)
+  let cell := request.cell index
   have key : cell.toNat * 8 = dest := by
-    simp only [cell, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : dest / 8 < 2 ^ 61)]
+    change (BitVec.ofNat 61 ((BitVec.ofNat 64 dest).toNat / 8)).toNat * 8 = dest
+    rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : dest < 2 ^ 64),
+      Nat.mod_eq_of_lt (by omega : dest / 8 < 2 ^ 61)]
     omega
   have addr : cell.baseAddr = BitVec.ofNat 64 dest := by
     apply BitVec.eq_of_toNat_eq
     rw [Soundness.RamCell.baseAddr_toNat, key, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   have located := hint_location (input := request.wordRow index (frontier (.ram (request.cell index))) ((ramWord64? source (BitVec.ofNat 64 dest)).getD 0)) (cell := cell)
     ((Address.toNat_ofNat (p := SP1Prime) dest high).trans key.symm) (by omega) (by omega)
-  exact ⟨⟨cell, located⟩, by rw [located]; change ramWord64? target cell.baseAddr = _; rwa [addr], time⟩
+  refine ⟨located, ?_, ?_, ?_, ?_, ?_, time⟩
+  · rw [located]; exact key
+  · rw [located]; exact priorTime
+  · rw [located]; exact time.trans finish.symm
+  · rw [located]; change ramWord64? source cell.baseAddr = _; rwa [addr]
+  · rw [located]; change ramWord64? target cell.baseAddr = _; rwa [addr]
 
 private theorem hint_values_at {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
@@ -90,7 +102,8 @@ private theorem hint_values_at {image : ProgramImage} {source target : Execution
     have pos := (List.getElem?_eq_some_iff.mp atJ).1
     rw [request.rows_length] at pos
     rw [clock]
-    exact hint_word_values span pos (words j pos) atJ
+    obtain ⟨whereAt, _, _, _, _, pushed, stamped⟩ := hint_word_endpoints span pos (words j pos) atJ
+    exact ⟨⟨_, whereAt⟩, pushed, stamped⟩
   · simp [HintReadTransfers.rowsAt?, present, read] at listed
 
 /-- All original Memory transfers compiled at a single event, in their published event order. -/

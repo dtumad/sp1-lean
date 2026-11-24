@@ -145,6 +145,7 @@ import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
 import SP1Clean.Proofs.Completeness.MemoryReadbackIntervals
+import SP1Clean.Proofs.Completeness.MemoryRecordExecution
 import SP1Clean.Proofs.Completeness.MemoryHistoryValues
 import SP1Clean.Proofs.Completeness.MemoryVersionHistory
 import SP1Clean.Proofs.Completeness.ProviderInteractions
@@ -160,6 +161,7 @@ import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.MixedCompiledRows
 import SP1Clean.Proofs.Completeness.MixedMemoryHistory
 import SP1Clean.Proofs.Completeness.MixedMemoryValues
+import SP1Clean.Proofs.Completeness.MixedMemoryRecords
 import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
