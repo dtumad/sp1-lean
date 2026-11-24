@@ -1,4 +1,5 @@
 import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
+import SP1CleanTest.Core.ComponentExport
 
 /-! # Shared native reference encoding for installed export fixtures
 
@@ -10,23 +11,7 @@ namespace SP1CleanTest.Alignment.InstalledAssemblyReference
 
 open Lean
 
-/-- Literal channel, payload and multiplicity, including zero occurrences. -/
-def interactionReference (interaction : Interaction (ZMod SP1Clean.SP1Prime)) : Json :=
-  Json.mkObj [
-    ("channel", toJson interaction.channel.name),
-    ("message", toJson (interaction.msg.map (·.val))),
-    ("multiplicity", toJson interaction.signedMult.val),
-    ("direction", toJson (if interaction.direction == .pull then "pull" else "push"))]
-
-/-- Every table and physical interaction, in its original order. -/
-def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
-    {ensemble : Air.Flat.Ensemble (ZMod SP1Clean.SP1Prime) PublicIO}
-    (witness : Air.Flat.EnsembleWitness ensemble) : Json :=
-  Json.mkObj [
-    ("tables", toJson (witness.tables.map fun table =>
-      table.table.map fun row => row.map (·.val))),
-    ("interactions", toJson (witness.interactions.map interactionReference))]
-
+open SP1CleanTest.Core.ComponentExport (interactionReference physicalReference)
 
 /-- Run the native scheduler and authenticated checker before recording the expected result. -/
 def installedCase (context : SP1Clean.Export.InstalledAssembly.Context)

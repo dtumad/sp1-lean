@@ -10,6 +10,7 @@ import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
 import SP1CleanTest.Core.ProgramExport
+import SP1CleanTest.Core.WriteAllocationExport
 import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.HintSnapshotGeneration
 import SP1CleanTest.Core.WritePermissionExport
@@ -27,6 +28,7 @@ The comparison script regenerates twice, checks the completion marker and compil
 -/
 
 open Lean SP1CleanTest.Core.EnsembleExport SP1CleanTest.Alignment.InstalledAssemblyReference
+open SP1CleanTest.Core.ComponentExport (physicalReference)
 
 private def expressionDegree : Expression (ZMod SP1Clean.SP1Prime) → ℕ
   | .var _ => 1
@@ -413,6 +415,9 @@ private def exportEnsembleFixture : IO Unit := do
       | .ok value => pure value
       | .error message => throw (IO.userError message)
     IO.FS.writeFile (out / name) source
+  let (allocation, rows) ← IO.ofExcept SP1CleanTest.Core.WriteAllocationExport.fixture
+  IO.FS.writeFile (out / "write_allocation.rs") allocation
+  IO.FS.writeFile (out / "write_allocation.reference.json") (rows.compress ++ "\n")
   IO.FS.writeFile (out / "host_control.reference.json")
     (SP1CleanTest.Core.HostControlExport.reference.compress ++ "\n")
   let hints ← match SP1CleanTest.Core.HostControlExport.hintReference with
