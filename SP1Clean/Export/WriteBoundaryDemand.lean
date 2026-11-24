@@ -1,5 +1,5 @@
 import SP1Clean.Export.WriteBoundaryBuild
-import SP1Clean.Proofs.Completeness.MixedMemoryHistory
+import SP1Clean.Proofs.Completeness.MixedMemoryValues
 import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.WriteBufferBatch
 
@@ -32,6 +32,29 @@ private theorem valid_location (loc : MemLoc) (legal : ValidKey loc.busAddress) 
     · omega
     · exact ⟨by change 2 ^ 16 ≤ cell.toNat * 8 at lower; omega, upper⟩
 
+/-- Every emitted x12 or aligned buffer read equals the canonical field encoding of the word held
+by the original mixed Memory stream at that exact WRITE's incoming clock. -/
+theorem readDemand_heldAt {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {packets : List WriteObservations.Packet}
+    (collected : WriteObservations.packets? (policy SP1Prime image) image.program source.realize events = some packets)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
+    {cut : ℕ} {read : Read F} (member : (cut, read) ∈ readDemand (packetRows events packets)) :
+    ∃ call loc, events[cut]? = some (.syscall call) ∧ call.rawCode = SyscallKind.write.code ∧ ValidKey loc.busAddress ∧
+      read = ⟨Address.ofNat loc.busAddress, Address.ofNat call.clock, Target.bitVecToWord
+        (MemoryHistoryAccess.heldAt (source.sail.memorySnapshot.read loc) call.clock
+          (memoryHistoryAt (MixedMemoryHistory.stream image source events rows) loc))⟩ := by
+  obtain ⟨call, current, frontier, loc, present, write, time, atCut, legal, key, clock, bounded, observed⟩ :=
+    readDemand_at run collected member
+  have word := MixedMemoryHistory.heldAt_cut run routed atCut loc (valid_location loc legal)
+  refine ⟨call, loc, present, write, legal, ?_⟩
+  rw [time]
+  have encoded := Word.eq_of_toBitVec64_eq bounded (Target.isU64_bitVecToWord _)
+    ((Option.some.inj (observed.symm.trans word)).trans (Target.toBitVec64_bitVecToWord _).symm)
+  cases read
+  congr
+
 /-- Every actual read at a fresh boundary key either has a previous compiler access at the cut
 or is covered by a positive physical finalizer. The witness is the canonical original supervisor
 containing the compiler's six boundary tables. -/
@@ -47,7 +70,7 @@ private theorem readDemand_sparse_source {image : ProgramImage} {source target :
     ∃ current frontier loc, mixedAccessPrefix (policy SP1Prime image) image.program source.realize events cut = some (current, frontier) ∧
       loc.busAddress = Address.toNat read.key ∧ read.clock = Address.ofNat current.clock ∧
       (0 < frontier loc ∨ ∃ record ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers record read) := by
-  obtain ⟨current, frontier, loc, atCut, legal, key, clock, bounded, observed⟩ := readDemand_at run collected member
+  obtain ⟨_, current, frontier, loc, _, _, _, atCut, legal, key, clock, bounded, observed⟩ := readDemand_at run collected member
   have location := valid_location loc legal
   have keyNat : Address.toNat read.key = loc.busAddress := by
     rw [key, Address.toNat_ofNat _ (MemLoc.busAddress_lt_two_pow_48 location)]

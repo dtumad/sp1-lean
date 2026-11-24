@@ -176,4 +176,75 @@ theorem batch_values {image : ProgramImage} {source target : ExecutionSnapshot} 
       rw [(hint_values_at run present atCut nextCut mem).2.2]
       omega
 
+private theorem cut_clock_mono {p : HostPolicy} {program : GuestProgram} {source early late : ExecutionState}
+    {events : List ExecutionEvent} {i j : ℕ} (ordered : i ≤ j)
+    (before : executionTrajectory p program source events i = some early)
+    (after : executionTrajectory p program source events j = some late) : early.clock ≤ late.clock := by
+  have split := List.take_append_drop i (events.take j)
+  rw [List.take_take, Nat.min_eq_left ordered] at split
+  rw [replayEvents?_clock (events := events.take i) before, replayEvents?_clock (events := events.take j) after]
+  conv_rhs => rw [← split, List.map_append, List.sum_append]
+  omega
+
+private theorem post_prefix {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
+    {cut : ℕ} {current : ExecutionState} (reached : executionTrajectory (policy SP1Prime image) image.program source.realize events cut = some current) :
+    post (locContent source.realize.sail) (((List.finRange rows.length).take cut).flatMap (batch image source events rows)) = locContent current.sail := by
+  induction cut generalizing current with
+  | zero => cases reached; rfl
+  | succ cut ih =>
+    by_cases inRows : cut < rows.length
+    · let i : Fin rows.length := ⟨cut, inRows⟩
+      obtain ⟨before, next, atCut, atNext, values, _⟩ := batch_values run routed i
+      cases Option.some.inj (reached.symm.trans atNext)
+      rw [List.take_succ_eq_append_getElem (by simpa only [List.length_finRange] using inRows),
+        List.flatMap_append, List.flatMap_singleton, post_append, ih atCut]
+      have same : (List.finRange rows.length)[cut]'(by simpa using inRows) = i := Fin.ext (by simp [i])
+      rwa [same]
+    · obtain ⟨actual, same, size⟩ := admissibleExecution_routeMixedRows run
+      have length : rows.length = events.length := Option.some.inj (routed.symm.trans same) ▸ size
+      have ended : events.length ≤ cut := by omega
+      have past : (List.finRange rows.length).length ≤ cut := by simpa using Nat.le_of_not_gt inRows
+      rw [List.take_of_length_le (Nat.le_succ_of_le past), ← List.take_of_length_le past]
+      apply ih
+      simpa only [executionTrajectory, List.take_of_length_le (Nat.le_succ_of_le ended), List.take_of_length_le ended] using reached
+
+/-- The held word of the complete original mixed transfer stream is the actual Sail value at every
+CPU cut and every canonical register or RAM location. The initial value comes from the realized
+incoming boundary. Both touched and untouched locations use this same query. -/
+theorem heldAt_cut {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
+    {cut : ℕ} {current : ExecutionState} {frontier : AccessFrontier}
+    (atCut : mixedAccessPrefix (policy SP1Prime image) image.program source.realize events cut = some (current, frontier))
+    (loc : MemLoc) (canonicalLoc : loc.CanonicalAddress) :
+    locContent current.sail loc = some (heldAt (source.sail.memorySnapshot.read loc) current.clock
+      (memoryHistoryAt (stream image source events rows) loc)) := by
+  obtain ⟨actual, f, path, found, _⟩ := admissibleExecution_mixedAccessPrefix run cut
+  cases Option.some.inj (atCut.symm.trans found)
+  let indices := List.finRange rows.length
+  let emit := batch image source events rows
+  have split : stream image source events rows = (indices.take cut).flatMap emit ++ (indices.drop cut).flatMap emit := by
+    rw [← List.flatMap_append, List.take_append_drop]
+    rfl
+  have earlier : ∀ a ∈ (indices.take cut).flatMap emit, a.current ≤ current.clock := by
+    intro a mem
+    obtain ⟨idx, member, occurs⟩ := List.mem_flatMap.mp mem
+    obtain ⟨j, bound, eq⟩ := List.mem_take_iff_getElem.mp member
+    have coordinate : idx.val = j := by rw [← eq]; simp [indices]
+    obtain ⟨before, next, _, after, _, window⟩ := batch_values run routed idx
+    exact (window a occurs).2.trans (cut_clock_mono (by omega) after path)
+  have later : ∀ a ∈ (indices.drop cut).flatMap emit, current.clock < a.current := by
+    intro a mem
+    obtain ⟨idx, member, occurs⟩ := List.mem_flatMap.mp mem
+    obtain ⟨j, _, eq⟩ := List.mem_drop_iff_getElem.mp member
+    have coordinate : idx.val = cut + j := by rw [← eq]; simp [indices]
+    obtain ⟨before, next, prior, _, _, window⟩ := batch_values run routed idx
+    exact (cut_clock_mono (by omega) path prior).trans_lt (window a occurs).1
+  rw [split, heldAt_post earlier later (values := locContent source.realize.sail) loc _ (run.1.1.memory.locContent loc canonicalLoc)]
+  exact congrFun (post_prefix run routed path).symm loc
+
 end SP1Clean.TraceGen.MixedMemoryHistory
