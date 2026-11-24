@@ -15,6 +15,7 @@ import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationProjection
 import SP1Clean.Export.WriteObservationBuild
 import SP1Clean.Export.WriteBoundaryBuild
+import SP1Clean.Export.WriteBoundaryDemand
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteSupplyCapacity
 import SP1Clean.Export.WriteObservationByte
@@ -166,6 +167,7 @@ import SP1Clean.Proofs.Completeness.HistoricalHintCapacity
 import SP1Clean.Proofs.Completeness.MixedAccessFrontier
 import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.MixedCompiledRows
+import SP1Clean.Proofs.Completeness.MixedMemoryHistory
 import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
