@@ -1,4 +1,5 @@
 import SP1Clean.Export.InstalledBoundaryGrowth
+import SP1Clean.FormalModel.Contracts.StockPublicOutput
 import Lean
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.WriteProbeCapacity
@@ -135,6 +136,8 @@ open Lean
 
 /-- Exact declarations whose types/definitions determine the audited target and machine view. -/
 def roots : Array Name := #[
+  ``SP1Clean.FormalModel.StockPublicOutput.acceptsCore,
+  ``SP1Clean.FormalModel.StockPublicOutput.commitment_projection,
   ``SP1Clean.Soundness.Shard.statement_iff,
   ``SP1Clean.Soundness.Shard.SoundnessTarget,
   ``SP1Clean.Soundness.Shard.CompilerTarget,

@@ -25,6 +25,14 @@ bytes, queued hints and matched requests and replies. Values enqueued by WRITE c
 later HINT_READ even when the caller only inspects the final guest state.
 [Guest WRITE wrapper](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/io.rs#L13-L31) · [Guest HALT](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/halt.rs#L24-L42) · [COMMIT AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/syscall/instructions/air.rs#L350-L367) · [SDK verification](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/sdk/src/prover.rs#L172-L220)
 
+Lean exposes the SDK check as `StockPublicOutput.acceptsCore` for a list of typed Core shard
+records and `Claim.accepts` for the exit code and digest shared by Core and Compressed. The last
+Core record supplies the claim. Its 32 bytes match either SHA-256 or BLAKE3 of the supplied
+public bytes. The default status requires success. The native header and the release commitment
+adapter project to the same claim when their exit codes agree. Version, layout and cryptographic
+proof checks surround this public-output check in the SDK.
+[Formal statement](../SP1Clean/FormalModel/Contracts/StockPublicOutput.lean) · [Release-vector tests](../SP1CleanTest/Core/StockPublicOutput.lean)
+
 ## Physical memory versions
 
 Each incoming CPU clock falls between two successive effect-slot pushes at a given register

@@ -25,6 +25,8 @@ EXPECTED_ROOTS = {
 } | {"SP1Clean.FormalModel.Shard." + name
      for name in ("Executes", "nativeProfile", "AdmissibleExecution", "ReleaseAdmissibleExecution",
                   "ReleaseStatementExecution", "sp1Machine")} | {
+    "SP1Clean.FormalModel.StockPublicOutput.acceptsCore",
+    "SP1Clean.FormalModel.StockPublicOutput.commitment_projection",
     "SP1Clean.Export.InstalledAssembly.proverStatement_iff",
     "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
@@ -143,6 +145,7 @@ def main() -> int:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
              "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShortShardChain", "SP1Clean.Export.InstalledBoundaryGrowth",
+             "SP1Clean.FormalModel.Contracts.StockPublicOutput",
              "SP1Clean.Export.InstalledHintCompleteness", "SP1Clean.Soundness.HostRegisteredCalls",
              "SP1Clean.Proofs.Completeness.PublicHeader", "SP1Clean.Proofs.Completeness.MixedInstructionBuckets",
              "SP1Clean.Proofs.Completeness.MixedInstructionTables", "SP1Clean.Proofs.Completeness.WriteObservationCuts",
