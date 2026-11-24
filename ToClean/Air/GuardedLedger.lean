@@ -3,6 +3,7 @@ module
 public import ToClean.Air.GuardedDemandTable
 public import ToClean.Air.UnitBalance
 public import ToClean.Air.MessageFilter
+public import ToClean.Circuit.EmittedInteraction
 
 /-! # Exact signed field sums for unit-demand table padding
 
@@ -47,6 +48,16 @@ theorem guarded_pull_sum (ch : Channel F M) (rows : List I) (record : I → M F)
     rw [balanceOf_cons]
     simp [Interaction.signedMult, Channel.pulledIfValue, balanceOf])
   simpa only [← List.map_eq_flatMap, List.map_map, Function.comp_def, Channel.pushedValue, Channel.pulledValue, Channel.pushedIfValue, Channel.pulledIfValue] using cut
+
+/-- Applying the guard to an arbitrary counted sender retains its complete physical ledger and
+contributes exactly the original unpadded counted emissions to every signed sum. -/
+theorem guarded_emit_sum (ch : Channel F M) (rows : List I) (count : I → F) (record : I → M F) (msg : Array F) :
+    balanceOf ((guardedRows rows).map (fun r => ch.emittedValue (r.2*count r.1) (record r.1))) msg =
+      balanceOf (rows.map (fun r => ch.emittedValue (count r) (record r))) msg := by
+  have cut := guardedRows_balanceOf rows (fun r => [ch.emittedValue (r.2*count r.1) (record r.1)]) msg (by
+    rw [balanceOf_cons]
+    simp [Interaction.signedMult,Channel.emittedValue,balanceOf])
+  simpa only [← List.map_eq_flatMap,one_mul] using cut
 
 end Air.Flat.WitnessGeneration
 
