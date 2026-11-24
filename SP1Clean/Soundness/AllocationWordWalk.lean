@@ -72,18 +72,28 @@ private theorem at_cursor {rows : List (Row F)} {initial : Cursor F}
         have missing : some other.prior = none := stopped.1
         contradiction
 
+/-- Every word beginning at a genuine seed retains its full source authorization, has its
+canonical word index, and consumes the exact outstanding byte count. -/
+theorem walk_positions (c : Contents F) (rows : List (Row F)) (walk : Walk.IsWalk wordEdge (some (start c)) none rows)
+    (checked : ∀ r ∈ rows, r.Valid) : rows.length = Address.toNat c.length / 8 + 1 ∧
+    ∀ i : Fin rows.length, let r := rows[i.val]
+      r.Valid ∧ r.prior.contents = c ∧ Address.toNat r.prior.index = i.val ∧
+        Address.toNat r.prior.remaining = Address.toNat c.length - (8 * i.val) := by
+  obtain ⟨size,pos⟩ := at_cursor walk checked
+  refine ⟨size,?_⟩
+  intro i
+  obtain ⟨valid,owner,idx,rem⟩ := pos i
+  have zero : Address.toNat (start c).index = 0 := by change Address.toNat (0 : fields 3 F) = 0; decide
+  exact ⟨valid,owner,by rwa [zero,Nat.zero_add] at idx,rem⟩
+
 /-- An exhaustive walk from a node's physical seed determines its full byte buffer and the
 canonical record backed by every participating word row. -/
 theorem decode_walk (c : Contents F) (rows : List (Row F))
     (walk : Walk.IsWalk wordEdge (some (start c)) none rows) (checked : ∀ r ∈ rows, r.Valid) :
     (decodedBytes c rows).length = Address.toNat c.length ∧
     ∀ r ∈ rows, r.word ∈ nodeWordRows (p := SP1Prime) (Address.toNat c.pointer) (decodedBytes c rows) := by
-  obtain ⟨size,pos⟩ := at_cursor walk checked
-  refine decode_records c rows size ?_
-  intro i
-  obtain ⟨valid,owner,idx,rem⟩ := pos i
-  have zero : Address.toNat (start c).index = 0 := by change Address.toNat (0 : fields 3 F) = 0; decide
-  exact ⟨valid,owner,by rwa [zero,Nat.zero_add] at idx,rem⟩
+  obtain ⟨size,pos⟩ := walk_positions c rows walk checked
+  exact decode_records c rows size pos
 
 private theorem final_short (length : Nat) : ¬ 8 ≤ length - (8 * (length / 8)) := by omega
 
@@ -95,13 +105,11 @@ theorem walk_inventory (c : Contents F) (rows : List (Row F))
       r.word.pointer = c.pointer ∧ Address.toNat r.word.index = i.val) ∧
     ∃ last ∈ rows, last.word.pointer = c.pointer ∧ Address.toNat last.word.index + 1 = rows.length ∧
       last.word.isLast = 1 := by
-  obtain ⟨size,pos⟩ := at_cursor walk checked
-  change rows.length = Address.toNat c.length / 8 + 1 at size
-  have zero : Address.toNat (start c).index = 0 := by change Address.toNat (0 : fields 3 F) = 0; decide
+  obtain ⟨size,pos⟩ := walk_positions c rows walk checked
   have indices (i : Fin rows.length) : let r := rows[i.val]
       r.word.pointer = c.pointer ∧ Address.toNat r.word.index = i.val := by
     obtain ⟨_,owner,index,_⟩ := pos i
-    exact ⟨congrArg Contents.pointer owner,by rwa [zero,Nat.zero_add] at index⟩
+    exact ⟨congrArg Contents.pointer owner,index⟩
   refine ⟨indices,?_⟩
   let i : Fin rows.length := ⟨Address.toNat c.length / 8,by rw [size]; exact Nat.lt_succ_self _⟩
   let last := rows[i.val]
