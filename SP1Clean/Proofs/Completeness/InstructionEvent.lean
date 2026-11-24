@@ -885,6 +885,14 @@ theorem compileInstructionEvent?_accessPlan_generated
   rw [projectSP1Transition?_accesses projected]
   exact compileInstructionEvent?_accessPlan generated
 
+/-- The routed event retains exactly the schedule applied to its original incoming frontier,
+including all high-window refreshes and the order of aliased operands. -/
+theorem compileInstructionEvent?_schedule {view : SP1TransitionView} {frontier : AccessFrontier}
+    {clk : ℕ} {result : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clk = some result) :
+    result.schedule = scheduleAccessPlan frontier clk result.plan := by
+  obtain ⟨_, _, _, _, rfl⟩ := compileInstructionEvent?_components generated
+  rfl
+
 /-- The outgoing compiler clock is the last real touch at each location, also across refreshes. -/
 theorem compileInstructionEvent?_nextFrontier {view : SP1TransitionView} {frontier : AccessFrontier}
     {clk : ℕ} {result : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clk = some result) :

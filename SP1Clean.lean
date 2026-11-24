@@ -49,6 +49,7 @@ import SP1Clean.Export.WriteSourceGrounding
 import SP1Clean.Export.WriteBoundarySourceGrounding
 import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Export.WriteGeneratedHostSources
+import SP1Clean.Export.WriteGeneratedRegisterSources
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
@@ -66,6 +67,7 @@ import SP1Clean.Proofs.Completeness.WriteSparseOrder
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
 import SP1Clean.Proofs.Completeness.WriteOrdinaryTables
 import SP1Clean.Soundness.WriteOrdinarySources
+import SP1Clean.Soundness.WriteRegisterPredecessors
 import SP1Clean.Soundness.WriteHostSources
 import SP1Clean.Soundness.WriteAccessInventory
 import SP1Clean.Soundness.WriteProbeConsumers
