@@ -1,3 +1,4 @@
+import SP1Clean.Export.CheckedLedger
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Proofs.Completeness.HintHandlerTransfers
 import SP1Clean.Proofs.Completeness.HintSnapshotRecords
@@ -18,19 +19,8 @@ open WriteEffects.Witness WitnessGeneration
 
 private abbrev F := ZMod SP1Prime
 
-/-- The complete raw ledger, its physical count check, and the resulting Clean interaction conditions. -/
-structure FundedImmutableLedger (ledger : List (Interaction F)) (sites : Nat) : Prop where
-  /-- Number of physical sites including zero counts and demand padding. -/
-  count : ledger.length = sites
-  /-- Per-message field balance at the actual publisher multiplicities. -/
-  signed : LogUpBalanced ledger
-  /-- The physical count fits at the native field characteristic. -/
-  fit : (Balance.logUp (F := F)).fits ledger.length = true
-  /-- Clean's matched interaction conditions obtained from that checked field sum. -/
-  matched : BalancedInteractions ledger
-
 private theorem funded {ledger : List (Interaction F)} {sites : Nat} (count : ledger.length = sites)
-    (small : sites < SP1Prime) (signed : LogUpBalanced ledger) : FundedImmutableLedger ledger sites := by
+    (small : sites < SP1Prime) (signed : LogUpBalanced ledger) : CheckedLedger ledger sites := by
   have fits : (Balance.logUp (F := F)).fits ledger.length = true := by
     simpa only [Balance.logUp, decide_eq_true_eq, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n, count] using small
   exact ⟨count, signed, fits, Balance.logUp.balancedInteractions_of_balanced _ fits signed⟩
@@ -51,36 +41,50 @@ private theorem assemble {M : TypeMap} [ProvableType M] (ch : Channel F M) (head
   rw [reads, last]
   linear_combination closed
 
-/-- Both immutable channels are funded and below the field characteristic over all ten
-original physical contributors for any mixed execution admitted by the broad native preset.
-Both fixed tables satisfy their original contracts. The allocation word table is the one
-whose private and block channels are checked in the same six-table construction. -/
-theorem native_immutable_queue {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
-    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) (data : ProverData F) :
-    ∃ final, storeAfter? (policy SP1Prime image) image.program source.realize events (ofList source.host.io.hints) = some final ∧
-      let history := HintQueueReaders.history image source events
-      let ending := HintQueueReaders.snapshot final.1 final.2 target.host.io.hints
-      let demand := HintQueueReaders.collect history ending
-      ∃ entries, native? image source events (demand.select (fun ptr => source.host.io.hints.length < ptr)).readers = some entries ∧
-        ∃ (s : SixTables entries source.host target.host) (fixedNodes fixedWords : Table F),
-          let snap := HostHintSnapshot.tableFor final.1 final.2 target.host.io.hints (admissible_hint_snapshot_fits run) data
-          let ts := HintHandlers.readerTables run data ++ [fixedNodes, fixedWords, snap, s.nodes data, s.words data]
-          s.Checked data ∧ fixedNodes.component = HostHintQueue.source source.host.io.hints ∧
-          fixedWords.component = sourceWord source.host.io.hints ∧ (∀ t ∈ ts, t.Constraints ∧ t.Guarantees) ∧
-          FundedImmutableLedger (ts.flatMap (·.interactionsWith nodeChannel.toRaw))
-            ((HintHandlers.readTable run data).length + (HintHandlers.lengthTable run false data).length +
-             (sourceTable (p := SP1Prime) source.host.io.hints).height + (HostHintSnapshot.inventory (p := SP1Prime) target.host.io.hints).height +
-             demandHeight (inputs entries).nodes.length) ∧
-          FundedImmutableLedger (ts.flatMap (·.interactionsWith wordChannel.toRaw))
-            ((HintHandlers.readTable run data).length + (HintHandlers.transferTable run false data).length +
-             (HintHandlers.transferTable run true data).length + (sourceWordInventory (p := SP1Prime) source.host.io.hints).height +
-             (HostHintSnapshot.inventory (p := SP1Prime) target.host.io.hints).height + demandHeight (inputs entries).words.length) := by
-  obtain ⟨final, finished, entries, collected, s, fnodes, fwords, valid, fresh, nodePaid, wordPaid, nodes, words⟩ :=
-    HintQueueReaders.native_joint_funding run data
+variable {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) (data : ProverData F)
+
+/-- Physical readers and publishers in original registry order, followed by the final snapshot
+and the node and word tables from the same WRITE allocation. -/
+noncomputable def immutableTables {entries : List Entry} (s : SixTables entries source.host target.host) : List (Table F) :=
+  let final := HintQueueReaders.finalCursor run
+  let snap := HostHintSnapshot.tableFor final.1 final.2 target.host.io.hints (admissible_hint_snapshot_fits run) data
+  HintHandlers.readerTables run data ++ [HintQueueReaders.fixedNodes run data, HintQueueReaders.fixedWords run data,
+    snap, s.nodes data, s.words data]
+
+/-- Every padded HINT_READ and nonempty HINT_LEN row, fixed input node, snapshot row and allocation row. -/
+noncomputable def immutableNodeSites (entries : List Entry) : Nat :=
+  (HintHandlers.readTable run data).length + (HintHandlers.lengthTable run false data).length +
+    (sourceTable (p := SP1Prime) source.host.io.hints).height +
+    (HostHintSnapshot.inventory (p := SP1Prime) target.host.io.hints).height + demandHeight (inputs entries).nodes.length
+
+/-- Every padded HINT_READ header and transfer, fixed input word, snapshot row and allocation word. -/
+noncomputable def immutableWordSites (entries : List Entry) : Nat :=
+  (HintHandlers.readTable run data).length + (HintHandlers.transferTable run false data).length +
+    (HintHandlers.transferTable run true data).length + (sourceWordInventory (p := SP1Prime) source.host.io.hints).height +
+    (HostHintSnapshot.inventory (p := SP1Prime) target.host.io.hints).height + demandHeight (inputs entries).words.length
+
+/-- The actual immutable readers and publishers of any checked six-table installation on this
+execution fund both complete channels, including the outgoing snapshot and all zero counts. -/
+theorem native_immutable_queue {entries : List Entry}
+    (collected : native? image source events (HintQueueReaders.freshDemand run).readers = some entries)
+    (s : SixTables entries source.host target.host) (valid : s.Checked data) :
+    let ts := immutableTables run data s
+    (∀ t ∈ ts, t.Constraints ∧ t.Guarantees) ∧
+    CheckedLedger (ts.flatMap (·.interactionsWith nodeChannel.toRaw)) (immutableNodeSites run data entries) ∧
+    CheckedLedger (ts.flatMap (·.interactionsWith wordChannel.toRaw)) (immutableWordSites run data entries) := by
+  let final := HintQueueReaders.finalCursor run
+  have finished := HintQueueReaders.finalCursor_done run
+  let fnodes := HintQueueReaders.fixedNodes run data
+  let fwords := HintQueueReaders.fixedWords run data
+  have nodePaid := HintQueueReaders.fixedNodes_checked run data
+  have wordPaid := HintQueueReaders.fixedWords_checked run data
+  have fresh := HintQueueReaders.freshDemand_funded run data collected s
+  obtain ⟨nodes, words⟩ := HintQueueReaders.joint_signed
+    (HintQueueReaders.collect (HintQueueReaders.history image source events) (HintQueueReaders.snapshot final.1 final.2 target.host.io.hints))
+    nodePaid wordPaid fresh
   let ending := HintQueueReaders.snapshot final.1 final.2 target.host.io.hints
   let history := HintQueueReaders.history image source events
-  let snap := HostHintSnapshot.tableFor final.1 final.2 target.host.io.hints (admissible_hint_snapshot_fits run) data
-  let hs := HintHandlers.readerTables run data
   have fnSilent : fnodes.interactionsWith wordChannel.toRaw = [] := by
     apply outside
     rw [nodePaid.source]
@@ -98,7 +102,8 @@ theorem native_immutable_queue {image : ProgramImage} {source target : Execution
     rw [valid.blocks.wordsValid.1]
     exact of_decide_eq_true rfl
   obtain ⟨other, _, done, _, snapshotWalk⟩ := admissibleExecution_hintSnapshot run
-  cases Option.some.inj (done.symm.trans finished)
+  have same := Option.some.inj (done.symm.trans finished)
+  subst other
   have snapOK := HostHintSnapshot.tableFor_valid snapshotWalk (admissible_hint_snapshot_fits run) data
   have snapSums := HostHintSnapshot.tableFor_demands final.1 final.2 target.host.io.hints (admissible_hint_snapshot_fits run) data
   obtain ⟨snapNodes, snapWords⟩ := HostHintSnapshot.tableFor_record_counts final.1 final.2 target.host.io.hints (admissible_hint_snapshot_fits run) data
@@ -114,7 +119,11 @@ theorem native_immutable_queue {image : ProgramImage} {source target : Execution
   have wordBound := demandHeight_le_pow wordMax
   have nodeBound := demandHeight_le_pow ((native_node_count run _ collected).trans wordMax)
   have safety : 2^16 + 4*2^28 + 2^29 < SP1Prime := by decide
-  refine ⟨final, finished, entries, collected, s, fnodes, fwords, valid, nodePaid.source, wordPaid.source, ?_, ?_, ?_⟩
+  dsimp only [immutableTables, immutableNodeSites, immutableWordSites]
+  dsimp only [fnodes] at fnSilent
+  dsimp only [fwords] at fwSilent
+  dsimp only [final] at snapNodes snapWords
+  refine ⟨?_, ?_, ?_⟩
   · intro t ht
     simp only [List.mem_append, HintHandlers.readerTables, List.mem_cons, List.not_mem_nil, or_false] at ht
     rcases ht with (rfl | rfl | rfl | rfl | rfl) | (rfl | rfl | rfl | rfl | rfl)

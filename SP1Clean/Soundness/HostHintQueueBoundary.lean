@@ -446,7 +446,7 @@ theorem queue_ledger
         [stateChannel.pushedValue (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints),stateChannel.pulledValue final]) := by
   have registered := auxiliary_channel_registered image source HostCallReceivers.available resources channels
     (names := availableNames) (channelNames := channelNames) (tableChannels := availableTableChannels) HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw
-    (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
+    (by simp [HostHintReadCoverage.handler, HostHintReadChip.component, HostHintReadChip.guardedCircuit, Guarded.circuit, HostHintReadChip.circuit, circuit_norm])
   have ledger := interactions_split witness stateChannel.toRaw registered
   have extra : (extraTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr

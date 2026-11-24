@@ -93,6 +93,7 @@ import SP1Clean.FormalModel.Contracts.WritePacket
 import SP1Clean.Native.Chips.WritePacket.Defs
 import SP1Clean.Proofs.Chips.WritePacket.Formal
 import SP1Clean.Proofs.Chips.WritePacket.Ledger
+import SP1Clean.Proofs.Chips.WritePacket.Physical
 import SP1Clean.FormalModel.Contracts.WriteBuffer
 import SP1Clean.FormalModel.Contracts.WriteProbe
 import SP1Clean.FormalModel.Contracts.WriteReadback
@@ -211,6 +212,7 @@ import SP1Clean.Semantics.Host.HintQueueEvent
 import SP1Clean.Semantics.Host.HintQueueRecords
 import SP1Clean.Semantics.Host.HintQueueSnapshot
 import SP1Clean.FormalModel.Contracts.HintQueueSnapshot
+import SP1Clean.FormalModel.Contracts.WriteStreamPositions
 import SP1Clean.Native.Operations.HintQueueSnapshot
 import SP1Clean.Native.Operations.HintQueueSeal
 import SP1Clean.Proofs.Operations.HintQueueSnapshot
@@ -534,10 +536,12 @@ import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+import SP1Clean.Proofs.Chips.HostHintLengthChip.Guarded
 import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
 import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
 import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+import SP1Clean.Proofs.Chips.HostHintReadChip.Guarded
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
@@ -653,6 +657,11 @@ import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
 import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
 import SP1Clean.Proofs.Operations.SubOperation.Formal
 import SP1Clean.Proofs.Operations.SubwOperation.Formal
+import SP1Clean.Proofs.Operations.WriteChronologyRows
+import SP1Clean.Proofs.Operations.WriteClassifiedRoute
+import SP1Clean.Proofs.Operations.WriteOctetRows
+import SP1Clean.Proofs.Operations.WritePlacementEdges
+import SP1Clean.Proofs.Operations.WriteRequestRows
 import SP1Clean.Soundness.RowView
 
 /-! # The core index

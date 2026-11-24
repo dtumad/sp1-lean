@@ -1,43 +1,62 @@
 import SP1Clean.Export.WriteMixedFixedResources
 import SP1Clean.Export.WriteOriginalInstallation
 import SP1Clean.Proofs.Completeness.MixedHaltPadding
+import SP1Clean.Proofs.Completeness.HintHandlerTables
 
-/-! # Native CPU state normalizations and legacy Exit padding on a mixed execution -/
+/-! # Constructing original control and HINT receiver tables from one mixed execution -/
 
 namespace SP1Clean.Export.WriteMixedControlTables
 open Circuit Air.Flat Semantics Soundness Machine TraceGen FormalModel.Shard WriteSourceRegistry
 private abbrev F := ZMod SP1Prime
 
-/-- The two original control tables following the register refresh table. -/
-inductive Index | stateBump | haltPadding deriving DecidableEq
+/-- The original clock normalization, checkpoint exit, and immutable queue receivers. -/
+inductive Index
+  | stateBump
+  | haltPadding
+  | hintRead
+  | hintLength (empty : Bool)
+  deriving DecidableEq
 
 /-- Position in the original physical registry. -/
-def position : Index → Nat | .stateBump => 56 | .haltPadding => 57
+def position : Index → Nat
+  | .stateBump => 56
+  | .haltPadding => 57
+  | .hintRead => 63
+  | .hintLength empty => if empty then 83 else 82
 
 /-- Recognize the physical control-table slots. -/
-def indexAt (i : Nat) : Option Index := [.stateBump,.haltPadding].find? (fun k => position k == i)
+def indexAt (i : Nat) : Option Index := [.stateBump,.haltPadding,.hintRead,.hintLength false,.hintLength true].find? (fun k => position k == i)
 
 /-- Actual components registered in the released-instruction supervisor. -/
-def component : Index → Component F | .stateBump => providerTableFor .stateBump | .haltPadding => HaltPaddingChip.component
+def component : Index → Component F
+  | .stateBump => providerTableFor .stateBump
+  | .haltPadding => HaltPaddingChip.component
+  | .hintRead => HostHintReadChip.component
+  | .hintLength empty => HostHintLengthChip.component empty
 
 variable (image : ProgramImage) (source target : ExecutionSnapshot) (finish : HostHintQueue.State F)
 
-/-- Both native components are precisely registered at their stated position. -/
+/-- Every generated control table occupies its registered supervisor position. -/
 theorem registered_at (k : Index) : (base image source target finish).tables[position k]? = some (component k) := by
-  cases k
+  rcases k with _ | _ | _ | (_ | _)
   · exact stateBump_at image source target finish
   · exact halt_at image source target finish
+  all_goals
+    rw [retained_at _ _ _ _ _ (by decide) (by decide) (by decide), HostFinalMemory.beforeChecks, HostLocalCore.tables,
+      List.getElem?_append_right (by rw [List.length_set, ProtectedLocalCore.tables_length]; decide),
+      List.length_set, ProtectedLocalCore.tables_length]
+    rfl
 
 private abbrev components := (base image source target finish).tables.drop 6
 
-/-- The still-unconstructed original components after both control tables are installed. -/
+/-- The still-unconstructed original components after the clock, exit and HINT tables are installed. -/
 def Remaining := (i : Fin (components image source target finish).length) →
   sourceAt (6 + i.val) = none → WriteMixedHostTables.indexAt (6 + i.val) = none → WriteMixedFixedResources.indexAt (6 + i.val) = none →
   indexAt (6 + i.val) = none → { t : Table F // t.component = (components image source target finish)[i] }
 
-/-- Exactly 28 original slots remain for the lookup and host-handler compilers. -/
+/-- Exactly 23 lookup providers and two other host receivers remain. -/
 theorem remaining_count : ((List.range' 6 (components image source target finish).length).filter (fun i =>
-    (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (WriteMixedFixedResources.indexAt i).isNone && (indexAt i).isNone)).length = 28 := by
+    (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (WriteMixedFixedResources.indexAt i).isNone && (indexAt i).isNone)).length = 25 := by
   rw [List.length_drop,base_length]; decide
 
 variable {image source target finish} {events : List ExecutionEvent}
@@ -47,16 +66,18 @@ variable {image source target finish} {events : List ExecutionEvent}
     (data : ProverData F)
 
 /-- The state companion of the original mixed register refresh and the endpoint-selected
-legacy Exit table. Both use the exact native row builders. -/
-def table : Index → Table F
+legacy Exit table, together with the actual queue reads and both HINT_LEN cases. -/
+noncomputable def table : Index → Table F
   | .stateBump => (InstalledAssembly.bumpTables (MixedBumpInput.memoryRows (rows.map MixedCompiledRow.bumpInput))
       (MixedBumpInput.stateRows (rows.map MixedCompiledRow.bumpInput)) data (WriteMixedSourceTables.heights run routed).memory (WriteMixedSourceTables.heights run routed).state).2
   | .haltPadding => MixedHaltPadding.table source target data
+  | .hintRead => HintHandlers.readTable run.1 data
+  | .hintLength empty => HintHandlers.lengthTable run.1 empty data
 
-/-- The two generated arrays have exactly their registered components. -/
+/-- The generated arrays have exactly their registered components. -/
 theorem table_component (k : Index) : (table run routed data k).component = component k := by cases k <;> rfl
 
-/-- Each generated normalization and checkpoint row satisfies its original physical circuit. -/
+/-- Each generated control table satisfies its original physical circuit. -/
 theorem table_valid (k : Index) : (table run routed data k).Constraints ∧ (table run routed data k).Guarantees := by
   cases k
   · obtain ⟨inputs,bumped,_,_,_,_,valid⟩ := admissibleExecution_mixedBumpInventory run.1
@@ -65,6 +86,9 @@ theorem table_valid (k : Index) : (table run routed data k).Constraints ∧ (tab
     exact InstalledAssembly.bumpTables_stateValid _ _ data _ _ valid
   · have checked := MixedHaltPadding.checked source target data
     exact ⟨checked.1,checked.2.1⟩
+  · have checked := HintHandlers.tables_checked run.1 data
+    exact ⟨checked.1,checked.2.1⟩
+  case hintLength empty => exact (HintHandlers.tables_checked run.1 data).2.2.1 empty
 
 /-- Physical height of the nonempty clock-window refresh bucket or its zero-demand shape,
 and the complementary zero-or-one row for the public Exit receipt. -/
@@ -72,7 +96,7 @@ theorem heights : (table run routed data .stateBump).length = WitnessGeneration.
     (table run routed data .haltPadding).length = (if (SP1StateBoundary.haltCode source target).isNone then 1 else 0) :=
   ⟨InstalledAssembly.bumpTables_stateLength _ _ data _ _,(MixedHaltPadding.checked source target data).2.2⟩
 
-/-- Fill exactly slots 56 and 57, retaining the complementary callback for all earlier registries. -/
+/-- Install the five generated control tables and delegate only the remaining physical positions. -/
 noncomputable def install (remaining : Remaining image source target finish) : WriteMixedFixedResources.Remaining image source target finish :=
   fun i absent host fixed => match found : indexAt (6 + i.val) with
     | none => remaining i absent host fixed found
@@ -82,7 +106,7 @@ noncomputable def install (remaining : Remaining image source target finish) : W
         rw [pos,← List.getElem?_drop,List.getElem?_eq_getElem i.isLt] at atSlot
         exact (table_component run routed data k).trans (Option.some.inj atSlot).symm⟩
 
-/-- The two native constructors discharge their own local checks regardless of the remaining slots. -/
+/-- The control constructors discharge their local checks regardless of the remaining slots. -/
 theorem install_valid (remaining : Remaining image source target finish)
     (checked : ∀ i a h f n, let t := (remaining i a h f n).1; t.Constraints ∧ t.Guarantees) :
     ∀ i a h f, let t := (install run routed data remaining i a h f).1; t.Constraints ∧ t.Guarantees := by
@@ -103,7 +127,9 @@ theorem original_arrays (k : Index) :
     (w.tables.map Table.table)[position k]? = some (table run routed data k).table := by
   intro fixed host w
   have location : 6 ≤ position k ∧ sourceAt (position k) = none ∧ WriteMixedHostTables.indexAt (position k) = none ∧
-      WriteMixedFixedResources.indexAt (position k) = none ∧ indexAt (position k) = some k := by cases k <;> decide
+      WriteMixedFixedResources.indexAt (position k) = none ∧ indexAt (position k) = some k := by
+    rcases k with _ | _ | _ | (_ | _)
+    all_goals decide
   have size := (List.getElem?_eq_some_iff.mp (registered_at image source target finish k)).1
   let i : Fin ((base image source target finish).tables.drop 6).length := ⟨position k - 6,by rw [List.length_drop]; omega⟩
   have offset : 6 + i.val = position k := by dsimp only [i]; omega
@@ -134,14 +160,14 @@ def InstalledAt (full : EnsembleWitness (WriteObservationAssembly.preprocessing 
 private theorem transfer (k : Index) (i : Interaction F) (member : i.channel ∈ (component k).circuit.channels)
     {old fresh : ProverData F} (accepted : i.Guarantees old) : i.Guarantees fresh := by
   have every : ∀ ch ∈ (component k).circuit.channels, ∀ (item : Interaction F), item.channel = ch → item.Guarantees old → item.Guarantees fresh := by
-    cases k
+    rcases k with _ | _ | _ | (_ | _)
     all_goals repeat' refine List.forall_mem_cons.mpr ⟨?_,?_⟩
     all_goals first
       | exact fun _ mem => False.elim (List.not_mem_nil mem)
       | intro ⟨ch,_,_,_,_⟩ same valid; change ch = _ at same; subst ch; exact valid
   exact every _ member i rfl accepted
 
-/-- Both control slots retain their generated traces, local assertions and complete physical
+/-- The real control slots retain their generated traces, local assertions and complete physical
 ledgers on the assembled witness, independently of the other original table generators. -/
 theorem installed_at (suffix : List (Table F)) (registered : suffix.map Table.component = WriteObservationAssembly.tables source target) (k : Index) :
     let fixed := install run routed data remaining
@@ -152,7 +178,9 @@ theorem installed_at (suffix : List (Table F)) (registered : suffix.map Table.co
   let original := table run routed data k
   have reg : original.component = component k := table_component run routed data k
   have atSlot := (registered_at image source target finish k).trans (congrArg some reg.symm)
-  have outside : sourceAt (position k) = none := by cases k <;> decide
+  have outside : sourceAt (position k) = none := by
+    rcases k with _ | _ | _ | (_ | _)
+    all_goals decide
   obtain ⟨actual,located,comp,cells,shared⟩ := WriteObservationAssembly.build_original_cells w suffix registered atSlot outside
     (original_arrays run routed data hint packets header remaining k)
   have free := HostObserved.lookupFree (image := image) (source := source) (target := target) (final := finish) original.component (List.mem_of_getElem? atSlot)

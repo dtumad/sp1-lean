@@ -1,3 +1,4 @@
+import SP1Clean.Export.InstalledImmutableLedger
 import SP1Clean.Export.WriteFundedInstallation
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteMixedControlTables
@@ -13,8 +14,8 @@ import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
 The chronological execution supplies the immutable reader counts, the final private
 queue state, the outgoing walk and its seal, and every alignment plan requested by a
 guest group. The fixed stream metadata table counts the actual hook dispatches and allocation
-steps. The original state bump and checkpoint padding are generated from the same execution.
-This constructs all nineteen observer tables. Twenty-eight original supervisor tables and the
+steps. The original state bump, checkpoint padding, HINT_READ and both HINT_LEN modes are generated from the same execution.
+This constructs all nineteen observer tables. Twenty-five original supervisor tables and the
 remaining shared-channel checks are still required for whole-assembly completeness.
 -/
 
@@ -101,6 +102,11 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
             (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
               [(SP1StateBoundary.haltCode ctx.source ctx.target).getD 0] ∧
             (∀ d, LogUpBalanced (full.interactionsWith (HostCommitChip.stateChannel d).toRaw)) ∧
+            CheckedLedger (full.interactionsWith HostHintQueue.nodeChannel.toRaw) (InstalledAssembly.immutableNodeSites release.1 data entries) ∧
+            CheckedLedger (full.interactionsWith HostHintQueue.wordChannel.toRaw) (InstalledAssembly.immutableWordSites release.1 data entries) ∧
+            CheckedLedger (full.interactionsWith HintReadWordChip.stateChannel.toRaw)
+              (2 * ((HintHandlers.readTable release.1 data).length + (HintHandlers.transferTable release.1 false data).length +
+                (HintHandlers.transferTable release.1 true data).length)) ∧
             CheckedLedger (full.interactionsWith WritePermissionProvider.channel.toRaw) (WriteMixedPermissionLedger.occurrences events rows) ∧
             (∀ ch ∈ readProtocols, LogUpBalanced (full.interactionsWith ch)) ∧
             (∀ ch ∈ fundedProtocols, LogUpBalanced (full.interactionsWith ch) ∧
@@ -165,12 +171,18 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   intro pre full
   obtain ⟨frontValid,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets fixed) tail ptail
   have endpoints := installed_endpoint_ledgers w suffix reg (s.groups data) plan _ _ rfl rfl rfl rfl
+  obtain ⟨nodeLedger,wordLedger,cursorLedger⟩ := installed_immutable_ledgers release routed data hint (inputs entries).packets header remaining
+    suffix reg s rfl rfl rfl
+  obtain ⟨_,nodePaid,wordPaid⟩ := InstalledAssembly.native_immutable_queue release.1 data collected s paid.toChecked
   refine ⟨frontValid,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
-    MixedHaltPadding.receipt release.1.1.2,?_,?_,?_,?_,?_,?_,?_,?_⟩
+    MixedHaltPadding.receipt release.1.1.2,?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)
     rw [public_bank pre d _ (banks (.bank d none))]
     exact bankPaid d
+  · obtain ⟨size,fit,matched⟩ := HintHandlers.transfer_matches release.1 data
+    rw [cursorLedger]
+    exact ⟨size,HintHandlers.transfer_closed release.1 data,fit,matched⟩
   · exact WriteMixedPermissionLedger.public_checked release routed data hint (inputs entries).packets header fixed suffix reg run.1 preset
   · intro ch member
     change LogUpBalanced ((withPublicChecks pre).interactionsWith ch)
