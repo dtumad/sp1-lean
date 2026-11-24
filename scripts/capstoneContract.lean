@@ -9,6 +9,8 @@ import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Proofs.Completeness.WriteAllocationStore
 import SP1Clean.Proofs.Completeness.WriteAllocationWordTables
 import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
+import SP1Clean.Export.WriteInstalledAllocations
+import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteObservationReads
@@ -221,6 +223,12 @@ def roots : Array Name := #[
   ``SP1Clean.WriteEffects.Witness.native_allocation_assembly,
   ``SP1Clean.WriteEffects.Witness.allocation_occurrences,
   ``SP1Clean.WriteEffects.Witness.native_private_matches,
+  ``SP1Clean.Export.WriteObservationAssembly.native_installed_allocation_matches,
+  ``SP1Clean.Export.WriteObservationAssembly.assembled_hint_read_origins,
+  ``SP1Clean.Export.WriteObservationAssembly.assembled_hint_word_data,
+  ``SP1Clean.Export.WriteObservationAssembly.outgoing_queue_read_origins,
+  ``SP1Clean.Export.WriteObservationAssembly.outgoing_queue_of_allocations,
+  ``SP1Clean.WriteEffects.Witness.native_block_tables,
   ``SP1Clean.Export.WriteObservationAssembly.withCursors_ledger,
   ``SP1Clean.Export.WriteObservationAssembly.effect_lookupFree,
   ``SP1Clean.WriteEffects.groups_of_admissibleExecution,

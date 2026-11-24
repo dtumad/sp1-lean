@@ -59,6 +59,16 @@ import SP1Clean.Proofs.Completeness.WriteWitnessAllocation
 import SP1Clean.Proofs.Completeness.WriteWitnessAllocationAssembly
 import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCapacity
 import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
+import SP1Clean.Proofs.Completeness.WriteAllocationBlockBalance
+import SP1Clean.Proofs.Completeness.WriteBlockLedgers
+import SP1Clean.Proofs.Completeness.WriteBlockRequests
+import SP1Clean.Proofs.Completeness.WriteBlockTally
+import SP1Clean.Proofs.Completeness.WriteCollectedGroups
+import SP1Clean.Proofs.Completeness.WriteCombinedBlockBalance
+import SP1Clean.Proofs.Completeness.WriteDirectBlocks
+import SP1Clean.Proofs.Completeness.WriteFundedWords
+import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
+import SP1Clean.Proofs.Completeness.WriteReturnedBlocks
 import SP1Clean.Proofs.Completeness.WriteWitnessAllocationTables
 import SP1Clean.Proofs.Completeness.WriteWitnessInputs
 import SP1Clean.Proofs.Completeness.WriteWitnessPosition
