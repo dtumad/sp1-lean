@@ -85,9 +85,12 @@ def dispatchRow (fd address length : BitVec 64) (callClock previousClock : Nat) 
     nextCounter := Address.ofNat (count + delta), pointer := Address.ofNat (store.size + 1)
     returned := Address.ofNat ((host.replies.head?.map (·.hints.length)).getD 0) }
 
-private theorem low_length (len : BitVec 64) :
-    #v[(bitVecToWord (p := SP1Prime) len)[0], (bitVecToWord (p := SP1Prime) len)[1], (bitVecToWord (p := SP1Prime) len)[2]] =
-      Address.ofNat len.toNat := by
+/-- The dispatch ticket uses the low three little-endian limbs of the observed x12. -/
+theorem dispatchRow_length (fd address len : BitVec 64) (clk prev : Nat) (earlier : WriteStreams)
+    (host : HostState) (store : HintQueue.Store) :
+    (dispatchRow fd address len clk prev earlier host store).length = Address.ofNat len.toNat := by
+  change #v[(bitVecToWord (p := SP1Prime) len)[0], (bitVecToWord (p := SP1Prime) len)[1],
+    (bitVecToWord (p := SP1Prime) len)[2]] = _
   simp [bitVecToWord, Address.ofNat, BitVec.extractLsb'_toNat, Nat.shiftRight_eq_div_pow]
 
 private theorem three_eq (x : fields 3 F) : threeLimbs (fun i => x[i.val]) = x := by
@@ -115,7 +118,7 @@ theorem dispatchRow_valid (fd address length : BitVec 64) (clk previousClock : N
     (dispatchRow fd address length clk previousClock earlier host store).Valid := by
   let route := WriteRoute.ofDescriptor fd
   let r := dispatchRow fd address length clk previousClock earlier host store
-  have len : r.length = Address.ofNat length.toNat := low_length _
+  have len : r.length = Address.ofNat length.toNat := dispatchRow_length fd address length clk previousClock earlier host store
   have select := selections route earlier previousClock r rfl length.toNat len
   have start : Address.toNat (Address.ofNat (p := SP1Prime) (address.toNat - 1)) = address.toNat - 1 :=
     Address.toNat_ofNat _ (by omega)
