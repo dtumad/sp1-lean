@@ -171,6 +171,14 @@ The backend rejects a changed tail on its aligned padding word and a changed ter
 allocation frontier.
 [Physical reader](../SP1Clean/Native/Operations/HintQueueSnapshot.lean) · [Constructive ledger](../SP1Clean/Proofs/Completeness/HintSnapshotLedger.lean) · [Capacity](../SP1Clean/Export/HintSnapshotCapacity.lean) · [Backend fixture](../rust/sp1-comparison/tests/hint_source_export.rs)
 
-The full native acceptance theorem still needs to connect consecutive WRITE clocks, close
-all per-stream positions, and recover the persistent node and word sources for the
-terminal walk from the balanced physical tables. The stock SDK digest statement above applies independently.
+Raw native acceptance forces the terminal walk to visit every public word in physical
+order. Its initial head comes from the private seal row. Within a buffer all its word
+rows use the same head and tail. The last word moves to the next node, and an empty
+outgoing queue forces the starting head to be null. Once the node and word requests
+identify a common persistent store, this walk determines the exact outgoing byte
+strings in that store. [Installed walk and queue decoding](../SP1Clean/Export/HintSnapshotWalk.lean)
+
+The full native theorem still needs to construct that store from the actual queue updates
+at each execution clock, including fresh nodes consumed within the shard, and to connect
+the ordered WRITE calls to every stream position. The stock SDK digest statement above
+applies independently.

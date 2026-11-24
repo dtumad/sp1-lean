@@ -24,6 +24,12 @@ def ofNat (address : ℕ) : fields 3 (ZMod p) :=
   #v[(address % 2 ^ 16 : ℕ), ((address / 2 ^ 16) % 2 ^ 16 : ℕ),
     ((address / 2 ^ 32) % 2 ^ 16 : ℕ)]
 
+/-- Zero has three zero limbs. -/
+theorem ofNat_zero : ofNat (p := p) 0 = 0 := by
+  ext i inside
+  have cases : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+  rcases cases with rfl | rfl | rfl <;> simp [ofNat]
+
 /-- Small offsets within the low limb, used for naturally aligned byte footprints. -/
 def offset {F : Type} [Add F] (address : fields 3 F) (index : F) : fields 3 F :=
   #v[address[0] + index, address[1], address[2]]

@@ -10,6 +10,7 @@ import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.HintSnapshotCapacity
+import SP1Clean.Export.HintSnapshotWalk
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationProjection
 import SP1Clean.Export.WriteObservationBuild
@@ -378,6 +379,8 @@ import SP1Clean.Soundness.ProtectedLocalCoreRom
 import SP1Clean.Soundness.ProtectedStoreFootprints
 import SP1Clean.Soundness.ProtectedStorePermissions
 import SP1Clean.Soundness.RankedCoverage
+import SP1Clean.Soundness.HintSnapshotOrder
+import SP1Clean.Soundness.HintSnapshotDecode
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring

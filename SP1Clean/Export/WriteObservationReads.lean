@@ -17,22 +17,7 @@ variable (image : ProgramImage) (source target : ExecutionSnapshot) (final : Hos
 def probeSlot : TableSlot (preprocessing image source target final).tables WriteProbe.component :=
   slot image source target final 1
 
-private theorem channels_installed : (preprocessing image source target final).channels =
-    channels ++ (withSources image source target final).channels := rfl
-
 attribute [local irreducible] base withSources preprocessing
-
-private theorem protocol_fresh (ch : RawChannel F) (member : ch ∈ channels) :
-    ch ∉ (withSources image source target final).channels := by
-  have names := (preprocessing image source target final).unique_channel_names
-  rw [channels_installed, List.map_append, List.nodup_append] at names
-  intro prior
-  exact names.2.2 _ (List.mem_map_of_mem member) _ (List.mem_map_of_mem prior) rfl
-
-private theorem protocol_installed (ch : RawChannel F) (member : ch ∈ channels) :
-    ch ∈ (preprocessing image source target final).channels := by
-  rw [channels_installed]
-  exact List.mem_append_left _ member
 
 private theorem silent_of_names {cs : List (Component F)} {ch : RawChannel F}
     (silent : ch.name ∉ cs.flatMap (fun c => c.circuit.channels.map RawChannel.name))

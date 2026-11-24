@@ -21,7 +21,24 @@ variable (image : ProgramImage) (source target : ExecutionSnapshot) (final : Hos
 theorem appended : Ensemble.AppendedTables (withSources image source target final)
     (preprocessing image source target final) (tables source target) := ⟨rfl, rfl⟩
 
+private theorem channels_installed : (preprocessing image source target final).channels =
+    channels ++ (withSources image source target final).channels := rfl
+
 attribute [local irreducible] base withSources preprocessing
+
+/-- Every observer protocol is fresh in the decorated prefix. -/
+theorem protocol_fresh (ch : RawChannel F) (member : ch ∈ channels) :
+    ch ∉ (withSources image source target final).channels := by
+  have names := (preprocessing image source target final).unique_channel_names
+  rw [channels_installed, List.map_append, List.nodup_append] at names
+  intro prior
+  exact names.2.2 _ (List.mem_map_of_mem member) _ (List.mem_map_of_mem prior) rfl
+
+/-- Each observer protocol is registered in the enlarged ensemble. -/
+theorem protocol_installed (ch : RawChannel F) (member : ch ∈ channels) :
+    ch ∈ (preprocessing image source target final).channels := by
+  rw [channels_installed]
+  exact List.mem_append_left _ member
 
 /-- The supplier is the first appended table. -/
 def supplySlot : TableSlot (preprocessing image source target final).tables ReadbackSupply.component :=
