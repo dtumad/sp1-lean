@@ -13,6 +13,7 @@ import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationSources
 import SP1Clean.Export.WriteObservationReads
+import SP1Clean.Export.WriteObservationHandoff
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot
 import SP1Clean.Export.WriteSourceInstallation
