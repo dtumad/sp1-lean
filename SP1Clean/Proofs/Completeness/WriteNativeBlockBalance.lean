@@ -33,7 +33,7 @@ theorem native_public_indices {image : ProgramImage} {source target : ExecutionS
       used.map (fun i => (provider.fixedEntry i.val).payload) = (entries.flatMap (Entry.publicGroups full)).flatMap directRequests ∧
       ∀ i ∈ used, (provider.fixedEntry i.val).eligible = 1 := by
   intro full provider
-  apply assigned
+  apply ReaderCounts.assign
   intro b query
   obtain ⟨g,atGroup,atBlock⟩ := List.mem_flatMap.mp query
   have funded := (native_public_groups run readers collected g atGroup).2 b atBlock
