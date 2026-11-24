@@ -39,7 +39,8 @@ private theorem open_values (r : Var Open F) (n : Nat) (env : Environment F) :
   simp only [List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed,
     eval_first, eval_last]
 
-private theorem openInput_cursors (env : Environment F) :
+/-- Exact guarded cursor occurrences in an arbitrary physical call header environment. -/
+theorem openInput_cursors (env : Environment F) :
     (openComponent (p := SP1Prime)).operations.interactionValuesWith cursorChannel.toRaw env =
       openCursors (openComponent.rowInput env) := by
   let I := ProvablePair Open field
@@ -100,7 +101,8 @@ private theorem step_values (r : Var Step F) (n : Nat) (env : Environment F) :
   simp only [List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed,
     eval_before, eval_after]
 
-private theorem stepInput_cursors (env : Environment F) :
+/-- Exact guarded cursor occurrences in an arbitrary physical fresh node environment. -/
+theorem stepInput_cursors (env : Environment F) :
     (stepComponent (p := SP1Prime)).operations.interactionValuesWith cursorChannel.toRaw env =
       stepCursors (stepComponent.rowInput env) := by
   let I := ProvablePair Step field
@@ -160,7 +162,8 @@ private theorem seed_values (r : Var Contents F) (n : Nat) (env : Environment F)
   simp only [List.map_cons, List.map_nil, Channel.eval_pushed,
     eval_start]
 
-private theorem seedInput_cursors (env : Environment F) :
+/-- Exact guarded cursor occurrences in an arbitrary physical contents header environment. -/
+theorem seedInput_cursors (env : Environment F) :
     (seedComponent (p := SP1Prime)).operations.interactionValuesWith cursorChannel.toRaw env =
       seedCursors (seedComponent.rowInput env) := by
   let I := ProvablePair Contents field
@@ -214,7 +217,8 @@ private theorem word_values (r : Var Row F) (n : Nat) (env : Environment F) :
   simp only [List.map_cons, List.map_nil, Channel.eval_pulled,
     Channel.eval_pushedIf, eval_prior, eval_next, eval_more]
 
-private theorem wordInput_cursors (env : Environment F) :
+/-- Exact guarded cursor occurrences in an arbitrary physical contents word environment. -/
+theorem wordInput_cursors (env : Environment F) :
     (wordComponent (p := SP1Prime)).operations.interactionValuesWith cursorChannel.toRaw env =
       wordCursors (wordComponent.rowInput env) := by
   let I := ProvablePair Row field

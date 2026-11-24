@@ -1,3 +1,4 @@
+import ToClean.Air.AppendedAuthentication
 import SP1Clean.Export.WriteObservationSources
 
 /-! # Exact physical handoff ledgers for chronological host-call decoding -/
@@ -48,7 +49,8 @@ private theorem flatMap_selected {α β : Type} (xs : List α) (used : α → Bo
     have tail := ih (fun y member => absent y (List.mem_cons_of_mem x member))
     cases enabled : used x <;> simp [enabled, tail, absent x List.mem_cons_self]
 
-private def selectedSlots (source target : ExecutionSnapshot) (ch : RawChannel F) : List (Fin 19) :=
+/-- Physical suffix slots declaring a channel, in installation order. -/
+def selectedSlots (source target : ExecutionSnapshot) (ch : RawChannel F) : List (Fin 19) :=
   (List.finRange 19).filter fun i => ((tables source target)[i.val].circuit.channels.map RawChannel.name).contains ch.name
 
 private theorem selected_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
@@ -73,6 +75,18 @@ private theorem selected_ledger (w : EnsembleWitness (preprocessing image source
   rw [(slot image source target final i).table_component w]
   intro present
   exact Bool.noConfusion ((List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) present)).symm.trans missing)
+
+/-- A fresh protocol is funded entirely inside its own declared physical suffix slots.
+The equality includes disabled interactions, repeated messages and both directions. -/
+theorem fresh_slots_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
+    (registered : ch ∈ channels) (distinct : ch ≠ readbackChannel.toRaw) :
+    w.interactionsWith ch = (selectedSlots source target ch).flatMap
+      (fun i => ((slot image source target final i).table w).interactionsWith ch) := by
+  rw [selected_ledger w ch distinct]
+  have projected := project_ledger ((appended image source target final).project w) ch distinct
+  change (supervisor w).interactionsWith ch = _ at projected
+  rw [projected, EnsembleWitness.interactionsWith_nil_of_not_registered _ _ (protocol_fresh image source target final ch registered),
+    List.nil_append]
 
 /-- The immutable metadata ledger retains every original supervisor occurrence, both the
 fixed outgoing snapshot's read sites and the fresh node table's counted publications. -/
