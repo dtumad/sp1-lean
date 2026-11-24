@@ -144,7 +144,7 @@ private theorem tables_at {image : ProgramImage} {source target : ExecutionSnaps
     cases Option.some.inj (afterStore.symm.trans observed)
     have width : SP1Prime < 2^31 := by decide
     have paid : storedWordCount after.1 ≤ 2^29 := by omega
-    obtain ⟨_,_,_,_,_,_,atStart,_,sameRead,sameStore,_,_,_,eligible⟩ := native_store_at run present write
+    obtain ⟨_,_,_,_,_,_,atStart,_,sameRead,sameStore,_,_,_,_,eligible⟩ := native_store_at run present write
     cases Option.some.inj (reached.symm.trans atStart)
     cases Option.some.inj (read.symm.trans sameRead)
     cases Option.some.inj (beforeStore.symm.trans sameStore)

@@ -69,6 +69,7 @@ theorem native_store_at {image : ProgramImage} {source target : ExecutionSnapsho
       let earlier := WriteStreams.fromEndpoints source.host current.host
       let bytes := WriteObservations.payload buffer call.arg2.toNat length.toNat
       let route := WriteRoute.ofDescriptor call.arg1
+      after = prepend cursor.1 cursor.2 (route.allocations current.host bytes) ∧
       ∀ batch, batchFor route earlier current.host bytes = some batch →
         let prior := (events.take cut).foldl advanceQueueClock 0
         let row := batch.openRow prior current.clock cursor.1 cursor.2
@@ -108,7 +109,7 @@ theorem native_store_at {image : ProgramImage} {source target : ExecutionSnapsho
   rw [budget] at paid
   have live := post.endpoint_fits run.2.2.2.1 paid.left .liveHintBytes
   change (right.host.io.hints.map List.length).sum ≤ SP1Prime - 1 at live
-  refine ⟨left,right,length,buffer,cursor,after,atCurrent,atNext,read,beforeStore,afterStore,rep,repAfter,?_⟩
+  refine ⟨left,right,length,buffer,cursor,after,atCurrent,atNext,read,beforeStore,afterStore,rep,repAfter,postState,?_⟩
   dsimp only
   intro batch active
   obtain ⟨ticket,buffers⟩ := dispatch_allocation_ticket call.arg1 call.arg2 length left.clock ((events.take cut).foldl advanceWriteClock source.clock)
