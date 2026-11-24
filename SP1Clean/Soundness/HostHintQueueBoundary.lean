@@ -167,6 +167,17 @@ theorem projected_constraints
   ((boundary source final bankFinal).project_constraints (underlying witness)).mp
     (HaltPadding.constraints witness constraints)
 
+/-- A protocol unused by the queue/bank verifier keeps its entire signed physical ledger
+when the padding wrapper and the boundary verifier are projected away. -/
+theorem projected_silent_interactions
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
+    (channel : RawChannel (ZMod p))
+    (registered : channel ∈ (HostHintReadLocal.ensemble image source others resources channels names channelNames tableChannels).channels)
+    (silent : channel ∉ (boundary source final bankFinal).circuit.channels) :
+    (projected witness).interactionsWith channel = witness.interactionsWith channel :=
+  ((boundary source final bankFinal).project_silent_interactions (underlying witness) channel registered silent).trans
+    (HaltPadding.interactions witness channel)
+
 /-- Only channels without boundary emissions retain balance under physical projection. -/
 theorem projected_balancedChannel
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
