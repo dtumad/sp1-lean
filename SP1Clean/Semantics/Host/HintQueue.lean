@@ -121,6 +121,36 @@ theorem prepend_size (store : Store) (head : ℕ) (prepended : List Bytes) :
   | nil => simp [prepend]
   | cons bytes rest ih => simp [prepend, ih, Nat.add_assoc]
 
+/-- A nonempty prepend ends at the newest allocated pointer. An empty prepend retains its incoming head. -/
+theorem prepend_head (store : Store) (head : ℕ) (buffers : List Bytes) :
+    (prepend store head buffers).2 = if buffers.length = 0 then head else store.size + buffers.length := by
+  cases buffers with
+  | nil => rfl
+  | cons bytes rest => simp [prepend, prepend_size, Nat.add_assoc]
+
+/-- Physical allocation ordinal `i` identifies both the original bytes and the previous head.
+The first new node may point below the frontier after an earlier pop. -/
+theorem node?_prepend_at (store : Store) (head : ℕ) (buffers : List Bytes) {i : ℕ} {bytes : Bytes}
+    (chosen : buffers.reverse[i]? = some bytes) :
+    node? (prepend store head buffers).1 (store.size + i + 1) =
+      some ⟨bytes, if i = 0 then head else store.size + i⟩ := by
+  induction buffers with
+  | nil => simp at chosen
+  | cons first rest ih =>
+    rw [List.reverse_cons] at chosen
+    by_cases old : i < rest.reverse.length
+    · rw [List.getElem?_append_left old] at chosen
+      exact extends_push _ _ _ _ (ih chosen)
+    · have inRange := (List.getElem?_eq_some_iff.mp chosen).1
+      simp only [List.length_append, List.length_cons, List.length_nil, List.length_reverse] at inRange old
+      have atLast : i = rest.length := by omega
+      subst i
+      rw [List.getElem?_append_right (by simp),List.length_reverse,Nat.sub_self] at chosen
+      have same : first = bytes := Option.some.inj chosen
+      subst first
+      simpa only [prepend, prepend_size, prepend_head] using
+        (node?_fresh (prepend store head rest).1 ⟨bytes, (prepend store head rest).2⟩)
+
 /-- Allocation stores every new byte buffer once, in reverse order of the logical queue. -/
 theorem prepend_bytes (store : Store) (head : ℕ) (prepended : List Bytes) :
     ((prepend store head prepended).1.toList.map Node.bytes) =

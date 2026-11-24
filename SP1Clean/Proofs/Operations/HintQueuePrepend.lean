@@ -19,12 +19,6 @@ the first node the previous head may be an older surviving pointer. -/
 def prefixState (clock head frontier count : ℕ) : HostHintQueue.State (ZMod p) :=
   HostHintQueue.State.encode clock (if count = 0 then head else frontier+count) (frontier+count)
 
-private theorem prependHead (store : Store) (head : Nat) (buffers : List Bytes) :
-    (prepend store head buffers).2 = if buffers.length = 0 then head else store.size + buffers.length := by
-  cases buffers with
-  | nil => rfl
-  | cons bytes rest => simp [prepend,prepend_size,Nat.add_assoc]
-
 /-- Compile each fresh node once, from the end of the returned list to its front. -/
 def compilePrepend (clock : ℕ) (store : Store) (head : ℕ) (added : List Bytes) : List (Inputs (ZMod p)) :=
   added.reverse.zipIdx.map fun (bytes,i) => populate (prefixState clock head store.size i) bytes
@@ -34,7 +28,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem compilePrepend_cons (clock : ℕ) (store : Store) (head : ℕ) (bytes : Bytes) (rest : List Bytes) :
     compilePrepend (p := p) clock store head (bytes :: rest) = compilePrepend clock store head rest ++
       [populate (HostHintQueue.State.encode clock (prepend store head rest).2 (prepend store head rest).1.size) bytes] := by
-  simp [compilePrepend,List.zipIdx_append,prefixState,prependHead,prepend_size]
+  simp [compilePrepend,List.zipIdx_append,prefixState,prepend_head,prepend_size]
 
 /-- Check full before/after cursor continuity, including clocks and the allocation frontier. -/
 def replayCursors (initial : HostHintQueue.State (ZMod p)) (rows : List (Inputs (ZMod p))) :

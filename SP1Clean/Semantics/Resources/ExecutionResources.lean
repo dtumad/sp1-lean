@@ -197,6 +197,17 @@ theorem ExecutionPath.resources_ticks {policy : HostPolicy} {program : GuestProg
       simp only [ResourceUsage.combine, ResourceKind.cumulative, ↓reduceIte,
         ExecutionState.resources, ExecutionState.eventResources, HostState.eventResources, Nat.zero_add, ih, List.map_cons, List.sum_cons]
 
+/-- The occupancy at the endpoint of a bounded path fits the same limits, including for an empty path. -/
+theorem ExecutionPath.endpoint_fits {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent} {limits : ResourceLimits}
+    (path : ExecutionPath policy program source events target) (incoming : source.resources.Fits limits)
+    (usage : (executionResources policy program source events).Fits limits) : target.resources.Fits limits := by
+  induction path with
+  | nil => exact incoming
+  | cons step _ ih =>
+    rw [executionResources_cons step] at usage
+    exact ih usage.right.left usage.right.right
+
 /-- Every cut of a bounded path fits the same ceilings on both pieces, without resetting host state. -/
 theorem ExecutionPath.resources_split {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {events : List ExecutionEvent} {limits : ResourceLimits}

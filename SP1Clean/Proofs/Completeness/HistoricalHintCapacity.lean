@@ -16,16 +16,6 @@ profile and apply to the same authenticated store and suffix as the persistent i
 namespace SP1Clean.TraceGen
 open Semantics Machine HintQueue FormalModel.Shard
 
-private theorem endpoint_fits {policy : HostPolicy} {program : Soundness.Target.GuestProgram}
-    {source target : ExecutionState} {events : List ExecutionEvent} {limits : ResourceLimits}
-    (path : ExecutionPath policy program source events target) (incoming : source.resources.Fits limits)
-    (usage : (executionResources policy program source events).Fits limits) : target.resources.Fits limits := by
-  induction path with
-  | nil => exact incoming
-  | cons step _ ih =>
-    rw [executionResources_cons step] at usage
-    exact ih usage.right.left usage.right.right
-
 private theorem padded_byte_bounds (hints : List Bytes) :
     (hints.map List.length).sum ≤ 8 * (hints.map wordCount).sum ∧
       8 * (hints.map wordCount).sum ≤ (hints.map bytePayloadCost).sum := by
@@ -45,7 +35,7 @@ theorem historical_hint_budget {policy : HostPolicy} {program : Soundness.Target
     (incoming : source.resources.Fits limits) (usage : (executionResources policy program source events).Fits limits) :
     storedByteCount cursor.1 ≤ 8 * storedWordCount cursor.1 ∧
       8 * storedWordCount cursor.1 + 125 ≤ limits.boundaryBytes + limits.writeBytes := by
-  have boundary := endpoint_fits path incoming usage .boundaryBytes
+  have boundary := path.endpoint_fits incoming usage .boundaryBytes
   change target.resources .boundaryBytes ≤ limits.boundaryBytes at boundary
   have writes := usage .writeBytes
   change executionResources policy program source events .writeBytes ≤ limits.writeBytes at writes
