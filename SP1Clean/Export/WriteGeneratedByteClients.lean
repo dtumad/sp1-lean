@@ -125,4 +125,103 @@ noncomputable def atIndex (k : Fin 98) (outside : k.val < 32 ∨ 55 ≤ k.val) :
           rw [WriteMixedControlTables.remaining_positions,List.mem_range'_1] at member
           omega
 
+/-- Consecutive ordinal of a reader in the registry with the 23 provider positions removed. -/
+def position (i : Fin 75) : Fin 98 :=
+  ⟨if i.val < 32 then i.val else i.val + 23,by split <;> omega⟩
+
+private theorem outside (i : Fin 75) : (position i).val < 32 ∨ 55 ≤ (position i).val := by
+  simp only [position]
+  split <;> omega
+
+/-- All 75 generated nonprovider tables, in their true original order. -/
+noncomputable def tables : List (Table F) :=
+  List.ofFn fun i : Fin 75 => (atIndex run routed finish data hint header packets (position i) (outside i)).table
+
+private theorem supervisor_header (rest : Rest image initial final finish) :
+    (supervisor run routed finish data hint header packets rest).publicInput = header := rfl
+
+attribute [local irreducible] base supervisor atIndex
+
+private theorem clientAt {α : Type*} (ts : List α) (n : ts.length = 98) (i : Fin 75) :
+    (ts.take 32 ++ ts.drop 55)[i.val]? = ts[(position i).val]? := by
+  have first : (ts.take 32).length = 32 := by simp [n]
+  change _ = ts[if i.val < 32 then i.val else i.val + 23]?
+  by_cases lo : i.val < 32
+  · rw [List.getElem?_append_left (show i.val < (ts.take 32).length by omega),List.getElem?_take_of_lt lo,ite_eq_left lo]
+  · rw [List.getElem?_append_right (by omega),first,List.getElem?_drop,ite_eq_right lo]
+    congr 1
+    omega
+
+private theorem same_ledger (rest : Rest image initial final finish) :
+    let w := supervisor run routed finish data hint header packets rest
+    (WriteByteLedger.clients w).flatMap (·.interactionsWith bus) =
+      (tables run routed finish data hint header packets).flatMap (·.interactionsWith bus) := by
+  intro w
+  have size : w.tables.length = 98 := w.same_length.symm.trans (base_length ..)
+  have n : (WriteByteLedger.clients w).length = 75 := by simp [WriteByteLedger.clients,size]
+  apply congrArg List.flatten
+  apply List.ext_getElem
+  · simp [tables,n]
+  intro j bound _
+  let i : Fin 75 := ⟨j,by simpa only [List.length_map,n] using bound⟩
+  let generated := atIndex run routed finish data hint header packets (position i) (outside i)
+  let k := (position i).val
+  have inside : k < w.tables.length := by rw [size]; exact (position i).isLt
+  let actual := w.tables[k]'inside
+  have placed : w.tables[k]? = some actual := List.getElem?_eq_getElem inside
+  have comp := congrArg (fun xs : List (Component F) => xs[k]?) w.tables_map_component
+  simp only [List.getElem?_map,placed,Option.map_some] at comp
+  have cells := generated.cells rest
+  change (w.tables.map Table.table)[k]? = some generated.table.table at cells
+  rw [List.getElem?_map,placed,Option.map_some] at cells
+  have who := clientAt w.tables size i
+  change (WriteByteLedger.clients w)[j]? = w.tables[k]? at who
+  rw [List.getElem?_eq_getElem (by simpa only [List.length_map] using bound),placed] at who
+  rw [List.getElem_map,Option.some.inj who,List.getElem_map]
+  simp only [tables,List.getElem_ofFn]
+  change actual.interactionsWith bus = generated.table.interactionsWith bus
+  apply Table.interactionsWith_eq_of_rows _ _ _ (Option.some.inj cells)
+  rw [Option.some.inj (comp.trans generated.component)]
+
+private def headerData (data : ProverData F) (header : SP1PublicIO F) : ProverData F :=
+  { data with publicInput := (toElements header).toArray }
+
+/-- The native tally's full input, obtained before constructing any Byte provider.
+The supplied suffix consists of the genuine observer rows from the same execution. -/
+noncomputable def demand (suffix : List (Table F)) : List (Interaction F) :=
+  (base image initial final finish).verifierOperations.interactionValuesWith bus (headerData data header).publicEnvironment ++
+    (tables run routed finish data hint header packets ++ suffix).flatMap (·.interactionsWith bus)
+
+/-- Replacing the provider window preserves every collected reader occurrence literally. -/
+theorem demand_eq (rest : Rest image initial final finish) (suffix : List (Table F)) :
+    WriteByteLedger.demand (supervisor run routed finish data hint header packets rest) suffix =
+      demand run routed finish data hint header packets suffix := by
+  simp only [WriteByteLedger.demand,demand,List.flatMap_append,same_ledger]
+  apply congrArg (· ++ _)
+  apply Operations.interactionValuesWith_congr
+  change (Environment.fromInput (supervisor run routed finish data hint header packets rest).publicInput _).get =
+    (Environment.fromInput header (headerData data header)).get
+  rw [supervisor_header]
+
+/-- A canonical public header and the generated table proofs discharge all original Byte
+reader contracts. The only additional reads here belong to the supplied observer suffix. -/
+theorem reads (limbs : header.LimbBounds) (suffix : List (Table F))
+    (observer : WriteByteConsumers.Reads (suffix.flatMap (·.interactionsWith bus))) :
+    WriteByteConsumers.Reads (demand run routed finish data hint header packets suffix) := by
+  intro i member
+  simp only [demand,List.flatMap_append,List.mem_append] at member
+  rcases member with publicRow | tableRow | added
+  · have eq : (headerData data header).getPublicInput SP1PublicIO = header := by
+      rw [ProverData.getPublicInput_eq_eval]
+      exact ProvableType.eval_fromInput_varFromOffset_zero header _
+    have bounded : (headerData data header).getPublicInput SP1PublicIO |>.LimbBounds := eq.symm ▸ limbs
+    have paid := WritePublicByteDemand.supervisor_readers image initial final finish (headerData data header) bounded i publicRow
+    exact ⟨paid.1,fun _ => paid.2.2⟩
+  · obtain ⟨table,listed,selected⟩ := List.mem_flatMap.mp tableRow
+    obtain ⟨j,rfl⟩ := List.mem_ofFn.mp listed
+    let client := atIndex run routed finish data hint header packets (position j) (outside j)
+    exact WriteByteConsumers.checked_table client.table (List.mem_of_getElem? client.component) client.checked
+      (fun _ h => WriteOriginalByteDirections.client image initial final finish client.component (outside j) h) i selected
+  · exact observer i added
+
 end SP1Clean.Export.WriteGeneratedByteClients
