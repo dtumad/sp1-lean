@@ -885,6 +885,13 @@ theorem compileInstructionEvent?_accessPlan_generated
   rw [projectSP1Transition?_accesses projected]
   exact compileInstructionEvent?_accessPlan generated
 
+/-- The compiled instruction keeps the full refresh-aware schedule of its canonical access plan. -/
+theorem compileInstructionEvent?_schedule {view : SP1TransitionView} {frontier : AccessFrontier}
+    {clock : ℕ} {row : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clock = some row) :
+    row.schedule = scheduleAccessPlan frontier clock row.plan := by
+  obtain ⟨_, _, _, _, rfl⟩ := compileInstructionEvent?_components generated
+  rfl
+
 /-- The outgoing compiler clock is the last real touch at each location, also across refreshes. -/
 theorem compileInstructionEvent?_nextFrontier {view : SP1TransitionView} {frontier : AccessFrontier}
     {clk : ℕ} {result : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clk = some result) :
