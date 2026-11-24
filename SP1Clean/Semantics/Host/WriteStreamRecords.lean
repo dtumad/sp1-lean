@@ -56,6 +56,53 @@ def queries (streams : WriteStreams) : List Query :=
       [.descriptor r, .returnCount r] ++ byteQueries (.request r) reply.request.input ++
         (reply.hints.zipIdx.flatMap fun (bytes, h) => byteQueries (.returned r h) bytes))
 
+private theorem query_of_hook {streams : WriteStreams} {r : Nat} {reply : HookReply} {q : Query}
+    (found : streams.hooks[r]? = some reply)
+    (member : q ∈ [.descriptor r, .returnCount r] ++ byteQueries (.request r) reply.request.input ++
+        (reply.hints.zipIdx.flatMap fun (bytes, h) => byteQueries (.returned r h) bytes)) : q ∈ queries streams := by
+  apply List.mem_append_right
+  exact List.mem_flatMap.mpr ⟨(reply, r), List.mk_mem_zipIdx_iff_getElem?.mpr found, member⟩
+
+private theorem bytes_enumerated {streams : WriteStreams} {key : StreamKey} {bytes : Bytes}
+    (found : key.contents streams = some bytes) {q : Query} (member : q ∈ byteQueries key bytes) :
+    q ∈ queries streams := by
+  cases key with
+  | stdout =>
+    cases found
+    exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ member))
+  | stderr =>
+    cases found
+    exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_right _ member))
+  | publicOutput =>
+    cases found
+    exact List.mem_append_left _ (List.mem_append_right _ member)
+  | request r =>
+    obtain ⟨reply, atReply, rfl⟩ := Option.map_eq_some_iff.mp found
+    exact query_of_hook atReply (List.mem_append_left _ (List.mem_append_right _ member))
+  | returned r h =>
+    obtain ⟨reply, atReply, atHint⟩ := Option.bind_eq_some_iff.mp found
+    exact query_of_hook atReply (List.mem_append_right _ (List.mem_flatMap.mpr
+      ⟨(bytes, h), List.mk_mem_zipIdx_iff_getElem?.mpr atHint, member⟩))
+
+/-- Every defined byte or metadata value has an actual position in the fixed inventory. -/
+theorem Query.enumerated {streams : WriteStreams} {q : Query} {v : Nat} (found : q.lookup streams = some v) :
+    q ∈ queries streams := by
+  cases q with
+  | length key =>
+    obtain ⟨bytes, read, _⟩ := Option.map_eq_some_iff.mp found
+    exact bytes_enumerated read List.mem_cons_self
+  | byte key i =>
+    obtain ⟨bytes, read, someByte⟩ := Option.bind_eq_some_iff.mp found
+    obtain ⟨byte, atByte, _⟩ := Option.map_eq_some_iff.mp someByte
+    exact bytes_enumerated read (List.mem_cons_of_mem _ (List.mem_map.mpr
+      ⟨i, List.mem_range.mpr (List.getElem?_eq_some_iff.mp atByte).1, rfl⟩))
+  | descriptor r =>
+    obtain ⟨reply, atReply, _⟩ := Option.map_eq_some_iff.mp found
+    exact query_of_hook atReply (List.mem_append_left _ (List.mem_append_left _ List.mem_cons_self))
+  | returnCount r =>
+    obtain ⟨reply, atReply, _⟩ := Option.map_eq_some_iff.mp found
+    exact query_of_hook atReply (List.mem_append_left _ (List.mem_append_left _ (by simp)))
+
 /-- Field key plus a canonical 48-bit payload. The stream tags are 1/2/13 for the three output
 streams, 3 for hook input and 4 for a returned hint. Attributes are length, byte, descriptor
 or returned-hint count (0 through 3). -/
@@ -163,6 +210,12 @@ theorem fixedRows_length {p : Nat} (streams : WriteStreams) : (fixedRows (p := p
   split
   · exact (List.length_filterMap_le ..).trans_lt (by assumption)
   · norm_num
+
+/-- Every representable actual lookup is physically available when the fixed inventory fits. -/
+theorem Query.present {p : Nat} {streams : WriteStreams} {q : Query} {v : Nat}
+    (found : q.lookup streams = some v) (fits : q.Fits v) (size : (queries streams).length < 2 ^ 48) :
+    q.encode (p := p) v ∈ fixedRows streams :=
+  (fixedRows_iff ..).mpr ⟨size, q, v, q.enumerated found, found, fits, rfl⟩
 
 /-- Every returned word-sized scalar has its exact natural meaning. -/
 theorem Record.Binds.readout {p : Nat} [Fact p.Prime] [Fact (2 ^ 17 < p)] {row : Record (ZMod p)}

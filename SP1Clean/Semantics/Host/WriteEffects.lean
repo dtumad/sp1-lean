@@ -94,4 +94,21 @@ theorem ofEvent_binds {route : WriteRoute} {source target : HostState} {bytes : 
   all_goals subst target; constructor <;> simp [ofEvent]
 
 end WriteStreams
+/-- Byte-exact allocations of this WRITE in logical queue order. Only the matched front reply
+can supply hook allocations. Every direct hint allocates a node, including the empty string. -/
+def WriteRoute.allocations (route : WriteRoute) (source : HostState) (bytes : Bytes) : List Bytes :=
+  match route with
+  | .hint => [bytes]
+  | .hook _ => source.replies.head?.map HookReply.hints |>.getD []
+  | _ => []
+
+theorem WriteRoute.Effect.queue {route : WriteRoute} {source target : HostState} {bytes : Bytes}
+    (effect : route.Effect source bytes target) :
+    target.io.hints = route.allocations source bytes ++ source.io.hints := by
+  cases route <;> simp only [WriteRoute.Effect] at effect
+  case hook fd =>
+    obtain ⟨_, _, replies, rfl⟩ := effect
+    simp [allocations, replies]
+  all_goals subst target; rfl
+
 end SP1Clean.Semantics
