@@ -38,7 +38,8 @@ private theorem mem_enabled {I : TypeMap} [ProvableType I] {t : Table F} {x : I 
   obtain ⟨row,live,rfl⟩ := List.mem_map.mp physical
   exact ⟨row,live,rfl,of_decide_eq_true active⟩
 
-private theorem header_fact (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
+/-- Every enabled physical allocation header has the actual checked chronology and timestamp decomposition. -/
+theorem allocation_header_valid (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
     (r : Open F) (mem : r ∈ (allocationInputs w).1) : r.Valid := by
   let o := slot image source target final 15
   obtain ⟨row,found,equal,active⟩ := mem_enabled (I := Open) (t := o.table w) mem
@@ -54,7 +55,7 @@ private theorem advances (w : EnsembleWitness (preprocessing image source target
   · obtain ⟨r,live,rfl⟩ := List.mem_map.mp old
     exact (handler_facts w checked _ live).1
   · obtain ⟨r,live,rfl⟩ := List.mem_map.mp call
-    exact (header_fact w checked _ live).2.2.2.2.2.2.2
+    exact (allocation_header_valid w checked _ live).2.2.2.2.2.2.2
 
 /-- Every genuine queue operation lies on a single connected, strictly chronological walk
 from the incoming state to the seal. Its outgoing times have no repetitions. -/
@@ -77,6 +78,17 @@ theorem native_ordered_queue (w : EnsembleWitness (native image source target)) 
   exact ⟨path,ordered,walk,RankedGrounding.targetRanks_pairwise_of_isWalk queueEdge HostQueueOrder.time walk
     (fun r m => advances seen ((observed_constraints w).mp checked) r (ordered.mem_iff.mp m))⟩
 
+/-- Two allocating headers can never share the outgoing timestamp on the physical global
+queue, irrespective of intervening original HINT operations. -/
+theorem native_allocation_clock_unique (w : EnsembleWitness (native image source target)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
+    ((allocationInputs (observed w)).1.map (fun r => HostQueueOrder.time r.outgoing)).Nodup := by
+  obtain ⟨ordered,allOps,_,times⟩ := native_ordered_queue w checked fit raw
+  have unique := ((allOps.map (fun r => HostQueueOrder.time (queueEdge r).2)).nodup_iff.mp
+    (times.imp Nat.ne_of_lt))
+  exact (List.nodup_append.mp (by simpa only [queueOperations,List.map_append,List.map_map,Function.comp_def,queueEdge,
+      Sum.elim_inl,Sum.elim_inr] using unique)).2.1
+
 /-- Private allocation walks terminate at the outgoing state of their own physical call.
 All authorized counts and all active fresh-node occurrences are retained, even for repeated data. -/
 theorem native_matched_allocations (w : EnsembleWitness (native image source target)) (checked : w.Constraints)
@@ -86,12 +98,7 @@ theorem native_matched_allocations (w : EnsembleWitness (native image source tar
         Walk.IsWalk (fun r : Step F => (r.before,r.after)) call.first call.last batch ∧
         batch.length = Address.toNat call.count) ins.1 batches ∧ batches.flatten.Perm ins.2 := by
   let ins := allocationInputs (observed w)
-  obtain ⟨ordered,allOps,_,times⟩ := native_ordered_queue w checked fit raw
-  have unique := ((allOps.map (fun r => HostQueueOrder.time (queueEdge r).2)).nodup_iff.mp
-    (times.imp Nat.ne_of_lt))
-  have calls : (ins.1.map (fun r => HostQueueOrder.time r.outgoing)).Nodup := by
-    exact (List.nodup_append.mp (by simpa only [queueOperations,List.map_append,List.map_map,Function.comp_def,queueEdge,
-      Sum.elim_inl,Sum.elim_inr] using unique)).2.1
+  have calls := native_allocation_clock_unique w checked fit raw
   obtain ⟨paths,walks,ends,steps⟩ := native_allocation_walks w checked fit raw
   refine ⟨paths.map Prod.fst, List.forall₂_map_right_iff.mpr ?_, ?_⟩
   · apply List.forall₂_iff_zip.mpr

@@ -34,7 +34,8 @@ private theorem position_ledger (w : EnsembleWitness (preprocessing image source
   simpa only [support,List.flatMap_cons,List.flatMap_nil,List.append_nil] using fresh_slots_ledger w ch position_registered
     (fun eq => Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq))
 
-private theorem dispatch_facts (w : EnsembleWitness (assembly image source target final)) (checked : w.Constraints)
+/-- Original enabled and padding dispatcher inputs carry their checked activity/semantic contract. -/
+theorem native_dispatch_input_facts (w : EnsembleWitness (assembly image source target final)) (checked : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
     ∀ x ∈ guardedInputs Dispatch ((slot image source target final 8).table (observed w)), IsBool x.2 ∧ (x.2 = 1 → x.1.Valid) := by
   let seen := observed w
@@ -116,7 +117,7 @@ theorem native_placement_walks (w : EnsembleWitness (assembly image source targe
     · simp [nonempty,off,IsBool]
     · simpa only [nonempty,on,one_mul] using (v on).2.2.2.1
   have ends := gated_walk_endpoints positionChannel ds Prod.snd (fun x => x.1.start x.1.flags) (fun x => x.1.finish x.1.flags)
-    hs nonempty (fun x => x.1.previous) (fun x => x.1.next) (fun r m => (dispatch_facts w ok fit raw r m).1) bits paid
+    hs nonempty (fun x => x.1.previous) (fun x => x.1.next) (fun r m => (native_dispatch_input_facts w ok fit raw r m).1) bits paid
   let edge := fun g : WriteEffects.Group F => (g.previous,g.next)
   let starts := (physicalDispatches seen).map (fun d => d.start d.flags)
   let stops := (physicalDispatches seen).map (fun d => d.finish d.flags)
