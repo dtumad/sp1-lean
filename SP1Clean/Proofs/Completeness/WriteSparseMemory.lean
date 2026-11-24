@@ -77,18 +77,7 @@ private theorem active_source (snapshot : MemorySnapshot) (ram : Bool) (previous
   have spec := (c.buildRow_spec_requirements input data hint honest (by cases ram <;> intro _ <;> trivial)).1
   change c.circuit.Spec (c.rowInput env) (c.rowOutput env) data at spec
   rw [hd] at spec
-  have bound : r.key < 2 ^ 48 := by
-    rw [← valid.1]
-    cases val : r.ram
-    · have d := valid.2.2.2
-      rw [val] at d
-      change FinalRegisterProvider.Domain r.record at d
-      rw [(FinalRegisterProvider.canonical _ d.1 d.2.1 d.2.2).2.2]
-      exact MemLoc.busAddress_lt_two_pow_48 (FinalRegisterProvider.canonical _ d.1 d.2.1 d.2.2).1
-    · have d := valid.2.2.2
-      rw [val] at d
-      change FinalRamProvider.Domain r.record at d
-      exact d.2.2.1
+  have bound := valid.key_lt
   have decoded : Word.toNat (Target.bitVecToWord (p := p) (BitVec.ofNat 64 (r.key + 1))) = r.key + 1 := by
     rw [← Word.toBitVec64_toNat (Target.isU64_bitVecToWord _), Target.toBitVec64_bitVecToWord,
       BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]

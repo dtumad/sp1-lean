@@ -88,6 +88,19 @@ def Terminal.Valid (r : Terminal (ZMod p)) : Prop :=
     MemoryMsg.ClkBound r.record ∧ (if r.ram then FinalRamProvider.Domain r.record else FinalRegisterProvider.Domain r.record)
 
 omit [Fact (2 ^ 25 < p)] in
+/-- A valid original register or RAM payload fits the 48-bit native physical address space. -/
+theorem Terminal.Valid.key_lt {r : Terminal (ZMod p)} (valid : r.Valid) : r.key < 2 ^ 48 := by
+  rw [← valid.1]
+  have d := valid.2.2.2
+  cases tag : r.ram <;> rw [tag] at d
+  · change FinalRegisterProvider.Domain r.record at d
+    have canonical := FinalRegisterProvider.canonical _ d.1 d.2.1 d.2.2
+    rw [canonical.2.2]
+    exact MemLoc.busAddress_lt_two_pow_48 canonical.1
+  · change FinalRamProvider.Domain r.record at d
+    exact d.2.2.1
+
+omit [Fact (2 ^ 25 < p)] in
 private theorem register_of_small {record : MemoryMsg (ZMod p)} (small : Word.toNat (MemoryBoundary.address record) < 32) :
     FinalRegisterProvider.Domain record := by
   simp only [MemoryBoundary.address, Word.toNat, circuit_norm, ZMod.val_zero, zero_mul, add_zero] at small
