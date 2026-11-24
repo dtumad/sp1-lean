@@ -1,4 +1,5 @@
 import SP1Clean.Export.CommitmentReaderLedger
+import SP1Clean.Export.WriteObservationBuild
 
 /-! # Commitment receipts on the public shard witness
 
@@ -41,11 +42,33 @@ theorem withStatementChecks_ledger (base : EnsembleWitness (withDeclarations ctx
 private theorem checked_header (base : EnsembleWitness (withDeclarations ctx)) :
     (withStatementChecks base).publicInput = base.publicInput := rfl
 
+private theorem checked_tables (base : EnsembleWitness (withDeclarations ctx)) :
+    (withStatementChecks (ctx := ctx) base).tables = base.tables := rfl
+
 attribute [local irreducible] assembly withDeclarations withStatementChecks
 
 /-- Canonically append the physical declaration source, then apply the statement and resource checks. -/
 def statementWitness : EnsembleWitness (assembly ctx) :=
   withStatementChecks (ctx := ctx) (withFundedDeclarations execution w data)
+
+/-- The generated declaration source satisfies its circuit on the canonical 118-table witness. -/
+theorem statementWitness_constraints (checked : w.Constraints) : (statementWitness (ctx := ctx) execution w data).Constraints := by
+  unfold statementWitness EnsembleWitness.Constraints
+  rw [checked_tables]
+  change (withFundedDeclarations (ctx := ctx) execution w data).Constraints
+  unfold withFundedDeclarations appendDeclaration
+  apply Ensemble.AppendedTables.extend_constraints _ _ _ _ _ checked
+  · intro t member
+    obtain rfl := List.mem_singleton.mp member
+    exact (CommitmentReaders.provider_checked execution.1.1 execution.2.2 data).1
+  · rw [(declarationLayout ctx).tables]
+    apply LookupFree.append (WriteObservationAssembly.preprocessing_lookupFree (image := ctx.image)
+      (source := ctx.source) (target := ctx.target) (final := SP1Clean.HostHintQueueBoundary.initial ctx.target.host.io.hints))
+    rw [LookupFree.cons_iff]
+    refine ⟨?_, LookupFree.nil⟩
+    apply Component.lookups_eq_nil_of_main
+    intro input offset
+    rfl
 
 theorem statementWitness_header : (statementWitness (ctx := ctx) execution w data).publicInput = w.publicInput :=
   (checked_header (ctx := ctx) (withFundedDeclarations execution w data)).trans

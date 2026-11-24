@@ -61,17 +61,16 @@ theorem suffix_lookupFree (source target : ExecutionSnapshot) : LookupFree (tabl
   · exact Guarded.main_lookups WriteEffects.requestCircuit WriteEffects.requestGuardSupported input offset
   · exact Guarded.main_lookups WriteEffects.wordCircuit WriteEffects.wordGuardSupported input offset
 
+/-- The entire observer uses assertions and registered channels on its physical tables. -/
+theorem preprocessing_lookupFree : LookupFree (preprocessing image source target final).tables := by
+  rw [(appended image source target final).tables]
+  exact (supervisor_lookupFree image source target final).append (suffix_lookupFree source target)
+
 theorem build_constraints (w : EnsembleWitness (base image source target final)) (suffix : List (Table F))
     (registered : suffix.map (·.component) = tables source target) (prior : w.Constraints)
     (added : ∀ t ∈ suffix, t.Constraints) : (build w suffix registered).Constraints := by
   let placement := appended image source target final
-  apply placement.extend_constraints (installSources w) suffix registered _ (installSources_constraints w prior) added
-  rw [placement.tables]
-  apply LookupFree.append _ (suffix_lookupFree _ _)
-  apply (sameRows image source target final).lookupFree
-  change LookupFree (base image source target final).tables
-  unfold base
-  exact Soundness.HostObserved.lookupFree (image := image) (source := source) (target := target) (final := final)
+  exact placement.extend_constraints (installSources w) suffix registered preprocessing_lookupFree (installSources_constraints w prior) added
 
 /-- Installation keeps the full original read-back source block, in physical order up to a
 permutation of component groups. -/
