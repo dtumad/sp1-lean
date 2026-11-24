@@ -13,7 +13,7 @@ namespace SP1Clean.Export.WriteObservationAssembly
 
 open Circuit Air.Flat Semantics WriteAllocation WriteSourceRegistry
 private abbrev F := ZMod SP1Prime
-local instance allocatorDecidableEq : DecidableEq F := FiniteField.instDecidableEq
+attribute [local instance 2000] FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State F}
 attribute [local irreducible] base withSources preprocessing
 

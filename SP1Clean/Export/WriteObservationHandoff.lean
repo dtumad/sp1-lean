@@ -53,7 +53,8 @@ private theorem flatMap_selected {α β : Type} (xs : List α) (used : α → Bo
 def selectedSlots (source target : ExecutionSnapshot) (ch : RawChannel F) : List (Fin 19) :=
   (List.finRange 19).filter fun i => ((tables source target)[i.val].circuit.channels.map RawChannel.name).contains ch.name
 
-private theorem selected_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
+/-- The complete original supervisor ledger followed by all participating physical suffix tables. -/
+theorem selected_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
     (distinct : ch ≠ readbackChannel.toRaw) :
     w.interactionsWith ch = (supervisor w).interactionsWith ch ++
       (selectedSlots source target ch).flatMap (fun i => ((slot image source target final i).table w).interactionsWith ch) := by
