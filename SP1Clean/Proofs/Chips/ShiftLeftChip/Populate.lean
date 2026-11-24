@@ -509,12 +509,6 @@ theorem higherLimb_val_lt (b : Word (ZMod p)) (c0 : ZMod p) (hb : Word.isU64 b)
   · rw [ZMod.val_natCast_of_lt (hsmall _ hb2)]; exact div_pow_lt hbs hb2
   · rw [ZMod.val_natCast_of_lt (hsmall _ hb3)]; exact div_pow_lt hbs hb3
 
-/-- Provide a `Range` byte-table row (the producer direction of `byteRowSpec_range`, for
-variable widths). -/
-theorem byteRowSpec_range_intro {x w : ZMod p} (h : x.val < 2 ^ w.val) :
-    ByteRowSpec (⟨6, x, w, 0⟩ : ByteRow (ZMod p)) :=
-  ⟨ByteOpcode.Range, by norm_cast, h⟩
-
 /-- The shift-amount high-bits pull row (`e32 < 2^10`) is in the byte table (field-numeral
 normal form; the completeness use-site `convert`s the circuit's ℕ-cast numerals onto it). -/
 theorem byteRow_e32 (c0 : ZMod p) (hc : c0.val < 2 ^ 16) :
@@ -522,11 +516,8 @@ theorem byteRow_e32 (c0 : ZMod p) (hc : c0.val < 2 ^ 16) :
       + (cBits c0)[2] * (4 : ZMod p) + (cBits c0)[3] * (8 : ZMod p)
       + (cBits c0)[4] * (16 : ZMod p) + (cBits c0)[5] * (32 : ZMod p))) * (64 : ZMod p)⁻¹,
       (10 : ZMod p), 0⟩ : ByteRow (ZMod p)) := by
-  have hp := Fact.out (p := 2 ^ 17 < p)
   rw [cBits_shamt_sum, ← sub_eq_add_neg, e32_eq]
-  refine byteRowSpec_range_intro ?_
-  rw [show ((10 : ZMod p)) = ((10 : ℕ) : ZMod p) by push_cast; rfl,
-    ZMod.val_natCast_of_lt (show (10 : ℕ) < p by omega)]
+  refine (byteRowSpec_range (n := 10) _ (by decide)).mpr ?_
   exact e32_val_lt c0 hc
 
 /-- The `lower_limb` byte-range pull rows (`< 2^(16 - bitShift)`) are in the table
@@ -536,7 +527,6 @@ theorem byteRow_lower (b : Word (ZMod p)) (c0 : ZMod p) (i : ℕ) (hi : i < 4) :
       (16 : ZMod p) + -((cBits c0)[0] * (1 : ZMod p) + (cBits c0)[1] * (2 : ZMod p)
         + (cBits c0)[2] * (4 : ZMod p) + (cBits c0)[3] * (8 : ZMod p)),
       0⟩ : ByteRow (ZMod p)) := by
-  have hp := Fact.out (p := 2 ^ 17 < p)
   have hw : (16 : ZMod p) + -((cBits c0)[0] * (1 : ZMod p) + (cBits c0)[1] * (2 : ZMod p)
       + (cBits c0)[2] * (4 : ZMod p) + (cBits c0)[3] * (8 : ZMod p))
       = ((16 - c0.val % 16 : ℕ) : ZMod p) := by
@@ -544,8 +534,7 @@ theorem byteRow_lower (b : Word (ZMod p)) (c0 : ZMod p) (i : ℕ) (hi : i < 4) :
       show ((16 : ZMod p)) = ((16 : ℕ) : ZMod p) by push_cast; rfl,
       ← Nat.cast_sub (by omega)]
   rw [hw]
-  refine byteRowSpec_range_intro ?_
-  rw [ZMod.val_natCast_of_lt (show 16 - c0.val % 16 < p by omega)]
+  refine (byteRowSpec_range (n := 16 - c0.val % 16) _ (by omega)).mpr ?_
   have h := lowerLimb_val_lt b c0 i hi
   unfold bitShiftNat at h
   exact h
@@ -558,10 +547,8 @@ theorem byteRow_higher (b : Word (ZMod p)) (c0 : ZMod p) (hb : Word.isU64 b)
       (cBits c0)[0] * (1 : ZMod p) + (cBits c0)[1] * (2 : ZMod p) + (cBits c0)[2] * (4 : ZMod p)
         + (cBits c0)[3] * (8 : ZMod p),
       0⟩ : ByteRow (ZMod p)) := by
-  have hp := Fact.out (p := 2 ^ 17 < p)
   rw [cBits_bitShift_sum]
-  refine byteRowSpec_range_intro ?_
-  rw [ZMod.val_natCast_of_lt (show c0.val % 16 < p by omega)]
+  refine (byteRowSpec_range (n := c0.val % 16) _ (by omega)).mpr ?_
   have h := higherLimb_val_lt b c0 hb i hi
   unfold bitShiftNat at h
   exact h
