@@ -95,7 +95,7 @@ theorem preset_bound {limits : ResourceLimits} (execution : AdmissibleExecution 
   change executionResources _ _ _ events .writeBytes ≤ limits.writeBytes at spent
   change _ ≤ 4 * (2^21 * 8) at allStores
   dsimp only [occurrences]
-  change _ < 2130706433
+  unfold SP1Prime
   omega
 
 /-- The public witness has all four native permission checks at the installed preset. -/
