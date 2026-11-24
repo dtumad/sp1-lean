@@ -11,7 +11,8 @@ open Circuit Air.Flat Semantics Soundness HostHintQueue WriteSourceRegistry
 private abbrev F := ZMod SP1Prime
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : State F}
 
-private theorem prior_assertion_balance (w : EnsembleWitness (assembly image source target final))
+/-- The complete installation preserves the supervisor assertion ledger on each original single-field channel. -/
+theorem prior_assertion_balance (w : EnsembleWitness (assembly image source target final))
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (ch : RawChannel F)
     (registered : ch ∈ (base image source target final).channels) (width : ch.arity = 1) :
     (supervisor (observed w)).BalancedChannel ch := by

@@ -100,12 +100,7 @@ private theorem packet_origin (w : EnsembleWitness (assembly image source target
     apply List.mem_singleton.mpr
     change WriteProbe.readChannel.pulledValue input.1.read = WriteProbe.readChannel.pulledIfValue input.2 input.1.read
     rw [act]; rfl
-  · have reg : HostCallChip.channel.toRaw ∈ (preprocessing image source target final).channels :=
-      (preprocessing image source target final).tables_channels _ (z.component_eq ▸ List.getElem_mem z.index.isLt)
-        (show HostCallChip.channel.toRaw ∈ WritePacket.component.circuit.channels from List.mem_cons_self)
-    have paid := observed_balance w fit raw _ reg (of_decide_eq_true rfl)
-    change BalancedInteractions (seen.interactionsWith HostCallChip.channel.toRaw) at paid
-    rw [hostCall_ledger] at paid
+  · have paid := native_packet_balance w fit raw
     have all := eight_calls (original seen) (supervisor_constraints seen checks) (z.table seen) (z.table_component seen)
       (z.table_constraints seen checks) paid
     have received : input.1.call ∈ ReceiverView.tableMessages WritePacket.receiver (z.table seen) := by
