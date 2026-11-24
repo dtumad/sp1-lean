@@ -24,14 +24,11 @@ private theorem step_values (r : Var Step F) (n : Nat) (env : Environment F) :
   rcases r with ⟨⟨_,⟨_,_,_⟩⟩,_,_,_,_,_⟩
   simp only [Step.contents,Step.length,scale,circuit_norm]
 
-/-- Every fresh node emits its contents authorization at the original activity. -/
-theorem stepTable_contents (rows : List (Step F)) (data : ProverData F) (fit) :
-    (stepTable rows data fit).interactionsWith contentsChannel.toRaw =
-      (WitnessGeneration.guardedRows rows).map (fun r => contentsChannel.pushedIfValue r.2 r.1.contents) := by
-  rw [List.map_eq_flatMap]
-  apply Table.ofInputs_ledger stepComponent (WitnessGeneration.guardedRows rows) data
-    ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
-  intro env
+/-- The contents emitted by an arbitrary guarded physical node row. -/
+theorem stepInput_contents (env : Environment F) :
+    let r := valueFromOffset (ProvablePair Step field) 0 env
+    stepComponent.operations.interactionValuesWith contentsChannel.toRaw env =
+      [contentsChannel.pushedIfValue r.2 r.1.contents] := by
   let I := ProvablePair Step field
   let input := varFromOffset I (F := F) 0
   rw [Operations.interactionValuesWith,Component.interactionsWith_eq]
@@ -45,14 +42,20 @@ theorem stepTable_contents (rows : List (Step F)) (data : ProverData F) (fit) :
   simp only [List.map_cons,List.map_nil,Channel.pushedValue,Channel.pushedIfValue,mul_one,
     Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
 
-/-- Each allocated word seed consumes the full authorization once, at its physical guard. -/
-theorem Words.seedTable_contents (rows : List (Contents F)) (data : ProverData F) (fit) :
-    (Words.seedTable rows data fit).interactionsWith contentsChannel.toRaw =
-      (WitnessGeneration.guardedRows rows).map (fun r => contentsChannel.pulledIfValue r.2 r.1) := by
+/-- Every fresh node emits its contents authorization at the original activity. -/
+theorem stepTable_contents (rows : List (Step F)) (data : ProverData F) (fit) :
+    (stepTable rows data fit).interactionsWith contentsChannel.toRaw =
+      (WitnessGeneration.guardedRows rows).map (fun r => contentsChannel.pushedIfValue r.2 r.1.contents) := by
   rw [List.map_eq_flatMap]
-  apply Table.ofInputs_ledger Words.seedComponent (WitnessGeneration.guardedRows rows) data
+  apply Table.ofInputs_ledger stepComponent (WitnessGeneration.guardedRows rows) data
     ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
-  intro env
+  exact stepInput_contents
+
+/-- The full contents authorization consumed by an arbitrary physical word seed. -/
+theorem seedInput_contents (env : Environment F) :
+    let r := valueFromOffset (ProvablePair Contents field) 0 env
+    Words.seedComponent.operations.interactionValuesWith contentsChannel.toRaw env =
+      [contentsChannel.pulledIfValue r.2 r.1] := by
   let I := ProvablePair Contents field
   let input := varFromOffset I (F := F) 0
   rw [Operations.interactionValuesWith,Component.interactionsWith_eq]
@@ -68,6 +71,15 @@ theorem Words.seedTable_contents (rows : List (Contents F)) (data : ProverData F
   rw [Operations.interactionValuesWith,raw]
   simp only [List.map_cons,List.map_nil,Channel.eval_pulled,Channel.pulledValue,Channel.pulledIfValue,mul_one,
     Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
+
+/-- Each allocated word seed consumes the full authorization once, at its physical guard. -/
+theorem Words.seedTable_contents (rows : List (Contents F)) (data : ProverData F) (fit) :
+    (Words.seedTable rows data fit).interactionsWith contentsChannel.toRaw =
+      (WitnessGeneration.guardedRows rows).map (fun r => contentsChannel.pulledIfValue r.2 r.1) := by
+  rw [List.map_eq_flatMap]
+  apply Table.ofInputs_ledger Words.seedComponent (WitnessGeneration.guardedRows rows) data
+    ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
+  exact seedInput_contents
 
 /-- Matching node and seed tables cancel at each serialized authorization, including repeated
 messages and disabled occurrences. -/
