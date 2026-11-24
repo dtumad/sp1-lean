@@ -21,7 +21,7 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : Hos
 its signed ledger before padding is filtered and each repeated payload is counted. -/
 theorem eight_calls (witness : EnsembleWitness (HostObserved.ensemble image source target final)) (checked : witness.Constraints)
     (packet : Table Fp) (installed : packet.component = WritePacket.component) (packetChecked : packet.Constraints)
-    (balanced : BalancedInteractions ((hostWitness witness).interactionsWith HostCallChip.channel.toRaw ++
+    (balanced : BalancedInteractions (witness.interactionsWith HostCallChip.channel.toRaw ++
       packet.interactionsWith HostCallChip.channel.toRaw)) :
     let host := hostWitness witness
     (HostCallLedger.calls (HostLocalCore.hostCallTable host) host.data).Perm
@@ -33,6 +33,7 @@ theorem eight_calls (witness : EnsembleWitness (HostObserved.ensemble image sour
     (HostObserved.baseWitness_constraints witness checked))
   apply HostCallLedger.calls_perm _ host.data (HostLocalCore.hostCallTable_component host)
     (physical _ (HostLocalCore.hostCallTable_mem host))
+  rw [← host_protocol_ledger witness HostCallChip.channel.toRaw (List.mem_cons_self ..)] at balanced
   have selected := balanced.filter_nonzero
   rw [HostLocalHandoff.hostCall_interactions host (HostHintReadLocal.resources_hostCall_silent interface), List.filter_append,
     List.filter_append, ReceiverView.messages_interactions _ _ (HostLocalHandoff.receiverTables_aligned host)
@@ -41,14 +42,14 @@ theorem eight_calls (witness : EnsembleWitness (HostObserved.ensemble image sour
   exact selected
 
 /-- Every active HINT_READ word follows the original cursor to a handler carrying the exact
-CPU call. Record authenticity comes from the actual input hint store and its word channel;
-the larger installation supplies the physical byte guarantees for the two word tables. -/
+CPU call. The two word tables use their physical byte ranges and authenticated hint-word
+records, including records supplied by earlier hint allocations. -/
 theorem word_cpu_eight (witness : EnsembleWitness (HostObserved.ensemble image source target final)) (checked : witness.Constraints)
     (packet : Table Fp) (installed : packet.component = WritePacket.component) (packetChecked : packet.Constraints)
-    (balanced : BalancedInteractions ((hostWitness witness).interactionsWith HostCallChip.channel.toRaw ++ packet.interactionsWith HostCallChip.channel.toRaw))
-    (cursor : (hostWitness witness).BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (wordData : (hostWitness witness).BalancedChannel HostHintQueue.wordChannel.toRaw)
-    (bytes : ∀ table ∈ HostHintReadLocal.wordTables (hostWitness witness), table.ChannelGuarantees byteChannel.toRaw)
+    (balanced : BalancedInteractions (witness.interactionsWith HostCallChip.channel.toRaw ++ packet.interactionsWith HostCallChip.channel.toRaw))
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (wordData : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees HostHintQueue.wordChannel.toRaw)
+    (bytes : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees byteChannel.toRaw)
     (row : HintReadCoverage.Row (p := SP1Prime))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (HostHintReadLocal.wordTables (hostWitness witness))) :
@@ -62,13 +63,19 @@ theorem word_cpu_eight (witness : EnsembleWitness (HostObserved.ensemble image s
   let boundary := HostFinalMemory.baseWitness (HostObserved.baseWitness witness)
   have boundaryChecked := HostFinalMemory.baseWitness_constraints _ (HostObserved.baseWitness_constraints witness checked)
   have physical := HostHintQueueBoundary.projected_constraints boundary boundaryChecked
-  have auth := HostHintQueueBoundary.source_authentication boundary boundaryChecked
   have interface := GroundingResources.sourceInterface (p := SP1Prime) source.host.io.hints
     (FinalMemoryChecks.checkTables target.sail.memorySnapshot)
-  have steps := HostHintReadLocal.word_steps_of_guarantees host physical bytes (fun table inside =>
-    HostHintReadLocal.word_guarantees host _ auth wordData table (HostHintReadLocal.wordTables_mem host table inside))
+  have localGuarantees (ch : RawChannel Fp) (valid : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees ch) :
+      ∀ table ∈ HostHintReadLocal.wordTables host, table.ChannelGuarantees ch := by
+    intro table inside
+    obtain ⟨last, rfl⟩ := word_table_eq witness inside
+    exact valid last
+  have localCursor : host.BalancedChannel HintReadWordChip.stateChannel.toRaw := by
+    change BalancedInteractions ((hostWitness witness).interactionsWith HintReadWordChip.stateChannel.toRaw)
+    rwa [host_protocol_ledger witness _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))]
+  have steps := HostHintReadLocal.word_steps_of_guarantees host physical (localGuarantees _ bytes) (localGuarantees _ wordData)
   have dispatch := eight_calls witness checked packet installed packetChecked balanced
-  exact word_cpu_of_received host interface (fun _ seen => dispatch.mem_iff.mpr (List.mem_append_left _ seen)) cursor steps row member
+  exact word_cpu_of_received host interface (fun _ seen => dispatch.mem_iff.mpr (List.mem_append_left _ seen)) localCursor steps row member
 
 
 private theorem cpuClock_data (event : ExecutionRow SP1Prime) (left right : ProverData Fp) :
@@ -79,10 +86,10 @@ this exact CPU tape and Memory inventory. CPU intervals end at the event's incom
 refresh intervals end at the refreshed timestamp, and finalizers cover their suffix. -/
 theorem source_attribution (witness : EnsembleWitness (HostObserved.ensemble image source target final)) (checked : witness.Constraints)
     (packet : Table Fp) (installed : packet.component = WritePacket.component) (packetChecked : packet.Constraints)
-    (balanced : BalancedInteractions ((hostWitness witness).interactionsWith HostCallChip.channel.toRaw ++ packet.interactionsWith HostCallChip.channel.toRaw))
-    (cursor : (hostWitness witness).BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (wordData : (hostWitness witness).BalancedChannel HostHintQueue.wordChannel.toRaw)
-    (bytes : ∀ table ∈ HostHintReadLocal.wordTables (hostWitness witness), table.ChannelGuarantees byteChannel.toRaw)
+    (balanced : BalancedInteractions (witness.interactionsWith HostCallChip.channel.toRaw ++ packet.interactionsWith HostCallChip.channel.toRaw))
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (wordData : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees HostHintQueue.wordChannel.toRaw)
+    (bytes : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees byteChannel.toRaw)
     (id : Source) (record : Readback Fp) (origin : Origin (raw witness) id record) :
     let core := HostFinalMemory.coreWitness (HostObserved.baseWitness witness)
     let words := TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (HostHintReadLocal.wordTables (hostWitness witness))

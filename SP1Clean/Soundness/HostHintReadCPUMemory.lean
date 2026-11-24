@@ -62,16 +62,16 @@ private theorem word_clock_time (row : HintReadCoverage.Row (p := p)) :
 private theorem cpu_clock_time (data : ProverData (ZMod p)) (event : ExecutionRow p) :
     clkNat (cpuClock data event).1 (cpuClock data event).2 = StateMsg.timeNat (event.edge data).1 := rfl
 
-private theorem clock_keys_nodup (data : ProverData (ZMod p)) (cpu events : List (ExecutionRow p))
-    (exhaustive : cpu.Perm events)
-    (unique : (events.map (fun event => StateMsg.timeNat (event.edge data).1)).Nodup) :
-    (cpu.map (cpuClock data)).Nodup := by
-  have perm : (cpu.map (fun event => StateMsg.timeNat (event.edge data).1)).Perm
-      (events.map (fun event => StateMsg.timeNat (event.edge data).1)) := exhaustive.map _
-  have ordered : (cpu.map (fun event => StateMsg.timeNat (event.edge data).1)).Nodup := perm.nodup_iff.mpr unique
-  have mapped : ((cpu.map (cpuClock data)).map (fun key => clkNat key.1 key.2)).Nodup := by
-    simpa only [List.map_map, Function.comp_def, cpu_clock_time] using ordered
-  exact List.Nodup.of_map _ mapped
+/-- Unique CPU clocks and an owner for every physical occurrence give an exact partition
+of the word tape, including repeated rows and repeated payloads. -/
+theorem words_partition_of_owned (data : ProverData (ZMod p)) (words : List (HintReadCoverage.Row (p := p)))
+    (cpu : List (ExecutionRow p)) (unique : (cpu.map (cpuClock data)).Nodup)
+    (owned : ∀ row ∈ words, ∃ event ∈ cpu, cpuClock data event = wordClock row) :
+    (cpu.flatMap (wordsAt data words)).Perm words := by
+  have partition := List.flatMap_filter_key_perm (cpu.map (cpuClock data)) words wordClock unique
+    (fun row member => List.mem_map.mpr (owned row member))
+  unfold wordsAt
+  simpa only [List.flatMap_map, Function.comp_def] using partition
 
 private theorem touch_at (data : ProverData (ZMod p)) (event : ExecutionRow p)
     (row : HintReadCoverage.Row (p := p))
@@ -379,20 +379,19 @@ theorem words_partition
     (cpu.flatMap (wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables witness)))).Perm
       (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) := by
-  have unique := LocalCore.executionRows_times_nodup_of_orderingChannels (HostLocalCore.localWitness witness)
-    (HostLocalCore.localWitness_constraints witness constraints)
-    ordering
+  have unique := LocalCore.executionRows_clocks_nodup_of_orderingChannels (HostLocalCore.localWitness witness)
+    (HostLocalCore.localWitness_constraints witness constraints) ordering
   simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at unique
-  have uniqueKeys := clock_keys_nodup witness.data cpu _ exhaustive unique
-  have partition := List.flatMap_filter_key_perm
-    (cpu.map (cpuClock witness.data))
-    (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) wordClock uniqueKeys (by
-      intro row member
-      obtain ⟨_, _, env, _, _, physical, time⟩ := word_cpu witness interface constraints calls cursor steps row member
-      exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env),
-        exhaustive.mem_iff.mpr physical, time⟩)
-  unfold wordsAt
-  simpa only [List.flatMap_map, Function.comp_def] using partition
+  apply words_partition_of_owned _ _ _ ((exhaustive.map _).nodup_iff.mpr unique)
+  intro row member
+  obtain ⟨_, _, env, _, _, physical, time⟩ := word_cpu witness interface constraints calls cursor steps row member
+  exact ⟨.syscall (HostCallLedger.input env), exhaustive.mem_iff.mpr physical, time⟩
+
+/-- The physical HINT_READ word tape selected by the installed word and final-word tables. -/
+noncomputable def sourceWords
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames) :=
+  TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+    (wordTables (HostHintQueueBoundary.projected witness))
 
 /-- The source-backed assembly derives every premise of the exact CPU word partition. -/
 theorem source_words_partition

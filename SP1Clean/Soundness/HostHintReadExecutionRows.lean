@@ -176,7 +176,9 @@ noncomputable def sourceExecutionRows
 No host access remains as an unaccounted side ledger. -/
 theorem source_execution_memory_projection
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
-    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (loc : MemLoc) :
+    (constraints : witness.Constraints)
+    (partition : ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).flatMap
+      (wordsAt witness.data (sourceWords witness))).Perm (sourceWords witness)) (loc : MemLoc) :
     TimedGrounding.pushesAt (sourceExecutionRows witness) loc +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑((LocalCore.memoryRefreshes (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map Prod.snd) : Multiset _) =
@@ -195,7 +197,7 @@ theorem source_execution_memory_projection
   have enlarged := eventFacts_memory witness.data
     (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness)))
     (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) loc
-  have partition := source_words_partition witness constraints balanced _ (List.Perm.refl _)
+  unfold sourceWords at partition
   have groupedPushes := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
     (Multiset.coe_eq_coe.mpr (partition.map (fun row => (touch row).2)))
   have groupedPulls := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
@@ -220,7 +222,10 @@ theorem source_execution_memory_projection
 This is record conservation before the grounding walk establishes predecessor value currency. -/
 theorem source_execution_memory_balance
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
-    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (loc : MemLoc) :
+    (constraints : witness.Constraints)
+    (memory : (HostHintQueueBoundary.projected witness).BalancedChannel memoryChannel.toRaw)
+    (partition : ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).flatMap
+      (wordsAt witness.data (sourceWords witness))).Perm (sourceWords witness)) (loc : MemLoc) :
     Multiset.filter (fun message => MemoryMsg.locOf message = loc)
         (↑((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
           (LocalCore.sourceWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) : Multiset _) +
@@ -233,11 +238,11 @@ theorem source_execution_memory_balance
       TimedGrounding.pullsAt (sourceExecutionRows witness) loc +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑((LocalCore.memoryRefreshes (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map Prod.fst) : Multiset _) := by
-  have physical := source_memory_records_perm witness constraints balanced
+  have physical := source_memory_records_perm witness constraints memory
   have balance := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
     (Multiset.coe_eq_coe.mpr physical)
   rw [filter_coe_append, filter_coe_append] at balance
-  have projection := source_execution_memory_projection witness constraints balanced loc
+  have projection := source_execution_memory_projection witness constraints partition loc
   rw [add_assoc, add_assoc, projection.1, projection.2]
   exact balance
 

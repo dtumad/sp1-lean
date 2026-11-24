@@ -1,4 +1,4 @@
-import SP1Clean.Export.WriteSourceRegistry
+import SP1Clean.Export.WriteSourceProjection
 import SP1Clean.Soundness.HostObservedProducers
 import SP1Clean.Soundness.WriteSourcePulls
 import SP1Clean.Soundness.WriteSourceActivity
@@ -16,20 +16,6 @@ open Circuit Air.Flat Semantics Soundness Channels WriteProbe WriteProbe.AccessI
 
 private abbrev Fp := ZMod SP1Prime
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State Fp}
-
-/-- Typed physical position of a registered read-back source before publication. -/
-def originalSlot (id : Source) : TableSlot (base image source target final).tables (original id) :=
-  let present := original_at image source target final id
-  let valid := (List.getElem?_eq_some_iff.mp present).choose_spec
-  ⟨⟨position id, (List.getElem?_eq_some_iff.mp present).choose⟩, valid⟩
-
-/-- The original physical source arrays in their own canonical witness's data environment. -/
-def raw (witness : EnsembleWitness (base image source target final)) (id : Source) : Table Fp :=
-  (originalSlot id).table witness
-
-/-- All raw source arrays come from the actual 31 registered components. -/
-theorem raw_registered (witness : EnsembleWitness (base image source target final)) (id : Source) :
-    (raw witness id).component = original id := (originalSlot id).table_component witness
 
 /-- The local execution decoder retains ownership of its ordinary rows in the source registry. -/
 theorem ordinary_origin (witness : EnsembleWitness (base image source target final))
@@ -52,7 +38,7 @@ theorem ordinary_origin (witness : EnsembleWitness (base image source target fin
   change row.physical ∈ (witness.tables[7 + InstructionChipId.all.idxOf id]'_).table
   simpa only [index] using physical
 
-local instance : DecidableEq Fp := FiniteField.instDecidableEq
+attribute [local instance] Soundness.cleanBalanceDecidableEq
 
 private theorem raw_pull {xs : List (TypedInteraction (memoryChannel (p := SP1Prime)))} {prior : MemoryMsg Fp}
     (pulled : prior ∈ consumedMessages xs) :
@@ -153,7 +139,7 @@ theorem execution_ordinary_predecessor (witness : EnsembleWitness (base image so
 comes from the constraints of the original source table. -/
 theorem positive_record_unit (witness : EnsembleWitness (base image source target final)) (checked : witness.Constraints)
     {gate : Fp} {receipt : Readback Fp} (physical : (gate, receipt) ∈ records (raw witness)) (positive : gate ≠ 0) : gate = 1 :=
-  (records_binary (raw witness) (raw_registered witness) (fun tag => checked _ ((originalSlot tag).table_mem witness))
+  (records_binary (raw witness) (raw_registered witness) (fun tag => checked _ ((originalSlot image source target final tag).table_mem witness))
     _ physical).resolve_left positive
 
 private theorem decoded_at (chips : List (SupportedChip SP1Prime)) (tables : List (Table Fp))

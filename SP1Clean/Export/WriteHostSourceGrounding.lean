@@ -270,4 +270,86 @@ theorem ordered_predecessors (witness : EnsembleWitness (HostObserved.ensemble i
   refine ⟨ordered, perm, walk, fun index _ _ pulled => ?_⟩
   exact event_predecessor witness checked (perm.mem_iff.mp (List.getElem_mem index.isLt)) core.data pulled
 
+
+/-- Every original core channel has exactly its original signed host ledger through the
+three supervisor wrappers. Byte closure of a larger verifier can still add physical rows. -/
+theorem host_core_ledger (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (channel : RawChannel Fp) (original : channel ∈ (LocalCore.baseEnsemble image source).channels) :
+    (hostWitness witness).interactionsWith channel = witness.interactionsWith channel := by
+  let memory := HostObserved.baseWitness witness
+  let boundary := HostFinalMemory.baseWitness memory
+  have fresh := HostHintQueueBoundary.core_visible channel original
+  have different (other : RawChannel Fp) (added : other ∈ HostHintQueueBoundary.hiddenChannels (p := SP1Prime)) : channel ≠ other :=
+    fun same => fresh (same ▸ added)
+  have reg : channel ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw ::
+      HostFinalMemory.sourceChannels (p := SP1Prime) target.sail.memorySnapshot) :=
+    List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ original)))
+  have fm := HostFinalMemory.baseWitness_silent_interactions memory channel (List.mem_append_left _ (List.mem_append_left _ reg))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.receiptChannels]))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.receiptChannels]))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.receiptChannels]))
+  have obs := HostObserved.baseWitness_interactions witness channel
+    (List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ reg)))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.externalChannels]))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.externalChannels]))
+  exact (HostHintQueueBoundary.projected_core_interactions boundary channel original).trans (fm.trans obs)
+
+/-- The signed host protocols and original Memory ledger retain
+all physical occurrences when removing the observation, final-memory and queue endpoints. -/
+theorem host_protocol_ledger (witness : EnsembleWitness (HostObserved.ensemble image source target final)) (channel : RawChannel Fp)
+    (protocol : channel ∈ [HostCallChip.channel.toRaw, HintReadWordChip.stateChannel.toRaw, HostHintQueue.wordChannel.toRaw, memoryChannel.toRaw]) :
+    (hostWitness witness).interactionsWith channel = witness.interactionsWith channel := by
+  let memory := HostObserved.baseWitness witness
+  let boundary := HostFinalMemory.baseWitness memory
+  have names := List.mem_map_of_mem (f := RawChannel.name) protocol
+  have different (other : RawChannel Fp) (fresh : other.name ∉ ([HostCallChip.channel.toRaw, HintReadWordChip.stateChannel.toRaw,
+      HostHintQueue.wordChannel.toRaw, memoryChannel.toRaw] : List (RawChannel Fp)).map RawChannel.name) : channel ≠ other :=
+    fun same => fresh (same ▸ names)
+  have reg : channel ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw ::
+      HostFinalMemory.sourceChannels (p := SP1Prime) target.sail.memorySnapshot) := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at protocol
+    rcases protocol with rfl | rfl | rfl | rfl <;>
+      simp [HostLocalCore.registry, HostFinalMemory.sourceChannels, LocalCore.baseEnsemble, sp1Ensemble_channels]
+  have qa := HostHintQueueBoundary.projected_silent_interactions boundary channel (List.mem_append_left _ reg)
+    (HostHintQueueBoundary.boundary_silent _ (different _ (by decide)) (different _ (by decide))
+      (different _ (by decide)) (different _ (by decide)))
+  have fm := HostFinalMemory.baseWitness_silent_interactions memory channel (List.mem_append_left _ (List.mem_append_left _ reg))
+    (different _ (by decide)) (different _ (by decide)) (different _ (by decide))
+  have obs := HostObserved.baseWitness_interactions witness channel
+    (List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ reg)))
+    (different _ (by decide)) (different _ (by decide))
+  exact qa.trans (fm.trans obs)
+
+private theorem hostWitness_data (witness : EnsembleWitness (HostObserved.ensemble image source target final)) :
+    (hostWitness witness).data = witness.data := by
+  rw [hostWitness, HostHintQueueBoundary.projected_data, HostFinalMemory.baseWitness_data, HostObserved.baseWitness_data witness]
+
+private theorem word_table_pair (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    {last : Bool} {table : Table Fp}
+    (paired : (last, table) ∈ HintReadCoverage.variants.zip (HostHintReadLocal.wordTables (hostWitness witness))) :
+    table = raw witness (.host (.word last)) := by
+  let host := hostWitness witness
+  have member := (List.of_mem_zip paired).2
+  have left := host.same_data table (HostHintReadLocal.wordTables_mem host table member)
+  have right := witness.same_data (raw witness (.host (.word last))) ((originalSlot image source target final (.host (.word last))).table_mem witness)
+  have component := (List.forall₂_zip (HostHintReadLocal.wordTables_aligned host) paired).symm
+  have actual := raw_registered witness (.host (.word last))
+  change (raw witness (.host (.word last))).component = (HintReadCoverage.view last).component at actual
+  exact Table.ext_iff.mpr ⟨component.trans actual.symm, word_origin witness paired,
+    left.trans ((hostWitness_data witness).trans right.symm)⟩
+
+private theorem paired_of_mem {left : List Bool} {right : List (Table Fp)}
+    (lengths : left.length = right.length) {t : Table Fp} (member : t ∈ right) : ∃ tag, (tag, t) ∈ left.zip right := by
+  obtain ⟨i, h, rfl⟩ := List.mem_iff_getElem.mp member
+  have inside : i < (left.zip right).length := by rw [List.length_zip, lengths]; exact lt_min h h
+  exact ⟨_, List.getElem_zip .. ▸ (List.getElem_mem (l := left.zip right) inside)⟩
+
+/-- Word tables in the inner history decoder are the exact original physical tables in the
+supervisor, including the component, row order, multiplicities and verifier-derived data. -/
+theorem word_table_eq (witness : EnsembleWitness (HostObserved.ensemble image source target final)) {table : Table Fp}
+    (member : table ∈ HostHintReadLocal.wordTables (hostWitness witness)) :
+    ∃ last, table = raw witness (.host (.word last)) := by
+  obtain ⟨tag, pair⟩ := paired_of_mem (HostHintReadLocal.wordTables_aligned (hostWitness witness)).length_eq member
+  exact ⟨tag, word_table_pair witness pair⟩
+
 end SP1Clean.Export.WriteSourceRegistry

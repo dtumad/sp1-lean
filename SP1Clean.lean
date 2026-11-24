@@ -11,6 +11,11 @@ import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
+import SP1Clean.Export.WriteObservationProjection
+import SP1Clean.Export.WriteObservationBuild
+import SP1Clean.Export.WriteObservationReadBuild
+import SP1Clean.Export.WriteSupplyCapacity
+import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WriteObservationSources
 import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteObservationHandoff
@@ -26,6 +31,7 @@ import SP1Clean.Proofs.Completeness.WriteCountedData
 import SP1Clean.Proofs.Completeness.WriteCountedHints
 import SP1Clean.Proofs.Completeness.WriteCountedRouting
 import SP1Clean.Proofs.Completeness.WriteCountedTables
+import SP1Clean.Proofs.Completeness.WriteCountedCost
 import SP1Clean.Proofs.Completeness.WriteEffectRows
 import SP1Clean.Proofs.Completeness.WriteFixedDataCapacity
 import SP1Clean.Proofs.Completeness.WriteGroupRows
@@ -43,8 +49,13 @@ import SP1Clean.Export.WriteSourceGrounding
 import SP1Clean.Export.WriteBoundarySourceGrounding
 import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Export.WriteWordOwner
+import SP1Clean.Export.WriteMemoryReplay
+import SP1Clean.Export.WriteMemoryReplayTiming
 import SP1Clean.Soundness.WritePacketReceiver
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
+import SP1Clean.Proofs.Completeness.WritePacketInputs
+import SP1Clean.Proofs.Completeness.WritePacketTables
+import SP1Clean.Proofs.Completeness.WritePacketAssembly
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
@@ -159,6 +170,8 @@ import SP1Clean.Proofs.Completeness.WriteObservationCuts
 import SP1Clean.Proofs.Completeness.WriteObservationPacket
 import SP1Clean.Proofs.Completeness.WriteObservations
 import SP1Clean.Proofs.Completeness.WriteBufferBatch
+import SP1Clean.Proofs.Completeness.WriteBufferAssembly
+import SP1Clean.Proofs.Completeness.WriteBufferFootprint
 import SP1Clean.Proofs.Completeness.WriteBufferRows
 import SP1Clean.Proofs.Completeness.WriteBufferTables
 import SP1Clean.Proofs.Completeness.WriteProbeDemand

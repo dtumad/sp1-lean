@@ -37,10 +37,10 @@ variable {image source target final}
 
 /-- The original source tables, with all their rows and canonical supervisor data. -/
 def rawSource (w : EnsembleWitness (withSources image source target final)) (id : Source) : Table F :=
-  (originalSlot image source target final id).table (project w)
+  raw (project w) id
 
 theorem rawSource_component (w : EnsembleWitness (withSources image source target final)) (id : Source) :
-    (rawSource w id).component = original id := (originalSlot image source target final id).table_component _
+    (rawSource w id).component = original id := raw_registered (project w) id
 
 private theorem ordinary_at {i : ℕ} (found : sourceAt i = none)
     (installed : i < (withSources image source target final).tables.length)
@@ -54,7 +54,7 @@ private theorem table_ledger_at (w : EnsembleWitness (withSources image source t
   cases found : sourceAt i.val with
   | some id =>
     have pos : position id = i.val := eq_of_beq (List.find?_some (p := fun s => position s == i.val) found)
-    simp only [Option.toList_some, List.flatMap_cons, List.flatMap_nil, List.append_nil, rawSource, publish_project]
+    simp only [Option.toList_some, List.flatMap_cons, List.flatMap_nil, List.append_nil, rawSource, raw, publish_project]
     unfold TableSlot.table
     apply congrArg (fun t : Table F => t.interactionsWith readbackChannel.toRaw)
     exact getElem_congr_idx (pos.symm.trans (publisherSlot_index image source target final id).symm)

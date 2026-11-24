@@ -162,6 +162,40 @@ private theorem cut_of_rank (events : List ExecutionEvent) (i : ℕ) (inside : i
     · obtain ⟨cut, later, here, write, rank⟩ := ih i (by simpa [List.countP_cons, yes] using inside)
       exact ⟨cut + 1, later, by simpa using here, write, by simp [yes, rank]⟩
 
+/-- Each packet in the ordered batch comes from one real WRITE and its native memory read. -/
+theorem packetRows_member {limits : ResourceLimits} {image : ProgramImage} {source target : ExecutionSnapshot}
+    {events : List ExecutionEvent} {packets : List WriteObservations.Packet} (run : AdmissibleExecution limits p image source target events)
+    (collected : WriteObservations.packets? (policy p image) image.program source.realize events = some packets)
+    {row : PacketRows (ZMod p)} (member : row ∈ packetRows events packets) :
+    ∃ cut call current frontier len buffer, events[cut]? = some (.syscall call) ∧ call.rawCode = SyscallKind.write.code ∧
+      mixedAccessPrefix (policy p image) image.program source.realize events cut = some (current, frontier) ∧
+      call.clock = current.clock ∧ WriteObservations.read? current.sail call = some (len, buffer) ∧
+      row = makePacketRows (cut, call) (len, buffer) := by
+  obtain ⟨i, inside, index⟩ := List.mem_iff_getElem.mp member
+  obtain ⟨cut, call, present, write, rank⟩ := cut_of_rank events i ((packetRows_length (p := p) collected) ▸ inside)
+  obtain ⟨current, frontier, len, buffer, prefixAt, clock, read, located⟩ := packetRows_at run collected present write
+  rw [rank, List.getElem?_eq_getElem inside, index] at located
+  exact ⟨cut, call, current, frontier, len, buffer, present, write, prefixAt, clock, read, Option.some.inj located⟩
+
+omit [Fact p.Prime] in
+/-- Read requests count one x12 length per packet in addition to every concrete aligned word. -/
+theorem readDemand_size (rows : List (PacketRows (ZMod p))) :
+    (readDemand rows).length = rows.length + (rows.flatMap PacketRows.steps).length := by
+  induction rows with
+  | nil => rfl
+  | cons row rows ih =>
+    simp only [readDemand, List.flatMap_cons, List.length_cons, List.length_append, List.length_map, PacketRows.reads] at ih ⊢
+    omega
+
+/-- The physical step inventory includes exactly the word reads of the semantic packet batch. -/
+theorem packetRows_words {host : HostPolicy} {program : GuestProgram} {source : ExecutionState}
+    {events : List ExecutionEvent} {packets : List WriteObservations.Packet}
+    (collected : WriteObservations.packets? host program source events = some packets) :
+    ((packetRows (p := p) events packets).flatMap PacketRows.steps).length = WriteObservations.wordProbes packets := by
+  have demand := readDemand_length (p := p) collected
+  rw [readDemand_size, packetRows_length collected, ← WriteObservations.packets_length collected] at demand
+  omega
+
 /-- A read-only supplier can attribute every input to its genuine original cut, architectural
 location, and full held Sail word. This includes repeated keys and the extra words of unaligned slices. -/
 theorem readDemand_at [Fact (2 ^ 17 < p)] {limits : ResourceLimits} {image : ProgramImage} {source target : ExecutionSnapshot}
@@ -174,11 +208,8 @@ theorem readDemand_at [Fact (2 ^ 17 < p)] {limits : ResourceLimits} {image : Pro
       r.value.isU64 ∧ locContent current.sail loc = some r.value.toBitVec64 := by
   obtain ⟨row, inBatch, tagged⟩ := List.mem_flatMap.mp member
   obtain ⟨actual, actualRead, same⟩ := List.mem_map.mp tagged
-  obtain ⟨i, inside, index⟩ := List.mem_iff_getElem.mp inBatch
-  obtain ⟨n, call, present, write, rank⟩ := cut_of_rank events i ((packetRows_length (p := p) collected) ▸ inside)
-  obtain ⟨current, frontier, len, buffer, prefixAt, clock, read, located⟩ := packetRows_at run collected present write
-  rw [rank, List.getElem?_eq_getElem inside, index] at located
-  cases Option.some.inj located
+  obtain ⟨n, call, current, frontier, len, buffer, _, _, prefixAt, clock, read, rfl⟩ :=
+    packetRows_member run collected inBatch
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj same
   obtain ⟨_, x12, lower, upper, count, atWord⟩ := WriteObservations.read?_eq_some_iff.mp read
   let h := headerOfCall (p := p) call.clock call len

@@ -309,6 +309,19 @@ theorem baseWitness_interactions
   (FinalReceiptEnsemble.project_interactions (registerWitness witness) channel registers).trans
     (FinalReceiptEnsemble.project_interactions (receiptWitness witness) channel ram)
 
+/-- The target-change verifier and the two finalizer wrappers preserve the entire signed
+ledger on every other registered channel. -/
+theorem baseWitness_silent_interactions
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
+    (channel : RawChannel (ZMod p))
+    (registered : channel ∈ (base image source target final bankFinal others resources channels names registration).channels)
+    (registers : channel ≠ (FinalMemoryValue.channel false).toRaw)
+    (ram : channel ≠ (FinalMemoryValue.channel true).toRaw) (changes : channel ≠ FinalMemoryChange.channel.toRaw) :
+    (baseWitness witness).interactionsWith channel = witness.interactionsWith channel :=
+  (baseWitness_interactions witness channel registers ram).trans
+    ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).project_silent_interactions witness channel registered
+      (by simp [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, circuit_norm, changes]))
+
 /-- Registered channels unaffected by the three new receipts retain balance and count bounds.
 Registration also separates them from the verifier's fresh assertion channel. The target
 validators remain in this view, so their Byte demand is retained. -/
@@ -321,10 +334,6 @@ theorem baseWitness_balancedChannel
     (changes : channel ≠ FinalMemoryChange.channel.toRaw)
     (balanced : witness.BalancedChannel channel) : (baseWitness witness).BalancedChannel channel := by
   change BalancedInteractions ((baseWitness witness).interactionsWith channel)
-  rw [baseWitness_interactions witness channel registers ram]
-  exact (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).project_balancedChannel
-    witness channel registered
-    (by simp [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
-      circuit_norm, changes]) balanced
+  rwa [baseWitness_silent_interactions witness channel registered registers ram changes]
 
 end SP1Clean.Soundness.HostFinalMemory

@@ -21,7 +21,7 @@ variable {image source target final}
 /-- A channel unused by the observer suffix retains its exact original signed ledger. -/
 theorem unchanged_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
     (original : ch ≠ readbackChannel.toRaw)
-    (unused : ch.name ∉ (tables source.host target.host).flatMap (fun c => c.circuit.channels.map RawChannel.name)) :
+    (unused : ch.name ∉ (tables source target).flatMap (fun c => c.circuit.channels.map RawChannel.name)) :
     w.interactionsWith ch = (supervisor w).interactionsWith ch := by
   apply ((appended image source target final).ledger_of_silent w ch ?_).trans (project_ledger _ ch original).symm
   intro c declared used

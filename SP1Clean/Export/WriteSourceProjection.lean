@@ -140,6 +140,13 @@ private theorem slots_position (id : Source) :
 
 variable {image source target final}
 
+/-- Physical sources with their genuine canonical data, selected before read-back decoration. -/
+def raw (w : EnsembleWitness (base image source target final)) (id : Source) : Table F :=
+  (originalSlot image source target final id).table w
+
+theorem raw_registered (w : EnsembleWitness (base image source target final)) (id : Source) :
+    (raw w id).component = original id := (originalSlot image source target final id).table_component w
+
 private theorem published_fields (id : Source) (t : Table F) (component : t.component = original id) :
     let extended := publish id t component
     extended.component = publisher id ∧ extended.table = t.table ∧ extended.data = t.data := by

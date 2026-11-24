@@ -16,21 +16,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-private theorem addressBounded (parts : ClockParts (ZMod p)) (bound : parts.Bounded) : Address.Bounded parts.address := by
-  obtain ⟨lo, midLo, midHi, hi⟩ := bound
-  have field := Fact.out (p := 2 ^ 25 < p)
-  have mid : (parts.midLow + parts.midHigh * 256).val = parts.midLow.val + parts.midHigh.val * 256 := by
-    have packed : (((parts.midLow.val + parts.midHigh.val * 256 : ℕ) : ZMod p)) =
-        parts.midLow + parts.midHigh * 256 := by simp
-    rw [← packed, ZMod.val_natCast_of_lt (by omega)]
-  intro i
-  fin_cases i
-  · exact lo
-  · change (parts.midLow + parts.midHigh * 256).val < _
-    rw [mid]
-    omega
-  · exact hi
-
 /-- The native circuit accepts the full desired read directly from its original physical
 split-clock receipt at every covered incoming clock. -/
 theorem covers_record (r : Readback (ZMod p)) (bounded : Bounded r)
@@ -45,7 +30,7 @@ theorem covers_record (r : Readback (ZMod p)) (bounded : Bounded r)
   have high := (ClockParts.split r.currentHigh r.currentLow).time current
   rw [prevHigh, prevLow] at low
   rw [currHigh, currLow] at high
-  refine ⟨⟨keyBound, legal, word, addressBounded _ previous, Address.bounded_ofNat _, addressBounded _ current, ?_, ?_⟩, rfl⟩
+  refine ⟨⟨keyBound, legal, word, ClockParts.address_bounded _ previous, Address.bounded_ofNat _, ClockParts.address_bounded _ current, ?_, ?_⟩, rfl⟩
   · change Address.toNat (ClockParts.split r.previousHigh r.previousLow).address ≤ Address.toNat (Address.ofNat clock)
     simpa only [low, Address.toNat_ofNat _ fits] using within.1
   · change Address.toNat (Address.ofNat clock) ≤ Address.toNat (ClockParts.split r.currentHigh r.currentLow).address

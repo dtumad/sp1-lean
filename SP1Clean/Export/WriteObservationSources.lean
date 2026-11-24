@@ -1,4 +1,4 @@
-import SP1Clean.Export.WriteObservationAssembly
+import SP1Clean.Export.WriteObservationProjection
 import SP1Clean.Export.WriteSourceLedger
 import ToClean.Air.AppendedTables
 
@@ -19,7 +19,7 @@ variable (image : ProgramImage) (source target : ExecutionSnapshot) (final : Hos
 
 /-- The packet and host circuit tables form an actual suffix after the decorated supervisor. -/
 theorem appended : Ensemble.AppendedTables (withSources image source target final)
-    (preprocessing image source target final) (tables source.host target.host) := ⟨rfl, rfl⟩
+    (preprocessing image source target final) (tables source target) := ⟨rfl, rfl⟩
 
 attribute [local irreducible] base withSources preprocessing
 
@@ -59,7 +59,7 @@ private theorem silent_of_name {components : List (Component F)} {ch : RawChanne
 theorem supervisor_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
     (protocol : ch = Channels.stateChannel.toRaw ∨ ch = Channels.memoryChannel.toRaw) :
     w.interactionsWith ch = (supervisor w).interactionsWith ch := by
-  have absent : ch.name ∉ (tables source.host target.host).flatMap (fun c => c.circuit.channels.map RawChannel.name) := by
+  have absent : ch.name ∉ (tables source target).flatMap (fun c => c.circuit.channels.map RawChannel.name) := by
     rcases protocol with rfl | rfl <;> exact of_decide_eq_true rfl
   have other : ch ≠ readbackChannel.toRaw := by
     rcases protocol with rfl | rfl <;> intro eq <;> exact Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq)
@@ -75,7 +75,7 @@ theorem readback_ledger (w : EnsembleWitness (preprocessing image source target 
   let install := appended image source target final
   let producers := install.project w
   let supplied := (supplySlot image source target final).table w
-  let tail := (tables source.host target.host).tail
+  let tail := (tables source target).tail
   have names : (readbackChannel (p := SP1Prime)).name ∉ tail.flatMap (fun c => c.circuit.channels.map RawChannel.name) :=
     of_decide_eq_true rfl
   have split := install.ledger_first w readbackChannel.toRaw (supplySlot image source target final)
@@ -94,7 +94,7 @@ theorem readback_occurrences (w : EnsembleWitness (preprocessing image source ta
       supply.length + (sources.map (fun id => (rawSource producers id).length * perRow (p := SP1Prime) id)).sum :=
   (readback_ledger w).length_eq.trans (ledger_length _ _ _ ((supplySlot image source target final).table_component w))
 
-private theorem readback_registered :
+theorem readback_registered :
     readbackChannel.toRaw ∈ (preprocessing image source target final).channels := by
   let supply := supplySlot image source target final
   have member : ReadbackSupply.component ∈ (preprocessing image source target final).tables :=
@@ -119,15 +119,9 @@ theorem authenticates_versions (w : EnsembleWitness (preprocessing image source 
 authenticate every counted version at its complete set of original physical sources. -/
 theorem assembled_versions (w : EnsembleWitness (assembly image source target final))
     (checked : w.Constraints) (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
-    let observed := (WriteEffects.checker source.host target.host).project
-      (ens := preprocessing image source target final) w
-    ((supplySlot image source target final).table observed).Authenticates versionChannel
-      (Meaning (rawSource ((appended image source target final).project observed))) := by
-  let checker := WriteEffects.checker (p := SP1Prime) source.host target.host
-  let seen := preprocessing image source target final
-  have balanced := ((checker.project_balanced_iff (ens := seen) w).mp
-    (EnsembleWitness.balancedChannels_of_balanced fit raw)).1
-  exact authenticates_versions (checker.project (ens := seen) w) ((checker.project_constraints w).mp checked)
-    (balanced _ (readback_registered (image := image) (source := source) (target := target) (final := final)))
+    ((supplySlot image source target final).table (observed w)).Authenticates versionChannel
+      (Meaning (rawSource ((appended image source target final).project (observed w)))) :=
+  authenticates_versions (observed w) ((observed_constraints w).mp checked)
+    (observed_balance w fit raw _ readback_registered (of_decide_eq_true rfl))
 
 end SP1Clean.Export.WriteObservationAssembly

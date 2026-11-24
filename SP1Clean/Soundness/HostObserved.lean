@@ -149,6 +149,15 @@ def baseWitness (witness : EnsembleWitness (ensemble image source target final))
     EnsembleWitness (HostFinalMemory.Installed image source target final) :=
   HostSailBoundary.baseWitness (HostOrdinaryReceipts.baseWitness (producerWitness witness))
 
+attribute [local irreducible] HostFinalMemory.ensemble in
+/-- The projected host assembly retains the canonical data map of the physical supervisor. -/
+theorem baseWitness_data (witness : EnsembleWitness (ensemble image source target final)) :
+    (baseWitness witness).data = witness.data := by
+  let receipts : EnsembleWitness (producers image source target final) :=
+    witness.withEnsemble _ (by simp only [ensemble, ClosedVerifier.withInteractions])
+  change (HostOrdinaryReceipts.baseWitness receipts).data = receipts.data
+  exact HostOrdinaryReceipts.baseWitness_data receipts
+
 /-- Projection retains the complete header. -/
 theorem baseWitness_publicInput (witness : EnsembleWitness (ensemble image source target final)) :
     (baseWitness witness).publicInput = witness.publicInput := by

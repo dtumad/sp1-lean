@@ -104,6 +104,26 @@ theorem memoryRefreshes_push_bounds {image : ProgramImage} {source : ExecutionSn
   memoryRefreshes_push_bounds_of_byte witness constraints
     (orderingChannels_of_balanced witness constraints balanced).byte
 
+/-- The two clock limbs of every original CPU Memory push are in range. The actual State
+walk bounds each instruction window, and the committed Program and Byte channels interpret
+the physical clock columns and the instruction's local touch alignment. -/
+theorem executionRows_push_bounds_of_channels {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
+    (ordering : OrderingChannels witness) (program : witness.BalancedChannel programChannel.toRaw)
+    (data : ProverData (ZMod p)) {event : ExecutionRow p} (member : event ∈ executionRows witness)
+    {msg : MemoryMsg (ZMod p)} (pushed : msg ∈ (event.facts data).memPushes) : MemoryClockBounds msg := by
+  obtain ⟨ordered, exhaustive, walk⟩ := executionRows_ordered_of_orderingChannels witness constraints ordering
+  have window := ordered_rows_window_bound_of_orderingChannels witness constraints ordering ordered exhaustive walk event (exhaustive.mem_iff.mpr member)
+  obtain ⟨aligned, facts⟩ := executionRows_aligned_of_channels valid witness constraints ordering.byte program member
+  rw [event.facts_setData data witness.data] at pushed
+  have active := facts.memory.pushes.mem_iff.mpr pushed
+  obtain ⟨_, _, paired⟩ := forall₂_exists_left facts.touches msg active
+  have upper := paired.push_hi
+  rw [facts.statePull] at upper
+  have finalBounds := finalBoundaryStateMessage_bounds _ (public_contract_of_byte witness ordering.sourceChecks ordering.verifierByte).1
+  have finalTime : StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) < 2 ^ 48 := clkNat_lt_of_limbs finalBounds.1 finalBounds.2.1
+  exact ⟨facts.pushBound msg active, clkHigh_lt_of_timeNat_le (by omega) finalTime⟩
+
 private theorem aligned_push_bounds {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
