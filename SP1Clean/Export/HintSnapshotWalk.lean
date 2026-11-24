@@ -40,10 +40,11 @@ theorem hint_walk_ledger (w : EnsembleWitness (preprocessing image source target
   rw [EnsembleWitness.interactionsWith_nil_of_not_registered _ _ (protocol_fresh image source target final _ walk_channel),
     List.nil_append] at eq
   have registered : suffix.map (·.component) = tables source target := install.suffix_components w
-  have length : suffix.length = 15 := by
-    calc
-      _ = (tables source target).length := by simpa only [List.length_map] using congrArg List.length registered
-      _ = 15 := rfl
+  have length : 11 < suffix.length := by
+    have size := congrArg List.length registered
+    rw [List.length_map] at size
+    rw [size]
+    simp [tables]
   have readerRow : suffix[10]'(by omega) = reader.table w := by
     simp only [suffix, List.getElem_drop]
     rfl
