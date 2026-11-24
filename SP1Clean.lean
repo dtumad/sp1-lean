@@ -63,6 +63,7 @@ import SP1Clean.Export.WriteMixedSourceTables
 import SP1Clean.Export.WriteMixedSupplyCapacity
 import SP1Clean.Export.WriteMixedSupplyBounds
 import SP1Clean.Proofs.Completeness.MixedCommitCalls
+import SP1Clean.Proofs.Completeness.MixedCommitHistory
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
