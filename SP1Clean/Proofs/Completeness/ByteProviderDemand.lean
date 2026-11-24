@@ -48,9 +48,9 @@ def padding : (id : Id) → (slot id).Occurrence
   | .inr _ => ⟨0,0⟩
 
 /-- Physical occurrences include the zero-amount padding at the end of each bucket. -/
-def entries (requests : List LookupKey) (id : Id) : List (slot id).Occurrence :=
+def entries (requests : List LookupKey) (count : LookupKey → ℕ) (id : Id) : List (slot id).Occurrence :=
   let active := keys requests id
-  (active.map fun key => entry id key (requests.count key)) ++
+  (active.map fun key => entry id key (count key)) ++
     List.replicate (demandPadding active.length) (padding id)
 
 /-- Original access produced by one of the physical entries in this bucket. -/
@@ -87,8 +87,8 @@ theorem entry_valid (id : Id) {k : LookupKey} (m : ℕ) (selected : selects id k
   | inr w => exact SupportedCoreTraceWitness.rangeEntryOfKey_wellFormed w selected valid
 
 /-- Every active and padded physical entry has valid operands at its own fixed width. -/
-theorem entries_valid (requests : List LookupKey) (id : Id) (valid : ∀ k ∈ requests, ByteServable k) :
-    ∀ e ∈ entries requests id, (slot id).Valid e := by
+theorem entries_valid (requests : List LookupKey) (count : LookupKey → ℕ) (id : Id) (valid : ∀ k ∈ requests, ByteServable k) :
+    ∀ e ∈ entries requests count id, (slot id).Valid e := by
   intro e used
   rcases List.mem_append.mp used with active | padded
   · obtain ⟨k,inside,rfl⟩ := List.mem_map.mp active
@@ -100,8 +100,8 @@ theorem entries_valid (requests : List LookupKey) (id : Id) (valid : ∀ k ∈ r
     | inr w => exact Nat.two_pow_pos w.val
 
 /-- Exact physical height after grouping and independently rounding this bucket. -/
-theorem height (requests : List LookupKey) (id : Id) :
-    (entries requests id).length = demandHeight (keys requests id).length := by
+theorem height (requests : List LookupKey) (count : LookupKey → ℕ) (id : Id) :
+    (entries requests count id).length = demandHeight (keys requests id).length := by
   simp only [entries,List.length_append,List.length_map,List.length_replicate,add_demandPadding]
 
 /-- Two valid selected keys agree as soon as their original operand input agrees. -/
@@ -148,8 +148,8 @@ private theorem code_injective (id : Id) {x y : LookupKey} (xs : selects id x) (
 
 /-- Independently of the execution length, each physical provider contains at most 65536
 distinct active keys. Repeated reads consume multiplicity, never a new bucket row. -/
-theorem height_bound (requests : List LookupKey) (id : Id) (valid : ∀ k ∈ requests, ByteServable k) :
-    (entries requests id).length ≤ 65536 := by
+theorem height_bound (requests : List LookupKey) (count : LookupKey → ℕ) (id : Id) (valid : ∀ k ∈ requests, ByteServable k) :
+    (entries requests count id).length ≤ 65536 := by
   let ks := keys requests id
   have routed {k} (inside : k ∈ ks) : selects id k ∧ ByteServable k := by
     obtain ⟨present,selected⟩ := List.mem_filter.mp inside
