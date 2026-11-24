@@ -37,6 +37,16 @@ theorem covers_record (r : Readback (ZMod p)) (bounded : Bounded r)
   · change Address.toNat (Address.ofNat clock) ≤ Address.toNat (ClockParts.split r.currentHigh r.currentLow).address
     simpa only [high, Address.toNat_ofNat _ fits] using within.2
 
+/-- Both timestamp pairs on an encoded Memory predecessor fit the 24-bit supply columns. -/
+theorem bounded_compiled_entry (entry : MemRecordEntry) (last : ℕ) (previous : entry.clk < 2 ^ 48)
+    (current : last < 2 ^ 48) :
+    Bounded (AccessSupply.atClock (F := ZMod p) ((last / 2 ^ 24 : ℕ), (last % 2 ^ 24 : ℕ)) entry.toMemoryMsg) := by
+  have characteristic := Fact.out (p := 2 ^ 24 < p)
+  change ((entry.clk / 2 ^ 24 : ℕ) : ZMod p).val < _ ∧ ((entry.clk % 2 ^ 24 : ℕ) : ZMod p).val < _ ∧
+    ((last / 2 ^ 24 : ℕ) : ZMod p).val < _ ∧ ((last % 2 ^ 24 : ℕ) : ZMod p).val < _
+  repeat' rw [ZMod.val_natCast_of_lt (by omega)]
+  omega
+
 /-- A canonical split-clock Memory entry covers its exact field-encoded address and value up to
 the physical receipt's closing clock. This applies to original accesses and to finalizers. -/
 theorem covers_compiled_entry (entry : MemRecordEntry) (last time : ℕ) (legal : ValidKey entry.addr)
@@ -45,11 +55,7 @@ theorem covers_compiled_entry (entry : MemRecordEntry) (last time : ℕ) (legal 
     Covers receipt ⟨Address.ofNat entry.addr, Address.ofNat time, Target.bitVecToWord (BitVec.ofNat 64 entry.value)⟩ := by
   intro receipt
   have characteristic := Fact.out (p := 2 ^ 24 < p)
-  have bounded : Bounded receipt := by
-    change ((entry.clk / 2 ^ 24 : ℕ) : ZMod p).val < _ ∧ ((entry.clk % 2 ^ 24 : ℕ) : ZMod p).val < _ ∧
-      ((last / 2 ^ 24 : ℕ) : ZMod p).val < _ ∧ ((last % 2 ^ 24 : ℕ) : ZMod p).val < _
-    repeat' rw [ZMod.val_natCast_of_lt (by omega)]
-    omega
+  have bounded := bounded_compiled_entry (p := p) entry last (lo.trans_lt (hi.trans_lt fits)) fits
   have key : receipt.key = Address.ofNat entry.addr := rfl
   have addressFits : entry.addr < 2 ^ 48 := by
     rcases legal with reg | ram
