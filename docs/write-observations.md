@@ -134,7 +134,14 @@ lanes against one or two aligned destination blocks and checks the last block's 
 This preserves empty and ignored writes, repeated positions, and writes crossing a block
 boundary. The public verifier seeds all four chronological counters and requires the final
 stdout, stderr, public-output and hook positions from the two snapshots. Hook metadata includes
-the supplied reply's descriptor, request length and number of returned hints. A direct hint or a
+the supplied reply's descriptor, request length and number of returned hints. For an admissible
+execution, the dispatcher gets its incoming clock from the last WRITE, or from the source clock
+when there has been none. Its four counters come from the actual host prefix. Each WRITE
+generates one active physical row, including empty and ignored writes. Its outgoing cursor
+agrees with the post-call snapshot, and demand padding fits the call-count bound.
+[Dispatcher construction](../SP1Clean/Proofs/Completeness/WriteDispatchTable.lean)
+
+A direct hint or a
 hook emits a queue-allocation ticket. The current registry has no receiver for that ticket.
 A nonempty direct hint also needs a block producer for its fresh pointer. These two obligations
 remain before the assembled eight-call statement can cover queue-changing writes.
