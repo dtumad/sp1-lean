@@ -147,7 +147,8 @@ theorem fit : demandHeight (bytes events rows).length ≤ UInt64.size := by
   apply demandHeight_le_pow (exponent := 64)
   change (rows.flatMap store ++ events.flatMap hint).length ≤ 2 ^ 64
   rw [List.length_append]
-  change (events.flatMap hint).length ≤ 2130706433 - 1 at host
+  change (events.flatMap hint).length ≤ SP1Prime - 1 at host
+  unfold SP1Prime at host
   omega
 
 variable (data : ProverData (ZMod SP1Prime))
