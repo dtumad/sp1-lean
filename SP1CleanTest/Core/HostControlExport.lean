@@ -1,4 +1,6 @@
 import SP1CleanTest.Core.ComponentExport
+import SP1Clean.Proofs.Chips.WritePacket.Ledger
+import SP1Clean.Proofs.Operations.WriteEffects
 import SP1Clean.Semantics.ReleasePolicy
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
@@ -29,7 +31,10 @@ private def commitName (deferred : Bool) (slot : Fin 8) : String :=
 
 /-- Installed host components and the VERIFY no-effect receiver. -/
 def rustExports : List (String × Except String String) :=
-  [("host_halt.rs", exportCircuit HostHaltChip.circuit),
+  [("write_packet.rs", exportCircuit WritePacket.component.circuit),
+   ("write_route.rs", exportCircuit WriteEffects.requestComponent.circuit),
+   ("write_octets.rs", exportCircuit WriteEffects.wordComponent.circuit),
+   ("host_halt.rs", exportCircuit HostHaltChip.circuit),
    ("host_enter.rs", exportCircuit (HostNoopChip.circuit .enter)),
    ("host_verify.rs", exportCircuit (HostNoopChip.circuit .verify)),
    ("host_enter_or_verify.rs", exportCircuit HostNoopChip.choiceCircuit)] ++

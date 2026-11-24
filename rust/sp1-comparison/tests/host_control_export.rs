@@ -33,6 +33,9 @@ macro_rules! exported {
         }
     };
 }
+exported!(write_packet, "write_packet.rs");
+exported!(write_route, "write_route.rs");
+exported!(write_octets, "write_octets.rs");
 exported!(halt, "host_halt.rs");
 exported!(enter, "host_enter.rs");
 exported!(verify, "host_verify.rs");
@@ -1032,5 +1035,108 @@ fn native_release_exit_policy_matches_the_default_released_verifier_policy() {
             case.accepted,
             sp1_core_executor::StatusCode::ANY.is_accepted_code(case.code)
         );
+    }
+}
+
+#[test]
+fn native_write_packet_and_octets_reproduce_released_public_output() {
+    let base = 262144u64;
+    let memory = [
+        0x0123_4567_89ab_cdefu64,
+        0xfedc_ba98_7654_3210,
+        0x1020_3040_5060_7080,
+    ];
+    let descriptor = (1u64 << 32) | 13;
+    let packet = handler::<write_packet::Ensemble>();
+    let route = handler::<write_route::Ensemble>();
+    let octets = handler::<write_octets::Ensemble>();
+
+    for (offset, length) in [(0, 0), (7, 0), (0, 8), (7, 10), (5, 16)] {
+        let address = base + offset;
+        let mut instructions = vec![];
+        execution::load_constant(&mut instructions, 12, length);
+        execution::syscall(&mut instructions, SyscallCode::WRITE, descriptor, address);
+        execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
+        let mut program = Sp1Program::new(instructions, 65536, 65536);
+        for (index, value) in memory.iter().enumerate() {
+            std::sync::Arc::make_mut(&mut program.memory_image)
+                .insert(base + 8 * index as u64, *value);
+        }
+        let (executor, records) = execution::run(program, &[]);
+        let (event, accesses) = &records[0].syscall_events[0];
+        let MemoryRecordEnum::Write(writeback) = accesses.a else {
+            panic!("released ECALL must write x5")
+        };
+        let clk = event.clk;
+        let length = executor.registers()[12];
+        let mut input = fields(&[clk & 65535, (clk >> 16) & 255, (clk >> 24) & 255, clk >> 32]);
+        input.extend(word(event.arg1));
+        input.extend(word(event.arg2));
+        input.extend(word(length));
+        input.push(F::ONE);
+        let row = packet.build(&input);
+        assert!(packet.valid(&row));
+        let time = &word(clk)[..3];
+        let header = [time, &word(event.arg1), &word(event.arg2), &word(length)].concat();
+        let register = [&word(12)[..3], time, &word(length)].concat();
+        same_ledger(
+            (packet.ledger)(&row),
+            vec![
+                entry(
+                    "sp1.native.host_call",
+                    -F::ONE,
+                    &call(2, event.arg1, event.arg2, writeback.value, clk),
+                ),
+                entry("sp1.native.write_probe", -F::ONE, &register),
+                entry("sp1.native.write_packet", F::ONE, &header),
+            ],
+        );
+
+        let classified = [header.as_slice(), &fields(&[13])].concat();
+        let route_row = route.build(&[classified.as_slice(), &[F::ONE]].concat());
+        assert!(route.valid(&route_row));
+        same_ledger(
+            nonbyte((route.ledger)(&route_row)),
+            vec![
+                entry("sp1.native.write_effect_header", -F::ONE, &header),
+                entry("sp1.native.write_effect_request", F::ONE, &classified),
+            ],
+        );
+
+        let mut observed = Vec::new();
+        for (index, value) in memory
+            .iter()
+            .take((offset + length).div_ceil(8) as usize)
+            .enumerate()
+        {
+            let key = &word(base + 8 * index as u64)[..3];
+            let read = [key, time, &word(*value)].concat();
+            let low_bytes: Vec<_> = value
+                .to_le_bytes()
+                .chunks_exact(2)
+                .map(|pair| F::from_u8(pair[0]))
+                .collect();
+            let row = octets.build(&[read.as_slice(), &low_bytes, &[F::ONE]].concat());
+            assert!(octets.valid(&row));
+            let bytes = value.to_le_bytes().map(F::from_u8);
+            same_ledger(
+                nonbyte((octets.ledger)(&row)),
+                vec![
+                    entry("sp1.native.write_buffer_value", -F::ONE, &read),
+                    entry(
+                        "sp1.native.write_effect_octets",
+                        F::ONE,
+                        &[key, time, &bytes].concat(),
+                    ),
+                ],
+            );
+            observed.extend(bytes.iter().map(|b| b.as_canonical_u64() as u8));
+        }
+        let selected: Vec<_> = observed
+            .into_iter()
+            .skip(offset as usize)
+            .take(length as usize)
+            .collect();
+        assert_eq!(executor.public_values_stream(), &selected);
     }
 }
