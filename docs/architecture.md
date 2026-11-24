@@ -194,7 +194,7 @@ receipts. In the seven-call profile every row accepts either ENTER with zero x5 
 with x5 equal to its full syscall code. Each row consumes one complete HostCall. Its physical
 height counts their combined occurrences. The released supervisor instruction table separately
 pads the full syscall-event stream. The registered host boundary proves code classification and
-dispatch for both profiles. The 100-slot production assembly uses the seven-call inventory. Raw acceptance authenticates VERIFY on the same chronological execution as the other six calls. Slot 65 uses 18 columns and consumes one HostCall per row. [Physical inventory](../SP1Clean/Export/InstalledFixedInventory.lean)
+dispatch for both profiles. The 100-slot production assembly uses the seven-call inventory. Raw acceptance authenticates VERIFY on the same chronological execution as the other six calls. Slot 65 uses 19 columns. Each active ENTER/VERIFY row consumes one HostCall, and the padding rows have zero multiplicity. [Physical inventory](../SP1Clean/Export/InstalledFixedInventory.lean)
 
 Each Clean table stores its evaluation data and a proof that its physical row count fits the
 upstream `UInt64` index space. Ensemble construction makes every table's stored data agree with
