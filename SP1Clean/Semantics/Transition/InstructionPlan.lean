@@ -400,6 +400,19 @@ theorem instructionAccessPlan?_isSome {decoded : instruction} {source target : S
     obtain ⟨newRam, newEq⟩ := Option.isSome_iff_exists.mp newPresent
     simp [instructionPlanByShape?, storePlan?, priorEq, oldEq, newEq]
 
+/-- The store's complete RAM cell occurs in its extracted plan at the incoming effective address. -/
+theorem storePlan_cell {source target : SailState} {plan : InstructionAccessPlan} {imm : BitVec 12}
+    {rs1 rs2 : regidx} {width : word_width} {base : BitVec 64}
+    (read : source.get_reg? (regidxBits rs1) = some base)
+    (generated : instructionAccessPlan? (.STORE (imm, rs2, rs1, width)) source target = some plan) :
+    MemLoc.ram (memoryRamCell base imm) ∈ plan.map PlannedTouch.loc := by
+  have shape := byShape_of_extracted generated
+  simp only [instructionPlanByShape?, storePlan?, read, Option.bind_some, Option.map_eq_some_iff,
+    Option.bind_eq_bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at shape
+  obtain ⟨cert, made, rfl⟩ := shape
+  repeat' obtain ⟨_, _, made⟩ := made
+  exact List.mem_cons_self
+
 /-- The two canonical JALR touches read the base and prior destination from the incoming state,
 even when the two register roles alias. -/
 theorem jalrPlan_pulled {source target : SailState} {plan : InstructionAccessPlan} {imm : BitVec 12}

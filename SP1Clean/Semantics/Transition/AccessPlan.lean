@@ -324,6 +324,19 @@ theorem advancePlan_of_not_touched {frontier : AccessFrontier} {base : ℕ}
         fun item member => notTouched item (List.mem_cons_of_mem touch member)
       rw [advancePlan, ih tailNe, advanceFrontier_of_ne frontier base touch headNe]
 
+/-- The zero boundary clock survives exactly when no occurrence of the location has been posted. -/
+theorem advancePlan_zero_iff (frontier : AccessFrontier) (base : ℕ) (plan : InstructionAccessPlan) (loc : MemLoc) :
+    advancePlan frontier base plan loc = 0 ↔ frontier loc = 0 ∧ loc ∉ plan.map PlannedTouch.loc := by
+  induction plan generalizing frontier with
+  | nil => simp [advancePlan]
+  | cons touch rest ih =>
+    rw [advancePlan, ih]
+    by_cases same : loc = touch.loc
+    · subst loc
+      have positive := touch.slot.recordOffset_pos
+      simp [advanceFrontier_same, PlannedTouch.recordTime, Nat.ne_of_gt positive]
+    · simp [advanceFrontier_of_ne frontier base touch same, same]
+
 /-- The stamped frontier also leaves every untouched location unchanged. -/
 theorem stampPlan_frontier_of_not_touched {frontier : AccessFrontier} {base : ℕ}
     {plan : InstructionAccessPlan} {loc : MemLoc}
