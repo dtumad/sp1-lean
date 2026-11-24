@@ -13,6 +13,7 @@ import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationProjection
 import SP1Clean.Export.WriteObservationBuild
+import SP1Clean.Export.WriteBoundaryBuild
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteSupplyCapacity
 import SP1Clean.Export.WriteObservationByte
@@ -61,6 +62,10 @@ import SP1Clean.Proofs.Completeness.WritePacketTables
 import SP1Clean.Proofs.Completeness.WritePacketAssembly
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
+import SP1Clean.Proofs.Completeness.WriteSparseFinalizers
+import SP1Clean.Proofs.Completeness.WriteSparseInitializers
+import SP1Clean.Proofs.Completeness.WriteSparseMemory
+import SP1Clean.Proofs.Completeness.WriteSparseOrder
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
 import SP1Clean.Proofs.Completeness.WriteOrdinaryTables
 import SP1Clean.Soundness.WriteOrdinarySources

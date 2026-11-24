@@ -96,6 +96,27 @@ def providerView {Payload : TypeMap} [ProvableType Payload] (name : String) (dis
     exact ⟨congrArg (fun input => toElements input.link.previous) payload,
       congrArg (fun input => toElements input.link.current) payload⟩
 
+/-- The control ledger of an original ordered provider uses its decoded input fields.
+This formulation is shared by the register and RAM table compilers. -/
+theorem provider_control {Payload : TypeMap} [ProvableType Payload] (name : String) (distinct : name ≠ "SP1Byte")
+    (recordSpec : MemoryMsg (ZMod p) → Prop)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
+    (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
+    (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record)
+    (privateChannel : (OrderedBoundary.channel name).toRaw ∉ provider.channels) (env : Environment (ZMod p)) :
+    let view := providerView name distinct recordSpec provider binds canonical privateChannel
+    let ch := OrderedBoundary.channel (p := p) name
+    let row := valueFromOffset (OrderedMemoryProvider.RowInput Payload) 0 env
+    view.component.operations.interactionValuesWith ch.toRaw env =
+      [ch.pulledIfValue row.2 row.1.link.previous, ch.pushedIfValue row.2 row.1.link.current] := by
+  let view := providerView name distinct recordSpec provider binds canonical privateChannel
+  have gate : env view.activity = (valueFromOffset (OrderedMemoryProvider.RowInput Payload) 0 env).2 := by
+    rw [← eval_varFromOffset_valueFromOffset]
+    exact eval_activity env _
+  have raw := view.interactions env
+  rw [gate] at raw
+  exact raw
+
 omit [Fact (2 ^ 17 < p)] in
 /-- Reading a provider's physical activity agrees with the decoded input selector. -/
 theorem active_input {Payload : TypeMap} [ProvableType Payload] {env : Environment (ZMod p)}
