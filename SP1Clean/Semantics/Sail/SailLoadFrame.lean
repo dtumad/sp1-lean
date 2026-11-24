@@ -118,7 +118,7 @@ theorem load_execute_successor (source : SailState) (cfg : SailConfigured source
     (ran : (runSail (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))) source =
       .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧
-      target.regs.get? Register.nextPC = source.regs.get? Register.nextPC ∧ Semantics.ExecuteFrame source target := by
+      target.regs.get? Register.nextPC = source.regs.get? Register.nextPC ∧ Semantics.DestinationFrame (some rd) source target := by
   simp only [SailExecute.dispatch_LOAD, execute_LOAD, PreSail.sail_assert] at ran
   split at ran
   · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran

@@ -138,15 +138,48 @@ private theorem value_at_zero_frontier {limits : ResourceLimits} {p : ℕ} {imag
         have kept := host step prior zero
         exact kept.2.trans (ih beforeBuilt kept.1)
 
-/-- At every cut of a complete mixed execution, a RAM cell still at its genesis time holds the incoming Sail word. -/
-theorem admissibleExecution_untouched_ram {limits : ResourceLimits} {p : ℕ} {image : ProgramImage}
+private theorem ordinary_register_untouched {policy : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
+    {view : SP1TransitionView} {plan : InstructionAccessPlan}
+    (step : ExecutionStep policy program source .ordinary target)
+    (cfg : SailConfigured source.sail) (loaded : RomLoaded program source.sail)
+    (projected : projectSP1Transition? program ⟨source.sail, ⟨.ordinary, target.sail⟩⟩ = some view)
+    (compiled : instructionAccessPlan? view.decoded source.sail target.sail = some plan)
+    (index : BitVec 5) (fresh : MemLoc.reg index ∉ plan.map PlannedTouch.loc) :
+    locContent target.sail (.reg index) = locContent source.sail (.reg index) := by
+  cases step with
+  | @ordinary next _ _ normal permitted =>
+    obtain ⟨pc, word, instr, atPc, fetched, decode, checked⟩ := permitted
+    have actual := decodeLocated?_eq_some_of (located := ⟨source.sail, ⟨.ordinary, next⟩⟩) atPc fetched (decode source.sail cfg)
+    have same := Option.some.inj ((projectSP1Transition?_decode projected).symm.trans actual)
+    rw [same] at compiled
+    exact (Advance.permitted_normal_frame cfg loaded atPc fetched decode checked normal).2.2.2 index
+      (fun selected => fresh (instructionAccessPlan_destination selected compiled))
+
+private theorem syscall_register_frontier_zero {policy : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
+    {call : CoreSyscallEvent} (step : ExecutionStep policy program source (.syscall call) target)
+    (prior : AccessFrontier) (index : BitVec 5) (zero : syscallFrontier prior source.clock call (.reg index) = 0) :
+    prior (.reg index) = 0 ∧ locContent target.sail (.reg index) = locContent source.sail (.reg index) := by
+  change advancePlan prior source.clock (syscallRegisterPlan call) (.reg index) = 0 at zero
+  rw [advancePlan_zero_iff] at zero
+  refine ⟨zero.1, step.syscall_sail_frame.2.1 index ?_⟩
+  rintro rfl
+  exact zero.2 (by simp [syscallRegisterPlan])
+
+/-- At every cut of a complete mixed execution, every register and RAM cell still at its genesis time holds its incoming Sail value. -/
+theorem admissibleExecution_untouched {limits : ResourceLimits} {p : ℕ} {image : ProgramImage}
     {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (execution : AdmissibleExecution limits p image source target events) {cut : ℕ} {current : ExecutionState} {frontier : AccessFrontier}
     (built : mixedAccessPrefix (policy p image) image.program source.realize events cut = some (current, frontier))
-    (cell : RamCell) (zero : frontier (.ram cell) = 0) :
-    locContent current.sail (.ram cell) = locContent source.realize.sail (.ram cell) :=
-  value_at_zero_frontier execution (.ram cell)
-    (fun step cfg loaded encoded projected compiled => ordinary_ram_untouched step cfg loaded encoded projected compiled cell)
-    (fun step prior => syscall_ram_frontier_zero step prior cell) built zero
+    (loc : MemLoc) (zero : frontier loc = 0) :
+    locContent current.sail loc = locContent source.realize.sail loc := by
+  cases loc with
+  | ram cell =>
+    exact value_at_zero_frontier execution (.ram cell)
+      (fun step cfg loaded encoded projected compiled => ordinary_ram_untouched step cfg loaded encoded projected compiled cell)
+      (fun step prior => syscall_ram_frontier_zero step prior cell) built zero
+  | reg index =>
+    exact value_at_zero_frontier execution (.reg index)
+      (fun step cfg loaded _ projected compiled => ordinary_register_untouched step cfg loaded projected compiled index)
+      (fun step prior => syscall_register_frontier_zero step prior index) built zero
 
 end SP1Clean.TraceGen

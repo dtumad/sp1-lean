@@ -41,7 +41,7 @@ theorem arithmetic_execute_successor (state : SailState) (cfg : SailConfigured s
     (decoded : instruction) (arithmetic : ArithmeticInstruction decoded) : ∃ next,
       (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧
         SailConfigured next ∧ next.mem = state.mem ∧ next.regs.get? Register.nextPC = state.regs.get? Register.nextPC ∧
-          Semantics.ExecuteFrame state next := by
+          Semantics.DestinationFrame (Semantics.instructionDestination? decoded) state next := by
   unfold ArithmeticInstruction at arithmetic
   split at arithmetic
   next =>

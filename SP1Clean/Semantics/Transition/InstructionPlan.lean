@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Transition.AccessPlan
+public import SP1Clean.Semantics.Sail.ExecutionFootprint
 public import SP1Clean.Semantics.ISA.Decode
 
 /-!
@@ -33,10 +34,6 @@ open Sail LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target (instructionRouteId instructionRouteKey)
 
 /-! ## Field-free operand projections -/
-
-/-- The five-bit architectural index carried by a generated Sail `regidx`. -/
-def regidxBits : regidx → BitVec 5
-  | .Regidx bits => bits
 
 /-- The wrapped 64-bit effective address used by ordinary loads and stores. -/
 def memoryEffectiveAddress (base : BitVec 64) (offset : BitVec 12) : BitVec 64 :=
@@ -399,6 +396,21 @@ theorem instructionAccessPlan?_isSome {decoded : instruction} {source target : S
     obtain ⟨oldRam, oldEq⟩ := Option.isSome_iff_exists.mp oldPresent
     obtain ⟨newRam, newEq⟩ := Option.isSome_iff_exists.mp newPresent
     simp [instructionPlanByShape?, storePlan?, priorEq, oldEq, newEq]
+
+/-- Every actual decoded register destination has a physical location in the canonical access plan. -/
+theorem instructionAccessPlan_destination {source target : SailState} {plan : InstructionAccessPlan} {decoded : instruction}
+    {index : BitVec 5} (selected : instructionDestination? decoded = some index)
+    (generated : instructionAccessPlan? decoded source target = some plan) : MemLoc.reg index ∈ plan.map PlannedTouch.loc := by
+  have shape := byShape_of_extracted generated
+  clear generated
+  cases decoded <;> rename_i operands <;> cases operands <;> simp only [instructionDestination?] at selected
+  all_goals first | contradiction | cases Option.some.inj selected
+  all_goals
+    simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, loadPlan?, Option.map_eq_some_iff,
+      Option.bind_eq_bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at shape
+    obtain ⟨cert, made, rfl⟩ := shape
+    repeat' obtain ⟨_, _, made⟩ := made
+    simp [registerDestination]
 
 /-- The store's complete RAM cell occurs in its extracted plan at the incoming effective address. -/
 theorem storePlan_cell {source target : SailState} {plan : InstructionAccessPlan} {imm : BitVec 12}
