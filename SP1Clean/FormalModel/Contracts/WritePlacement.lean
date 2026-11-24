@@ -10,6 +10,7 @@ already written within the selected stream or hint.
 
 namespace SP1Clean.WriteEffects
 
+/-- A selected guest byte identified by its absolute address and incoming WRITE clock. -/
 structure ByteRead (F : Type) where
   /-- Clock of the WRITE that requested the byte. -/
   clock : fields 3 F

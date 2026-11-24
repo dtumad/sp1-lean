@@ -11,6 +11,7 @@ whose previous values come from a private channel.
 namespace SP1Clean.AddressSum
 open Circuit
 
+/-- Two unsigned address operands and their canonical nonwrapping sum. -/
 structure Inputs (F : Type) where
   /-- First three-limb address operand. -/
   left : fields 3 F

@@ -32,6 +32,7 @@ def StreamKey.contents (streams : WriteStreams) : StreamKey → Option Bytes
   | .request r => (streams.hooks[r]?).map (·.request.input)
   | .returned r h => (streams.hooks[r]?).bind (·.hints[h]?)
 
+/-- A byte, length, descriptor or reply count in the verifier-owned transcript. -/
 inductive Query where
   | length (key : StreamKey)
   | byte (key : StreamKey) (index : Nat)
