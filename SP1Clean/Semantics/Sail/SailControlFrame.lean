@@ -60,7 +60,7 @@ private theorem fetched_pc_add_four_aligned {program : GuestProgram} {pc : BitVe
 theorem jump_to_frame (source : SailState) (cfg : SailConfigured source) (destination : BitVec 64)
     (result : ExecutionResult) (target : SailState)
     (ran : (runSail (jump_to destination)) source = .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.ExecuteFrame source target ∧
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.DestinationFrame none source target ∧
       (result = .Retire_Success () → AlignedPC (target.regs.get? Register.nextPC) destination) := by
   simp only [jump_to, ext_control_check_pc, SailME.run, PreSail.PreSailME.run_lift_bind] at ran
   by_cases low : (BitVec.access destination 0 == 0#1) = true
@@ -93,7 +93,7 @@ private theorem jump_and_link_frame (source : SailState) (cfg : SailConfigured s
       match ← jump_to destination with
       | .Retire_Success () => wX_bits (.Regidx rd) link; pure (ExecutionResult.Retire_Success ())
       | failure => pure failure)) source = .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.ExecuteFrame source target ∧
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.DestinationFrame (some rd) source target ∧
       (result = .Retire_Success () → AlignedPC (target.regs.get? Register.nextPC) destination) := by
   obtain ⟨middle, outcome, jumpRun, suffix⟩ := run_bind_success _ _ source target result ran
   obtain ⟨direct, configured, memory, framed, staged⟩ := jump_to_frame source cfg destination outcome middle jumpRun
@@ -103,15 +103,15 @@ private theorem jump_and_link_frame (source : SailState) (cfg : SailConfigured s
     cases suffix
     exact ⟨(fun _ h => nomatch h), SailConfigured.writeGPR configured rd link, by
       by_cases zero : rd = 0#5 <;> simpa only [zero, ↓reduceIte] using memory,
-      framed.trans (writeGPR_frame middle rd link),
+      (Semantics.DestinationFrame.of_none framed (some rd)).trans (writeGPR_frame middle rd link),
       fun _ => ⟨(writeGPR_nextPC middle rd link).trans (staged rfl).1, (staged rfl).2⟩⟩
-  · cases outcome <;> first | contradiction | (cases suffix; exact ⟨direct, configured, memory, framed, staged⟩)
+  · cases outcome <;> first | contradiction | (cases suffix; exact ⟨direct, configured, memory, Semantics.DestinationFrame.of_none framed _, staged⟩)
 
 /-- JAL preserves configuration and every byte for every successful execute result. -/
 theorem jal_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 21) (rd : BitVec 5) (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.JAL (imm, .Regidx rd)))) source = .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.ExecuteFrame source target ∧
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.DestinationFrame (some rd) source target ∧
       (result = .Retire_Success () → AlignedPC (target.regs.get? Register.nextPC)
         (source.regs.get Register.PC (cfg.init _) + sign_extend (m := 64) imm)) := by
   simp only [SailExecute.dispatch_JAL, execute_JAL, get_next_pc] at ran
@@ -124,7 +124,7 @@ theorem jalr_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs1 rd : BitVec 5) (value : BitVec 64) (read : source.get_reg? rs1 = some value)
     (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.JALR (imm, .Regidx rs1, .Regidx rd)))) source = .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.ExecuteFrame source target ∧
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.DestinationFrame (some rd) source target ∧
       (result = .Retire_Success () → AlignedPC (target.regs.get? Register.nextPC)
         (BitVec.update (value + sign_extend (m := 64) imm) 0 0#1)) := by
   simp only [SailExecute.dispatch_JALR, execute_JALR, get_next_pc] at ran
@@ -139,7 +139,7 @@ theorem branch_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 13) (rs1 rs2 : BitVec 5) (op : bop) (left right : BitVec 64) (leftRead : source.get_reg? rs1 = some left) (rightRead : source.get_reg? rs2 = some right)
     (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.BTYPE (imm, .Regidx rs2, .Regidx rs1, op)))) source = .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.ExecuteFrame source target ∧
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧ Semantics.DestinationFrame none source target ∧
       (result = .Retire_Success () →
         (BranchSail.branchCond op left right → AlignedPC (target.regs.get? Register.nextPC)
           (source.regs.get Register.PC (cfg.init _) + sign_extend (m := 64) imm)) ∧
@@ -233,7 +233,7 @@ covers successful and trapped branches without an assumption about either destin
 theorem control_execute_frame {decoded : instruction} (control : ControlFlowInstruction decoded)
     (state : SailState) (cfg : SailConfigured state) (result : ExecutionResult) (next : SailState)
     (executed : (runSail (execute decoded)) state = .ok result next) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ next.mem = state.mem ∧ Semantics.ExecuteFrame state next := by
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ next.mem = state.mem ∧ Semantics.DestinationFrame (Semantics.instructionDestination? decoded) state next := by
   unfold ControlFlowInstruction at control
   split at control
   next =>

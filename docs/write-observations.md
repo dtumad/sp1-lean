@@ -134,7 +134,16 @@ lanes against one or two aligned destination blocks and checks the last block's 
 This preserves empty and ignored writes, repeated positions, and writes crossing a block
 boundary. The public verifier seeds all four chronological counters and requires the final
 stdout, stderr, public-output and hook positions from the two snapshots. Hook metadata includes
-the supplied reply's descriptor, request length and number of returned hints. A direct hint or a
+the supplied reply's descriptor, request length and number of returned hints. For an admissible
+execution, the dispatcher gets its incoming clock from the last WRITE, or from the source clock
+when there has been none. Its four counters come from the actual host prefix. Each WRITE
+generates one active physical row, including empty and ignored writes. Its outgoing cursor
+agrees with the post-call snapshot, and demand padding fits the call-count bound. The constructor
+visits each CPU event once, carrying the previous WRITE clock and persistent queue cursor.
+A missing required guest read fails the same replay.
+[Dispatcher construction](../SP1Clean/Proofs/Completeness/WriteDispatchTable.lean) · [Ordered replay](../SP1Clean/Proofs/Completeness/WriteDispatchReplay.lean)
+
+A direct hint or a
 hook emits a queue-allocation ticket. The current registry has no receiver for that ticket.
 A nonempty direct hint also needs a block producer for its fresh pointer. These two obligations
 remain before the assembled eight-call statement can cover queue-changing writes.
@@ -171,6 +180,14 @@ The backend rejects a changed tail on its aligned padding word and a changed ter
 allocation frontier.
 [Physical reader](../SP1Clean/Native/Operations/HintQueueSnapshot.lean) · [Constructive ledger](../SP1Clean/Proofs/Completeness/HintSnapshotLedger.lean) · [Capacity](../SP1Clean/Export/HintSnapshotCapacity.lean) · [Backend fixture](../rust/sp1-comparison/tests/hint_source_export.rs)
 
-The full native acceptance theorem still needs to connect consecutive WRITE clocks, close
-all per-stream positions, and recover the persistent node and word sources for the
-terminal walk from the balanced physical tables. The stock SDK digest statement above applies independently.
+Raw native acceptance forces the terminal walk to visit every public word in physical
+order. Its initial head comes from the private seal row. Within a buffer all its word
+rows use the same head and tail. The last word moves to the next node, and an empty
+outgoing queue forces the starting head to be null. Once the node and word requests
+identify a common persistent store, this walk determines the exact outgoing byte
+strings in that store. [Installed walk and queue decoding](../SP1Clean/Export/HintSnapshotWalk.lean)
+
+The full native theorem still needs to construct that store from the actual queue updates
+at each execution clock, including fresh nodes consumed within the shard, and to connect
+the ordered WRITE calls to every stream position. The stock SDK digest statement above
+applies independently.

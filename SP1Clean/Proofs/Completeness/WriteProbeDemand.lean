@@ -20,7 +20,9 @@ def isWriteCall : ExecutionEvent → Bool
   | .ordinary => false
   | .syscall call => decide (call.rawCode = SyscallKind.write.code)
 
-private def packetAt? (source : SailState) : ExecutionEvent → Option (Option Packet)
+/-- Inspect a single event. A successful non-WRITE yields an empty observation, while a
+missing required WRITE read rejects the event. -/
+def packetAt? (source : SailState) : ExecutionEvent → Option (Option Packet)
   | .ordinary => some none
   | .syscall call =>
     if call.rawCode = SyscallKind.write.code then (read? source call).map some else some none

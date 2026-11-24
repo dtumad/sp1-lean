@@ -92,6 +92,32 @@ theorem ledger_of_silent (w : EnsembleWitness whole) (ch : RawChannel F)
     exact List.mem_map_of_mem member
   rw [layout.ledger, absent, List.append_nil]
 
+/-- The contiguous part of an appended inventory containing all its contributions to a
+channel. The result retains every physical row and its exact signed occurrences. -/
+theorem ledger_window (w : EnsembleWitness whole) (ch : RawChannel F) (start count : ℕ)
+    (before : ∀ c ∈ extra.take start, ch ∉ c.circuit.channels)
+    (after : ∀ c ∈ extra.drop (start + count), ch ∉ c.circuit.channels) :
+    w.interactionsWith ch = (layout.project w).interactionsWith ch ++
+      (((w.tables.drop base.tables.length).drop start).take count).flatMap (·.interactionsWith ch) := by
+  let suffix := w.tables.drop base.tables.length
+  have empty (rows : List (Table F)) (components : List (Component F)) (same : rows.map (·.component) = components)
+      (silent : ∀ c ∈ components, ch ∉ c.circuit.channels) : rows.flatMap (·.interactionsWith ch) = [] := by
+    apply List.flatMap_eq_nil_iff.mpr
+    intro t member
+    exact t.interactionsWith_nil_of_channel_not_mem (silent t.component (same ▸ List.mem_map_of_mem member))
+  have components : suffix.map (·.component) = extra := layout.suffix_components w
+  have pre := empty (suffix.take start) (extra.take start) (by rw [List.map_take, components]) before
+  have post := empty ((suffix.drop start).drop count) (extra.drop (start + count))
+    (by rw [List.drop_drop, List.map_drop, components]) after
+  rw [layout.ledger]
+  apply congrArg (List.append _)
+  change suffix.flatMap _ = _
+  calc
+    _ = (suffix.drop start).flatMap (·.interactionsWith ch) := by
+      conv_lhs => rw [← List.take_append_drop start suffix, List.flatMap_append, pre, List.nil_append]
+    _ = _ := by
+      conv_lhs => rw [← List.take_append_drop count (suffix.drop start), List.flatMap_append, post, List.append_nil]
+
 /-- A single contributing position anywhere in the suffix keeps its complete physical ledger.
 The silence proofs cover all components on either side of the selected slot. -/
 theorem ledger_at (w : EnsembleWitness whole) (ch : RawChannel F) (i : ℕ) {component : Component F}
@@ -105,20 +131,10 @@ theorem ledger_at (w : EnsembleWitness whole) (ch : RawChannel F) (i : ℕ) {com
   have selected : suffix[i] = slot.table w := by
     simp only [suffix, List.getElem_drop]
     exact getElem_congr_idx position.symm
-  have empty (rows : List (Table F)) (components : List (Component F)) (same : rows.map (·.component) = components)
-      (silent : ∀ c ∈ components, ch ∉ c.circuit.channels) : rows.flatMap (·.interactionsWith ch) = [] := by
-    apply List.flatMap_eq_nil_iff.mpr
-    intro t member
-    exact t.interactionsWith_nil_of_channel_not_mem (silent t.component (same ▸ List.mem_map_of_mem member))
-  have components : suffix.map (·.component) = extra := layout.suffix_components w
-  have pre := empty (suffix.take i) (extra.take i) (by rw [List.map_take, components]) before
-  have post := empty (suffix.drop (i+1)) (extra.drop (i+1)) (by rw [List.map_drop, components]) after
-  have split := List.drop_eq_getElem_cons atIndex
-  rw [selected] at split
-  rw [layout.ledger]
-  apply congrArg (List.append _)
-  change suffix.flatMap _ = _
-  conv_lhs => rw [← List.take_append_drop i suffix, List.flatMap_append, split, List.flatMap_cons, pre, post, List.nil_append, List.append_nil]
+  rw [layout.ledger_window w ch i 1 before after]
+  change _ ++ ((suffix.drop i).take 1).flatMap _ = _
+  rw [List.drop_eq_getElem_cons atIndex, selected]
+  simp
 
 /-- If only the first appended table uses a channel, its exact ledger is the appended
 contribution. The selected table belongs to the whole witness and retains its data. -/

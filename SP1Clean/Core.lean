@@ -202,6 +202,7 @@ import SP1Clean.FormalModel.Contracts.HintQueueSnapshot
 import SP1Clean.Native.Operations.HintQueueSnapshot
 import SP1Clean.Native.Operations.HintQueueSeal
 import SP1Clean.Proofs.Operations.HintQueueSnapshot
+import SP1Clean.Proofs.Operations.HintSnapshotPositions
 import SP1Clean.Semantics.Host.HintQueueWordRecords
 import SP1Clean.Semantics.Host.HintQueueWords
 import SP1Clean.Semantics.Host.HostExecution

@@ -26,6 +26,7 @@ structure AlignedFacts (aligned original : RowFacts p) : Prop where
   statePush : aligned.statePush = original.statePush
   fetch : aligned.fetch = original.fetch
   memory : RowMemoryPermutation aligned original
+  addresses : PreservesAddresses (rowTouches aligned)
   touches : List.Forall₂ (TouchOK (StateMsg.timeNat aligned.statePull)) aligned.memPulls aligned.memPushes
   chain : ∀ loc, List.IsChain (fun a b : Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
     (rowTouchesAt aligned loc)
@@ -53,6 +54,7 @@ theorem AlignedFacts.rowOKCore {aligned original : RowFacts p} (facts : AlignedF
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 theorem alignedFacts_of_touches (original : RowFacts p) (touches : List (Touch p))
     (projection : RowMemoryPermutation (alignedOf original touches) original)
+    (addresses : PreservesAddresses touches)
     (localOK : ∀ touch ∈ touches, TouchOK (StateMsg.timeNat original.statePull) touch.1 touch.2)
     (chain : ∀ loc, List.IsChain (fun a b : Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
       (touches.filter (fun touch => MemoryMsg.locOf touch.2 = loc)))
@@ -64,6 +66,7 @@ theorem alignedFacts_of_touches (original : RowFacts p) (touches : List (Touch p
   statePush := rfl
   fetch := rfl
   memory := projection
+  addresses := by simpa [rowTouches, alignedOf, List.zip_map'] using addresses
   touches := List.forall₂_map_left_iff.mpr
     (List.forall₂_map_right_iff.mpr (List.forall₂_same.mpr localOK))
   chain := by intro loc; rw [rowTouchesAt_alignedOf]; exact chain loc
@@ -102,6 +105,7 @@ theorem halt_aligned (row : HaltChip.Inputs (ZMod p))
         List.map_cons, List.map_nil, SystemTouches.prior, SystemTouches.push,
         HaltChip.memPulledMessage, HaltChip.memPushedMessage] <;>
       exact List.Perm.refl _
+  · exact .cons rfl (.cons rfl (.cons rfl .nil))
   · change ∀ touch ∈ touches, TouchOK (SystemTouches.start row.state) touch.1 touch.2
     exact facts.1
   · exact facts.2.1
@@ -116,7 +120,7 @@ theorem syscall_aligned (row : SyscallInstrsChip.Inputs (ZMod p))
   let touches := SystemTouches.touches row.state row.op_a_memory row.op_b_memory row.op_c_memory row.op_a_value
   have facts := SystemTouches.touches_spec row.state row.op_a_memory row.op_b_memory row.op_c_memory
     row.op_a_value clock timestamps
-  refine ⟨alignedOf (syscallRowFacts row) touches, alignedFacts_of_touches (syscallRowFacts row) touches ?_ facts.1 facts.2.1 facts.2.2.1
+  refine ⟨alignedOf (syscallRowFacts row) touches, alignedFacts_of_touches (syscallRowFacts row) touches ?_ (.cons rfl (.cons rfl (.cons rfl .nil))) facts.1 facts.2.1 facts.2.2.1
     (fun touch member bound _ => facts.2.2.2 touch member bound)⟩
   constructor
   · simp only [alignedOf, syscallRowFacts, operands.1, operands.2.1, operands.2.2]
@@ -145,10 +149,10 @@ theorem ordinary_aligned (data : ProverData (ZMod p)) (row : DecodedInstructionR
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.instruction row).facts data) := by
   have decode := committed.decoded_of_opcode_ne
     (supportedChip_fetchDiscriminantShape row.chip chipMem data row.physical checked byte active)
-  obtain ⟨touches, projection, localOK, chain, pushBound, slot⟩ :=
+  obtain ⟨touches, addresses, projection, localOK, chain, pushBound, slot⟩ :=
     (supportedChip_groundingContracts row.chip chipMem).rowAlignedLocal data row rfl active
       checked byte program decode
   exact ⟨alignedOf _ touches, alignedFacts_of_touches _ _ (RowMemoryPermutation.of_alignsWith projection)
-    localOK chain pushBound slot⟩
+    addresses localOK chain pushBound slot⟩
 
 end SP1Clean.Soundness.NativeCore

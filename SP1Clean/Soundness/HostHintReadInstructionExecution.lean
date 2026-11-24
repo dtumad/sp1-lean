@@ -2,6 +2,7 @@ import SP1Clean.Soundness.InstructionWritePolicy
 import SP1Clean.Soundness.HostHintReadTrajectory
 import SP1Clean.Soundness.HostLocalCoreRom
 import SP1Clean.Soundness.CoreInstructionExecution
+import SP1Clean.Soundness.LocalCoreWordRanges
 
 /-! # Ordinary execution on the complete instruction and hint carrier
 
@@ -23,22 +24,6 @@ local instance instructionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p 
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-
-private theorem instruction_staticInputs
-    (witness : EnsembleWitness (LocalCore.ensemble (p := p) image source))
-    (constraints : witness.Constraints)
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
-    (program : ∀ table ∈ witness.tables, table.ChannelGuarantees programChannel.toRaw)
-    {row : DecodedInstructionRow p} (member : row ∈ LocalCore.instructionRows witness) :
-    DecodedRowStaticInputs row witness.data :=
-  ⟨mem_chip_of_mem_decodeInstructionTables member,
-    LocalCore.instructionRows_constraints witness constraints row member,
-    channelGuarantees_of_mem_decodeInstructionTables witness.data _ (LocalCore.instructionTables_aligned witness)
-      (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
-      (fun table tableMem => byte table (LocalCore.instructionTables_mem witness tableMem)) row member,
-    channelGuarantees_of_mem_decodeInstructionTables witness.data _ (LocalCore.instructionTables_aligned witness)
-      (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
-      (fun table tableMem => program table (LocalCore.instructionTables_mem witness tableMem)) row member⟩
 
 variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
@@ -66,7 +51,7 @@ private theorem instruction_inputs (valid : image.Valid)
     exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
       (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have program := LocalCore.program_guarantees_of_balance image source _ checked programBalance
-  have inputs := (instruction_staticInputs _ checked ordering.byte program.2 active.1).setData witness.data
+  have inputs := (LocalCore.instruction_staticInputs _ checked ordering.byte program.2 active.1).setData witness.data
   have committed := LocalCore.instructionRows_program_committed_of_balance valid _ checked programBalance active.1 active.2
   rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at committed active
   refine ⟨inputs, ?_⟩

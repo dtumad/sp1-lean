@@ -11,6 +11,13 @@ import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WritePhysicalCuts
+import SP1Clean.Export.HintSnapshotWalk
+import SP1Clean.Export.WriteBoundaryDemand
+import SP1Clean.Export.WritePhysicalRouting
+import SP1Clean.Proofs.Completeness.WriteDestination
+import SP1Clean.Proofs.Completeness.MixedMemoryPosts
+import SP1Clean.Proofs.Completeness.WriteDispatchReplay
+import SP1Clean.Proofs.Completeness.MixedMemorySyscall
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
@@ -206,6 +213,24 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.assembled_hint_word_bytes,
   ``SP1Clean.Export.WriteObservationAssembly.counted_packet_tables,
   ``SP1Clean.Export.WriteSourceRegistry.physical_cut_values,
+  ``SP1Clean.Export.WriteObservationAssembly.native_hint_walk,
+  ``SP1Clean.Export.WriteObservationAssembly.outgoing_queue_of_immutable_reads,
+  ``SP1Clean.WriteEffects.native_destination_groups,
+  ``SP1Clean.Export.WriteSourceRegistry.routable_physical_cuts,
+  ``SP1Clean.Export.WriteBoundaryBuild.build_sparse_covers,
+  ``SP1Clean.Export.WriteBoundaryBuild.compiled_sparse_read,
+  ``SP1Clean.Export.WriteBoundaryBuild.sparse_suppliers_of_admissibleExecution,
+  ``SP1Clean.TraceGen.admissibleExecution_untouched,
+  ``SP1Clean.TraceGen.ordinary_plan_values,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.canonical,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.hint_tables_memory,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.heldAt_of_posts,
+  ``SP1Clean.WriteEffects.native_dispatch_at,
+  ``SP1Clean.WriteEffects.native_dispatch_table,
+  ``SP1Clean.WriteEffects.native_dispatch_replay,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.posts_of_priors,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.syscall_pulls,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.syscall_posts,
   ``SP1Clean.TraceGen.admissibleExecution_hintSnapshot,
   ``SP1Clean.TraceGen.admissibleExecution_writePacket,
   ``SP1Clean.WriteBuffer.tables_cursor_closed,

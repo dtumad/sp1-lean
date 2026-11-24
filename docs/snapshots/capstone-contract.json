@@ -1373,6 +1373,27 @@
       "typeFingerprint": "1146737147"
     },
     {
+      "bodyFingerprint": "496466495",
+      "local": true,
+      "module": "ToClean.Air.TableSlot",
+      "name": "Air.Flat.TableSlot.appendRight",
+      "typeFingerprint": "3549676148"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.TableSlot",
+      "name": "Air.Flat.TableSlot.appendRight._proof_2",
+      "typeFingerprint": "1656387660"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.TableSlot",
+      "name": "Air.Flat.TableSlot.appendRight._proof_3",
+      "typeFingerprint": "3442961659"
+    },
+    {
       "bodyFingerprint": "4121323756",
       "local": true,
       "module": "ToClean.Air.TableSlot",
@@ -1415,6 +1436,20 @@
       "typeFingerprint": "2618491075"
     },
     {
+      "bodyFingerprint": "3735268851",
+      "local": true,
+      "module": "ToClean.Air.TableSlot",
+      "name": "Air.Flat.TableSlot.ofIndex",
+      "typeFingerprint": "3804968609"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.TableSlot",
+      "name": "Air.Flat.TableSlot.ofIndex._proof_1",
+      "typeFingerprint": "56441033"
+    },
+    {
       "bodyFingerprint": "3500612935",
       "local": true,
       "module": "ToClean.Air.TableSlot",
@@ -1427,6 +1462,13 @@
       "module": "ToClean.Air.TableSlot",
       "name": "Air.Flat.TableSlot.table._proof_1",
       "typeFingerprint": "2422794802"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "ToClean.Air.TableSlot",
+      "name": "Air.Flat.TableSlot.table_component",
+      "typeFingerprint": "4176141862"
     },
     {
       "bodyFingerprint": null,
@@ -3513,6 +3555,13 @@
       "module": "Init.Prelude",
       "name": "Fin.val",
       "typeFingerprint": "1293027417"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Data.Fin.Basic",
+      "name": "Fin.val_lt_of_le",
+      "typeFingerprint": "3416372362"
     },
     {
       "bodyFingerprint": null,
@@ -18780,6 +18829,13 @@
       "module": "Init.Data.List.Basic",
       "name": "List.mem_append_right",
       "typeFingerprint": "466931877"
+    },
+    {
+      "bodyFingerprint": "1484693294",
+      "local": false,
+      "module": "Init.Data.List.Sort.Basic",
+      "name": "List.mergeSort",
+      "typeFingerprint": "2806307468"
     },
     {
       "bodyFingerprint": null,
@@ -36639,6 +36695,69 @@
       "typeFingerprint": "2204152289"
     },
     {
+      "bodyFingerprint": "1338152700",
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.boundaryTables",
+      "typeFingerprint": "3947581425"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.boundaryTables._proof_1",
+      "typeFingerprint": "303292683"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.boundaryTables._proof_2",
+      "typeFingerprint": "2319383599"
+    },
+    {
+      "bodyFingerprint": "4075050296",
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.build",
+      "typeFingerprint": "3301744008"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.build._proof_1",
+      "typeFingerprint": "1013250454"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.build_sparse_covers",
+      "typeFingerprint": "3998897520"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.compiled_sparse_read",
+      "typeFingerprint": "2209224587"
+    },
+    {
+      "bodyFingerprint": "3566762598",
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.demandKeys",
+      "typeFingerprint": "3079711597"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.sparse_suppliers_of_admissibleExecution",
+      "typeFingerprint": "2789174250"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Export.WriteObservationSources",
@@ -36688,6 +36807,20 @@
       "typeFingerprint": "3056913528"
     },
     {
+      "bodyFingerprint": "2506961737",
+      "local": true,
+      "module": "SP1Clean.Export.WriteObservationAssembly",
+      "name": "SP1Clean.Export.WriteObservationAssembly.native",
+      "typeFingerprint": "2995287881"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.HintSnapshotWalk",
+      "name": "SP1Clean.Export.WriteObservationAssembly.native_hint_walk",
+      "typeFingerprint": "1984452655"
+    },
+    {
       "bodyFingerprint": "4114518098",
       "local": true,
       "module": "SP1Clean.Export.WriteObservationProjection",
@@ -36700,6 +36833,13 @@
       "module": "SP1Clean.Export.WriteObservationProjection",
       "name": "SP1Clean.Export.WriteObservationAssembly.observed._proof_1",
       "typeFingerprint": "569082757"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.HintSnapshotWalk",
+      "name": "SP1Clean.Export.WriteObservationAssembly.outgoing_queue_of_immutable_reads",
+      "typeFingerprint": "2933987565"
     },
     {
       "bodyFingerprint": "1129049710",
@@ -36728,6 +36868,27 @@
       "module": "SP1Clean.Export.WriteObservationAssembly",
       "name": "SP1Clean.Export.WriteObservationAssembly.queue_slots",
       "typeFingerprint": "2018643375"
+    },
+    {
+      "bodyFingerprint": "1584612449",
+      "local": true,
+      "module": "SP1Clean.Export.WriteObservationAssembly",
+      "name": "SP1Clean.Export.WriteObservationAssembly.slot",
+      "typeFingerprint": "3324988031"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteObservationAssembly",
+      "name": "SP1Clean.Export.WriteObservationAssembly.slot._proof_1",
+      "typeFingerprint": "1221005662"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteObservationAssembly",
+      "name": "SP1Clean.Export.WriteObservationAssembly.slot._proof_2",
+      "typeFingerprint": "1738886394"
     },
     {
       "bodyFingerprint": null,
@@ -36959,6 +37120,13 @@
       "module": "SP1Clean.Export.WriteSourceLedger",
       "name": "SP1Clean.Export.WriteSourceRegistry.rawSource",
       "typeFingerprint": "2094191056"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WritePhysicalRouting",
+      "name": "SP1Clean.Export.WriteSourceRegistry.routable_physical_cuts",
+      "typeFingerprint": "3496770532"
     },
     {
       "bodyFingerprint": null,
@@ -43156,6 +43324,20 @@
       "typeFingerprint": "3265150928"
     },
     {
+      "bodyFingerprint": "521346640",
+      "local": true,
+      "module": "SP1Clean.Proofs.Operations.HintQueueSnapshot",
+      "name": "SP1Clean.HostHintSnapshot.Seal.physicalState",
+      "typeFingerprint": "4069420223"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Operations.HintQueueSnapshot",
+      "name": "SP1Clean.HostHintSnapshot.Seal.physicalState._proof_1",
+      "typeFingerprint": "888534551"
+    },
+    {
       "bodyFingerprint": "3285702160",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.HintSnapshotTables",
@@ -43735,6 +43917,27 @@
       "module": "SP1Clean.Native.Operations.HintQueueSnapshot",
       "name": "SP1Clean.HostHintSnapshot.main",
       "typeFingerprint": "84444933"
+    },
+    {
+      "bodyFingerprint": "2179893553",
+      "local": true,
+      "module": "SP1Clean.Soundness.HintSnapshotOrder",
+      "name": "SP1Clean.HostHintSnapshot.physicalEdge",
+      "typeFingerprint": "2241285050"
+    },
+    {
+      "bodyFingerprint": "897378930",
+      "local": true,
+      "module": "SP1Clean.Soundness.HintSnapshotOrder",
+      "name": "SP1Clean.HostHintSnapshot.physicalInput",
+      "typeFingerprint": "2243077815"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HintSnapshotOrder",
+      "name": "SP1Clean.HostHintSnapshot.physicalInput._proof_2",
+      "typeFingerprint": "387992308"
     },
     {
       "bodyFingerprint": "572840871",
@@ -45065,6 +45268,13 @@
       "module": "SP1Clean.Native.Operations.InitialMemoryRead",
       "name": "SP1Clean.InitialMemoryRead.main._proof_5",
       "typeFingerprint": "3687058850"
+    },
+    {
+      "bodyFingerprint": "2312786626",
+      "local": true,
+      "module": "SP1Clean.Native.Operations.InitialMemoryRead",
+      "name": "SP1Clean.InitialMemoryRead.populate?",
+      "typeFingerprint": "497770982"
     },
     {
       "bodyFingerprint": null,
@@ -53215,6 +53425,13 @@
       "typeFingerprint": "1533213835"
     },
     {
+      "bodyFingerprint": "2435373773",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.EventExecution",
+      "name": "SP1Clean.Machine.ExecutionEvent.ctorIdx",
+      "typeFingerprint": "1991079423"
+    },
+    {
       "bodyFingerprint": "1854325335",
       "local": true,
       "module": "SP1Clean.Semantics.Execution.EventExecution",
@@ -56386,6 +56603,13 @@
       "typeFingerprint": "1111514577"
     },
     {
+      "bodyFingerprint": "3200614369",
+      "local": true,
+      "module": "SP1Clean.Native.Operations.OrderedBoundary",
+      "name": "SP1Clean.OrderedBoundary.populate",
+      "typeFingerprint": "904149750"
+    },
+    {
       "bodyFingerprint": "3894782848",
       "local": true,
       "module": "SP1Clean.Native.Operations.OrderedBoundaryEnd",
@@ -56468,6 +56692,13 @@
       "module": "SP1Clean.Native.Operations.OrderedBoundaryEnd",
       "name": "SP1Clean.OrderedBoundaryEnd.main",
       "typeFingerprint": "1120545618"
+    },
+    {
+      "bodyFingerprint": "1015113044",
+      "local": true,
+      "module": "SP1Clean.Native.Operations.OrderedBoundaryEnd",
+      "name": "SP1Clean.OrderedBoundaryEnd.populate",
+      "typeFingerprint": "1123653847"
     },
     {
       "bodyFingerprint": "4030339470",
@@ -56762,6 +56993,34 @@
       "module": "SP1Clean.Proofs.Chips.OrderedMemoryProvider",
       "name": "SP1Clean.OrderedMemoryProvider.main",
       "typeFingerprint": "3405198777"
+    },
+    {
+      "bodyFingerprint": "3888435876",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.OrderedMemoryProvider",
+      "name": "SP1Clean.OrderedMemoryProvider.populate",
+      "typeFingerprint": "1995255267"
+    },
+    {
+      "bodyFingerprint": "840032524",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.OrderedSnapshotProvider",
+      "name": "SP1Clean.OrderedSnapshotProvider.Inputs",
+      "typeFingerprint": "2306656481"
+    },
+    {
+      "bodyFingerprint": "4126988396",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.OrderedSnapshotProvider",
+      "name": "SP1Clean.OrderedSnapshotProvider.populate",
+      "typeFingerprint": "1995255267"
+    },
+    {
+      "bodyFingerprint": "3811442143",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.OrderedSnapshotProvider",
+      "name": "SP1Clean.OrderedSnapshotProvider.populateRam?",
+      "typeFingerprint": "3949459813"
     },
     {
       "bodyFingerprint": null,
@@ -65885,6 +66144,13 @@
       "typeFingerprint": "3931117990"
     },
     {
+      "bodyFingerprint": "717348836",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.AccessPlan",
+      "name": "SP1Clean.Semantics.InstructionAccessPlan.RunsFrom",
+      "typeFingerprint": "989366227"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Semantics.Transition.AccessPlan",
@@ -65897,6 +66163,34 @@
       "module": "SP1Clean.Semantics.Transition.AccessPlan",
       "name": "SP1Clean.Semantics.InstructionAccessPlan.WellFormed.mk",
       "typeFingerprint": "1263270136"
+    },
+    {
+      "bodyFingerprint": "2635278801",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.AccessPlan",
+      "name": "SP1Clean.Semantics.InstructionAccessPlan.applyTouch?",
+      "typeFingerprint": "1910565117"
+    },
+    {
+      "bodyFingerprint": "4066429227",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.AccessPlan",
+      "name": "SP1Clean.Semantics.InstructionAccessPlan.run?",
+      "typeFingerprint": "2259284155"
+    },
+    {
+      "bodyFingerprint": "2068422181",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.AccessPlan",
+      "name": "SP1Clean.Semantics.InstructionAccessPlan.run?._f",
+      "typeFingerprint": "4084626458"
+    },
+    {
+      "bodyFingerprint": "3783669702",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.AccessPlan",
+      "name": "SP1Clean.Semantics.InstructionAccessPlan.run?.match_1",
+      "typeFingerprint": "2408063243"
     },
     {
       "bodyFingerprint": "877097884",
@@ -66086,6 +66380,13 @@
       "module": "SP1Clean.Semantics.ISA.JumpLink",
       "name": "SP1Clean.Semantics.JumpLinkFits",
       "typeFingerprint": "431162151"
+    },
+    {
+      "bodyFingerprint": "3645832523",
+      "local": true,
+      "module": "SP1Clean.Semantics.Transition.AccessPlan",
+      "name": "SP1Clean.Semantics.LocationValues",
+      "typeFingerprint": "3931117990"
     },
     {
       "bodyFingerprint": null,
@@ -86985,14 +87286,14 @@
     {
       "bodyFingerprint": "4205177140",
       "local": true,
-      "module": "SP1Clean.Semantics.Transition.InstructionPlan",
+      "module": "SP1Clean.Semantics.Sail.ExecutionFootprint",
       "name": "SP1Clean.Semantics.regidxBits",
       "typeFingerprint": "3520754728"
     },
     {
       "bodyFingerprint": "1262225287",
       "local": true,
-      "module": "SP1Clean.Semantics.Transition.InstructionPlan",
+      "module": "SP1Clean.Semantics.Sail.ExecutionFootprint",
       "name": "SP1Clean.Semantics.regidxBits.match_1",
       "typeFingerprint": "2198934784"
     },
@@ -89510,6 +89811,13 @@
       "typeFingerprint": "3555174148"
     },
     {
+      "bodyFingerprint": "743765829",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.SnapshotRamProvider",
+      "name": "SP1Clean.SnapshotRamProvider.populate?",
+      "typeFingerprint": "497770982"
+    },
+    {
       "bodyFingerprint": "2107195814",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.SnapshotRegisterProvider",
@@ -89620,6 +89928,13 @@
       "module": "SP1Clean.Proofs.Chips.SnapshotRegisterProvider",
       "name": "SP1Clean.SnapshotRegisterProvider.message",
       "typeFingerprint": "4269377134"
+    },
+    {
+      "bodyFingerprint": "2903380468",
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.SnapshotRegisterProvider",
+      "name": "SP1Clean.SnapshotRegisterProvider.populate",
+      "typeFingerprint": "2758408446"
     },
     {
       "bodyFingerprint": "594628543",
@@ -91943,7 +92258,7 @@
       "local": true,
       "module": "SP1Clean.Soundness.CoreTouches",
       "name": "SP1Clean.Soundness.NativeCore.AlignedFacts.mk",
-      "typeFingerprint": "845358572"
+      "typeFingerprint": "3353590895"
     },
     {
       "bodyFingerprint": null,
@@ -94079,6 +94394,13 @@
       "module": "SP1Clean.Soundness.TouchChains",
       "name": "SP1Clean.Soundness.TimedGrounding.ChainOK.mk",
       "typeFingerprint": "4046603690"
+    },
+    {
+      "bodyFingerprint": "1503585306",
+      "local": true,
+      "module": "SP1Clean.Soundness.AlignedCarrier",
+      "name": "SP1Clean.Soundness.TimedGrounding.PreservesAddresses",
+      "typeFingerprint": "1592876707"
     },
     {
       "bodyFingerprint": "1332046320",
@@ -103659,6 +103981,55 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "name": "SP1Clean.TraceGen.MemRecordEntry",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4119730839",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "name": "SP1Clean.TraceGen.MemRecordEntry.addr",
+      "typeFingerprint": "3149550836"
+    },
+    {
+      "bodyFingerprint": "2848587297",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "name": "SP1Clean.TraceGen.MemRecordEntry.clk",
+      "typeFingerprint": "3149550836"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "name": "SP1Clean.TraceGen.MemRecordEntry.mk",
+      "typeFingerprint": "2547871658"
+    },
+    {
+      "bodyFingerprint": "3646810701",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "name": "SP1Clean.TraceGen.MemRecordEntry.toMemoryMsg",
+      "typeFingerprint": "4067831040"
+    },
+    {
+      "bodyFingerprint": "427686223",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "name": "SP1Clean.TraceGen.MemRecordEntry.value",
+      "typeFingerprint": "3149550836"
+    },
+    {
+      "bodyFingerprint": "2771839643",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryAddressesCanonical",
+      "typeFingerprint": "4079733576"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Semantics.Transition.AccessSchedule",
       "name": "SP1Clean.TraceGen.MemoryBumpEvent",
       "typeFingerprint": "3931117990"
@@ -103916,11 +104287,25 @@
       "typeFingerprint": "3931117990"
     },
     {
+      "bodyFingerprint": "1271045434",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.CanonicalAddress",
+      "typeFingerprint": "1212225676"
+    },
+    {
       "bodyFingerprint": "199974127",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
       "name": "SP1Clean.TraceGen.MemoryHistoryAccess.Continues",
       "typeFingerprint": "373697932"
+    },
+    {
+      "bodyFingerprint": "1175271895",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.busAddress",
+      "typeFingerprint": "1771460920"
     },
     {
       "bodyFingerprint": "2657431603",
@@ -103986,11 +104371,39 @@
       "typeFingerprint": "2018658342"
     },
     {
+      "bodyFingerprint": "2242029205",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.ofAccessSchedule",
+      "typeFingerprint": "2457144310"
+    },
+    {
+      "bodyFingerprint": "1297877502",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.ofMemoryBump",
+      "typeFingerprint": "403722850"
+    },
+    {
       "bodyFingerprint": "2599323661",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
       "name": "SP1Clean.TraceGen.MemoryHistoryAccess.ofRecords",
       "typeFingerprint": "4166865285"
+    },
+    {
+      "bodyFingerprint": "933582647",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.ofScheduledAccess",
+      "typeFingerprint": "2042723305"
+    },
+    {
+      "bodyFingerprint": "2291089076",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.ofStamped",
+      "typeFingerprint": "1997607996"
     },
     {
       "bodyFingerprint": "1021732894",
@@ -104014,11 +104427,25 @@
       "typeFingerprint": "3753147219"
     },
     {
+      "bodyFingerprint": "974743421",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.pulledEntry",
+      "typeFingerprint": "2767828669"
+    },
+    {
       "bodyFingerprint": "497939286",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
       "name": "SP1Clean.TraceGen.MemoryHistoryAccess.pushed",
       "typeFingerprint": "3753147219"
+    },
+    {
+      "bodyFingerprint": "481174206",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryHistoryAccess.pushedEntry",
+      "typeFingerprint": "2767828669"
     },
     {
       "bodyFingerprint": null,
@@ -104049,6 +104476,13 @@
       "typeFingerprint": "2661636201"
     },
     {
+      "bodyFingerprint": "1472585990",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.finalEntry",
+      "typeFingerprint": "664804203"
+    },
+    {
       "bodyFingerprint": "2786581870",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
@@ -104068,6 +104502,13 @@
       "module": "SP1Clean.Proofs.Completeness.MemoryVersionHistory",
       "name": "SP1Clean.TraceGen.MemoryLocationHistory.heldAt_interval",
       "typeFingerprint": "421068853"
+    },
+    {
+      "bodyFingerprint": "1173733166",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryLocationHistory.initialEntry",
+      "typeFingerprint": "664804203"
     },
     {
       "bodyFingerprint": "1295279699",
@@ -104243,6 +104684,118 @@
       "module": "SP1Clean.Proofs.Completeness.MixedSyscallRows",
       "name": "SP1Clean.TraceGen.MixedCompiledRow.syscallInput?.match_1",
       "typeFingerprint": "625409651"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.canonical",
+      "typeFingerprint": "4025949130"
+    },
+    {
+      "bodyFingerprint": "1597995105",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.cpu",
+      "typeFingerprint": "143363859"
+    },
+    {
+      "bodyFingerprint": "2792772233",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.cpu.match_1",
+      "typeFingerprint": "625409651"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.heldAt_of_posts",
+      "typeFingerprint": "2342852905"
+    },
+    {
+      "bodyFingerprint": "572007185",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.hint",
+      "typeFingerprint": "1192743638"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.hint._proof_1",
+      "typeFingerprint": "2271130875"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.hint_tables_memory",
+      "typeFingerprint": "446822626"
+    },
+    {
+      "bodyFingerprint": "4096226394",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.instruction",
+      "typeFingerprint": "143363859"
+    },
+    {
+      "bodyFingerprint": "2792772233",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.instruction.match_1",
+      "typeFingerprint": "625409651"
+    },
+    {
+      "bodyFingerprint": "963186469",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.post",
+      "typeFingerprint": "2092743971"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.posts_of_priors",
+      "typeFingerprint": "2825451269"
+    },
+    {
+      "bodyFingerprint": "1624241736",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.prior",
+      "typeFingerprint": "2092743971"
+    },
+    {
+      "bodyFingerprint": "2119101159",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.stream",
+      "typeFingerprint": "4006721736"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.stream._proof_2",
+      "typeFingerprint": "905178260"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemorySyscall",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.syscall_posts",
+      "typeFingerprint": "739572424"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemorySyscall",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.syscall_pulls",
+      "typeFingerprint": "3435506955"
     },
     {
       "bodyFingerprint": "2360640148",
@@ -104840,6 +105393,13 @@
       "typeFingerprint": "411759966"
     },
     {
+      "bodyFingerprint": "4194334525",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
+      "name": "SP1Clean.TraceGen.WriteObservations.packetAt?",
+      "typeFingerprint": "3041314318"
+    },
+    {
       "bodyFingerprint": "2038291160",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
@@ -104847,7 +105407,7 @@
       "typeFingerprint": "2349893012"
     },
     {
-      "bodyFingerprint": "3137614038",
+      "bodyFingerprint": "3446419632",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
       "name": "SP1Clean.TraceGen.WriteObservations.packets?._f",
@@ -105041,6 +105601,13 @@
       "module": "SP1Clean.Proofs.Completeness.MixedStateSchedule",
       "name": "SP1Clean.TraceGen.admissibleExecution_syscallPushedState",
       "typeFingerprint": "1175175100"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.UntouchedMemory",
+      "name": "SP1Clean.TraceGen.admissibleExecution_untouched",
+      "typeFingerprint": "499348335"
     },
     {
       "bodyFingerprint": null,
@@ -105393,6 +105960,41 @@
       "typeFingerprint": "1785408292"
     },
     {
+      "bodyFingerprint": "898476449",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.memoryFinalEntries",
+      "typeFingerprint": "279377908"
+    },
+    {
+      "bodyFingerprint": "3018778849",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.memoryHistoryAt",
+      "typeFingerprint": "2789633375"
+    },
+    {
+      "bodyFingerprint": "3612313698",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.memoryInitialEntries",
+      "typeFingerprint": "279377908"
+    },
+    {
+      "bodyFingerprint": "4095832693",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.memoryLocationHistories",
+      "typeFingerprint": "462740348"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.memoryLocationHistories._proof_1",
+      "typeFingerprint": "3298798168"
+    },
+    {
       "bodyFingerprint": "3580630720",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedAccessFrontier",
@@ -105454,6 +106056,13 @@
       "module": "SP1Clean.Proofs.Completeness.ExecutionObservationTerminal",
       "name": "SP1Clean.TraceGen.observationTerminalTables",
       "typeFingerprint": "3277832787"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.UntouchedMemory",
+      "name": "SP1Clean.TraceGen.ordinary_plan_values",
+      "typeFingerprint": "2729508237"
     },
     {
       "bodyFingerprint": "2394902087",
@@ -105790,6 +106399,13 @@
       "module": "SP1Clean.Proofs.Completeness.MixedSyscallInstruction",
       "name": "SP1Clean.TraceGen.syscallRegisterTouch._proof_1",
       "typeFingerprint": "3472188968"
+    },
+    {
+      "bodyFingerprint": "1150243108",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.touchedMemoryLocations",
+      "typeFingerprint": "3551668231"
     },
     {
       "bodyFingerprint": "86549615",
@@ -110230,6 +110846,20 @@
       "typeFingerprint": "3103365241"
     },
     {
+      "bodyFingerprint": "1207714013",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.advanceWriteClock",
+      "typeFingerprint": "1150615739"
+    },
+    {
+      "bodyFingerprint": "2864973472",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.advanceWriteClock.match_1",
+      "typeFingerprint": "2031499241"
+    },
+    {
       "bodyFingerprint": "584127181",
       "local": true,
       "module": "SP1Clean.Native.Operations.WriteBlockSource",
@@ -110517,6 +111147,20 @@
       "typeFingerprint": "1108273492"
     },
     {
+      "bodyFingerprint": "1997790224",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.countDelta",
+      "typeFingerprint": "1830338587"
+    },
+    {
+      "bodyFingerprint": "4015017808",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.countDelta.match_1",
+      "typeFingerprint": "3911586431"
+    },
+    {
       "bodyFingerprint": "3117310517",
       "local": true,
       "module": "SP1Clean.Native.Operations.WriteCursorBoundary",
@@ -110657,6 +111301,97 @@
       "typeFingerprint": "1697962674"
     },
     {
+      "bodyFingerprint": "1882017734",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationBytes",
+      "typeFingerprint": "803368984"
+    },
+    {
+      "bodyFingerprint": "3292004266",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationKey",
+      "typeFingerprint": "2600343748"
+    },
+    {
+      "bodyFingerprint": "3416311542",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationKey.match_1",
+      "typeFingerprint": "249448198"
+    },
+    {
+      "bodyFingerprint": "269614386",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationOffset",
+      "typeFingerprint": "678989460"
+    },
+    {
+      "bodyFingerprint": "1498180942",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationOffset._sparseCasesOn_1",
+      "typeFingerprint": "1622874181"
+    },
+    {
+      "bodyFingerprint": "107021071",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationOffset.match_1",
+      "typeFingerprint": "3230649380"
+    },
+    {
+      "bodyFingerprint": "2105861930",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationOwner",
+      "typeFingerprint": "1379833927"
+    },
+    {
+      "bodyFingerprint": "671725295",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationOwner._sparseCasesOn_1",
+      "typeFingerprint": "11082502"
+    },
+    {
+      "bodyFingerprint": "2408409016",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.destinationOwner.match_1",
+      "typeFingerprint": "3827927100"
+    },
+    {
+      "bodyFingerprint": "3714786400",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchAt?",
+      "typeFingerprint": "431689496"
+    },
+    {
+      "bodyFingerprint": "3291498109",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchAt?.match_1",
+      "typeFingerprint": "1609569865"
+    },
+    {
+      "bodyFingerprint": "1902067408",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchAt?.match_3",
+      "typeFingerprint": "3642574750"
+    },
+    {
+      "bodyFingerprint": "3058699621",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchAt?.match_5",
+      "typeFingerprint": "2171198484"
+    },
+    {
       "bodyFingerprint": "2457799926",
       "local": true,
       "module": "SP1Clean.Native.Operations.WriteDispatch",
@@ -110748,6 +111483,13 @@
       "typeFingerprint": "189951937"
     },
     {
+      "bodyFingerprint": "3687013421",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchInputs",
+      "typeFingerprint": "2131119151"
+    },
+    {
       "bodyFingerprint": "3731280915",
       "local": true,
       "module": "SP1Clean.Native.Operations.WriteDispatch",
@@ -110802,6 +111544,48 @@
       "module": "SP1Clean.Native.Operations.WriteDispatch",
       "name": "SP1Clean.WriteEffects.dispatchMain._proof_7",
       "typeFingerprint": "4259527601"
+    },
+    {
+      "bodyFingerprint": "4073063146",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.dispatchRow",
+      "typeFingerprint": "1898959319"
+    },
+    {
+      "bodyFingerprint": "1156917130",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchTable",
+      "typeFingerprint": "624855007"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.dispatchTable._proof_1",
+      "typeFingerprint": "713970546"
+    },
+    {
+      "bodyFingerprint": "91194414",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "SP1Clean.WriteEffects.dispatchTape?",
+      "typeFingerprint": "2751898751"
+    },
+    {
+      "bodyFingerprint": "975547733",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "SP1Clean.WriteEffects.dispatchTape?._f",
+      "typeFingerprint": "1274379334"
+    },
+    {
+      "bodyFingerprint": "3710049639",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "SP1Clean.WriteEffects.dispatchTape?.match_1",
+      "typeFingerprint": "1773278879"
     },
     {
       "bodyFingerprint": "1382431539",
@@ -111291,7 +112075,7 @@
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteWindowTape",
       "name": "SP1Clean.WriteEffects.groups_of_admissibleExecution",
-      "typeFingerprint": "2955977677"
+      "typeFingerprint": "791935295"
     },
     {
       "bodyFingerprint": "1557717503",
@@ -112141,6 +112925,34 @@
       "typeFingerprint": "3334279894"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDestination",
+      "name": "SP1Clean.WriteEffects.native_destination_groups",
+      "typeFingerprint": "4064893057"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.native_dispatch_at",
+      "typeFingerprint": "3354985032"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "SP1Clean.WriteEffects.native_dispatch_replay",
+      "typeFingerprint": "183315064"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "SP1Clean.WriteEffects.native_dispatch_table",
+      "typeFingerprint": "1895853133"
+    },
+    {
       "bodyFingerprint": "4269593686",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.WriteEffects",
@@ -112148,11 +112960,11 @@
       "typeFingerprint": "1733445497"
     },
     {
-      "bodyFingerprint": "898327563",
+      "bodyFingerprint": "3814671359",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteWindowTape",
       "name": "SP1Clean.WriteEffects.packetGroups",
-      "typeFingerprint": "1871120819"
+      "typeFingerprint": "3984969415"
     },
     {
       "bodyFingerprint": "1073585262",
@@ -112195,6 +113007,27 @@
       "module": "SP1Clean.FormalModel.Contracts.WritePlacement",
       "name": "SP1Clean.WriteEffects.positionChannel",
       "typeFingerprint": "4096902366"
+    },
+    {
+      "bodyFingerprint": "1390149317",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.previousCount",
+      "typeFingerprint": "678989460"
+    },
+    {
+      "bodyFingerprint": "4284534523",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.previousCount._sparseCasesOn_1",
+      "typeFingerprint": "4033899199"
+    },
+    {
+      "bodyFingerprint": "1283996952",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.previousCount.match_1",
+      "typeFingerprint": "1844198218"
     },
     {
       "bodyFingerprint": "2709380158",
@@ -112335,6 +113168,20 @@
       "module": "SP1Clean.Native.Operations.WriteEffects",
       "name": "SP1Clean.WriteEffects.requestMain",
       "typeFingerprint": "145800973"
+    },
+    {
+      "bodyFingerprint": "2390588946",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.routeFlags",
+      "typeFingerprint": "1039774514"
+    },
+    {
+      "bodyFingerprint": "1042248128",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "SP1Clean.WriteEffects.routeFlags.match_1",
+      "typeFingerprint": "85446925"
     },
     {
       "bodyFingerprint": "356779552",
@@ -114374,6 +115221,328 @@
       "typeFingerprint": "2330190150"
     },
     {
+      "bodyFingerprint": "2044817848",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.InitialPayload",
+      "typeFingerprint": "1659643574"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Rows",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": "2398294789",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Rows.initial",
+      "typeFingerprint": "3430271704"
+    },
+    {
+      "bodyFingerprint": "3731391480",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Rows.key",
+      "typeFingerprint": "189707904"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Rows.mk",
+      "typeFingerprint": "764993110"
+    },
+    {
+      "bodyFingerprint": "259219903",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Rows.ram",
+      "typeFingerprint": "597609862"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Terminal",
+      "typeFingerprint": "2330190150"
+    },
+    {
+      "bodyFingerprint": "292186719",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Terminal.key",
+      "typeFingerprint": "1771325985"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Terminal.mk",
+      "typeFingerprint": "2134988997"
+    },
+    {
+      "bodyFingerprint": "3265466454",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Terminal.ram",
+      "typeFingerprint": "4166208190"
+    },
+    {
+      "bodyFingerprint": "984985237",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.Terminal.record",
+      "typeFingerprint": "1046800770"
+    },
+    {
+      "bodyFingerprint": "1650644770",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.build?",
+      "typeFingerprint": "3628026491"
+    },
+    {
+      "bodyFingerprint": "1500249254",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.buildAll",
+      "typeFingerprint": "2965893410"
+    },
+    {
+      "bodyFingerprint": "1073585262",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.buildAll.match_1",
+      "typeFingerprint": "1595908424"
+    },
+    {
+      "bodyFingerprint": "1591517745",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseOrder",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.cursor",
+      "typeFingerprint": "1967140188"
+    },
+    {
+      "bodyFingerprint": "1190918663",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.finalInputs",
+      "typeFingerprint": "3303712367"
+    },
+    {
+      "bodyFingerprint": "3436310732",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.finalTable",
+      "typeFingerprint": "264561572"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.finalTable._proof_1",
+      "typeFingerprint": "3460922713"
+    },
+    {
+      "bodyFingerprint": "1140437727",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.initialInput",
+      "typeFingerprint": "3476245174"
+    },
+    {
+      "bodyFingerprint": "2561094069",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.initialInput.match_1",
+      "typeFingerprint": "2561012691"
+    },
+    {
+      "bodyFingerprint": "2466251670",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.initialTable",
+      "typeFingerprint": "3172947679"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.initialTable._proof_1",
+      "typeFingerprint": "3004702813"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.initialTable._proof_2",
+      "typeFingerprint": "4135368548"
+    },
+    {
+      "bodyFingerprint": "2896084423",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.initialTable.match_1",
+      "typeFingerprint": "2089582448"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.instFactLtNatHPowOfNat_sP1Clean",
+      "typeFingerprint": "2252444825"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.instFactLtNatHPowOfNat_sP1Clean_1",
+      "typeFingerprint": "2252444825"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseMemory",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.instFactLtNatHPowOfNat_sP1Clean_2",
+      "typeFingerprint": "2252444825"
+    },
+    {
+      "bodyFingerprint": "2691234653",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseInitializers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.instProvableTypeInitialPayload",
+      "typeFingerprint": "3695159306"
+    },
+    {
+      "bodyFingerprint": "2449881710",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.keys",
+      "typeFingerprint": "1661762796"
+    },
+    {
+      "bodyFingerprint": "1336977203",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseOrder",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.lastCursor",
+      "typeFingerprint": "1214005480"
+    },
+    {
+      "bodyFingerprint": "1487094460",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseOrder",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.lastCursor._f",
+      "typeFingerprint": "3297466771"
+    },
+    {
+      "bodyFingerprint": "2925397648",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseOrder",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.lastCursor.match_1",
+      "typeFingerprint": "3069563810"
+    },
+    {
+      "bodyFingerprint": "2682106981",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.orderedInputs",
+      "typeFingerprint": "3768580419"
+    },
+    {
+      "bodyFingerprint": "1764141659",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.orderedInputs._f",
+      "typeFingerprint": "1451409321"
+    },
+    {
+      "bodyFingerprint": "2925397648",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.orderedInputs.match_1",
+      "typeFingerprint": "3069563810"
+    },
+    {
+      "bodyFingerprint": "153932094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.source",
+      "typeFingerprint": "370822832"
+    },
+    {
+      "bodyFingerprint": "3654351950",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.sourceInput?",
+      "typeFingerprint": "1418750199"
+    },
+    {
+      "bodyFingerprint": "2486953239",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.sourceInput?.match_1",
+      "typeFingerprint": "1517933355"
+    },
+    {
+      "bodyFingerprint": "4196341979",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.sourceRecord",
+      "typeFingerprint": "1147021996"
+    },
+    {
+      "bodyFingerprint": "1449838653",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminalOfEntry",
+      "typeFingerprint": "1537762914"
+    },
+    {
+      "bodyFingerprint": "245449787",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminalOfRows",
+      "typeFingerprint": "2605698475"
+    },
+    {
+      "bodyFingerprint": "271445103",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseOrder",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminalTable",
+      "typeFingerprint": "2323085410"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseOrder",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminalTable._proof_1",
+      "typeFingerprint": "3385865536"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminal_count_fit",
+      "typeFingerprint": "386098767"
+    },
+    {
+      "bodyFingerprint": "3277567074",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminals",
+      "typeFingerprint": "4101277464"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseFinalizers",
+      "name": "SP1Clean.WriteProbe.SparseBoundary.terminals_fit",
+      "typeFingerprint": "768193389"
+    },
+    {
       "bodyFingerprint": "3478639438",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.WriteProbe",
@@ -115648,6 +116817,13 @@
       "typeFingerprint": "853391086"
     },
     {
+      "bodyFingerprint": "1343071951",
+      "local": false,
+      "module": "Clean.Circuit.Lookup",
+      "name": "StaticTable.Contains",
+      "typeFingerprint": "393951254"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "ToClean.Air.StaticProvider",
@@ -116122,6 +117298,27 @@
       "module": "Std.Data.ExtHashMap.Basic",
       "name": "Std.ExtHashMap.instMembershipOfEquivBEqOfLawfulHashable",
       "typeFingerprint": "4230790345"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Std.Data.HashSet.Basic",
+      "name": "Std.HashSet",
+      "typeFingerprint": "3893219693"
+    },
+    {
+      "bodyFingerprint": "3704086447",
+      "local": false,
+      "module": "Std.Data.HashSet.Basic",
+      "name": "Std.HashSet.contains",
+      "typeFingerprint": "17632201"
+    },
+    {
+      "bodyFingerprint": "2781508395",
+      "local": false,
+      "module": "Std.Data.HashSet.Basic",
+      "name": "Std.HashSet.ofList",
+      "typeFingerprint": "2264881205"
     },
     {
       "bodyFingerprint": null,
@@ -117484,6 +118681,20 @@
     {
       "bodyFingerprint": "4239447094",
       "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryBuild",
+      "name": "_private.SP1Clean.Export.WriteBoundaryBuild.0.SP1Clean.Export.WriteBoundaryBuild.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "_private.SP1Clean.Export.WriteBoundaryDemand.0.SP1Clean.Export.WriteBoundaryBuild.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
       "module": "SP1Clean.Export.WriteHostSourceGrounding",
       "name": "_private.SP1Clean.Export.WriteHostSourceGrounding.0.SP1Clean.Export.WriteSourceRegistry.Fp",
       "typeFingerprint": "3931117990"
@@ -117563,6 +118774,13 @@
       "local": true,
       "module": "SP1Clean.Export.WritePhysicalCuts",
       "name": "_private.SP1Clean.Export.WritePhysicalCuts.0.SP1Clean.Export.WriteSourceRegistry.Pair",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WritePhysicalRouting",
+      "name": "_private.SP1Clean.Export.WritePhysicalRouting.0.SP1Clean.Export.WriteSourceRegistry.Fp",
       "typeFingerprint": "3931117990"
     },
     {
@@ -118952,6 +120170,20 @@
       "typeFingerprint": "14342587"
     },
     {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "_private.SP1Clean.Proofs.Completeness.MixedMemoryHistory.0.SP1Clean.TraceGen.MixedMemoryHistory.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryPosts",
+      "name": "_private.SP1Clean.Proofs.Completeness.MixedMemoryPosts.0.SP1Clean.TraceGen.MixedMemoryHistory.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
       "bodyFingerprint": "2786964794",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedSyscallInstruction",
@@ -118994,6 +120226,55 @@
       "typeFingerprint": "3075384084"
     },
     {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchReplay.0.SP1Clean.WriteEffects.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "1718768692",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchReplay.0.SP1Clean.WriteEffects.emit",
+      "typeFingerprint": "2675836396"
+    },
+    {
+      "bodyFingerprint": "2818882634",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchReplay.0.SP1Clean.WriteEffects.emit._sparseCasesOn_1",
+      "typeFingerprint": "4047299656"
+    },
+    {
+      "bodyFingerprint": "1385501301",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchReplay.0.SP1Clean.WriteEffects.emit._sparseCasesOn_2",
+      "typeFingerprint": "2334663261"
+    },
+    {
+      "bodyFingerprint": "1732714344",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchReplay",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchReplay.0.SP1Clean.WriteEffects.emit.match_1",
+      "typeFingerprint": "3440216918"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchRows",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchRows.0.SP1Clean.WriteEffects.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteDispatchTable",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteDispatchTable.0.SP1Clean.WriteEffects.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
       "bodyFingerprint": "4197693016",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.WriteObservations",
@@ -119001,11 +120282,18 @@
       "typeFingerprint": "1680465446"
     },
     {
-      "bodyFingerprint": "4194334525",
+      "bodyFingerprint": "2008889804",
       "local": true,
-      "module": "SP1Clean.Proofs.Completeness.WriteProbeDemand",
-      "name": "_private.SP1Clean.Proofs.Completeness.WriteProbeDemand.0.SP1Clean.TraceGen.WriteObservations.packetAt?",
-      "typeFingerprint": "3041314318"
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteSparseBoundaries.0.SP1Clean.WriteProbe.SparseBoundary.buildFrom",
+      "typeFingerprint": "1163799137"
+    },
+    {
+      "bodyFingerprint": "1478882609",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.WriteSparseBoundaries",
+      "name": "_private.SP1Clean.Proofs.Completeness.WriteSparseBoundaries.0.SP1Clean.WriteProbe.SparseBoundary.positions",
+      "typeFingerprint": "946758936"
     },
     {
       "bodyFingerprint": "4207782280",
@@ -120389,6 +121677,13 @@
     {
       "bodyFingerprint": null,
       "local": false,
+      "module": "Mathlib.Order.Defs.PartialOrder",
+      "name": "le_refl",
+      "typeFingerprint": "1319502725"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
       "module": "Init.Prelude",
       "name": "noConfusion_of_Nat",
       "typeFingerprint": "2514162023"
@@ -120551,6 +121846,24 @@
     "SP1Clean.Export.WriteObservationAssembly.assembled_hint_word_bytes",
     "SP1Clean.Export.WriteObservationAssembly.counted_packet_tables",
     "SP1Clean.Export.WriteSourceRegistry.physical_cut_values",
+    "SP1Clean.Export.WriteObservationAssembly.native_hint_walk",
+    "SP1Clean.Export.WriteObservationAssembly.outgoing_queue_of_immutable_reads",
+    "SP1Clean.WriteEffects.native_destination_groups",
+    "SP1Clean.Export.WriteSourceRegistry.routable_physical_cuts",
+    "SP1Clean.Export.WriteBoundaryBuild.build_sparse_covers",
+    "SP1Clean.Export.WriteBoundaryBuild.compiled_sparse_read",
+    "SP1Clean.Export.WriteBoundaryBuild.sparse_suppliers_of_admissibleExecution",
+    "SP1Clean.TraceGen.admissibleExecution_untouched",
+    "SP1Clean.TraceGen.ordinary_plan_values",
+    "SP1Clean.TraceGen.MixedMemoryHistory.canonical",
+    "SP1Clean.TraceGen.MixedMemoryHistory.hint_tables_memory",
+    "SP1Clean.TraceGen.MixedMemoryHistory.heldAt_of_posts",
+    "SP1Clean.WriteEffects.native_dispatch_at",
+    "SP1Clean.WriteEffects.native_dispatch_table",
+    "SP1Clean.WriteEffects.native_dispatch_replay",
+    "SP1Clean.TraceGen.MixedMemoryHistory.posts_of_priors",
+    "SP1Clean.TraceGen.MixedMemoryHistory.syscall_pulls",
+    "SP1Clean.TraceGen.MixedMemoryHistory.syscall_posts",
     "SP1Clean.TraceGen.admissibleExecution_hintSnapshot",
     "SP1Clean.TraceGen.admissibleExecution_writePacket",
     "SP1Clean.WriteBuffer.tables_cursor_closed",

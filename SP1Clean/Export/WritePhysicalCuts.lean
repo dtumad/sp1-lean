@@ -80,7 +80,9 @@ private theorem touch_end {time : ℕ} {t : Touch SP1Prime} (valid : TouchOK tim
   · have positive : 0 < writeOffset (MemoryMsg.locOf t.2) := by cases MemoryMsg.locOf t.2 <;> simp
     omega
 
-private theorem paired_predecessor (data : ProverData Fp) (cpu : List (ExecutionRow SP1Prime))
+/-- Every actual ordinary or host Memory predecessor is paired with a physical successor
+on its owning row at the checked incoming clock. -/
+theorem paired_predecessor (data : ProverData Fp) (cpu : List (ExecutionRow SP1Prime))
     (words : List (HintReadCoverage.Row (p := SP1Prime))) (aligned : List (RowFacts SP1Prime))
     (paired : List.Forall₂ AlignedFacts aligned (cpu.map (ExecutionRow.facts data)))
     (access : ∀ row ∈ words, HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram)
@@ -122,7 +124,8 @@ private theorem paired_predecessor (data : ProverData Fp) (cpu : List (Execution
 def keyLocation (key : fields 3 Fp) : MemLoc :=
   MemoryMsg.locOf (p := SP1Prime) ⟨0, 0, key[0], key[1], key[2], 0⟩
 
-private theorem head_at_unique (rows : List (MemoryMsg Fp)) (unique : (rows.map MemoryMsg.locOf).Nodup)
+/-- A record with a unique location is its actual terminal frontier entry. -/
+theorem head_at_unique (rows : List (MemoryMsg Fp)) (unique : (rows.map MemoryMsg.locOf).Nodup)
     {record : MemoryMsg Fp} (present : record ∈ rows) :
     (rows.filter (fun m => decide (MemoryMsg.locOf m = MemoryMsg.locOf record))).head? = some record := by
   let selected := rows.filter (fun m => decide (MemoryMsg.locOf m = MemoryMsg.locOf record))

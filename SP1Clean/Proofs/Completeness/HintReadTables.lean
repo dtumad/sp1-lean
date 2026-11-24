@@ -87,6 +87,11 @@ private theorem history_complete {image : ProgramImage} {source target : Executi
     rw [success] at occurs
     exact correct entry occurs
 
+/-- Every HINT_READ word from the canonical mixed compiler is an active original row. -/
+theorem history_active {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (execution : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events) :
+    ∀ entry ∈ history image source events, entry.2.2 = 1 := fun e member => ((history_complete execution).2 e member).1
+
 /-- Inputs in a single physical variant, before applying demand padding. -/
 def selected (last : Bool) (entries : List Entry) : List (RowInput F) :=
   (entries.filter fun entry => entry.1 == last).map Prod.snd

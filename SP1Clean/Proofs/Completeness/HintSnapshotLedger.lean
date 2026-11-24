@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Completeness.HintSnapshotTables
 import SP1Clean.Proofs.Operations.HintQueueSnapshot
+import SP1Clean.Proofs.Operations.HintSnapshotPositions
 import ToClean.Air.MessageFilter
 import ToClean.Air.TableEvaluation
 
@@ -12,22 +13,6 @@ identities. The padded last word moves to the tail, and the final word reaches z
 namespace SP1Clean.HostHintSnapshot
 open Circuit Air.Flat Semantics Semantics.HintQueue HostHintQueue
 variable {p : ℕ} [Fact p.Prime]
-
-/-- Both signed cursor occurrences of one physical word row, including inactive padding. -/
-def walkValues (r : Inputs (ZMod p)) : List (Interaction (ZMod p)) :=
-  [channel.pulledIfValue r.2.2 (r.1.before r.2.1), channel.pushedIfValue r.1.active (r.1.after r.2.1)]
-
-private theorem walk_values (hints : List Bytes) (r : Var Inputs (ZMod p)) (env : Environment (ZMod p)) (offset : ℕ) :
-    ((main hints r).operations offset).interactionValuesWith channel.toRaw env = walkValues (eval env r) := by
-  have occurrences : ((main hints r).operations offset).interactionsWith channel.toRaw =
-      [(channel.pulledIf r.2.2 (r.1.before r.2.1)).toRaw, (channel.pushedIf r.1.active (r.1.after r.2.1)).toRaw] := by
-    rw [Operations.interactionsWith, ledger]
-    simp [channel, nodeChannel, wordChannel, Channel.toRaw, circuit_norm]
-  rw [Operations.interactionValuesWith, occurrences]
-  simp only [List.map_cons, List.map_nil, Channel.eval_pulledIf, Channel.eval_pushedIf, walkValues]
-  rcases r with ⟨⟨_, _, _, _, _, _, _, _⟩, ⟨_, _⟩, _⟩
-  simp only [Shape.before, Shape.after, circuit_norm]
-  simp only [ProvableType.eval_fields, Vector.map_map, Function.comp_def]
 
 /-- The complete generated cursor ledger uses the physical rows at their canonical data. -/
 theorem tableFor_walk (store : Store) (head : ℕ) (hints : List Bytes) (fit : fits hints = true)
@@ -49,32 +34,6 @@ theorem tableFor_walk (store : Store) (head : ℕ) (hints : List Bytes) (fit : f
   rw [walk_values, eval_varFromOffset_valueFromOffset]
   exact congrArg walkValues (c.rowInput_buildRow r own own (.empty _))
 
-private def position (start head tail words i : ℕ) : Cursor (ZMod p) :=
-  ⟨Address.ofNat (start + i), Address.ofNat (if i = words then tail else head),
-    if 0 < i ∧ i < words then Address.ofNat tail else 0⟩
-
-private theorem step_positions (start head tail length i : ℕ) (word : BitVec 64) (live : i < length / 8 + 1) :
-    let s := shape (p := p) (start + i) i length word
-    let l : Links (ZMod p) := ⟨Address.ofNat head, Address.ofNat tail⟩
-    s.before l = position start head tail (length / 8 + 1) i ∧
-      s.after l = position start head tail (length / 8 + 1) (i + 1) := by
-  have before : i ≠ length / 8 + 1 := by omega
-  have nextPositive : 0 < i + 1 := by omega
-  have begins : 0 < i ↔ i ≠ 0 := by omega
-  have ends : i + 1 = length / 8 + 1 ↔ i = length / 8 := by omega
-  have continues : i + 1 < length / 8 + 1 ↔ i ≠ length / 8 := by omega
-  have erased : (Address.ofNat (p := p) tail).map (fun _ => (0 : ZMod p)) = 0 := by
-    ext j hj
-    simp
-  simp only [Shape.before, Shape.after, position, shape, before, live, nextPositive, begins, ends,
-    continues, and_true, true_and, ↓reduceIte]
-  by_cases first : i = 0 <;> by_cases last : i = length / 8
-  all_goals
-    first | have hf : (i = 0) = True := eq_true first | have hf : (i = 0) = False := eq_false first
-    first | have hl : (i = length / 8) = True := eq_true last | have hl : (i = length / 8) = False := eq_false last
-    simp [ne_eq, hf, hl, erased, Nat.add_assoc]
-
-
 private def indicator (cursor : Cursor (ZMod p)) (msg : Array (ZMod p)) : ZMod p :=
   if (toElements cursor).toArray = msg then 1 else 0
 
@@ -93,30 +52,26 @@ private theorem buffer_balance (start head tail : ℕ) (bytes : Bytes) (msg : Ar
       indicator (endpoint start (Address.ofNat head)) msg := by
   let links : Links (ZMod p) := ⟨Address.ofNat head, Address.ofNat tail⟩
   let row (i : ℕ) : Shape (ZMod p) := shape (start + i) i bytes.length (arrayWord bytes.toArray i)
-  let atWord (i : ℕ) := position (p := p) start head tail (wordCount bytes) i
+  let atWord (i : ℕ) := position (p := p) start links (wordCount bytes) i
   have prefixSum (n : ℕ) (bound : n ≤ wordCount bytes) :
       balanceOf ((List.range n).flatMap (fun i => walkValues (row i, links, 1))) msg =
         indicator (atWord n) msg - indicator (atWord 0) msg := by
     induction n with
     | zero => simp [balanceOf]
     | succ n ih =>
-      have steps := step_positions (p := p) start head tail bytes.length n (arrayWord bytes.toArray n) bound
+      have steps := step_positions (p := p) start links bytes.length n (arrayWord bytes.toArray n) bound
       rw [List.range_succ, List.flatMap_append, List.flatMap_singleton, balanceOf_append, ih (by omega),
         active_delta _ _ rfl, show (row n).before links = atWord n from steps.1,
         show (row n).after links = atWord (n + 1) from steps.2]
       abel
   have zero : atWord 0 = endpoint start (Address.ofNat head) := by
-    simp [atWord, position, endpoint, wordCount]
+    simp [atWord, position, endpoint, wordCount, links]
   have last : atWord (wordCount bytes) = endpoint (start + wordCount bytes) (Address.ofNat tail) := by
-    simp [atWord, position, endpoint]
+    simp [atWord, position, endpoint, links]
   have exactSum := prefixSum (wordCount bytes) (by rfl)
   rw [zero, last] at exactSum
   simpa only [bufferShapes, List.flatMap_map, List.size_toArray, Function.comp_apply, links, row, wordCount]
     using exactSum
-
-private theorem address_zero : Address.ofNat (p := p) 0 = 0 := by
-  ext i inside
-  interval_cases i <;> simp [Address.ofNat]
 
 private theorem live_balance [Fact (2 ^ 17 < p)] {store : Store} {head : ℕ} {hints : List Bytes} {tails : List ℕ}
     (read : ReadsSnapshot p store head hints tails) (start : ℕ) (msg : Array (ZMod p)) :
@@ -127,7 +82,7 @@ private theorem live_balance [Fact (2 ^ 17 < p)] {store : Store} {head : ℕ} {h
     cases tails with
     | nil =>
       have ended : head = 0 := read
-      simp [liveInputs, wordRows, ended, address_zero, balanceOf]
+      simp [liveInputs, wordRows, ended, Address.ofNat_zero, balanceOf]
     | cons => contradiction
   | cons bytes rest ih =>
     cases tails with
@@ -193,7 +148,7 @@ theorem tableFor_ledger (hints : List Bytes) (state : State (ZMod p)) (data : Pr
     simpa only [circuit_norm] using congrArg (fun x : Inputs (ZMod p) => x.2.1) cells
   have ticket : env r.2.2 = 1 := by
     simpa only [circuit_norm] using congrArg (fun x : Inputs (ZMod p) => x.2.2) cells
-  simp [endpoint, circuit_norm, head, address_zero, cursor, ticket]
+  simp [endpoint, circuit_norm, head, Address.ofNat_zero, cursor, ticket]
 
 /-- The generated seal's two physical walk occurrences. -/
 theorem tableFor_walk (hints : List Bytes) (state : State (ZMod p)) (data : ProverData (ZMod p)) :

@@ -397,6 +397,37 @@ theorem scheduleAccessPlan_memoryBump_currTs
         · exact ih nextAccess nextMember nextEmitted
   exact entriesShape access accessMem emitted
 
+/-- Every scheduled register operand uses the row's timestamp window, whether its
+incoming use was already in that window or a refresh first posted at `base + 1`. -/
+theorem scheduleAccessPlan_register_window {frontier : AccessFrontier} {base : ℕ}
+    {plan : InstructionAccessPlan} (window : base % 2 ^ 24 + 4 < 2 ^ 24)
+    {stamped : StampedTouch} (inside : stamped ∈ (scheduleAccessPlan frontier base plan).stampedTouches)
+    {index : BitVec 5} (reg : stamped.touch.loc = .reg index) (role : stamped.touch.slot ≠ .ram) :
+    timestampWindow stamped.previous = timestampWindow base ∧
+      timestampWindow (stamped.current base) = timestampWindow base := by
+  have same : timestampWindow (base + 1) = timestampWindow base := by
+    unfold timestampWindow
+    omega
+  induction plan generalizing frontier with
+  | nil => simp [scheduleAccessPlan, AccessSchedule.stampedTouches] at inside
+  | cons head tail ih =>
+    rcases List.mem_cons.mp inside with rfl | later
+    · refine ⟨?_, (head.recordTime_sameWindow_of_window window).trans same⟩
+      change head.loc = .reg index at reg
+      change head.slot ≠ .ram at role
+      change timestampWindow (scheduledPrevious frontier base head) = _
+      rcases head with ⟨slot, loc, read, write⟩
+      change loc = .reg index at reg
+      change slot ≠ .ram at role
+      subst loc
+      cases slot
+      · contradiction
+      all_goals
+        by_cases inWindow : timestampWindow (frontier (.reg index)) = timestampWindow (base + 1)
+        · simpa only [scheduledPrevious, memoryBumpEvent?, ite_eq_left inWindow] using inWindow.trans same
+        · simpa only [scheduledPrevious, memoryBumpEvent?, ite_eq_right inWindow] using same
+    · exact ih later
+
 /-- One scheduled touch's previous timestamp is sound whenever the incoming frontier predates that
 touch. -/
 private theorem scheduleAccess_previous_lt {frontier : AccessFrontier} {base : ℕ}
