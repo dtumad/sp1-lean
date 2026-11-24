@@ -201,4 +201,169 @@ theorem host (id : WriteMixedHostTables.Index) {a : AbstractInteraction F}
   · exact bank d s
   · exact observation i
 
+private theorem ordered (name : String) (apart : name ≠ "SP1Byte") (i : Var OrderedBoundary.Inputs F) (n : ℕ) :
+    (((OrderedBoundary.circuit name).main i).operations n).interactions.all allowed = true := by
+  simp only [OrderedBoundary.circuit,OrderedBoundary.main,circuit_norm,
+    FormalAssertion.toSubcircuit_interactions,List.all_append,word,cmp]
+  simp [allowed,OrderedBoundary.channel,apart,circuit_norm]
+
+private theorem orderedProvider {I : TypeMap} [ProvableType I] (name : String) (apart : name ≠ "SP1Byte")
+    (spec : MemoryMsg F → Prop) (provider : GeneralFormalCircuit F I MemoryMsg) [Guarded.Supported provider]
+    (binds : ∀ i o d, provider.Spec i o d → spec o) (canonical : ∀ r, spec r → MemoryBoundary.CanonicalSpec r)
+    (child : ∀ i n, ((provider.main i).operations n).interactions.all allowed = true)
+    (i : Var (OrderedMemoryProvider.RowInput I) F) (n : ℕ) :
+    (((OrderedMemoryProvider.circuit name spec provider binds canonical).main i).operations n).interactions.all allowed = true := by
+  change (((Guarded.main (OrderedMemoryProvider.activeCircuit name spec provider binds canonical) inferInstance i).operations n).interactions.all allowed) = true
+  rw [Guarded.main_interactions,guard_all]
+  simp only [OrderedMemoryProvider.activeCircuit,OrderedMemoryProvider.main,circuit_norm,
+    GeneralFormalCircuit.toSubcircuit_interactions,FormalAssertion.toSubcircuit_interactions,
+    List.all_append,child,ordered name apart,add]
+
+private theorem address (i : Var AddressOperation.Inputs F) (n : ℕ) :
+    ((AddressOperation.circuit.main i).operations n).interactions.all allowed = true := by
+  simp only [AddressOperation.circuit,AddressOperation.main,circuit_norm,FormalAssertion.toSubcircuit_interactions,
+    AddrAddOperation.circuit,AddrAddOperation.main,Gadgets.Equality.main]
+  rfl
+
+private theorem headReg (s : MemorySnapshot) : Checked (SnapshotMemoryEnsemble.registerView s).component := by
+  apply orderedProvider _ (by decide)
+  intro i n
+  rfl
+
+private theorem headRam (s : MemorySnapshot) : Checked (SnapshotMemoryEnsemble.ramView s).component := by
+  apply orderedProvider _ (by decide)
+  intro i n
+  simp only [SnapshotRamProvider.circuit,SnapshotRamProvider.main,circuit_norm,GeneralFormalCircuit.toSubcircuit_interactions,
+    InitialMemoryRead.circuit,InitialMemoryRead.circuitNamed,List.all_append,readWord,address]
+  rfl
+
+private theorem boundarySeal (name : String) (apart : name ≠ "SP1Byte") :
+    Checked (OrderedMemoryEnsemble.terminalView name apart).component := by
+  change (((OrderedBoundaryEnd.main name _ (varFromOffset OrderedBoundary.TerminalInputs 0)).operations (size OrderedBoundary.TerminalInputs)).interactions.all allowed) = true
+  simp only [OrderedBoundaryEnd.main,circuit_norm,GeneralFormalCircuit.toSubcircuit_interactions,ordered name apart]
+
+private theorem finalizer (ram : Bool) : Checked (original (.finalizer ram)) := by
+  have reg (i : Var MemoryMsg F) (n : ℕ) : ((FinalRegisterProvider.circuit.main i).operations n).interactions.all allowed = true :=
+    other FinalRegisterProvider.circuit.base (by rfl) i n
+  have ramChild (i : Var MemoryMsg F) (n : ℕ) : ((FinalRamProvider.circuit.main i).operations n).interactions.all allowed = true := by
+    simp only [FinalRamProvider.circuit,FinalRamProvider.main,FinalRamProvider.addressCircuit,circuit_norm,
+      GeneralFormalCircuit.toSubcircuit_interactions,FormalAssertion.toSubcircuit_interactions,List.all_append,word,address]
+    rfl
+  have receipt (tag : Bool) (child : GeneralFormalCircuit F (OrderedMemoryProvider.RowInput MemoryMsg) MemoryMsg)
+      (checked : ∀ i n, ((child.main i).operations n).interactions.all allowed = true)
+      (i : Var (OrderedMemoryProvider.RowInput MemoryMsg) F) (n : ℕ) :
+      ((((FinalMemoryReceipt.circuit tag child).main i).operations n).interactions.all allowed) = true := by
+    simp only [FinalMemoryReceipt.circuit,circuit_norm,GeneralFormalCircuit.toSubcircuit_interactions,List.all_append,checked]
+    cases tag <;> rfl
+  cases ram
+  · apply receipt false OrderedFinalProvider.registerCircuit
+    exact orderedProvider _ (by decide) _ _ _ _ reg
+  · apply receipt true OrderedFinalProvider.ramCircuit
+    exact orderedProvider _ (by decide) _ _ _ _ ramChild
+
+private theorem hostWord (last : Bool) : Checked (original (.host (.word last))) := by
+  have range (n : ℕ) (hn : 2^n < SP1Prime) (i : Var field F) (o : ℕ) :
+      (((Gadgets.ToBits.rangeCheck n hn).main i).operations o).interactions.all allowed = true :=
+    other (Gadgets.ToBits.rangeCheck n hn).base (by rfl) i o
+  have access (i : Var Readers.MemoryAccess.Inputs F) (o : ℕ) :
+      ((Readers.MemoryAccess.circuit.main i).operations o).interactions.all allowed = true := by
+    simp only [Readers.MemoryAccess.circuit,Readers.MemoryAccess.main,circuit_norm,FormalAssertion.toSubcircuit_interactions,Gadgets.Equality.main]
+    rfl
+  have ram (i : Var HostRamAccessChip.Inputs F) (o : ℕ) :
+      ((HostRamAccessChip.circuit.main i).operations o).interactions.all allowed = true := by
+    simp only [HostRamAccessChip.circuit,HostRamAccessChip.main,circuit_norm,GeneralFormalCircuit.toSubcircuit_interactions,
+      FormalAssertion.toSubcircuit_interactions,List.all_append,word,address,range,access]
+    rfl
+  change (((Guarded.main (HintReadWordChip.activeCircuit last) (HintReadWordChip.guardSupported last)
+      (varFromOffset HintReadWordChip.RowInput 0)).operations (size HintReadWordChip.RowInput)).interactions.all allowed) = true
+  rw [Guarded.main_interactions,guard_all]
+  simp only [HintReadWordChip.activeCircuit,HintReadWordChip.main,circuit_norm,GeneralFormalCircuit.toSubcircuit_interactions,List.all_append,ram,step]
+  rfl
+
+private theorem ecall : Checked (original (.host .ecall)) := by
+  change (((HostCallChip.main (varFromOffset SyscallInstrsChip.Inputs 0)).operations (size SyscallInstrsChip.Inputs)).interactions.all allowed) = true
+  simp only [HostCallChip.main,CoreSyscallChip.circuit,CoreSyscallChip.main,SyscallCodeGuard.circuit,SyscallInstrsChip.circuit,
+    SyscallInstrsChip.main,circuit_norm,GeneralFormalCircuit.toSubcircuit_interactions,FormalAssertion.toSubcircuit_interactions,
+    Readers.CPUState.circuit,Readers.CPUState.main,Readers.RegisterAccessCols.circuit,Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,Readers.RegisterAccessTimestamp.main,IsZeroOperation.circuit,IsZeroOperation.main,
+    U16toU8OperationSafe.circuit,U16toU8OperationSafe.main,Gadgets.Equality.main,
+    SyscallInstrsChip.CommitArm.circuit,SyscallInstrsChip.CommitArm.main,SyscallInstrsChip.DispatchArm.circuit,
+    SyscallInstrsChip.DispatchArm.main,SyscallInstrsChip.FieldBoundArm.circuit,SyscallInstrsChip.FieldBoundArm.main,
+    SyscallInstrsChip.PcArm.circuit,SyscallInstrsChip.PcArm.main,SyscallInstrsChip.WriteArm.circuit,SyscallInstrsChip.WriteArm.main,
+    U16CompareOperation.circuit,U16CompareOperation.main]
+  rfl
+
+/-- Every source of a WRITE predecessor, including both HINT_READ word families, only
+pulls Byte lookups on its original circuit. -/
+theorem source (id : Source) {a : AbstractInteraction F}
+    (seen : a ∈ (original id).operations.interactionsWith byteChannel.toRaw) : a.direction = .pull := by
+  cases id with
+  | ordinary id => exact InstalledAssembly.ordinary_byte_direction id seen
+  | refresh => exact directions (c := original .refresh) (by rfl) seen
+  | host fam => cases fam with
+    | ecall => exact directions ecall seen
+    | word last => exact directions (hostWord last) seen
+  | finalizer ram => exact directions (finalizer ram) seen
+
+private theorem first_six (image : ProgramImage) (initial final : ExecutionSnapshot) (finish : HostHintQueue.State F)
+    {c : Component F} (inside : c ∈ (WriteSourceRegistry.base image initial final finish).tables.take 6) : Checked c := by
+  rw [WriteSourceRegistry.boundary_prefix] at inside
+  simp only [List.mem_cons,List.not_mem_nil,or_false] at inside
+  rcases inside with rfl | rfl | rfl | rfl | rfl | rfl
+  · exact headReg _
+  · exact headRam _
+  · exact boundarySeal _ (by decide)
+  · exact finalizer false
+  · exact finalizer true
+  · exact boundarySeal _ (by decide)
+
+attribute [local irreducible] WriteSourceRegistry.base in
+/-- At every physical original index outside the 23-provider window, all registered Byte
+interactions are pulls. The window follows from the registry's actual residual positions. -/
+theorem client (image : ProgramImage) (initial final : ExecutionSnapshot) (finish : HostHintQueue.State F)
+    {c : Component F} {k : ℕ} (located : (WriteSourceRegistry.base image initial final finish).tables[k]? = some c)
+    (outside : k < 32 ∨ 55 ≤ k) {a : AbstractInteraction F} (seen : a ∈ c.operations.interactionsWith byteChannel.toRaw) :
+    a.direction = .pull := by
+  by_cases first : k < 6
+  · apply directions _ seen
+    apply first_six image initial final finish
+    apply List.mem_of_getElem? (i := k)
+    rwa [List.getElem?_take_of_lt first]
+  cases src : WriteSourceRegistry.sourceAt k with
+  | some id =>
+    have same := WriteSourceRegistry.original_at image initial final finish id
+    rw [WriteSourceRegistry.position_of_sourceAt src,located] at same
+    exact source id (Option.some.inj same ▸ seen)
+  | none =>
+    cases h : WriteMixedHostTables.indexAt k with
+    | some id =>
+      have same := WriteMixedHostTables.registered_at image initial final finish id
+      rw [WriteMixedHostTables.position_of_indexAt h,located] at same
+      exact host id (Option.some.inj same ▸ seen)
+    | none =>
+      cases f : WriteMixedFixedResources.indexAt k with
+      | some id =>
+        have pos : WriteMixedFixedResources.position id = k := eq_of_beq (List.find?_some (p := fun id => WriteMixedFixedResources.position id == k) f)
+        have same := WriteMixedFixedResources.registered_at image initial final finish id
+        rw [pos,located] at same
+        exact fixed image initial final id (Option.some.inj same ▸ seen)
+      | none =>
+        cases ctrl : WriteMixedControlTables.indexAt k with
+        | some id =>
+          have pos : WriteMixedControlTables.position id = k := eq_of_beq (List.find?_some (p := fun id => WriteMixedControlTables.position id == k) ctrl)
+          have same := WriteMixedControlTables.registered_at image initial final finish id
+          rw [pos,located] at same
+          exact control id (Option.some.inj same ▸ seen)
+        | none =>
+          have size := (List.getElem?_eq_some_iff.mp located).1
+          have inRange : k ∈ (List.range' 6 (((WriteSourceRegistry.base image initial final finish).tables).drop 6).length).filter
+              (fun j => (WriteSourceRegistry.sourceAt j).isNone && (WriteMixedHostTables.indexAt j).isNone &&
+                (WriteMixedFixedResources.indexAt j).isNone && (WriteMixedControlTables.indexAt j).isNone) := by
+            apply List.mem_filter.mpr
+            refine ⟨List.mem_range'_1.mpr ?_,by simp [src,h,f,ctrl]⟩
+            rw [List.length_drop]
+            omega
+          rw [WriteMixedControlTables.remaining_positions,List.mem_range'_1] at inRange
+          omega
+
 end SP1Clean.Export.WriteOriginalByteDirections
