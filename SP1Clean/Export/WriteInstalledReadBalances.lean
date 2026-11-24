@@ -100,4 +100,59 @@ theorem compiled_read_balances (w : EnsembleWitness (base image source target fi
       rw [select]; rfl
     rw [slots]; simpa only [List.flatMap_cons,List.flatMap_nil,List.append_nil] using buffer
 
+private theorem read_guarantees_setData {source target : ExecutionSnapshot} {t : Table F}
+    (physical : t.component ∈ (tables source target).take 5) {i : Interaction F} (used : i ∈ t.interactions)
+    {old fresh : ProverData F} (original : i.Guarantees old) : i.Guarantees fresh := by
+  have channel := t.channel_mem_channels_of_mem_interactions i used
+  have seen : i.channel ∈ ((tables source target).take 5).flatMap (·.circuit.channels) :=
+    List.mem_flatMap.mpr ⟨t.component, physical, channel⟩
+  have transfer : ∀ c ∈ ((tables source target).take 5).flatMap (·.circuit.channels),
+      ∀ (interaction : Interaction F), interaction.channel = c → interaction.Guarantees old → interaction.Guarantees fresh := by
+    repeat' refine List.forall_mem_cons.mpr ⟨?_, ?_⟩
+    all_goals first
+      | exact fun _ mem => False.elim (List.not_mem_nil mem)
+      | intro ⟨ch, _, _, _, _⟩ same valid
+        change ch = _ at same
+        subst ch
+        exact valid
+  exact transfer i.channel seen i rfl original
+
+/-- The five registered tables retain every constraint and guarantee at the canonical data of
+the complete installed ensemble, independently of the later tables' validity. -/
+theorem compiled_read_constraints (w : EnsembleWitness (base image source target final)) (block tail : List (Table F))
+    (physical : block.map (·.component) = (tables source target).take 5)
+    (valid : ∀ t ∈ block, t.Constraints ∧ t.Guarantees)
+    (registered : tail.map (·.component) = (tables source target).drop 5) :
+    let full := build w (block ++ tail) (by rw [List.map_append, physical, registered, List.take_append_drop])
+    ∀ t ∈ (full.tables.drop (installSources w).tables.length).take block.length, t.Constraints ∧ t.Guarantees := by
+  intro full t actual
+  let pairs (q : Table F) := (q.component, q.table)
+  have collected := List.mem_map_of_mem (f := pairs) actual
+  have equiv : ((full.tables.drop (installSources w).tables.length).take block.length).map pairs = block.map pairs := by
+    rw [List.map_take, List.map_drop]
+    dsimp only [full, build, Ensemble.AppendedTables.extend]
+    rw [EnsembleWitness.ofTables_tables]
+    change (((withDerivedData _ _ _).map (fun q : Table F => (q.component, q.table))).drop _).take _ = _
+    rw [withDerivedData_map, List.map_append, ← List.length_map pairs (as := (installSources w).tables), List.drop_left,
+      List.map_append, ← List.length_map pairs (as := block), List.take_left]
+  rw [equiv] at collected
+  obtain ⟨before, member, same⟩ := List.mem_map.mp collected
+  obtain ⟨component, cells⟩ := Prod.mk.inj same
+  have own : t.component ∈ (tables source target).take 5 := physical ▸ component ▸ List.mem_map_of_mem member
+  have free := suffix_lookupFree source target t.component (List.mem_of_mem_take own)
+  obtain ⟨checked, guaranteed⟩ := valid before member
+  refine ⟨?_, t.guarantees_iff_forall.mpr ?_⟩
+  · intro row inside
+    have checkedRow := checked row (cells ▸ inside)
+    rw [component] at checkedRow
+    exact t.component.constraintsHold_setData free checkedRow
+  · intro i used
+    apply read_guarantees_setData own used (old := before.data)
+    apply before.guarantees_iff_forall.mp guaranteed
+    have sameInteractions : t.interactions = before.interactions := by
+      simp only [Table.interactions, Table.environment, ← component, ← cells]
+      apply List.flatMap_congr
+      exact fun _ _ => Operations.interactionValues_congr rfl
+    exact sameInteractions ▸ used
+
 end SP1Clean.Export.WriteObservationAssembly
