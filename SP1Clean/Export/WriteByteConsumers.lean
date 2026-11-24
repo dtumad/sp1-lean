@@ -14,6 +14,21 @@ Disabled physical sites retain their position without acquiring a payload obliga
 def Reads (ledger : List (Interaction F)) : Prop :=
   ∀ i ∈ ledger, i.direction = .pull ∧ (i.mult ≠ 0 → ByteServable (messageKey i.msg))
 
+/-- The signed reader contract of a physical table follows from its own local requirements,
+generated row guarantees and the directions in its registered circuit. -/
+theorem of_table (table : Table F) (requirements : table.ChannelRequirements byteChannel.toRaw)
+    (guarantees : table.Guarantees)
+    (directions : ∀ a ∈ table.component.operations.interactionsWith byteChannel.toRaw, a.direction = .pull) :
+    Reads (table.interactionsWith byteChannel.toRaw) := by
+  intro i seen
+  have onByte := table.channel_eq_of_mem_interactionsWith seen
+  have pull : i.direction = .pull := by
+    obtain ⟨row,_,paid⟩ := List.mem_flatMap.mp seen
+    obtain ⟨a,listed,rfl⟩ := List.mem_map.mp paid
+    exact directions a listed
+  have guar := (table.channelGuarantees_iff_forall byteChannel.toRaw).mp (table.channelGuarantees_of_requirements guarantees) i seen
+  exact ⟨pull,checked_reader onByte pull table.data ((table.channelRequirements_iff_forall _).mp requirements i seen) guar⟩
+
 /-- The old supervisor provides Boolean reader activity from the real table constraints.
 The generated row guarantees then justify each active field payload. -/
 theorem checked_table {image : ProgramImage} {source target : ExecutionSnapshot} {finish : HostHintQueue.State F}
@@ -21,16 +36,8 @@ theorem checked_table {image : ProgramImage} {source target : ExecutionSnapshot}
     (valid : table.Constraints ∧ table.Guarantees)
     (directions : ∀ a ∈ table.component.operations.interactionsWith byteChannel.toRaw, a.direction = .pull) :
     Reads (table.interactionsWith byteChannel.toRaw) := by
-  have requirements : table.ChannelRequirements byteChannel.toRaw :=
-    fun row inside => HostObserved.component_byte_requirements table.component registered (table.environment row) (valid.1 row inside)
-  intro i seen
-  have onByte := table.channel_eq_of_mem_interactionsWith seen
-  have pull : i.direction = .pull := by
-    obtain ⟨row,_,paid⟩ := List.mem_flatMap.mp seen
-    obtain ⟨a,listed,rfl⟩ := List.mem_map.mp paid
-    exact directions a listed
-  have guar := (table.channelGuarantees_iff_forall byteChannel.toRaw).mp (table.channelGuarantees_of_requirements valid.2) i seen
-  exact ⟨pull,checked_reader onByte pull table.data ((table.channelRequirements_iff_forall _).mp requirements i seen) guar⟩
+  apply of_table table _ valid.2 directions
+  exact fun row inside => HostObserved.component_byte_requirements table.component registered (table.environment row) (valid.1 row inside)
 
 /-- Every real or padded original instruction table supplies its own Byte reader contract on
 the native compiler output, including all four protected stores. -/
