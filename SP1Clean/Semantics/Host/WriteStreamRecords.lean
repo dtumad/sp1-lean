@@ -189,33 +189,59 @@ private theorem fixedRow_iff {p : Nat} (streams : WriteStreams) (q : Query) (row
   | none => simp
   | some v => by_cases fits : q.Fits v <;> simp [fits, eq_comm]
 
+/-- Verifier-side representability of the entire fixed inventory. A single missing lookup,
+oversized scalar, or overflowing position invalidates the endpoint pair. -/
+def inventoryOK (streams : WriteStreams) : Bool :=
+  decide ((queries streams).length < 2 ^ 48) &&
+    (queries streams).all fun q => (q.lookup streams).any fun v => decide (q.Fits v)
+
+theorem inventoryOK_iff (streams : WriteStreams) :
+    inventoryOK streams = true ↔
+      (queries streams).length < 2 ^ 48 ∧ ∀ q ∈ queries streams, ∃ v, q.lookup streams = some v ∧ q.Fits v := by
+  have entry (q : Query) : ((q.lookup streams).any fun v => decide (q.Fits v)) = true ↔
+      ∃ v, q.lookup streams = some v ∧ q.Fits v := by
+    cases found : q.lookup streams <;> simp
+  simp only [inventoryOK, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, entry]
+
 /-- Overlarge physical endpoint inventory fails closed as a whole. -/
 def fixedRows {p : Nat} (streams : WriteStreams) : List (Record (ZMod p)) :=
-  if (queries streams).length < 2 ^ 48 then (queries streams).filterMap (fixedRow? streams) else []
+  if inventoryOK streams then (queries streams).filterMap (fixedRow? streams) else []
 
 theorem fixedRows_iff {p : Nat} (streams : WriteStreams) (row : Record (ZMod p)) :
-    row ∈ fixedRows streams ↔ (queries streams).length < 2 ^ 48 ∧ row.Binds streams := by
+    row ∈ fixedRows streams ↔ inventoryOK streams = true ∧ row.Binds streams := by
   unfold fixedRows Record.Binds
-  by_cases bound : (queries streams).length < 2 ^ 48
+  by_cases bound : inventoryOK streams = true
   · simp only [bound, ite_true, true_and, List.mem_filterMap, fixedRow_iff]
     constructor
     · rintro ⟨q, member, v, found, fits, same⟩
       exact ⟨q, v, member, found, fits, same⟩
     · rintro ⟨q, v, member, found, fits, same⟩
       exact ⟨q, member, v, found, fits, same⟩
-  · simp only [bound, ite_false, List.not_mem_nil, false_and]
+  · simp [Bool.eq_false_iff.mpr bound]
 
 theorem fixedRows_length {p : Nat} (streams : WriteStreams) : (fixedRows (p := p) streams).length < 2 ^ 48 := by
   unfold fixedRows
   split
-  · exact (List.length_filterMap_le ..).trans_lt (by assumption)
+  · exact (List.length_filterMap_le ..).trans_lt ((inventoryOK_iff _).mp (by assumption)).1
   · norm_num
+
+/-- All enumerated occurrences survive physical encoding on a checked endpoint pair. -/
+theorem fixedRows_length_eq {p : Nat} {streams : WriteStreams} (checked : inventoryOK streams = true) :
+    (fixedRows (p := p) streams).length = (queries streams).length := by
+  simp only [fixedRows, checked, ite_true]
+  apply Nat.le_antisymm (List.length_filterMap_le ..)
+  by_contra! smaller
+  obtain ⟨q, member, absent⟩ := List.length_filterMap_lt_length_iff_exists.mp smaller
+  obtain ⟨v, found, fits⟩ := ((inventoryOK_iff _).mp checked).2 q member
+  simp [fixedRow?, found, fits] at absent
 
 /-- Every representable actual lookup is physically available when the fixed inventory fits. -/
 theorem Query.present {p : Nat} {streams : WriteStreams} {q : Query} {v : Nat}
-    (found : q.lookup streams = some v) (fits : q.Fits v) (size : (queries streams).length < 2 ^ 48) :
-    q.encode (p := p) v ∈ fixedRows streams :=
-  (fixedRows_iff ..).mpr ⟨size, q, v, q.enumerated found, found, fits, rfl⟩
+    (found : q.lookup streams = some v) (checked : inventoryOK streams = true) :
+    q.encode (p := p) v ∈ fixedRows streams := by
+  obtain ⟨actual, eq, fits⟩ := ((inventoryOK_iff _).mp checked).2 q (q.enumerated found)
+  obtain rfl := Option.some.inj (found.symm.trans eq)
+  exact (fixedRows_iff ..).mpr ⟨checked, q, v, q.enumerated found, found, fits, rfl⟩
 
 /-- Every returned word-sized scalar has its exact natural meaning. -/
 theorem Record.Binds.readout {p : Nat} [Fact p.Prime] [Fact (2 ^ 17 < p)] {row : Record (ZMod p)}
