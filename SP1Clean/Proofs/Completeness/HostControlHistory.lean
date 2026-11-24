@@ -1,4 +1,5 @@
-import SP1Clean.Proofs.Completeness.WritePacketHandoff
+import SP1Clean.Proofs.Completeness.MixedSyscallHandoff
+import SP1Clean.Proofs.Completeness.MixedSyscallRows
 import SP1Clean.Native.Operations.HostExitBoundary
 
 /-! # Terminal and no-effect host handoffs of the original mixed tape
@@ -28,16 +29,11 @@ def calls (kind : Bucket) (events : List ExecutionEvent) : List CoreSyscallEvent
     | .ordinary => none
     | .syscall call => if kind.accepts call.rawCode then some call else none
 
-/-- These are the exact four words and both time limbs of the instruction receiver protocol. -/
-def message (call : CoreSyscallEvent) : HostCallChip.Message F :=
-  ⟨(call.clock / 2^24 : Nat), (call.clock % 2^24 : Nat), bitVecToWord call.rawCode,
-    bitVecToWord call.arg1, bitVecToWord call.arg2, bitVecToWord call.result⟩
-
 /-- Populated active HALT inputs in chronological order. -/
-def haltRows (events : List ExecutionEvent) := (calls .halt events).map (fun c => HostHaltChip.populate (message c))
+def haltRows (events : List ExecutionEvent) := (calls .halt events).map (fun c => HostHaltChip.populate (eventHostMessage (p := SP1Prime) c))
 
 /-- Populated active ENTER and VERIFY rows in chronological order. -/
-def noopRows (events : List ExecutionEvent) := (calls .noop events).map message
+def noopRows (events : List ExecutionEvent) := (calls .noop events).map (eventHostMessage (p := SP1Prime))
 
 private theorem present {k : Bucket} {call : CoreSyscallEvent} {events : List ExecutionEvent} (member : call ∈ calls k events) :
     ExecutionEvent.syscall call ∈ events ∧ k.accepts call.rawCode = true := by
@@ -83,7 +79,7 @@ theorem instruction_at {limits : ResourceLimits} {image : ProgramImage} {source 
     (atCut : events[cut]? = some (.syscall call)) :
     ∃ before frontier,
       mixedAccessPrefix (policy SP1Prime image) image.program source.realize events cut = some (before, frontier) ∧
-      HostCallChip.message (syscallInstruction (p := SP1Prime) frontier call) = message call := by
+      HostCallChip.message (syscallInstruction (p := SP1Prime) frontier call) = eventHostMessage call := by
   obtain ⟨current, frontier, _, _, built, step, _⟩ := admissibleExecution_syscall_from_prefix run atCut
   cases step with
   | syscall success =>
@@ -139,7 +135,7 @@ theorem exit_words {limits : ResourceLimits} {image : ProgramImage} {source targ
   simp only [haltRows, List.map_map]
   apply List.map_congr_left
   intro c member
-  have spec := ((honest run).1 (HostHaltChip.populate (message c)) (List.mem_map_of_mem member)).1
+  have spec := ((honest run).1 (HostHaltChip.populate (eventHostMessage (p := SP1Prime) c)) (List.mem_map_of_mem member)).1
   have small := (lt_min_iff.mp spec.2.2.2).2
   change Word.toNat (bitVecToWord (p := SP1Prime) c.arg1) < 2^32 at small
   rw [← Word.toBitVec64_toNat (isU64_bitVecToWord _), toBitVec64_bitVecToWord] at small
