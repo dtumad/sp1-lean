@@ -61,6 +61,19 @@ theorem lookupFree (free : LookupFree a.tables) : LookupFree b.tables := by
   have prior : i < a.tables.length := same.length.symm ▸ inside
   exact (same.slot ⟨i, prior⟩).lookups.symm.trans (free _ (List.getElem_mem prior))
 
+include same in
+/-- In-place decoration transfers local source obligations on every retained channel. -/
+theorem channelRequirements (ch : RawChannel F) (retained : keep ch)
+    (prior : ∀ c ∈ a.tables, ∀ env, c.operations.ConstraintsHold env → c.operations.ChannelRequirements ch env) :
+    ∀ c ∈ b.tables, ∀ env, c.operations.ConstraintsHold env → c.operations.ChannelRequirements ch env := by
+  intro c member env checked
+  obtain ⟨i, bound, rfl⟩ := List.mem_iff_getElem.mp member
+  have before : i < a.tables.length := same.length.symm ▸ bound
+  have row := same.slot ⟨i, before⟩
+  apply Operations.channelRequirements_of_interactionsWith_subset _ _ _ _ env (prior a.tables[i] (List.getElem_mem before) env ?_)
+  · rw [← row.interactions ch retained]
+  · simpa only [Operations.ConstraintsHold, row.constraints, row.lookups] using checked
+
 /-- Relabel the same committed arrays, recomputing their data through the canonical typed API. -/
 def transport (w : EnsembleWitness b) : EnsembleWitness a :=
   w.projectPrefix a same.length.le (fun i => (same.slot i).width.le) (fun i => (same.slot i).fixed)

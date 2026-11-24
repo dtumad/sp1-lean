@@ -20,12 +20,59 @@ private theorem byteRegistered :
 
 attribute [local irreducible] HostFinalMemory.ensemble
 
-private theorem canonicalData (witness : EnsembleWitness (ensemble image source target final)) :
-    (baseWitness witness).data = witness.data := by
-  let receipts : EnsembleWitness (producers image source target final) :=
-    witness.withEnsemble _ (by simp only [ensemble, ClosedVerifier.withInteractions])
-  change (HostOrdinaryReceipts.baseWitness receipts).data = receipts.data
-  exact HostOrdinaryReceipts.baseWitness_data receipts
+omit [Fact (2 ^ 25 < p)] in
+private theorem verifier_iff (ens : Ensemble (ZMod p) SP1PublicIO) (data : ProverData (ZMod p)) :
+    ens.VerifierChannelRequirements data byteChannel.toRaw ↔ ∀ i ∈ ens.verifierOperations.interactionValuesWith
+      byteChannel.toRaw data.publicEnvironment, i.Requirements data := by
+  simp only [Ensemble.VerifierChannelRequirements, Operations.ChannelRequirements,
+    Operations.forall_interactionsWith_iff, Operations.interactionValuesWith_eq_map, List.forall_mem_map]
+  rfl
+
+/-- Both public checks added to the host supervisor leave its genuine Byte verifier ledger intact. -/
+theorem verifier_byte_requirements (data : ProverData (ZMod p)) :
+    (ensemble image source target final).VerifierChannelRequirements data byteChannel.toRaw := by
+  let original := HostFinalMemory.Installed image source target final
+  have registered : byteChannel.toRaw ∈ original.channels := byteRegistered
+  have different : byteChannel.toRaw ≠ (SP1Clean.OrdinaryObservation.stateChannel (p := p)).toRaw := by
+    simp [byteChannel, SP1Clean.OrdinaryObservation.stateChannel, Channel.toRaw]
+  have physical : (ensemble image source target final).verifierOperations.interactionValuesWith byteChannel.toRaw data.publicEnvironment =
+      original.verifierOperations.interactionValuesWith byteChannel.toRaw data.publicEnvironment := by
+    rw [verifier_interactions, ite_eq_right different, List.append_nil]
+    exact (SailBoundary.checker source target).install_verifier_interactions_of_mem original _ _ registered
+  have prior : original.VerifierChannelRequirements data byteChannel.toRaw := by
+    intro i mem _
+    exact HostFinalMemory.verifier_requirements (image := image) (source := source) (target := target.sail.memorySnapshot)
+      (final := final) (bankFinal := target.host) (others := HostCallReceivers.available)
+      (resources := HostHintReadLocal.sourceResources source.host.io.hints) (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
+      (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot)
+      (registration := HostFinalMemory.source_registration image source target.sail.memorySnapshot) _ i mem
+  rw [verifier_iff, physical]
+  exact (verifier_iff original data).mp prior
+
+/-- Each original observed component satisfies its outgoing Byte requirements, independently
+of the other consumers sharing the final physical Byte ledger. -/
+theorem component_byte_requirements (component : Component (ZMod p))
+    (member : component ∈ (ensemble image source target final).tables) (env : Environment (ZMod p))
+    (checked : component.operations.ConstraintsHold env) : component.operations.ChannelRequirements byteChannel.toRaw env := by
+  simp only [ensemble, ClosedVerifier.withInteractions] at member
+  obtain ⟨old, included, constraints, lookups, traffic⟩ := HostOrdinaryReceipts.original_of_mem
+    (image := image) (source := source) (target := target) (final := final) (others := HostCallReceivers.available)
+    (resources := HostHintReadLocal.sourceResources source.host.io.hints)
+    (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
+    (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot) component member
+  have before : old ∈ (HostFinalMemory.Installed image source target final).tables := included
+  have valid : old.operations.ConstraintsHold env := by simpa only [Operations.ConstraintsHold, constraints, lookups] using checked
+  apply Operations.channelRequirements_of_interactionsWith_subset _ _ _ _ env
+    (HostFinalMemory.component_byte_requirements (image := image) (source := source) (target := target.sail.memorySnapshot)
+      (final := final) (bankFinal := target.host) (others := HostCallReceivers.available)
+      (resources := HostHintReadLocal.sourceResources source.host.io.hints) (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
+      (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot)
+      (registration := HostFinalMemory.source_registration image source target.sail.memorySnapshot)
+      (HostHintReadLocal.source_interface source.host.io.hints) old before env valid)
+  rw [traffic _ (by simp [byteChannel, InstructionReceipt.channel, Channel.toRaw])]
+
+private theorem registered_observed : byteChannel.toRaw ∈ (ensemble image source target final).channels :=
+  List.mem_append_left _ (byteRegistered (image := image) (source := source) (target := target) (final := final))
 
 attribute [local irreducible] ensemble
 
@@ -33,41 +80,10 @@ attribute [local irreducible] ensemble
 theorem byte_guarantees (witness : EnsembleWitness (ensemble image source target final))
     (checked : witness.Constraints) (funded : DeclarationsOpen witness) :
     ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw := by
-  let original := HostFinalMemory.Installed image source target final
-  let projected := baseWitness witness
-  have registered : byteChannel.toRaw ∈ original.channels := byteRegistered
-  have outside : byteChannel.toRaw ∉ HostFinalMemory.externalChannels (p := p) := by
-    simp [HostFinalMemory.externalChannels, byteChannel, InstructionReceipt.channel,
-      SP1Clean.OrdinaryObservation.stateChannel, CommitmentDeclaration.channel, Channel.toRaw]
-  have receipt : byteChannel.toRaw ≠ (InstructionReceipt.channel (p := p)).toRaw := by
-    simp [byteChannel, InstructionReceipt.channel, Channel.toRaw]
-  have observation : byteChannel.toRaw ≠ (SP1Clean.OrdinaryObservation.stateChannel (p := p)).toRaw := by
-    simp [byteChannel, SP1Clean.OrdinaryObservation.stateChannel, Channel.toRaw]
-  have base := HostFinalMemory.byte_guarantees projected (HostHintReadLocal.source_interface source.host.io.hints)
-    (baseWitness_constraints witness checked) (grounding_balance witness funded _ registered outside)
-  have data : projected.data = witness.data := canonicalData witness
-  have verifier : witness.verifierInteractionsWith byteChannel.toRaw =
-      projected.verifierInteractionsWith byteChannel.toRaw := by
-    change (ensemble image source target final).verifierOperations.interactionValuesWith _ _ =
-      original.verifierOperations.interactionValuesWith _ projected.data.publicEnvironment
-    rw [data, verifier_interactions, ite_eq_right observation, List.append_nil]
-    exact (SailBoundary.checker source target).install_verifier_interactions_of_mem original _ _ registered
-  have ledger := baseWitness_interactions witness byteChannel.toRaw registered receipt observation
-  change projected.verifierInteractionsWith byteChannel.toRaw ++ projected.tables.flatMap (·.interactionsWith byteChannel.toRaw) =
-    witness.verifierInteractionsWith byteChannel.toRaw ++ witness.tables.flatMap (·.interactionsWith byteChannel.toRaw) at ledger
-  rw [verifier, List.append_right_inj] at ledger
-  intro table member
-  rw [Table.channelGuarantees_iff_forall]
-  intro interaction emitted
-  have physical : interaction ∈ projected.tables.flatMap (·.interactionsWith byteChannel.toRaw) := by
-    rw [ledger]
-    exact List.mem_flatMap.mpr ⟨table, member, emitted⟩
-  obtain ⟨previous, earlier, occurrence⟩ := List.mem_flatMap.mp physical
-  have authenticated := (previous.channelGuarantees_iff_forall byteChannel.toRaw).mp
-    (base previous earlier) interaction occurrence
-  have before : previous.data = projected.data := projected.same_data previous earlier
-  have after : table.data = witness.data := witness.same_data table member
-  rwa [before, data, ← after] at authenticated
+  have balanced := funded _ registered_observed (by simp [byteChannel, CommitmentDeclaration.channel, Channel.toRaw])
+  exact (witness.channelGuarantees_of_component_requirements _ checked balanced
+    (verifier_byte_requirements (image := image) (source := source) (target := target) (final := final))
+    (component_byte_requirements (image := image) (source := source) (target := target) (final := final))).2
 
 /-- Raw constraints and balance establish the row specification of the installed guarded consumer. -/
 theorem consumer_spec (witness : EnsembleWitness (ensemble image source target final))

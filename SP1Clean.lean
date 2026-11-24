@@ -12,6 +12,7 @@ import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationBuild
+import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WriteObservationSources
 import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteObservationHandoff
