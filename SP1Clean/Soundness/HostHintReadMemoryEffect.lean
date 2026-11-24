@@ -215,8 +215,7 @@ private theorem source_memory_effect
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
-    (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · witness.data))
+    (handler : env ∈ HostHintReadCoverage.activeEnvs (handlerTable (HostHintQueueBoundary.projected witness)) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (host : HostState) (bytes : Bytes) (remaining : List Bytes)
     (inventory : ((HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
@@ -256,8 +255,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
-    (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · witness.data))
+    (handler : env ∈ HostHintReadCoverage.activeEnvs (handlerTable (HostHintQueueBoundary.projected witness)) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
@@ -299,18 +297,10 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
-  have handlerMember : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+  have handlerMember : (none, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)) := by
-    obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
-    simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
-      List.zip_cons_cons, List.flatMap_cons]
-    have shared : (handlerTable (HostHintQueueBoundary.projected witness)).data =
-        (HostHintQueueBoundary.projected witness).data :=
-      (HostHintQueueBoundary.projected witness).same_data _
-        (handlerTable_mem (HostHintQueueBoundary.projected witness))
-    rw [HostHintQueueBoundary.projected_data] at shared
-    simp only [Table.environment, shared]
-    exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
+    apply (handler_mem_queue (HostHintQueueBoundary.projected witness) env).mpr
+    rwa [HostHintQueueBoundary.projected_data]
   have matched := HostQueueCPUOrder.call_cpu_at (HostHintQueueBoundary.projected witness) interface checks calls ordering
   simp only [HostHintQueueBoundary.projected_data] at matched
   obtain ⟨physical, active, sameCall, sameEvent⟩ := matched (none, env) handlerMember event member clock
@@ -391,7 +381,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
-    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+    (handler : (some empty, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
@@ -734,7 +724,7 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (queueRow : HostQueueOrder.Row (p := p))
-    (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+    (queueMember : queueRow ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow)
     (effect : ∀ (_ : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
@@ -776,8 +766,7 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
-    (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · witness.data))
+    (handler : env ∈ HostHintReadCoverage.activeEnvs (handlerTable (HostHintQueueBoundary.projected witness)) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
     LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
@@ -787,16 +776,9 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (none, env) ?_ clock
     (fun pull currency => carrier.hintRead_step valid constraints balanced event member env handler clock pull currency)
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
-  simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
-    List.zip_cons_cons, List.flatMap_cons]
-  have shared : (handlerTable (HostHintQueueBoundary.projected witness)).data =
-      (HostHintQueueBoundary.projected witness).data :=
-    (HostHintQueueBoundary.projected witness).same_data _
-      (handlerTable_mem (HostHintQueueBoundary.projected witness))
-  rw [HostHintQueueBoundary.projected_data] at shared
-  simp only [Table.environment, shared]
-  exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
+  apply (handler_mem_queue (HostHintQueueBoundary.projected witness) env).mpr
+  rwa [HostHintQueueBoundary.projected_data]
+
 
 /-- Both physical HINT_LEN variants supply the existing timed engine's complete step and
 frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
@@ -807,7 +789,7 @@ theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
-    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+    (handler : (some empty, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env)) :
     LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
@@ -824,17 +806,6 @@ theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
   rw [noWords]
   simp only [List.not_mem_nil, false_implies, implies_true]
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem read_handler_member (first : Table (ZMod p)) (others : List (Table (ZMod p)))
-    (env : Environment (ZMod p))
-    (member : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (first :: others)) :
-    env ∈ first.table.map first.environment := by
-  cases others with
-  | nil => simpa [TransitionView.readIndexedRows, HostQueueOrder.indices, List.mem_map] using member
-  | cons second rest =>
-    cases rest <;>
-      simpa [TransitionView.readIndexedRows, HostQueueOrder.indices, List.mem_map] using member
-
 /-- Every physical queue handler supplies the full timed step/frame contract. HINT_READ and
 both HINT_LEN variants are coordinated internally on the same complete execution carrier. -/
 theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
@@ -843,7 +814,7 @@ theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (queueRow : HostQueueOrder.Row (p := p))
-    (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+    (queueMember : queueRow ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow) :
     LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
@@ -855,15 +826,8 @@ theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
   rcases queueRow with ⟨index, env⟩
   cases index with
   | none =>
-    have handler := read_handler_member _ _ env queueMember
-    have shared : (handlerTable (HostHintQueueBoundary.projected witness)).data =
-        (HostHintQueueBoundary.projected witness).data :=
-      (HostHintQueueBoundary.projected witness).same_data _
-        (handlerTable_mem (HostHintQueueBoundary.projected witness))
-    rw [HostHintQueueBoundary.projected_data] at shared
-    change env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · (handlerTable (HostHintQueueBoundary.projected witness)).data) at handler
-    rw [shared] at handler
+    have handler := (handler_mem_queue (HostHintQueueBoundary.projected witness) env).mp queueMember
+    rw [HostHintQueueBoundary.projected_data] at handler
     exact carrier.hintRead_engineFacts valid constraints balanced event member env handler clock
   | some empty =>
     exact carrier.hintLength_engineFacts valid constraints balanced event member empty env queueMember clock

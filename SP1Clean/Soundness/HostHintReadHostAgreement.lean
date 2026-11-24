@@ -71,7 +71,7 @@ private theorem queue_terminal
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {path : List (HostQueueOrder.Row (p := p))} {initial final : HostHintQueue.State (ZMod p)}
     {upper : HintQueue.Store}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness)))
+    (queueExhaustive : path.Perm (HostQueueOrder.activeRows (queueTables witness)))
     (queueWalk : Walk.IsWalk HostQueueOrder.edge initial final path)
     (history : HostHintQueueHistory.History source.host.io.hints final upper path)
     (policy : HostPolicy) (program : Target.GuestProgram) (target : ExecutionState)
