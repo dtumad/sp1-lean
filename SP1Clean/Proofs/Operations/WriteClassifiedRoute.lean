@@ -27,8 +27,20 @@ theorem semantic_flags (fd : BitVec 64) :
   simp only [hookDescriptors, List.mem_cons, List.not_mem_nil, or_false] at hooks
   rcases hooks with h|h|h|h|h|h|h <;> rw [h] <;> decide
 
+private theorem tag_lt (fd : BitVec 64) : (WriteRoute.ofDescriptor fd).tag < SP1Prime := by
+  unfold WriteRoute.ofDescriptor
+  split_ifs with _ _ _ _ hooks
+  all_goals try decide
+  simp only [hookDescriptors,List.mem_cons,List.not_mem_nil,or_false] at hooks
+  rcases hooks with h|h|h|h|h|h|h <;> rw [h] <;> decide
+
 /-- Recover the semantic route from the original full guest file descriptor. -/
 def Dispatch.route (d : Dispatch F) := WriteRoute.ofDescriptor d.request.header.descriptor.toBitVec64
+
+/-- The original released descriptor chooses its natural route tag without field reduction. -/
+theorem Dispatch.tag_val {d : Dispatch F} (classified : d.request.Valid) : d.request.route.val = d.route.tag := by
+  rw [classified.2,ZMod.val_natCast_of_lt (tag_lt _)]
+  rfl
 
 /-- The full x12 word has exactly the natural value of the dispatch length columns. -/
 theorem Dispatch.Valid.guest_length {d : Dispatch F} (v : d.Valid) : d.request.header.length.toNat = Address.toNat d.length := by

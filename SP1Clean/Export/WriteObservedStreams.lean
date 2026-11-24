@@ -17,6 +17,8 @@ structure ObservedWriteTape (w : EnsembleWitness (native image source target)) (
   exhaustive : path.Perm (physicalDispatches (observed w))
   /-- The recovered sequence is sorted by the original CPU's incoming clock. -/
   chronological : (path.map (fun d => Address.toNat d.request.header.clock)).Pairwise (· < ·)
+  /-- The original stream prefixes, consumed replies and appended journal bind both snapshots. -/
+  endpoints : (WriteStreams.fromEndpoints source.host target.host).Binds source.host target.host
   /-- Consumed reply and all three output byte counts exhaust the public stream deltas. -/
   totals : dispatchCounts path = StreamCounts.ofStreams (.fromEndpoints source.host target.host)
   /-- Every call has the actual original CPU and x12 receipts. -/
@@ -25,6 +27,8 @@ structure ObservedWriteTape (w : EnsembleWitness (native image source target)) (
   positions : ∀ i : Fin path.length, StreamCounts.ofCursor path[i.val].previous = dispatchCounts (path.take i.val)
   /-- The stdout, stderr, public output or indexed hook-request slice is precisely the guest buffer. -/
   published : ∀ d ∈ path, PublicSliceAt w d
+  /-- Each hook consumes and journals the same complete guest request and canonical descriptor. -/
+  requests : ∀ d ∈ path, ∀ fd, d.route = .hook fd → HookRequestAt w d fd
   /-- Direct hints store the complete guest buffer in the common persistent store. -/
   direct : ∀ d ∈ path, d.route = .hint → DirectBufferAt w store d
   /-- Each consumed hook reply contributes exactly its returned buffers, in the released order. -/
@@ -58,7 +62,8 @@ theorem native_observed_write_tape (w : EnsembleWitness (native image source tar
     change StreamCounts.ofCursor (initialCursor (p := SP1Prime) 0) = _
     decide
   obtain ⟨_,_,unique⟩ := native_persistent_queue_unique w ok fit raw
-  refine ⟨store,⟨stored,path,all,sorted,?_,each,?_,fun d md => native_public_slice w ok fit raw d (all.mem_iff.mp md),?_,?_⟩,
+  refine ⟨store,⟨stored,path,all,sorted,(native_stream_boundary w fit raw).1,?_,each,?_,fun d md => native_public_slice w ok fit raw d (all.mem_iff.mp md),
+    fun d md _ => native_hook_request w ok fit raw d (all.mem_iff.mp md),?_,?_⟩,
     fun other h => (unique _ h.1).trans (unique _ stored).symm⟩
   · have total := (dispatch_walk_counts walk valid).1
     rw [start,final_counts w fit raw prior] at total

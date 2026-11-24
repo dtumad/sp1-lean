@@ -20,18 +20,28 @@ private theorem stream_of_route (route : WriteRoute) (streams : WriteStreams) (o
     obtain ⟨reply,found,size⟩ := hook fd rfl
     exact ⟨reply.request.input,by simp only [StreamKey.contents,found,Option.map_some],fun _ _ => size⟩
 
+private theorem hook_reply (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (md : d ∈ physicalDispatches (observed w))
+    {fd : BitVec 32} (route : d.route = .hook fd) :
+    ∃ reply, (WriteStreams.fromEndpoints source.host target.host).hooks[Address.toNat d.previous.replies]? = some reply ∧
+      reply.request.descriptor = fd ∧ reply.request.input.length = Address.toNat d.length := by
+  obtain ⟨v,alloc⟩ := physical_dispatch_valid w ok fit raw d md
+  have classified := (native_dispatch_origin w ok fit raw d md).1
+  have shape := v.route_flags classified
+  have flags : d.flags.hook = 1 := by rw [shape,route]; simp [routeFlags,DispatchFlags.hook]
+  have allocated := alloc (by rw [shape,route]; simp [routeFlags,DispatchFlags.hook])
+  obtain ⟨reply,found,_,desc,size⟩ := native_hook_reply w ok fit raw d allocated flags
+  rw [d.tag_val classified,route] at desc
+  exact ⟨reply,found,BitVec.eq_of_toNat_eq desc,size⟩
+
 private theorem published (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (md : d ∈ physicalDispatches (observed w))
     {key : StreamKey} (selected : destinationKey d.route (Address.toNat d.previous.replies) = some key) :
     ∃ stream, key.contents (.fromEndpoints source.host target.host) = some stream ∧
       (∀ r, key = .request r → stream.length = Address.toNat d.length) := by
-  have valid := (physical_dispatch_valid w ok fit raw d md).1
-  have shape := valid.route_flags ((native_dispatch_origin w ok fit raw d md).1)
   refine stream_of_route d.route _ _ _ ?_ selected
   intro fd route
-  have flags : d.flags.hook = 1 := by rw [shape,route]; simp [routeFlags,DispatchFlags.hook]
-  have allocated := (physical_dispatch_valid w ok fit raw d md).2 (by rw [shape,route]; simp [routeFlags,DispatchFlags.hook])
-  obtain ⟨reply,found,_,_,size⟩ := native_hook_reply w ok fit raw d allocated flags
+  obtain ⟨reply,found,_,size⟩ := hook_reply w ok fit raw d md route
   exact ⟨reply,found,size⟩
 
 /-- The complete selected public slice has precisely x12 bytes. All of those bytes are
@@ -82,5 +92,41 @@ theorem native_public_slice (w : EnsembleWitness (native image source target)) (
     have sameIndex : k = atPos := Fin.ext pos
     exact (congrArg (fun j : Fin stream.length => stream[j.val]) sameIndex).symm
   exact same.symm ▸ guest
+
+/-- An actual hook matches its supplied reply, the full guest request and the appended
+request journal entry at the same exact ordinal. Empty buffers are included. -/
+def HookRequestAt (w : EnsembleWitness (native image source target)) (d : Dispatch F) (fd : BitVec 32) : Prop :=
+  let ordinal := Address.toNat d.previous.replies
+  ∃ reply, source.host.replies[ordinal]? = some reply ∧
+    target.host.requests[source.host.requests.length + ordinal]? = some reply.request ∧ reply.request.descriptor = fd ∧
+    reply.request.input.length = d.request.header.length.toNat ∧ ∀ i : Fin reply.request.input.length, GuestByteAt w d i.val reply.request.input[i.val]
+
+/-- Every physical hook consumes and journals precisely the original guest request bytes and descriptor. -/
+theorem native_hook_request (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (md : d ∈ physicalDispatches (observed w))
+    {fd : BitVec 32} (route : d.route = .hook fd) : HookRequestAt w d fd := by
+  let s := WriteStreams.fromEndpoints source.host target.host
+  let ordinal := Address.toNat d.previous.replies
+  obtain ⟨reply,found,descriptor,size⟩ := hook_reply w ok fit raw d md route
+  change s.hooks[ordinal]? = some reply at found
+  have ordinalFits : ordinal < s.hooks.length := (List.getElem?_eq_some_iff.mp found).1
+  have binds : s.Binds source.host target.host := (native_stream_boundary w fit raw).1
+  have input : source.host.replies[ordinal]? = some reply := by
+    rw [binds.replies,List.getElem?_append_left ordinalFits,found]
+  have journal : target.host.requests[source.host.requests.length + ordinal]? = some reply.request := by
+    rw [binds.requests,List.getElem?_append_right (by omega),Nat.add_sub_cancel_left,List.getElem?_map,found]
+    rfl
+  have selected : destinationKey d.route ordinal = some (.request ordinal) := by rw [route]; rfl
+  obtain ⟨bytes,pub,_,_,guest⟩ := native_public_slice w ok fit raw d md _ selected
+  change (s.hooks[ordinal]?).map (fun h => h.request.input) = some bytes at pub
+  rw [found,Option.map_some] at pub
+  obtain rfl := Option.some.inj pub
+  have zeros : (StreamCounts.ofCursor d.previous).offset d.route = 0 := by rw [route]; rfl
+  have slice : (reply.request.input.drop ((StreamCounts.ofCursor d.previous).offset d.route)).take (Address.toNat d.length) = reply.request.input := by
+    rw [zeros,List.drop_zero,← size,List.take_length]
+  let observedBytes (bytes : Bytes) := ∀ i : Fin bytes.length, GuestByteAt w d i.val bytes[i.val]
+  change observedBytes _ at guest
+  rw [slice] at guest
+  exact ⟨reply,input,journal,descriptor,size.trans (physical_dispatch_valid w ok fit raw d md).1.guest_length.symm,guest⟩
 
 end SP1Clean.Export.WriteObservationAssembly
