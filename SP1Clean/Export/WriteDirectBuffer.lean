@@ -62,18 +62,23 @@ private theorem stored_group_lane (w : EnsembleWitness (native image source targ
   have same := congrArg (fun x : Nat => g.octets.bytes[L x]) firstEq
   exact (congrArg (fun x : F => BitVec.ofNat 8 x.val) (same.trans bytes)).trans equal
 
+/-- The actual persistent direct node has the specified byte length. Its i-th byte comes
+from the original aligned Memory word covering x11+i at the incoming dispatcher clock. -/
+def DirectBufferAt (w : EnsembleWitness (native image source target)) (store : Store) (d : Dispatch F) : Prop :=
+    ∃ node, node? store (Address.toNat d.pointer) = some node ∧ node.bytes.length = Address.toNat d.length ∧
+      ∀ i : Fin node.bytes.length, ∃ s : WriteBuffer.Step F, s.Valid ∧
+        WriteProbe.ReadMeaning (rawSource ((appended image source target _).project (observed w))) s.read ∧
+        s.read.clock = d.request.header.clock ∧ ∃ lane : Fin 8,
+          Address.toNat s.read.key + lane.val = d.request.header.address.toNat + i.val ∧
+          s.read.value.toBitVec64.extractLsb' (8 * lane.val) 8 = node.bytes[i.val]
+
 /-- Every byte of the persistent hint created by a genuine direct dispatcher is the
 original guest byte at x11 plus its index, read at that dispatcher's incoming clock. The
 exact length and pointer come from the physical allocation, including the empty case. -/
 theorem native_direct_buffer (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) {store : Store} (stored : PersistentQueue w store)
     (d : Dispatch F) (md : d ∈ allocatingDispatches (observed w)) (direct : d.flags.direct = 1) :
-    ∃ node, node? store (Address.toNat d.pointer) = some node ∧ node.bytes.length = Address.toNat d.length ∧
-      ∀ i : Fin node.bytes.length, ∃ s : WriteBuffer.Step F, s.Valid ∧
-        WriteProbe.ReadMeaning (rawSource ((appended image source target _).project (observed w))) s.read ∧
-        s.read.clock = d.request.header.clock ∧ ∃ lane : Fin 8,
-          Address.toNat s.read.key + lane.val = d.request.header.address.toNat + i.val ∧
-          s.read.value.toBitVec64.extractLsb' (8 * lane.val) 8 = node.bytes[i.val] := by
+    DirectBufferAt w store d := by
   obtain ⟨_,_,_,_,_,_,_,_,_,node,found,length,_⟩ := native_direct_node w ok fit raw stored d md direct
   refine ⟨node,found,length,?_⟩
   obtain ⟨groups,walk,steps⟩ := native_direct_placement w ok fit raw d md direct
