@@ -52,28 +52,36 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     execution::load_constant(&mut code, 10, 65536);
     execution::load_constant(&mut code, 11, 17);
     let base = 131072 - 4 * code.len() as u64;
-    for read_length in [length, 8] {
-        for _ in 0..2 {
+    let triples = length == 9;
+    let mut sizes = vec![length, 8];
+    if triples {
+        sizes.push(0);
+    }
+    for (index, &read_length) in sizes.iter().enumerate() {
+        for _ in 0..if triples { 1 } else { 2 } {
             code.extend([addi(5, 0, 240), ecall()]);
+        }
+        if index == 2 {
+            code.push(addi(10, 10, 24));
         }
         code.extend([addi(5, 0, 241), addi(11, 0, read_length), ecall()]);
     }
-    code.extend([
-        addi(5, 0, 240),
-        ecall(),
-        addi(5, 0, 0),
-        addi(10, 0, 0),
-        ecall(),
-    ]);
+    for _ in 0..if triples { 3 } else { 1 } {
+        code.extend([addi(5, 0, 240), ecall()]);
+    }
+    code.extend([addi(5, 0, 0), addi(10, 0, 0), ecall()]);
     let mut program = Sp1Program::new(code, base, base);
     for offset in [0, 8, 16, 24] {
         std::sync::Arc::make_mut(&mut program.memory_image).insert(65536 + offset, u64::MAX);
     }
     let bytes = |n| (0..n).map(|i| (19 * i + 3) as u8).collect::<Vec<_>>();
-    let (executor, records) = execution::run(program, &[bytes(length), bytes(8)]);
+    let (executor, records) = execution::run(
+        program,
+        &sizes.iter().map(|size| bytes(*size)).collect::<Vec<_>>(),
+    );
     assert_eq!(records.len(), 1);
     let record = &records[0];
-    assert_eq!(record.syscall_events.len(), 8);
+    assert_eq!(record.syscall_events.len(), if triples { 10 } else { 8 });
     let first = record.syscall_events[0].0.clk - 8; // first instruction is ADDI x5, x0, 240
     check_host_instructions(
         record,
@@ -90,19 +98,28 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
             record.public_values.next_pc,
         ),
     );
-    let expected_results = [length, length, 8, 8, u64::MAX];
+    let expected_results = if triples {
+        vec![length, 8, 0, u64::MAX, u64::MAX, u64::MAX]
+    } else {
+        vec![length, length, 8, 8, u64::MAX]
+    };
     let mut observed = 0;
     for (event, access) in &record.syscall_events {
         if event.syscall_code == SyscallCode::HINT_LEN {
             assert_eq!(access.a.current_record().value, expected_results[observed]);
-            let table = if observed == 4 { 83 } else { 82 };
-            let row = &witness.tables[table][if observed == 4 { 0 } else { observed }];
+            let empty_start = if triples { 3 } else { 4 };
+            let (table, index) = if observed >= empty_start {
+                (83, observed - empty_start)
+            } else {
+                (82, observed)
+            };
+            let row = &witness.tables[table][index];
             assert_eq!(row[1], F::from_u64(event.clk - first + 9));
             assert_eq!(decode(&row[14..18]), expected_results[observed]);
             observed += 1;
         }
     }
-    assert_eq!(observed, 5);
+    assert_eq!(observed, expected_results.len());
     let last_hint = record
         .syscall_events
         .iter()
@@ -149,14 +166,21 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     }
     let (intermediate, _) = execution::run(first_program, &[bytes(length)]);
     let mut expected = vec![];
-    for ((event, _), (size, state)) in record
+    for (read_index, ((event, _), &size)) in record
         .syscall_events
         .iter()
         .filter(|(event, _)| event.syscall_code == SyscallCode::HINT_READ)
-        .zip([(length, &intermediate), (8, &executor)])
+        .zip(&sizes)
+        .enumerate()
     {
+        let state = if read_index == 0 {
+            &intermediate
+        } else {
+            &executor
+        };
+        let base_address = if read_index == 2 { 65560 } else { 65536 };
         for index in 0..=size / 8 {
-            let address = 65536 + 8 * index;
+            let address = base_address + 8 * index;
             let value = state.get_memory_value(address).value;
             let clock = event.clk - first + 10;
             expected.push(vec![
@@ -197,9 +221,20 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     expected.sort();
     assert_eq!(actual, expected);
 
-    assert_eq!(witness.tables[63].len(), 2);
+    assert_eq!(witness.tables[63].len(), if triples { 4 } else { 2 });
     assert_eq!(witness.tables[82].len(), 4);
-    assert_eq!(witness.tables[83].len(), 1);
+    assert_eq!(witness.tables[83].len(), if triples { 4 } else { 1 });
+    if triples {
+        for slot in [63, 82, 83] {
+            let padding = &witness.tables[slot][3];
+            assert_eq!(padding[P::HINT_TABLES[slot].width - 1], F::ZERO);
+            let occurrences = P::interactions(slot, padding);
+            assert!(!occurrences.is_empty());
+            assert!(occurrences
+                .iter()
+                .all(|entry| entry.multiplicity == F::ZERO));
+        }
+    }
     assert!(witness.tables[57].is_empty());
     for row in &witness.tables[95] {
         if row[P::HINT_TABLES[95].width - 1] == F::ONE {

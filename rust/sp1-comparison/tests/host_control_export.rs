@@ -675,7 +675,7 @@ fn node(pointer: u64, tail: u64, length: u64) -> Vec<F> {
 }
 
 fn length_input(message: &[F], previous: &[F], record: &[F]) -> Vec<F> {
-    [message, previous, record].concat()
+    [message, previous, record, &[F::ONE]].concat()
 }
 
 fn read_input(
@@ -686,7 +686,7 @@ fn read_input(
     length: u64,
     last: u64,
 ) -> Vec<F> {
-    let mut input = length_input(message, previous, record);
+    let mut input = [message, previous, record].concat();
     input.extend(address(start));
     input.extend(
         word(start)[..3]
@@ -703,6 +703,7 @@ fn read_input(
     input.extend(address(length / 8 + 1));
     input.extend(address(length / 8));
     input.extend(word(last));
+    input.push(F::ONE);
     input
 }
 
@@ -773,7 +774,7 @@ fn hint_handlers_match_lean_constructor_rows_and_complete_ledgers() {
         assert_eq!(values(&row), reference.row);
         same_ledger((handler.ledger)(&row), reference.ledger);
         assert!((handler.has_open_bus)(&input));
-        assert!(!handler.valid(&handler.build(&vec![F::ZERO; handler.input_width])));
+        assert!(handler.valid(&handler.build(&vec![F::ZERO; handler.input_width])));
     }
 }
 
@@ -1004,9 +1005,10 @@ fn malformed_hint_calls_clocks_and_spans_are_rejected() {
 }
 
 #[test]
-fn commitment_padding_retains_occurrences_without_executing_a_call() {
+fn commitment_and_hint_padding_retains_occurrences_without_executing_a_call() {
     let handlers = handlers();
-    for handler in &handlers[2..18] {
+    let hints = hint_handlers();
+    for handler in handlers[2..18].iter().chain(hints.iter()) {
         let mut input = vec![F::from_u64(42); handler.input_width];
         let activity = input.len() - 1;
         input[activity] = F::ZERO;

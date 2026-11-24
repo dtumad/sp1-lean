@@ -7,6 +7,8 @@ import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostNoopChip.Choice
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+import SP1Clean.Proofs.Chips.HostHintReadChip.Guarded
+import SP1Clean.Proofs.Chips.HostHintLengthChip.Guarded
 import SP1Clean.Native.Operations.HostCommitBoundary
 import ToClean.Air.TableBuild
 
@@ -43,9 +45,9 @@ def rustExports : List (String × Except String String) :=
       (s!"{commitName deferred slot}.rs", exportCircuit (HostCommitChip.circuit deferred slot))) ++
   [("host_commit_terminal.rs", exportCircuit (HostCommitBoundary.terminal false)),
    ("host_deferred_terminal.rs", exportCircuit (HostCommitBoundary.terminal true)),
-   ("host_hint_length_empty.rs", exportCircuit (HostHintLengthChip.circuit true)),
-   ("host_hint_length.rs", exportCircuit (HostHintLengthChip.circuit false)),
-   ("host_hint_read.rs", exportCircuit HostHintReadChip.circuit)]
+   ("host_hint_length_empty.rs", exportCircuit (HostHintLengthChip.guardedCircuit true)),
+   ("host_hint_length.rs", exportCircuit (HostHintLengthChip.guardedCircuit false)),
+   ("host_hint_read.rs", exportCircuit HostHintReadChip.guardedCircuit)]
 
 private def word (value : ℕ) : Word Fp := Soundness.Target.bitVecToWord (BitVec.ofNat 64 value)
 
@@ -101,8 +103,8 @@ private def hintExecution (hints : List Semantics.Bytes) (kind : Semantics.Sysca
 /-- Constructor rows from native execution include empty queues, empty hints and limb carries. -/
 def hintReference : Except String Lean.Json := do
   let empty ← hintExecution [] .hintLength (2 ^ 64 - 1) 17
-  let initial := rowReference "host_hint_length_empty" (HostHintLengthChip.circuit true)
-    (HostHintLengthChip.populate #[] 0 1 265 empty)
+  let initial := rowReference "host_hint_length_empty" (HostHintLengthChip.guardedCircuit true)
+    (HostHintLengthChip.populate #[] 0 1 265 empty,1)
   let cases ← [0, 1, 7, 8, 9, 16, 17, 65535, 65536].mapM fun length => do
     let bytes : Semantics.Bytes := (List.range length).map fun index => BitVec.ofNat 8 (19 * index + 3)
     let hints := [bytes, [BitVec.ofNat 8 99]]
@@ -110,10 +112,10 @@ def hintReference : Except String Lean.Json := do
     let address := if length % 2 = 0 then 131072 else 131064
     let observe ← hintExecution hints .hintLength (2 ^ 64 - 1) 17
     let read ← hintExecution hints .hintRead address length
-    pure [rowReference "host_hint_length" (HostHintLengthChip.circuit false)
-        (HostHintLengthChip.populate store.1 store.2 1 265 observe),
-      rowReference "host_hint_read" HostHintReadChip.circuit
-        (HostHintReadChip.populate store.1 store.2 1 265 read)]
+    pure [rowReference "host_hint_length" (HostHintLengthChip.guardedCircuit false)
+        (HostHintLengthChip.populate store.1 store.2 1 265 observe,1),
+      rowReference "host_hint_read" HostHintReadChip.guardedCircuit
+        (HostHintReadChip.populate store.1 store.2 1 265 read,1)]
   return Lean.toJson (initial :: cases.flatten)
 
 end SP1CleanTest.Core.HostControlExport
