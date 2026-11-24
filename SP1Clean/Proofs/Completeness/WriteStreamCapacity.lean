@@ -53,7 +53,8 @@ private theorem count_list_le (buffers : List Bytes) : buffers.length ≤ (buffe
   | nil => simp
   | cons b bs ih => simp only [List.length_cons, List.map_cons, List.sum_cons, bytePayloadCost]; omega
 
-private theorem count_hooks_le (replies : List HookReply) : replies.length ≤ (replies.map HookReply.payloadCost).sum := by
+/-- Each consumed hook reply pays for at least one record in the endpoint cost. -/
+theorem count_hooks_le (replies : List HookReply) : replies.length ≤ (replies.map HookReply.payloadCost).sum := by
   induction replies with
   | nil => simp
   | cons r rs ih => simp only [List.length_cons, List.map_cons, List.sum_cons, HookReply.payloadCost, bytePayloadCost]; omega
@@ -106,11 +107,10 @@ theorem streamCost_endpoints (source target : HostState) :
   simp only [streamCost, WriteStreams.fromEndpoints, List.length_drop, HostState.payloadCost, bytePayloadCost]
   omega
 
-/-- Native semantic resource ceilings imply representability for every fixed endpoint position.
-The resulting table height also fits the backend's u64 index. -/
-theorem admissible_inventoryOK {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+/-- The entire stream cost is representable under the native endpoint payload bounds. -/
+theorem admissible_streamCost {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events) :
-    inventoryOK (.fromEndpoints source.host target.host) = true := by
+    streamCost (.fromEndpoints source.host target.host) < 2^48 := by
   have low := run.2.2.2.1 .boundaryBytes
   have high := run.2.2.2.2.1 .boundaryBytes
   change source.realize.boundaryPayload ≤ SP1Prime - 1 at low
@@ -120,9 +120,15 @@ theorem admissible_inventoryOK {image : ProgramImage} {source target : Execution
   have b : target.realize.host = target.host := rfl
   rw [a] at low
   rw [b] at high
-  apply inventoryOK_of_cost
   have cost := streamCost_endpoints source.host target.host
   have field : SP1Prime < 2^31 := by decide
   omega
+
+/-- Native semantic resource ceilings imply representability for every fixed endpoint position.
+The resulting table height also fits the backend's u64 index. -/
+theorem admissible_inventoryOK {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events) :
+    inventoryOK (.fromEndpoints source.host target.host) = true :=
+  inventoryOK_of_cost _ (admissible_streamCost run)
 
 end SP1Clean.WriteEffects
