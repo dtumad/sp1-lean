@@ -94,6 +94,7 @@ import SP1Clean.Proofs.Completeness.FixedProgramReads
 import SP1Clean.Proofs.Completeness.MixedProgramFetches
 import SP1Clean.Proofs.Completeness.PermissionTables
 import SP1Clean.Proofs.Completeness.MixedPermissionDemand
+import SP1Clean.Export.WriteMixedPermissionLedger
 import SP1Clean.Proofs.Completeness.MemoryInstructionRows
 import SP1Clean.Proofs.Completeness.StorePermissionRows
 import SP1Clean.Proofs.Completeness.StorePermissionLedger
