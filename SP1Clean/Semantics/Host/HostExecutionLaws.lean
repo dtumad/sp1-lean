@@ -98,17 +98,17 @@ theorem HostState.execute_hintRead_iff (host : HostState) (policy : HostPolicy)
 
 /-- Every emitted write is checked against the complete native write policy. No other arm can
 silently write RAM, including through a supplied hook reply. -/
-theorem HostState.executeKind_write_permitted {host : HostState} {policy : HostPolicy}
+theorem HostState.executeKind_write_origin {host : HostState} {policy : HostPolicy}
     {context : HostReadContext} {kind : SyscallKind} {arg1 arg2 : BitVec 64} {effect : HostEffect}
     (executed : host.executeKind policy context kind arg1 arg2 = some effect)
     (write : HostMemoryWrite) (present : effect.write = some write) :
-    policy.memory.permits write.address write.bytes.length = true := by
+    kind = .hintRead ∧ policy.memory.permits write.address write.bytes.length = true := by
   cases kind with
   | hintRead =>
       obtain ⟨bytes, rest, _, _, _, permitted, rfl⟩ :=
         (host.execute_hintRead_iff policy context arg1 arg2 effect).mp executed
       cases present
-      exact permitted
+      exact ⟨rfl, permitted⟩
   | write =>
       obtain ⟨_, _, _, _, _, _, rfl⟩ :=
         (host.execute_write_iff policy context arg1 arg2 effect).mp executed
@@ -123,5 +123,13 @@ theorem HostState.executeKind_write_permitted {host : HostState} {policy : HostP
       all_goals
         cases executed
         contradiction
+
+/-- Every emitted host write is permitted for its entire padded byte length. -/
+theorem HostState.executeKind_write_permitted {host : HostState} {policy : HostPolicy}
+    {context : HostReadContext} {kind : SyscallKind} {arg1 arg2 : BitVec 64} {effect : HostEffect}
+    (executed : host.executeKind policy context kind arg1 arg2 = some effect)
+    (write : HostMemoryWrite) (present : effect.write = some write) :
+    policy.memory.permits write.address write.bytes.length = true :=
+  (executeKind_write_origin executed write present).2
 
 end SP1Clean.Semantics

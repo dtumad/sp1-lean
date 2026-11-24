@@ -885,6 +885,13 @@ theorem compileInstructionEvent?_accessPlan_generated
   rw [projectSP1Transition?_accesses projected]
   exact compileInstructionEvent?_accessPlan generated
 
+/-- The outgoing compiler clock is the last real touch at each location, also across refreshes. -/
+theorem compileInstructionEvent?_nextFrontier {view : SP1TransitionView} {frontier : AccessFrontier}
+    {clk : ℕ} {result : CompiledInstructionEvent} (generated : compileInstructionEvent? view frontier clk = some result) :
+    result.nextFrontier = advancePlan frontier clk result.plan := by
+  obtain ⟨accesses, event, _, _, rfl⟩ := compileInstructionEvent?_components generated
+  exact scheduleAccessPlan_outgoing frontier clk accesses
+
 /-- Stamping is not a second access representation: erasing its timestamps returns the retained
 canonical plan literally. -/
 theorem compileInstructionEvent?_stamped_touches {view : SP1TransitionView}
