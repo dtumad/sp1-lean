@@ -1,7 +1,7 @@
 import SP1Clean.Export.InstalledImmutableLedger
 import SP1Clean.Export.WriteObserverRows
 import SP1Clean.Export.WriteObservationReadBuild
-import SP1Clean.Export.WriteMixedControlTables
+import SP1Clean.Export.WriteControlLedgers
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteEndpointJoins
 import SP1Clean.Export.WritePermissionCapacity
@@ -15,9 +15,10 @@ The queue seal rebases the last private pointer and timestamp to the canonical t
 The chronological execution supplies the immutable reader counts, the final private
 queue state, the outgoing walk and its seal, and every alignment plan requested by a
 guest group. The fixed stream metadata table counts the actual hook dispatches and allocation
-steps. The original state bump, checkpoint padding, HINT_READ and both HINT_LEN modes are generated from the same execution.
-This constructs all nineteen observer tables. Twenty-five original supervisor tables and the
-remaining shared-channel checks are still required for whole-assembly completeness.
+steps. The same execution supplies the original state bump, checkpoint padding, HINT_READ, both HINT_LEN
+modes, HALT and the shared ENTER/VERIFY receiver. All nineteen observer tables have constructors.
+The twenty-three original Byte and range providers and the remaining shared-channel checks
+are still required for whole-assembly completeness.
 -/
 
 namespace SP1Clean.Export.WriteObservationAssembly
@@ -102,6 +103,7 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
             (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
             (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
               [(SP1StateBoundary.haltCode ctx.source ctx.target).getD 0] ∧
+            ControlLedgers full header events rows ∧
             (∀ d, LogUpBalanced (full.interactionsWith (HostCommitChip.stateChannel d).toRaw)) ∧
             CheckedLedger (full.interactionsWith HostHintQueue.nodeChannel.toRaw) (InstalledAssembly.immutableNodeSites release.1 data entries) ∧
             CheckedLedger (full.interactionsWith HostHintQueue.wordChannel.toRaw) (InstalledAssembly.immutableWordSites release.1 data entries) ∧
@@ -189,7 +191,9 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     suffix reg s rfl rfl rfl
   obtain ⟨_,nodePaid,wordPaid⟩ := InstalledAssembly.native_immutable_queue release.1 data collected s paid.toChecked
   refine ⟨suffixGood,installed_observer_rows w suffix reg suffixGood,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
-    MixedHaltPadding.receipt release.1.1.2,?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩
+    MixedHaltPadding.receipt release.1.1.2,
+    installed_control_ledgers release routed data hint _ header remaining suffix reg run.1 preset,
+    ?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)
     rw [public_bank pre d _ (banks (.bank d none))]

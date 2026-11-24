@@ -153,6 +153,8 @@ import SP1Clean.Export.WriteByteProviderInstallation
 import SP1Clean.Export.WritePublicByteDemand
 import SP1Clean.Export.WriteByteConsumers
 import SP1Clean.Export.WriteByteLedger
+import SP1Clean.Export.WriteMixedExitLedger
+import SP1Clean.Export.WriteControlLedgers
 import SP1Clean.Export.WriteMixedHostData
 import SP1Clean.Export.WriteMixedBankBalances
 import SP1Clean.Export.WriteMixedSourceRecords
@@ -364,6 +366,7 @@ import SP1Clean.Proofs.Completeness.OrdinaryBucketCapacity
 import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
 import SP1Clean.Proofs.Completeness.MixedStateSchedule
 import SP1Clean.Proofs.Completeness.MixedBumpInventory
+import SP1Clean.Proofs.Completeness.MixedExitDemand
 import SP1Clean.Proofs.Completeness.MixedHaltPadding
 import SP1Clean.Soundness.WriteBufferCoverage
 import SP1Clean.Soundness.WriteObservationHistory

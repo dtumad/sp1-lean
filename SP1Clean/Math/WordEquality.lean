@@ -34,4 +34,13 @@ theorem eq_of_toBitVec64_eq {left right : Word (ZMod p)}
   apply eq_of_toNat_eq leftBound rightBound
   simpa only [toBitVec64_toNat leftBound, toBitVec64_toNat rightBound] using congrArg BitVec.toNat equal
 
+/-- Reducing the four bounded little-endian limbs in the field agrees with casting the
+unsigned 64-bit value. -/
+theorem reduce_eq_toBitVec64 (word : Word (ZMod p)) (small : Word.isU64 word) :
+    word[0] + (word[1] + (word[2] + word[3] * 65536) * 65536) * 65536 =
+      ((Word.toBitVec64 word).toNat : ZMod p) := by
+  rw [Word.toBitVec64_toNat small]
+  simp only [Word.toNat, Nat.cast_add, Nat.cast_mul, ZMod.natCast_zmod_val, Nat.cast_pow, Nat.cast_ofNat]
+  ring
+
 end SP1Clean.Word

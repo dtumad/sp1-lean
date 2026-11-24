@@ -126,6 +126,12 @@ def projected (witness : EnsembleWitness (ensemble image source final bankFinal 
   exact ((boundary source final bankFinal).project_publicInput (underlying witness)).trans
     (HaltPadding.project_publicInput witness)
 
+/-- The queue endpoint and HALT wrapper retain the original physical cells in every slot. -/
+theorem projected_rows
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
+    (projected witness).tables.map Table.table = witness.tables.map Table.table :=
+  HaltPadding.project_rows witness
+
 /-- Physical tables following the padding-only slot are unchanged; no verifier table is appended. -/
 theorem projected_drop
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))

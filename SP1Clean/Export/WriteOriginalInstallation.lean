@@ -60,4 +60,25 @@ theorem checks_of_original_cells {actual original : Table F}
   · intro ch
     rw [Table.interactionsWith_eq_filter,Table.interactionsWith_eq_filter,interactions]
 
+/-- An original channel whose name is absent from every observer component and both public
+endpoints retains its exact original ledger, including its public boundary occurrences. -/
+theorem public_original_ledger (w : EnsembleWitness (base image source target finish)) (suffix : List (Table F))
+    (registered : suffix.map Table.component = tables source target) (ch : RawChannel F)
+    (original : ch ∈ (base image source target finish).channels)
+    (outside : ch ≠ WriteProbe.readbackChannel.toRaw)
+    (silent : ch.name ∉ (tables source target).flatMap (fun c => c.circuit.channels.map RawChannel.name))
+    (endpoints : ch.name ∉ [(WriteEffects.cursorChannel (p := SP1Prime)).name,(WriteEffects.closeChannel (p := SP1Prime)).name]) :
+    (withPublicChecks (build w suffix registered)).interactionsWith ch = w.interactionsWith ch := by
+  have full : ch ∈ (preprocessing image source target finish).channels := by
+    unfold preprocessing
+    change _ ∈ channels ++ (withSources image source target finish).channels
+    rw [channels_eq]
+    exact List.mem_append_right _ (List.mem_cons_of_mem _ original)
+  have empty : suffix.flatMap (·.interactionsWith ch) = [] := by
+    apply List.flatMap_eq_nil_iff.mpr
+    intro t used
+    apply Table.interactionsWith_nil_of_channel_not_mem
+    exact fun member => silent (List.mem_flatMap.mpr ⟨t.component,registered ▸ List.mem_map_of_mem used,List.mem_map_of_mem member⟩)
+  rw [withPublicChecks_ledger _ _ full endpoints,build_ledger,empty,List.append_nil,installSources_ledger _ _ outside]
+
 end SP1Clean.Export.WriteObservationAssembly

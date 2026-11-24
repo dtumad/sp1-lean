@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostHintReadHostAgreement
 import SP1Clean.Soundness.LocalCoreExit
+import SP1Clean.Math.WordEquality
 
 /-! # Public Exit values on the installed complete execution
 
@@ -41,26 +42,26 @@ private theorem source_exit_silent :
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
   contradiction
 
+/-- The complete original Exit ledger, including all gate-zero rows, is retained by the
+local-core projection below the host handler and resource tables. -/
+theorem local_exit_interactions
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames) :
+    (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith exitChannel.toRaw =
+      (HostHintQueueBoundary.projected witness).interactionsWith exitChannel.toRaw :=
+  HostLocalCore.localWitness_other _ exitChannel.toRaw
+    (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
+    (by simp [exitChannel, HostCallChip.channel, Channel.toRaw])
+    (by simp [exitChannel, WritePermissionProvider.channel, Channel.toRaw]) source_exit_silent
+
 /-- Exit balance projects from the full installed witness, independently of Memory balance. -/
 theorem source_exit_balance
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (balanced : HostHintQueueBoundary.Balanced witness) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel exitChannel.toRaw := by
   change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
-  rw [HostLocalCore.localWitness_other _ exitChannel.toRaw
-    (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-    (by simp [exitChannel, HostCallChip.channel, Channel.toRaw])
-    (by simp [exitChannel, WritePermissionProvider.channel, Channel.toRaw]) source_exit_silent]
+  rw [local_exit_interactions witness]
   exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-
-omit [Fact (2 ^ 25 < p)] in
-private theorem word_reduction (word : Word (ZMod p)) (small : Word.isU64 word) :
-    word[0] + (word[1] + (word[2] + word[3] * 65536) * 65536) * 65536 =
-      ((Word.toBitVec64 word).toNat : ZMod p) := by
-  rw [Word.toBitVec64_toNat small]
-  simp only [Word.toNat, Nat.cast_add, Nat.cast_mul, ZMod.natCast_zmod_val, Nat.cast_pow, Nat.cast_ofNat]
-  ring
 
 private theorem halt_selector (row : SyscallInstrsChip.Inputs (ZMod p))
     (spec : SyscallInstrsChip.Spec row) (real : row.is_real = 1)
@@ -102,7 +103,7 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
       StateMsg.timeNat (HaltChip.statePulledMessage row))
       (by simp [ExecutionRow.facts, haltRowFacts, HaltChip.memoryPairs])).1
     have emitted := LocalCore.halt_exit_code _ checked exitBalance active
-    rw [HaltChip.exitMessage, word_reduction _ small] at emitted
+    rw [HaltChip.exitMessage, Word.reduce_eq_toBitVec64 _ small] at emitted
     rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput] at emitted
     exact emitted
   | syscall row =>
@@ -132,7 +133,7 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
     have small : Word.isU64 row.op_b_memory.prev_value :=
       (syscallRowFacts_currency_split row original).2.1.1
     have emitted := LocalCore.syscall_exit_code _ checked exitBalance active selected
-    rw [SyscallInstrsChip.exitMessage, word_reduction _ small] at emitted
+    rw [SyscallInstrsChip.exitMessage, Word.reduce_eq_toBitVec64 _ small] at emitted
     rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput] at emitted
     exact emitted
 
