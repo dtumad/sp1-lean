@@ -178,7 +178,8 @@ theorem sourceAt_position (id : Source) : sourceAt (position id) = some id := by
   | refresh => decide
   | finalizer ram => cases ram <;> decide
 
-private theorem position_of_sourceAt {index : ℕ} {id : Source} (found : sourceAt index = some id) :
+/-- Selection recovers the unique physical table index of its source. -/
+theorem position_of_sourceAt {index : ℕ} {id : Source} (found : sourceAt index = some id) :
     position id = index := eq_of_beq (List.find?_some (p := fun candidate => position candidate == index) found)
 
 /-- Publish the registered sources in place. All other physical components retain their

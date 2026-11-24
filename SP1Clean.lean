@@ -59,6 +59,8 @@ import SP1Clean.Export.WriteGeneratedHostSources
 import SP1Clean.Export.WriteGeneratedRamSources
 import SP1Clean.Export.WriteGeneratedRegisterSources
 import SP1Clean.Export.WriteGeneratedSelection
+import SP1Clean.Export.WriteMixedSourceAssembly
+import SP1Clean.Export.WriteMixedSourceTables
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming

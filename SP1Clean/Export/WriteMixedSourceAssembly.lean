@@ -1,0 +1,136 @@
+import SP1Clean.Export.WriteMixedSourceTables
+
+/-! # Installing every mixed Memory producer in the native supervisor
+
+The memory compiler owns the two boundary finalizers and the 29 instruction, host and refresh
+tables. Only the remaining physical slots take their tables from other component generators.
+Canonical assembly preserves every selected cell and every unit read-back occurrence.
+-/
+
+namespace SP1Clean.Export.WriteMixedSourceTables
+
+open Circuit Air.Flat Channels Semantics Soundness TraceGen Machine FormalModel.Shard
+open WriteProbe WriteProbe.AccessInventory WriteSourceRegistry
+
+private abbrev F := ZMod SP1Prime
+
+variable (image : ProgramImage) (source target : ExecutionSnapshot) (finish : HostHintQueue.State F)
+
+private abbrev components := (base image source target finish).tables.drop 6
+
+/-- The other generators provide precisely the post-boundary slots that do not publish
+Memory read-backs. The index rules out supplying replacements for any Memory producer. -/
+def Remaining := (i : Fin (components image source target finish).length) → sourceAt (6 + i.val) = none →
+  { t : Table F // t.component = (components image source target finish)[i] }
+
+variable (rows : List MixedCompiledRow) (words : List (Bool × HintReadWordChip.RowInput F))
+    (fit : Heights rows words) (data : ProverData F) (hint : ProverHint F)
+    (remaining : Remaining image source target finish)
+
+private noncomputable def selectedAt (i : Fin (components image source target finish).length) :
+    { t : Table F // t.component = (components image source target finish)[i] } :=
+  match found : sourceAt (6 + i.val) with
+  | none => remaining i found
+  | some id =>
+    have pos := position_of_sourceAt found
+    ⟨table rows words fit data hint id (by omega), by
+      rw [registered]
+      have atSlot := original_at image source target finish id
+      rw [pos, ← List.getElem?_drop, List.getElem?_eq_getElem i.isLt] at atSlot
+      exact (Option.some.inj atSlot).symm⟩
+
+/-- The suffix in physical registry order, using generated sources and the other installed generators. -/
+noncomputable def suffix : List (Table F) :=
+  List.ofFn fun i => (selectedAt image source target finish rows words fit data hint remaining i).1
+
+/-- Every slot has exactly its original registered circuit and generation procedure. -/
+theorem suffix_registered : (suffix image source target finish rows words fit data hint remaining).map (·.component) =
+    (base image source target finish).tables.drop 6 := by
+  apply List.ext_getElem
+  · simp only [suffix, List.length_map, List.length_ofFn]
+  · intro i bound _
+    simp only [suffix, List.getElem_map, List.getElem_ofFn]
+    exact (selectedAt image source target finish rows words fit data hint remaining ⟨i, by simpa only [suffix, List.length_map, List.length_ofFn] using bound⟩).2
+
+private theorem suffix_at (id : Source) (outside : 6 ≤ position id) :
+    (suffix image source target finish rows words fit data hint remaining)[position id - 6]? =
+      some (table rows words fit data hint id outside) := by
+  have inBase := (List.getElem?_eq_some_iff.mp (original_at image source target finish id)).1
+  have bound : position id - 6 < (components image source target finish).length := by
+    simp only [components, List.length_drop]
+    omega
+  have found : sourceAt (6 + (position id - 6)) = some id := by
+    rw [show 6 + (position id - 6) = position id by omega, sourceAt_position]
+  rw [List.getElem?_eq_getElem (by simpa only [suffix, List.length_ofFn] using bound)]
+  simp only [suffix, List.getElem_ofFn]
+  unfold selectedAt
+  split
+  · rename_i h
+    change sourceAt (6 + (position id - 6)) = none at h
+    have impossible : (none : Option Source) = some id := h.symm.trans found
+    cases impossible
+  · rename_i other h
+    obtain rfl := Option.some.inj (h.symm.trans found)
+    rfl
+
+/-- All 29 generated sources discharge their own constraints and guarantees. Other table
+generators need certify only the slots they actually supply. -/
+theorem suffix_valid {events : List ExecutionEvent}
+    (run : ReleaseAdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
+    (checked : ∀ i absent, let t := (remaining i absent).1; t.Constraints ∧ t.Guarantees) :
+    ∀ t ∈ suffix image source target finish rows (HintReadTransfers.history image source events) (heights run routed)
+      data hint remaining, t.Constraints ∧ t.Guarantees := by
+  intro t member
+  obtain ⟨i, rfl⟩ := List.mem_ofFn.mp member
+  dsimp only [selectedAt]
+  split
+  · exact checked i _
+  · exact valid run routed data hint _ _
+
+/-- A generated supervisor with the complete set of original WRITE-read source slots. -/
+noncomputable def build (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
+    (header : SP1PublicIO F) : EnsembleWitness (base image source target finish) :=
+  WriteBoundaryBuild.build image source target finish stream requested canonical data hint header
+    (suffix image source target finish rows words fit data hint remaining)
+    (suffix_registered image source target finish rows words fit data hint remaining)
+
+/-- Canonical global prover-data derivation preserves the generated row arrays at every registered
+ordinary, ECALL, HINT_READ and register refresh source. -/
+theorem raw_rows (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
+    (header : SP1PublicIO F) (id : Source) (outside : 6 ≤ position id) :
+    let w := build image source target finish rows words fit data hint remaining stream requested canonical header
+    (raw w id).table = (table rows words fit data hint id outside).table := by
+  let w := build image source target finish rows words fit data hint remaining stream requested canonical header
+  let boundary := WriteBoundaryBuild.boundaryTables source.sail.memorySnapshot stream requested canonical data hint
+  let tail := suffix image source target finish rows words fit data hint remaining
+  have arrays : w.tables.map (·.table) = (boundary ++ tail).map (·.table) := by
+    dsimp only [w, build, WriteBoundaryBuild.build]
+    rw [EnsembleWitness.ofTables_tables, withDerivedData_map_table]
+  let slot := originalSlot image source target finish id
+  have got : w.tables[slot.index.val]? = some (raw w id) :=
+    List.getElem?_eq_getElem (by rw [← w.same_length]; exact slot.index.isLt)
+  rw [show slot.index.val = position id from originalSlot_index ..] at got
+  have located := congrArg (fun xs : List (List (Array F)) => xs[position id]?) arrays
+  simp only [List.getElem?_map, got, Option.map_some] at located
+  rw [List.getElem?_append_right (show boundary.length ≤ position id from outside),
+    show boundary.length = 6 from rfl, show tail[position id - 6]? = _ from suffix_at image source target finish rows words fit data hint remaining id outside] at located
+  exact Option.some.inj located
+
+/-- Each positive read-back generated on an actual source row survives canonical installation
+as a positive occurrence at the same physical site in the full supervisor. -/
+theorem mem_live (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
+    (header : SP1PublicIO F) (id : Source) (outside : 6 ≤ position id) (r : Readback F)
+    (generated : ∀ envData, ∃ cells ∈ (table rows words fit data hint id outside).table,
+      (1, r) ∈ rowRecords id (Environment.fromArray cells envData)) :
+    let w := build image source target finish rows words fit data hint remaining stream requested canonical header
+    r ∈ Counted.live (records (raw w)) := by
+  let w := build image source target finish rows words fit data hint remaining stream requested canonical header
+  obtain ⟨cells, occurs, readback⟩ := generated (raw w id).data
+  have actual : cells ∈ (raw w id).table := by
+    rw [show (raw w id).table = _ from raw_rows image source target finish rows words fit data hint remaining stream requested canonical header id outside]
+    exact occurs
+  have site : (1, r) ∈ records (raw w) := List.mem_flatMap.mpr ⟨id, sources_complete id, List.mem_flatMap.mpr ⟨cells, actual, readback⟩⟩
+  exact List.mem_map.mpr ⟨(1,r), List.mem_filter.mpr ⟨site, by simp⟩, rfl⟩
+
+end SP1Clean.Export.WriteMixedSourceTables
