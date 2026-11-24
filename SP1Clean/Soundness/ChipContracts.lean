@@ -261,7 +261,7 @@ structure ChipGroundingContracts (chip : SupportedChip p) : Prop where
       ∀ (program : GuestProgram),
         decodedInROM program (programAccess (decoded.toChipRow proverData).view).toRow →
         ∃ touches : List (Touch p),
-          AlignsWith (alignedOf (decoded.ordinaryRowFacts proverData) touches)
+          PreservesAddresses touches ∧ AlignsWith (alignedOf (decoded.ordinaryRowFacts proverData) touches)
               (decoded.ordinaryRowFacts proverData) ∧
             (∀ tc ∈ touches,
               TouchOK (StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull)
@@ -328,7 +328,7 @@ theorem ChipGroundingContracts.rowAligned {chip : SupportedChip p}
       ∀ (program : GuestProgram),
         decodedInROM program (programAccess (decoded.toChipRow witness.data).view).toRow →
         ∃ touches : List (Touch p),
-          AlignsWith (alignedOf (decoded.ordinaryRowFacts witness.data) touches)
+          PreservesAddresses touches ∧ AlignsWith (alignedOf (decoded.ordinaryRowFacts witness.data) touches)
               (decoded.ordinaryRowFacts witness.data) ∧
             (∀ tc ∈ touches,
               TouchOK (StateMsg.timeNat (decoded.ordinaryRowFacts witness.data).statePull)
@@ -491,7 +491,7 @@ theorem RTypeChipGroundingData.toContracts {chip : SupportedChip p}
   rowAlignedLocal := by
     intro proverData decoded hchip real rowConstraints byteG program decode
     refine ⟨rtypeTouches (decoded.toChipRow proverData).view
-      (decoded.ordinaryRowFacts proverData), ?_⟩
+      (decoded.ordinaryRowFacts proverData), .cons rfl (.cons rfl (.cons rfl .nil)), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps := data.timestampBounds decoded proverData hchip byteG real
     have registerBounds := decode.register_bounds
@@ -601,7 +601,7 @@ theorem ITypeChipGroundingData.toContracts {chip : SupportedChip p}
   rowAlignedLocal := by
     intro proverData decoded hchip real rowConstraints byteG program decode
     refine ⟨itypeTouches (decoded.toChipRow proverData).view
-      (decoded.ordinaryRowFacts proverData), ?_⟩
+      (decoded.ordinaryRowFacts proverData), .cons rfl (.cons rfl .nil), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps := data.timestampBounds decoded proverData hchip byteG real
     have registerBounds := decode.register_bounds
@@ -840,7 +840,7 @@ theorem ImmutableALUTypeChipGroundingData.toContracts {chip : SupportedChip p}
         decode.immediate_flags_binary.2
     rcases immBinary with register | immediate
     · refine ⟨immutableRtypeTouches (decoded.toChipRow proverData).view
-        (decoded.ordinaryRowFacts proverData), ?_⟩
+        (decoded.ordinaryRowFacts proverData), .cons rfl (.cons rfl (.cons rfl .nil)), ?_⟩
       have consumed := consumedMemoryMessages_eq_of_immutableAlu_register
         data.memoryShape decoded proverData hchip real register
       have produced := producedMemoryMessages_eq_of_immutableAlu_register
@@ -873,7 +873,7 @@ theorem ImmutableALUTypeChipGroundingData.toContracts {chip : SupportedChip p}
       · rw [DecodedInstructionRow.ordinaryRowFacts_memPushes]
         exact produced
     · refine ⟨immutableItypeTouches (decoded.toChipRow proverData).view
-        (decoded.ordinaryRowFacts proverData), ?_⟩
+        (decoded.ordinaryRowFacts proverData), .cons rfl (.cons rfl .nil), ?_⟩
       have consumed := consumedMemoryMessages_eq_of_immutableAlu_immediate
         data.memoryShape decoded proverData hchip real immediate
       have produced := producedMemoryMessages_eq_of_immutableAlu_immediate
@@ -1016,7 +1016,7 @@ theorem JTypeChipGroundingData.toContracts {chip : SupportedChip p}
   rowAlignedLocal := by
     intro proverData decoded hchip real rowConstraints byteG program decode
     refine ⟨jtypeTouches (decoded.toChipRow proverData).view
-      (decoded.ordinaryRowFacts proverData), ?_⟩
+      (decoded.ordinaryRowFacts proverData), .cons rfl .nil, ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamp := data.timestampBound decoded proverData hchip byteG real
     exact rowAligned_jtype_of_shape data.memoryShape decoded proverData hchip real bounds timestamp
@@ -1136,7 +1136,7 @@ theorem ConditionalITypeChipGroundingData.toContracts {chip : SupportedChip p}
   rowAlignedLocal := by
     intro proverData decoded hchip real rowConstraints byteG program decode
     refine ⟨itypeTouches (decoded.toChipRow proverData).view
-      (decoded.ordinaryRowFacts proverData), ?_⟩
+      (decoded.ordinaryRowFacts proverData), .cons rfl (.cons rfl .nil), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps := data.timestampBounds decoded proverData hchip byteG real
     exact rowAligned_itype_of_shape data.memoryShape decoded proverData hchip real bounds
@@ -1227,7 +1227,7 @@ theorem ImmutableITypeChipGroundingData.toContracts {chip : SupportedChip p}
   rowAlignedLocal := by
     intro proverData decoded hchip real rowConstraints byteG program decode
     refine ⟨immutableItypeTouches (decoded.toChipRow proverData).view
-      (decoded.ordinaryRowFacts proverData), ?_⟩
+      (decoded.ordinaryRowFacts proverData), .cons rfl (.cons rfl .nil), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps := data.timestampBounds decoded proverData hchip byteG real
     exact rowAligned_immutableItype_of_shape data.memoryShape decoded proverData hchip real
@@ -1360,7 +1360,7 @@ theorem LoadMemoryChipGroundingData.toContracts {chip : SupportedChip p}
     refine ⟨ramItypeTouches (decoded.toChipRow proverData).view
       (memoryShape.access decoded proverData)
       (decoded.ordinaryRowFacts proverData)
-      (rtypeWriteMessage (decoded.toChipRow proverData).view), ?_⟩
+      (rtypeWriteMessage (decoded.toChipRow proverData).view), .cons rfl (.cons rfl (.cons rfl .nil)), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps :=
       data.timestampBounds decoded proverData hchip rowConstraints byteG real
@@ -1485,7 +1485,7 @@ theorem ImmutableLoadMemoryChipGroundingData.toContracts {chip : SupportedChip p
       (decoded.ordinaryRowFacts proverData)
       (rtypeReadBackMessage (decoded.toChipRow proverData).view
         (decoded.toChipRow proverData).view.adapter.op_a
-        (decoded.toChipRow proverData).view.adapter.op_a_memory 4), ?_⟩
+        (decoded.toChipRow proverData).view.adapter.op_a_memory 4), .cons rfl (.cons rfl (.cons rfl .nil)), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps :=
       data.timestampBounds decoded proverData hchip rowConstraints byteG real
@@ -1613,7 +1613,7 @@ theorem StoreMemoryChipGroundingData.toContracts {chip : SupportedChip p}
       (decoded.ordinaryRowFacts proverData)
       (rtypeReadBackMessage (decoded.toChipRow proverData).view
         (decoded.toChipRow proverData).view.adapter.op_a
-        (decoded.toChipRow proverData).view.adapter.op_a_memory 4), ?_⟩
+        (decoded.toChipRow proverData).view.adapter.op_a_memory 4), .cons rfl (.cons rfl (.cons rfl .nil)), ?_⟩
     have bounds := data.viewClockBounds decoded proverData hchip byteG real
     have timestamps :=
       data.timestampBounds decoded proverData hchip rowConstraints byteG real

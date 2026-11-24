@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.TimedGrounding
+import SP1Clean.FormalModel.Contracts.MemoryBoundary
 
 /-! # The aligned `RowFacts` carrier (Phase B1)
 
@@ -24,7 +25,25 @@ open SP1Clean.Channels (StateMsg MemoryMsg)
 
 namespace SP1Clean.Soundness.TimedGrounding
 
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
+variable {p : ℕ}
+
+/-- Every paired physical access retains all three raw address limbs. -/
+def PreservesAddresses (touches : List (Touch p)) : Prop :=
+  ∀ t ∈ touches, MemoryBoundary.address t.1.1 = MemoryBoundary.address t.2
+
+/-- An empty physical sequence preserves addresses. -/
+theorem PreservesAddresses.nil : PreservesAddresses ([] : List (Touch p)) := by simp [PreservesAddresses]
+
+/-- Assemble the physical address invariant directly from each concrete bus message. -/
+theorem PreservesAddresses.cons {t : Touch p} {tail : List (Touch p)}
+    (key : MemoryBoundary.address t.1.1 = MemoryBoundary.address t.2) (rest : PreservesAddresses tail) :
+    PreservesAddresses (t :: tail) := by
+  intro e member
+  rcases List.mem_cons.mp member with rfl | inside
+  · exact key
+  · exact rest e inside
+
+variable [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The aligned carrier: same state edge and fetch as the ordinary row; pull/push lists read off the
 touch list (`memPulls` = the aligned priors with their read micro-times, `memPushes` = the produced

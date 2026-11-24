@@ -248,7 +248,7 @@ theorem source_execution_memory_balance
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 private theorem append_aligned {aligned original : RowFacts p} (facts : AlignedFacts aligned original)
-    (extra : List (Touch p))
+    (extra : List (Touch p)) (keys : PreservesAddresses extra)
     (localOK : ∀ access ∈ extra, TouchOK (StateMsg.timeNat original.statePull) access.1 access.2)
     (chain : ∀ loc, List.IsChain (fun a b : Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
       (extra.filter (fun access => MemoryMsg.locOf access.2 = loc)))
@@ -268,9 +268,13 @@ private theorem append_aligned {aligned original : RowFacts p} (facts : AlignedF
     rw [List.zip_append (List.forall₂_iff_zip.mp facts.touches).1]
     simp only [List.zip_map', Prod.mk.eta]
     exact congrArg (rowTouches aligned ++ ·) (List.map_id extra)
-  refine ⟨facts.statePull, facts.statePush, facts.fetch, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨facts.statePull, facts.statePush, facts.fetch, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact ⟨facts.memory.pushes.append_right _, by
       simpa only [List.map_append] using facts.memory.pulls.append_right (extra.map Prod.fst |>.map Prod.fst)⟩
+  · change PreservesAddresses ((aligned.memPulls ++ extra.map Prod.fst).zip (aligned.memPushes ++ extra.map Prod.snd))
+    rw [zipped]
+    intro t inside
+    exact (List.mem_append.mp inside).elim (facts.addresses t) (keys t)
   · apply List.rel_append facts.touches
     apply List.forall₂_map_left_iff.mpr
     apply List.forall₂_map_right_iff.mpr
@@ -425,6 +429,10 @@ theorem source_event_aligned (valid : image.Valid)
   have combined := append_aligned facts
     ((wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))) event).map touch)
+    (by
+      intro access member
+      obtain ⟨_, _, rfl⟩ := List.mem_map.mp member
+      rfl)
     (by
       intro access member
       obtain ⟨row, present, rfl⟩ := List.mem_map.mp member

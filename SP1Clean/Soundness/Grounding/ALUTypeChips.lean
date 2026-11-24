@@ -735,7 +735,7 @@ theorem rowAligned_aluType_of_shape {chip : SupportedChip p}
     (opc_lt : (decoded.toChipRow data).view.adapter.imm_c = 0 →
       (decoded.toChipRow data).view.adapter.op_c[0].val < 32) :
     ∃ touches : List (Touch p),
-      AlignsWith (alignedOf (decoded.ordinaryRowFacts data) touches)
+      PreservesAddresses touches ∧ AlignsWith (alignedOf (decoded.ordinaryRowFacts data) touches)
           (decoded.ordinaryRowFacts data) ∧
         (∀ tc ∈ touches,
           TouchOK (StateMsg.timeNat (decoded.ordinaryRowFacts data).statePull) tc.1 tc.2) ∧
@@ -747,7 +747,7 @@ theorem rowAligned_aluType_of_shape {chip : SupportedChip p}
           (tc : Touch p).1.1.clk_high.val < 2 ^ 24 →
             MemoryMsg.timeNat (tc : Touch p).1.1 < MemoryMsg.timeNat tc.2) := by
   rcases immBinary with register | immediate
-  · refine ⟨rtypeTouches (decoded.toChipRow data).view (decoded.ordinaryRowFacts data), ?_⟩
+  · refine ⟨rtypeTouches (decoded.toChipRow data).view (decoded.ordinaryRowFacts data), .cons rfl (.cons rfl (.cons rfl .nil)), ?_⟩
     have consumed := consumedMemoryMessages_eq_of_aluType_register shape decoded data hchip
       constraints real register
     have produced := producedMemoryMessages_eq_of_aluType_register shape decoded data hchip
@@ -773,7 +773,7 @@ theorem rowAligned_aluType_of_shape {chip : SupportedChip p}
       rfl
     · rw [DecodedInstructionRow.ordinaryRowFacts_memPushes]
       exact produced
-  · refine ⟨itypeTouches (decoded.toChipRow data).view (decoded.ordinaryRowFacts data), ?_⟩
+  · refine ⟨itypeTouches (decoded.toChipRow data).view (decoded.ordinaryRowFacts data), .cons rfl (.cons rfl .nil), ?_⟩
     have consumed := consumedMemoryMessages_eq_of_aluType_immediate shape decoded data hchip
       constraints real immediate
     have produced := producedMemoryMessages_eq_of_aluType_immediate shape decoded data hchip
