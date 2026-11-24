@@ -98,6 +98,18 @@ theorem retained_at (i : ℕ) (lo : 32 ≤ i) (hi : i < 94) (other : i ≠ 57) :
     List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega),
     List.getElem?_append_left (by rw [HostFinalMemory.prefix_length]; exact hi)]
 
+/-- The original target consumers and both snapshot providers occupy the four final positions. -/
+theorem target_check_at (i : Fin 4) :
+    (base image source target final).tables[94 + i.val]? =
+      (FinalMemoryChecks.checkTables (p := SP1Prime) target.sail.memorySnapshot)[i.val]? := by
+  rw [outside _ _ _ _ _ (by omega), initial, HostFinalMemory.Installed, HostFinalMemory.tables_eq,
+    List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega)]
+  have size : (HostFinalMemory.beforeChecks (p := SP1Prime) image source HostCallReceivers.available
+      (HostHintReadLocal.sourceResources source.host.io.hints)).length = 94 := by
+    rw [HostFinalMemory.prefix_length]
+    rfl
+  rw [List.getElem?_append_right (by rw [size]; omega), size, Nat.add_sub_cancel_left]
+
 private theorem core (i : ℕ) (lo : 32 ≤ i) (hi : i < 63) (other : i ≠ 57) :
     (base image source target final).tables[i]? = ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer)[i]? := by
   rw [retained_at _ _ _ _ _ lo (by omega) other, HostFinalMemory.beforeChecks, HostLocalCore.tables,
