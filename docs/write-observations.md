@@ -134,8 +134,10 @@ lanes against one or two aligned destination blocks and checks the last block's 
 This preserves empty and ignored writes, repeated positions, and writes crossing a block
 boundary. The public verifier seeds all four chronological counters and requires the final
 stdout, stderr, public-output and hook positions from the two snapshots. Hook metadata includes
-the supplied reply's descriptor, request length and number of returned hints. Fresh node
-allocation during WRITE and the corresponding arbitrary-witness host theorem remain open.
+the supplied reply's descriptor, request length and number of returned hints. A direct hint or a
+hook emits a queue-allocation ticket. The current registry has no receiver for that ticket.
+A nonempty direct hint also needs a block producer for its fresh pointer. These two obligations
+remain before the assembled eight-call statement can cover queue-changing writes.
 [Observer assembly](../SP1Clean/Export/WriteObservationAssembly.lean) · [Grouped row construction](../SP1Clean/Proofs/Completeness/WriteGroupRows.lean) · [Rows from an admitted WRITE](../SP1Clean/Proofs/Completeness/WriteWindowTape.lean)
 
 At the native read and tick limits the call demand pads to at most `2^16` rows and grouped
