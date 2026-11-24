@@ -102,53 +102,81 @@ private theorem filter_unique {Row Key : Type*} [DecidableEq Key] (key : Row →
         exact fresh (List.mem_map.mpr ⟨row, member, equal.symm⟩)
       simp [different, ih unique member]
 
-private theorem handler_row_filter (key : ZMod p × ZMod p)
-    (table : Table (ZMod p)) (component : table.component = handler) :
-    ((table.table.map table.environment).filter (fun env => decide (callClock env = key))).flatMap
-      (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw) =
-    (table.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
-        (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) := by
-  have projected : table.interactionsWith HintReadWordChip.stateChannel.toRaw =
-      (table.table.map table.environment).flatMap
-        (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw) := by
-    simp only [Table.interactionsWith, List.flatMap_map, component]
-  rw [projected]
+private def endpoints (env : Environment (ZMod p)) :=
+  [HintReadWordChip.stateChannel.pushedValue (input env).first,HintReadWordChip.stateChannel.pulledValue (input env).final]
+
+/-- Keep the original count-sensitive balance as the premise. Its projection onto the active
+handler pairs preserves every unit read and every consumer-side occurrence. -/
+private theorem active_balance (table : Table (ZMod p)) (component : table.component = handler)
+    (constraints : table.Constraints) (rest : List (Interaction (ZMod p)))
+    (balanced : BalancedInteractions (table.interactionsWith HintReadWordChip.stateChannel.toRaw ++ rest)) :
+    BalancedInteractions ((activeEnvs table table.data).flatMap endpoints ++ rest) := by
+  let sites := (handler (p := p)).operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw
+  let envs := table.table.map table.environment
+  have physical : table.interactionsWith HintReadWordChip.stateChannel.toRaw = envs.flatMap sites := by
+    simp only [envs,sites,Table.interactionsWith,List.flatMap_map,component]
+  have binary env (member : env ∈ envs) : IsBool (env activity) := by
+    obtain ⟨raw,present,rfl⟩ := List.mem_map.mp member
+    have checked := constraints raw present
+    rw [component,Component.constraintsHold_iff] at checked
+    exact Guarded.activity_of_constraints HostHintReadChip.circuit inferInstance (varFromOffset HostHintReadChip.RowInput 0)
+      (size HostHintReadChip.RowInput) _ checked
+  have strip (rs : List (Environment (ZMod p))) (bits : ∀ e ∈ rs, IsBool (e activity)) :
+      ((rs.flatMap sites).filter (fun i => decide (i.mult ≠ 0))) =
+      (((rs.filter (fun e => decide (e activity = 1))).flatMap endpoints).filter (fun i => decide (i.mult ≠ 0))) := by
+    induction rs with
+    | nil => rfl
+    | cons e rs ih =>
+      have next := ih (fun x m => bits x (List.mem_cons_of_mem _ m))
+      rcases bits e (List.mem_cons_self ..) with disabled | enabled
+      · simp [sites,handler_cursor,disabled,Channel.pulledIfValue,Channel.pushedIfValue] at next ⊢
+        exact next
+      · simp [sites,handler_cursor,enabled,endpoints,Channel.pulledIfValue,Channel.pushedIfValue,Channel.pulledValue,Channel.pushedValue] at next ⊢
+        exact next
+  apply BalancedInteractions.filter_nonzero_iff.mp
+  have projected := balanced.filter_nonzero
+  rw [physical,List.filter_append] at projected
+  rw [List.filter_append]
+  let explicit := fun i : Interaction (ZMod p) => decide (i.mult ≠ 0)
+  have same : (fun i : Interaction (ZMod p) => @decide (i.mult ≠ 0)
+      (@instDecidableNot _ (FiniteField.instDecidableEq _ _))) = explicit := by
+    funext i
+    exact congrArg (@decide _) (Subsingleton.elim _ _)
+  rw [same] at projected ⊢
+  exact (congrArg (fun xs => BalancedInteractions (xs ++ rest.filter explicit)) (strip envs binary)).mp projected
+
+omit [Fact (2 ^ 25 < p)] in
+
+private theorem handler_row_filter (key : ZMod p × ZMod p) (envs : List (Environment (ZMod p))) :
+    (envs.filter (fun env => decide (callClock env = key))).flatMap endpoints =
+    (envs.flatMap endpoints).filter (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) := by
   apply selectedRows_interactions
   intro env _ interaction present
-  rw [handler_cursor] at present
   exact handler_selection key (input env) interaction present
-
-private theorem handler_filter (table : Table (ZMod p)) (component : table.component = handler)
-    (env : Environment (ZMod p)) (member : env ∈ table.table.map table.environment)
-    (unique : ((table.table.map table.environment).map callClock).Nodup) :
-    (table.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
-        (fun interaction => ProvableType.selectMessage (keepState (callClock env)) interaction.msg) =
-      handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env := by
-  rw [← handler_row_filter (callClock env) table component,
-    filter_unique callClock _ unique env member]
-  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
 
 /-- A shared physical ledger supplies each unique handler's per-call balance and its count bound. -/
 theorem balanced_for (handlers : Table (ZMod p)) (component : handlers.component = handler)
-    (tables : List (Table (ZMod p)))
+    (constraints : handlers.Constraints) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables)
-    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map (fun row => handlers.environment row))
-    (unique : ((handlers.table.map (fun row => handlers.environment row)).map callClock).Nodup)
+    (env : Environment (ZMod p)) (member : env ∈ activeEnvs handlers handlers.data)
+    (unique : ((activeEnvs handlers handlers.data).map callClock).Nodup)
     (balanced : BalancedInteractions
       (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw))) :
     BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         HintReadCoverage.interactions (rowsFor (callClock env) tables) HintReadWordChip.stateChannel.toRaw) := by
-  have selected := balanced.filter_messages (ProvableType.selectMessage (keepState (callClock env)))
-  rw [List.filter_append, handler_filter handlers component env member unique,
+  have selected := (active_balance handlers component constraints _ balanced).filter_messages (ProvableType.selectMessage (keepState (callClock env)))
+  rw [List.filter_append, ← handler_row_filter, filter_unique callClock _ unique env member,List.flatMap_singleton,
     ← cursor_for _ tables aligned] at selected
+  have active := of_decide_eq_true (List.mem_filter.mp member).2
+  rw [handler_cursor,show env activity = 1 from active]
   exact selected
 
 /-- Global balance cannot hide consumer rows whose event clock has no handler. -/
 theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.component = handler)
-    (tables : List (Table (ZMod p)))
+    (constraints : handlers.Constraints) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) (valid : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants tables))
     (balanced : BalancedInteractions
@@ -156,20 +184,20 @@ theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.c
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables) :
-    ∃ env ∈ handlers.table.map (fun row => handlers.environment row),
+    ∃ env ∈ activeEnvs handlers handlers.data,
       callClock env = clock (HintReadCoverage.rowInput row).previous := by
   classical
   by_contra! absent
   let key := clock (HintReadCoverage.rowInput row).previous
-  have noHandlers : (handlers.table.map handlers.environment).filter
+  have noHandlers : (activeEnvs handlers handlers.data).filter
       (fun env => decide (callClock env = key)) = [] := by
     apply List.filter_eq_nil_iff.mpr
     intro env present equal
     exact absent env present (of_decide_eq_true equal)
-  have noEndpoints : (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
+  have noEndpoints : ((activeEnvs handlers handlers.data).flatMap endpoints).filter
       (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) = [] := by
-    rw [← handler_row_filter key handlers component, noHandlers, List.flatMap_nil]
-  have selected := balanced.filter_messages (ProvableType.selectMessage (keepState key))
+    rw [← handler_row_filter key, noHandlers, List.flatMap_nil]
+  have selected := (active_balance handlers component constraints _ balanced).filter_messages (ProvableType.selectMessage (keepState key))
   rw [List.filter_append, noEndpoints, List.nil_append, ← cursor_for key tables aligned] at selected
   rw [HintReadCoverage.cursor_interactions] at selected
   have specs := valid.select (fun row => keepWord key row.1 row.2)
@@ -183,11 +211,11 @@ theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.c
 /-- Successful concrete dispatch and complete writes follow from the shared physical cursor ledger.
 Unique handler clocks and authenticated records/permissions remain enclosing-ensemble obligations. -/
 theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.component = handler)
-    (handlerSpecs : handlers.Spec) (tables : List (Table (ZMod p)))
+    (constraints : handlers.Constraints) (handlerSpecs : handlers.Spec) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) (wordSpecs : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants tables))
-    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map (fun row => handlers.environment row))
-    (unique : ((handlers.table.map (fun row => handlers.environment row)).map callClock).Nodup)
+    (env : Environment (ZMod p)) (member : env ∈ activeEnvs handlers handlers.data)
+    (unique : ((activeEnvs handlers handlers.data).map callClock).Nodup)
     (balanced : BalancedInteractions
       (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
@@ -208,15 +236,15 @@ theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.c
       ((HintReadCoverage.activeRows (rowsFor (callClock env) tables)).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
   have valid : handler.Spec env := by
-    obtain ⟨physical, present, equal⟩ := List.mem_map.mp member
+    obtain ⟨physical, present, equal⟩ := List.mem_map.mp (List.mem_filter.mp member).1
     rw [← equal, ← component]
     exact handlerSpecs physical present
   have specs := wordSpecs.select (fun row => keepWord (callClock env) row.1 row.2)
   have selectedPermissions := TransitionView.selectRows_interactions_sublist HintReadCoverage.variants tables
     (fun last => (HintReadCoverage.view last).component) (keepWord (callClock env))
     WritePermissionProvider.channel.toRaw aligned
-  exact HostHintReadWrites.run_of_rows env (rowsFor (callClock env) tables) valid specs
-    (balanced_for handlers component tables aligned env member unique balanced) host store current header ending
+  exact HostHintReadWrites.run_of_rows env (rowsFor (callClock env) tables) valid (of_decide_eq_true (List.mem_filter.mp member).2) specs
+    (balanced_for handlers component constraints tables aligned env member unique balanced) host store current header ending
     (fun row present => by
       have selected := List.mem_filter.mp ((active_rows_for _ tables) ▸ present)
       exact words row selected.1 (of_decide_eq_true selected.2))

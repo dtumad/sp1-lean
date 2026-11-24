@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
+import SP1Clean.Proofs.Chips.HostHintLengthChip.Guarded
 import ToClean.Air.HintIndex
 import ToClean.Air.ReceiverView
 import SP1Clean.Soundness.HostLocalCore
@@ -74,18 +74,17 @@ def commit (deferred : Bool) (slot : Fin 8) : ReceiverView (HostCallChip.channel
     exact HostCommitChip.guarded_host_values deferred slot _ _ env
 
 def hintLength (empty : Bool) : ReceiverView (HostCallChip.channel (p := p)) where
-  component := {
-    circuit := HostHintLengthChip.circuit empty
-    Assumptions := (HostHintLengthChip.circuit empty).Assumptions
-    generation := Witgen.HintIndex.unitDemand (HostHintLengthChip.circuit (p := p) empty).name HostCallChip.channel .push
-      (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
-      (fun input => input.call) (fun _ => 1) }
-  message env := eval env (varFromOffset HostHintLengthChip.Inputs 0).call
+  component := HostHintLengthChip.component empty
+  message env := eval env (varFromOffset HostHintLengthChip.RowInput 0).1.call
+  activity := (varFromOffset HostHintLengthChip.RowInput 0).2
+  activity_of_constraints := by
+    intro env valid
+    rw [Component.constraintsHold_iff] at valid
+    exact Guarded.activity_of_constraints (HostHintLengthChip.circuit empty) inferInstance
+      (varFromOffset HostHintLengthChip.RowInput 0) (size HostHintLengthChip.RowInput) env valid
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-    change ((HostHintLengthChip.main empty (varFromOffset HostHintLengthChip.Inputs 0)).operations
-      (size HostHintLengthChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
-    exact HostHintLengthChip.host_values empty _ _ env
+    exact HostHintLengthChip.guarded_host_values empty (varFromOffset HostHintLengthChip.RowInput 0) (size HostHintLengthChip.RowInput) env
 
 /-- The receiver reads the complete call from the physical HALT row. -/
 theorem halt_message (env : Environment (ZMod p)) :

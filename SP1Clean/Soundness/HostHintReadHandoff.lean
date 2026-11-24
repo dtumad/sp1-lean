@@ -26,17 +26,20 @@ private theorem eval_call (row : Var HostHintReadChip.Inputs (ZMod p)) (env : En
 
 theorem handler_values (env : Environment (ZMod p)) :
     handler.operations.interactionValuesWith HostCallChip.channel.toRaw env =
-      [HostCallChip.channel.pulledValue (input env).call] := by
+      [HostCallChip.channel.pulledIfValue (env activity) (input env).call] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((HostHintReadChip.main (varFromOffset HostHintReadChip.Inputs 0)).operations
-    (size HostHintReadChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
-  rw [HostHintReadChip.host_values, eval_call, eval_varFromOffset_valueFromOffset]
+  change (((HostHintReadChip.guardedCircuit).main (varFromOffset HostHintReadChip.RowInput 0)).operations
+    (size HostHintReadChip.RowInput)).interactionValuesWith HostCallChip.channel.toRaw env = _
+  rw [HostHintReadChip.guarded_host_values, eval_call,decoded_input]
   rfl
 
-/-- The real HINT_READ handler consumes one complete HostCall per physical row. -/
+/-- The real HINT_READ handler consumes one full HostCall on every active row. -/
 def receiver : HostLocalHandoff.Receiver (p := p) where
   component := handler
   message env := (input env).call
+  activity := activity
+  activity_of_constraints env valid := Guarded.activity_of_constraints HostHintReadChip.circuit inferInstance
+    (varFromOffset HostHintReadChip.RowInput 0) (size HostHintReadChip.RowInput) env ((Component.constraintsHold_iff env).mp valid)
   interactions := handler_values
 
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -49,7 +52,7 @@ theorem auxiliaryInterface : HostLocalCore.AuxiliaryInterface
   · intro component member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;>
-      simp [handler, HintReadCoverage.view, HintReadCoverage.component, HostHintReadChip.circuit,
+      simp [handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit, HintReadCoverage.view, HintReadCoverage.component, HostHintReadChip.circuit,
         HintReadWordChip.circuit, Guarded.circuit, HintReadWordChip.activeCircuit,
         Channels.byteChannel, Channels.memoryChannel, HostHintQueue.nodeChannel,
         HostHintQueue.wordChannel, HostHintQueue.stateChannel, HostCallChip.channel,
@@ -97,13 +100,13 @@ theorem wordResources_hostCall_silent : ∀ component ∈ wordResources (p := p)
 
 private theorem callClock_nodup_of_receiver (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (unique : ((ReceiverView.tableMessages receiver table).map HostCallLedger.clock).Nodup) :
-    ((table.table.map (Environment.fromArray · data)).map HostHintReadPartition.callClock).Nodup := by
-  have inputs (row : Array (ZMod p)) : input (table.environment row) =
-      input (Environment.fromArray row data) :=
-    ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
-  simpa only [ReceiverView.tableMessages, receiver, List.map_map, Function.comp_def, inputs,
-    HostCallLedger.clock, HostHintReadPartition.callClock, HostHintReadPartition.clock,
-    HostHintReadChip.Inputs.first, Expression.eval, decide_true, List.filter_true] using unique
+    ((activeEnvs table data).map HostHintReadPartition.callClock).Nodup := by
+  have inputs (row : Array (ZMod p)) : input (table.environment row) = input (Environment.fromArray row data) :=
+    congrArg Prod.fst (ProvableType.valueFromOffset_congr HostHintReadChip.RowInput 0 (fun _ _ => rfl))
+  have gates (row : Array (ZMod p)) : table.environment row activity = (Environment.fromArray row data) activity := by
+    simp only [activity,varFromOffset_pair,Nat.zero_add,circuit_norm,Table.environment,Environment.fromArray]
+  simpa only [ReceiverView.tableMessages, receiver,activeEnvs,List.filter_map, List.map_map, Function.comp_def, inputs,gates,
+    HostCallLedger.clock, HostHintReadPartition.callClock, HostHintReadPartition.clock,HostHintReadChip.Inputs.first] using unique
 
 /-- Registration and the actual CPU/HostCall evidence fix the physical handler clocks.
 No Byte balance is required of this proof view. -/
@@ -122,7 +125,7 @@ theorem handler_clocks_nodup_of_registered_channels
     (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (index : Fin receivers.length) (registered : receivers[index.val] = receiver) :
     let handlers := HostLocalHandoff.receiverTable witness index
-    ((handlers.table.map (Environment.fromArray · witness.data)).map HostHintReadPartition.callClock).Nodup := by
+    ((activeEnvs handlers witness.data).map HostHintReadPartition.callClock).Nodup := by
   have unique := HostLocalHandoff.receiver_clocks_nodup_of_orderingChannels witness silent constraints ordering balanced
     index.val index.isLt
   rw [registered] at unique

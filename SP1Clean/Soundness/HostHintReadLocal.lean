@@ -243,7 +243,7 @@ theorem handler_clocks_nodup_of_channels (witness : EnsembleWitness (ensemble im
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw) :
-    (((handlerTable witness).table.map (Environment.fromArray · witness.data)).map
+    ((HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data).map
       HostHintReadPartition.callClock).Nodup :=
   handler_clocks_nodup_of_registered_channels witness (resources_hostCall_silent interface)
     constraints ordering calls ⟨0, by simp⟩ rfl
@@ -252,7 +252,7 @@ theorem handler_clocks_nodup_of_channels (witness : EnsembleWitness (ensemble im
 theorem handler_clocks_nodup (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) :
-    (((handlerTable witness).table.map (Environment.fromArray · witness.data)).map
+    ((HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data).map
       HostHintReadPartition.callClock).Nodup :=
   handler_clocks_nodup_of_channels witness interface constraints
     (HostLocalCore.orderingChannels witness (auxiliaryInterface interface) constraints balanced)
@@ -265,16 +265,17 @@ theorem balanced_for_of_channels (witness : EnsembleWitness (ensemble image sour
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw) (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data) :
     BalancedInteractions
       (HostHintReadCoverage.handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         HintReadCoverage.interactions (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness)) HintReadWordChip.stateChannel.toRaw) := by
   have shared : (handlerTable witness).data = witness.data :=
     witness.same_data _ (handlerTable_mem witness)
   apply HostHintReadPartition.balanced_for (handlerTable witness) (handlerTable_component witness)
+    (constraints _ (handlerTable_mem witness))
     (wordTables witness) (wordTables_aligned witness) env
-  · simpa only [Table.environment, shared] using member
-  · simpa only [Table.environment, shared] using
+  · simpa only [shared] using member
+  · simpa only [shared] using
       handler_clocks_nodup_of_channels witness interface constraints ordering calls
   · exact cursor_balanced_of_balancedChannel witness interface cursor
 
@@ -282,7 +283,7 @@ theorem balanced_for_of_channels (witness : EnsembleWitness (ensemble image sour
 theorem balanced_for (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data) :
     BalancedInteractions
       (HostHintReadCoverage.handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         HintReadCoverage.interactions (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness)) HintReadWordChip.stateChannel.toRaw) :=
@@ -294,30 +295,31 @@ theorem balanced_for (witness : EnsembleWitness (ensemble image source others re
 /-- Authenticated word steps and actual cursor balance rule out a word with no physical handler. -/
 theorem consumer_has_handler_of_balancedChannel
     (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface others resources)
+    (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (wordSpecs : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
-    ∃ env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
+    ∃ env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data,
       HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous := by
   have shared : (handlerTable witness).data = witness.data :=
     witness.same_data _ (handlerTable_mem witness)
-  simpa only [Table.environment, shared] using
+  simpa only [shared] using
     HostHintReadPartition.consumer_has_handler (handlerTable witness) (handlerTable_component witness)
+      (constraints _ (handlerTable_mem witness))
       (wordTables witness) (wordTables_aligned witness) wordSpecs
       (cursor_balanced_of_balancedChannel witness interface cursor) row member
 
 /-- An installed consumer cannot belong to a call absent from the physical handler table.
 Authenticated word-step contracts suffice; prior Memory values and timestamps are separate. -/
 theorem consumer_has_handler (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface others resources) (balanced : witness.BalancedChannels)
+    (interface : ExtensionInterface others resources) (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (wordSpecs : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
-    ∃ env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
+    ∃ env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data,
       HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous :=
-  consumer_has_handler_of_balancedChannel witness interface
+  consumer_has_handler_of_balancedChannel witness interface constraints
     (balanced _ (by simp [ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, HostLocalCore.registry])) wordSpecs row member
 
 
