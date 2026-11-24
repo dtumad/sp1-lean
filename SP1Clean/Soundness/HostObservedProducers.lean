@@ -45,7 +45,8 @@ private theorem producer_rows (witness : EnsembleWitness (ensemble image source 
   apply EnsembleWitness.projectPrefix_getElem_rows_of_width_eq produced _ _ _ ix
   exact hw.trans ((ProtectedOrdinaryReceipt.width _).symm.trans hs.symm)
 
-private theorem core_rows (witness : EnsembleWitness (ensemble image source target final)) (i : Fin 25)
+/-- Ordinary CPU arrays survive the projection to the execution core at their exact positions. -/
+theorem ordinary_core_rows (witness : EnsembleWitness (ensemble image source target final)) (i : Fin 25)
     (h : 7 + i.val < (HostFinalMemory.coreWitness (baseWitness witness)).tables.length)
     (h' : 7 + i.val < witness.tables.length) :
     ((HostFinalMemory.coreWitness (baseWitness witness)).tables[7 + i.val]'h).table =
@@ -114,7 +115,7 @@ theorem decoded_receipts (witness : EnsembleWitness (ensemble image source targe
       (witness.tables[7 + j]'(by omega)).table.map _ at receipts
     simp only [List.getElem_map, List.getElem_take, List.getElem_drop, List.getElem_zip, LocalCore.instructionTables,
       supportedChips, List.map_map, Function.comp_def]
-    rw [receipts, core_rows witness i (by change 7 + j < core.tables.length; omega) (by change 7 + j < witness.tables.length; omega)]
+    rw [receipts, ordinary_core_rows witness i (by change 7 + j < core.tables.length; omega) (by change 7 + j < witness.tables.length; omega)]
     apply List.map_congr_left
     intro physical _
     dsimp only [DecodedInstructionRow.toChipRow]
