@@ -388,7 +388,14 @@ theorem source_word_order (valid : image.Valid)
 ordering channels, giving the full host Memory ledger its per-location frontier equation. -/
 theorem source_memory_frontier_balance
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
-    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (loc : MemLoc) :
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).tables,
+      table.ChannelGuarantees byteChannel.toRaw)
+    (memory : (HostHintQueueBoundary.projected witness).BalancedChannel memoryChannel.toRaw)
+    (sourceOrder : (HostHintQueueBoundary.projected witness).BalancedChannel (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
+    (finalOrder : (HostHintQueueBoundary.projected witness).BalancedChannel (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw)
+    (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
+      (HostHintQueueBoundary.projected witness).BalancedChannel channel) (loc : MemLoc) :
     TimedGrounding.optMS (LocalCore.memoryInitialFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc) +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑(producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))) : Multiset _) =
@@ -396,20 +403,11 @@ theorem source_memory_frontier_balance
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑(consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))) : Multiset _) :=
   HostLocalCore.memory_frontier_balance (HostHintQueueBoundary.projected witness)
-    (auxiliaryInterface (GroundingResources.sourceInterface source.host.io.hints extra))
     (source_boundary_silent (extra := extra) source _ (List.mem_cons_self ..))
     (source_boundary_silent (extra := extra) source _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
     (fun channel known => source_boundary_silent (extra := extra) source channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ known)))
     (HostHintQueueBoundary.projected_constraints witness constraints)
-    (HostHintQueueBoundary.record_channels witness balanced).byte
-    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
-      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels]))
-    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
-    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
-    (fun channel known => HostHintQueueBoundary.projected_core_balancedChannel witness balanced channel (by
-      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
-        List.not_mem_nil, or_false] at known
-      rcases known with rfl | rfl <;> simp [LocalCore.baseEnsemble]))
+    bytes memory sourceOrder finalOrder membership
     (source_memoryBinary (extra := extra) source) loc
 
 end SP1Clean.Soundness.HostHintReadLocal

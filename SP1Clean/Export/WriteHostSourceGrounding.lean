@@ -271,6 +271,29 @@ theorem ordered_predecessors (witness : EnsembleWitness (HostObserved.ensemble i
   exact event_predecessor witness checked (perm.mem_iff.mp (List.getElem_mem index.isLt)) core.data pulled
 
 
+/-- Every original core channel has exactly its original signed host ledger through the
+three supervisor wrappers. Byte closure of a larger verifier can still add physical rows. -/
+theorem host_core_ledger (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (channel : RawChannel Fp) (original : channel ∈ (LocalCore.baseEnsemble image source).channels) :
+    (hostWitness witness).interactionsWith channel = witness.interactionsWith channel := by
+  let memory := HostObserved.baseWitness witness
+  let boundary := HostFinalMemory.baseWitness memory
+  have fresh := HostHintQueueBoundary.core_visible channel original
+  have different (other : RawChannel Fp) (added : other ∈ HostHintQueueBoundary.hiddenChannels (p := SP1Prime)) : channel ≠ other :=
+    fun same => fresh (same ▸ added)
+  have reg : channel ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw ::
+      HostFinalMemory.sourceChannels (p := SP1Prime) target.sail.memorySnapshot) :=
+    List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ original)))
+  have fm := HostFinalMemory.baseWitness_silent_interactions memory channel (List.mem_append_left _ (List.mem_append_left _ reg))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.receiptChannels]))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.receiptChannels]))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.receiptChannels]))
+  have obs := HostObserved.baseWitness_interactions witness channel
+    (List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ reg)))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.externalChannels]))
+    (different _ (by simp [HostHintQueueBoundary.hiddenChannels, HostFinalMemory.externalChannels]))
+  exact (HostHintQueueBoundary.projected_core_interactions boundary channel original).trans (fm.trans obs)
+
 /-- The signed host protocols and original Memory ledger retain
 all physical occurrences when removing the observation, final-memory and queue endpoints. -/
 theorem host_protocol_ledger (witness : EnsembleWitness (HostObserved.ensemble image source target final)) (channel : RawChannel Fp)

@@ -206,7 +206,15 @@ theorem frontier_balance
   have ledger := source_execution_memory_projection witness constraints
     (source_words_partition witness constraints balanced _ (.refl _)) loc
   rw [(projection loc).1, (projection loc).2, add_assoc, add_assoc, ledger.1, ledger.2]
-  exact source_memory_frontier_balance witness constraints balanced loc
+  apply source_memory_frontier_balance witness constraints
+    (HostHintQueueBoundary.SourceWitness.orderingChannels witness constraints balanced).byte
+    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels]))
+    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
+    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble])) _ loc
+  intro channel member
+  apply HostHintQueueBoundary.projected_core_balancedChannel witness balanced
+  simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl <;> simp [LocalCore.baseEnsemble]
 
 /-- The installed host AIR constructs an exhaustive Memory ledger with all refreshes removed.
 Every CPU and host touch survives; rewritten priors and the final frontier preserve values and

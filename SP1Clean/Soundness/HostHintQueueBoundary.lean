@@ -302,7 +302,7 @@ private theorem boundary_core_silent (channel : RawChannel (ZMod p))
   exact Bool.noConfusion absent
 
 /-- No core channel is a final-memory receipt channel. -/
-private theorem core_visible (channel : RawChannel (ZMod p))
+theorem core_visible (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∉ hiddenChannels (p := p) := by
   have checked : (LocalCore.baseEnsemble (p := p) image source).channels.all
@@ -314,6 +314,15 @@ private theorem core_visible (channel : RawChannel (ZMod p))
   have absent := List.all_eq_true.mp checked channel registered
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) member)] at absent
   exact Bool.noConfusion absent
+
+/-- The installed host boundary retains every signed occurrence on each original core channel. -/
+theorem projected_core_interactions
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
+    (channel : RawChannel (ZMod p)) (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
+    (projected witness).interactionsWith channel = witness.interactionsWith channel :=
+  projected_silent_interactions witness channel
+    (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ registered)))))
+    (boundary_core_silent channel registered)
 
 /-- Core channels, including Memory and its private ordering ledgers, have no host-boundary traffic. -/
 theorem projected_core_balancedChannel
