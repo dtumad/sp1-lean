@@ -20,30 +20,11 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : Hos
 
 attribute [local irreducible] ensemble HostFinalMemory.ensemble HostFinalMemory.coreWitness HostOrdinaryReceipts.ensemble
 
-private theorem producer_rows (witness : EnsembleWitness (ensemble image source target final)) (i : Fin 25)
-    (h : 7 + i.val < (baseWitness witness).tables.length) (h' : 7 + i.val < witness.tables.length) :
-    ((baseWitness witness).tables[7 + i.val]'h).table = (witness.tables[7 + i.val]'h').table := by
+/-- Projecting the native supervisor retains all physical source arrays in registration order. -/
+theorem baseWitness_rows (witness : EnsembleWitness (ensemble image source target final)) :
+    (baseWitness witness).tables.map (·.table) = witness.tables.map (·.table) := by
   let produced := witness.withEnsemble (producers image source target final) (by simp only [ensemble, ClosedVerifier.withInteractions])
-  let stripped := HostOrdinaryReceipts.baseWitness produced
-  change (stripped.tables[7 + i.val]'h).table = _
-  have here : 7 + i.val < (HostSailBoundary.ensemble image source target final HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) (HostFinalMemory.sourceChannels target.sail.memorySnapshot)
-    (HostFinalMemory.source_unique_names image source target.sail.memorySnapshot)).tables.length := by
-      rw [stripped.same_length]; exact h
-  let ix : Fin _ := ⟨7 + i.val, here⟩
-  have hw := congrArg Component.width (HostOrdinaryReceipts.original_component (image := image) (source := source)
-    (target := target) (final := final) (others := HostCallReceivers.available)
-    (resources := HostHintReadLocal.sourceResources source.host.io.hints)
-    (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
-    (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot) i)
-  have hs := congrArg Component.width (HostOrdinaryReceipts.slot (image := image) (source := source)
-    (target := target) (final := final) (others := HostCallReceivers.available)
-    (resources := HostHintReadLocal.sourceResources source.host.io.hints)
-    (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
-    (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot) i).component_eq
-  unfold stripped HostOrdinaryReceipts.baseWitness
-  apply EnsembleWitness.projectPrefix_getElem_rows_of_width_eq produced _ _ _ ix
-  exact hw.trans ((ProtectedOrdinaryReceipt.width _).symm.trans hs.symm)
+  exact HostOrdinaryReceipts.baseWitness_rows produced
 
 /-- Ordinary CPU arrays survive the projection to the execution core at their exact positions. -/
 theorem ordinary_core_rows (witness : EnsembleWitness (ensemble image source target final)) (i : Fin 25)
@@ -76,7 +57,9 @@ theorem ordinary_core_rows (witness : EnsembleWitness (ensemble image source tar
       (by have := i.isLt; omega : 57 ≠ 7 + i.val) _)
   have arrays := List.getElem_of_eq same (i := 7 + i.val) (by simpa only [List.length_map] using ho)
   simp only [List.getElem_map] at arrays
-  simpa only [HostFinalMemory.coreWitness] using first.trans (before.trans (arrays.trans (producer_rows witness i hb h')))
+  have raw := List.getElem_of_eq (baseWitness_rows witness) (i := 7 + i.val) (by simpa only [List.length_map] using hb)
+  simp only [List.getElem_map] at raw
+  simpa only [HostFinalMemory.coreWitness] using first.trans (before.trans (arrays.trans raw))
 
 private theorem decode_zip (chips : List (SupportedChip p)) (tables : List (Table (ZMod p))) :
     decodeInstructionTables chips tables =

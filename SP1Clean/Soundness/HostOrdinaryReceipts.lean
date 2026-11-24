@@ -332,6 +332,21 @@ def construct (witness : EnsembleWitness
     (fun index => (construction_layout index).2.1.le)
     (fun index => (construction_layout index).2.2)
 
+/-- Receipt publication preserves the complete physical row arrays, including all padding. -/
+theorem baseWitness_rows (witness : EnsembleWitness
+    (ensemble image source target final others resources channels names)) :
+    (baseWitness witness).tables.map (·.table) = witness.tables.map (·.table) := by
+  apply List.ext_getElem
+  · simp only [List.length_map, ← EnsembleWitness.same_length, tables_length]
+  · intro j left right
+    simp only [List.getElem_map]
+    have bound : j < (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length := by
+      simpa only [List.length_map, ← (baseWitness witness).same_length] using left
+    let index := (⟨j, bound⟩ : Fin _)
+    unfold baseWitness
+    apply EnsembleWitness.projectPrefix_getElem_rows_of_width_eq witness _ _ _ index
+    exact (layout image source target final others resources channels names index).2.1.symm
+
 /-- Retaining every name and input layout preserves the complete canonical data function. -/
 theorem baseWitness_data (witness : EnsembleWitness
     (ensemble image source target final others resources channels names)) :
