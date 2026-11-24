@@ -56,6 +56,7 @@ import SP1Clean.Proofs.Completeness.WritePacketTables
 import SP1Clean.Proofs.Completeness.WritePacketAssembly
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
+import SP1Clean.Proofs.Completeness.WriteSparseFinalizers
 import SP1Clean.Proofs.Completeness.WriteAccessIntervals
 import SP1Clean.Proofs.Completeness.WriteOrdinaryTables
 import SP1Clean.Soundness.WriteOrdinarySources
