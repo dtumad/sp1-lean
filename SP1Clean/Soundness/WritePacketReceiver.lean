@@ -38,7 +38,7 @@ def receiver : ReceiverView (HostCallChip.channel (p := p)) where
       Channel.pulledValue, Channel.pulledIfValue, mul_one]
     rfl
 
-local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+attribute [local instance] Soundness.cleanBalanceDecidableEq
 
 /-- Removing zero-weight padding yields precisely the typed active packet calls. -/
 theorem active_call_ledger (table : Table (ZMod p)) (installed : table.component = component) (checked : table.Constraints) :

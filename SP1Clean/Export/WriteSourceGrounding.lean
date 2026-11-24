@@ -52,7 +52,7 @@ theorem ordinary_origin (witness : EnsembleWitness (base image source target fin
   change row.physical ∈ (witness.tables[7 + InstructionChipId.all.idxOf id]'_).table
   simpa only [index] using physical
 
-local instance : DecidableEq Fp := FiniteField.instDecidableEq
+attribute [local instance] Soundness.cleanBalanceDecidableEq
 
 private theorem raw_pull {xs : List (TypedInteraction (memoryChannel (p := SP1Prime)))} {prior : MemoryMsg Fp}
     (pulled : prior ∈ consumedMessages xs) :
