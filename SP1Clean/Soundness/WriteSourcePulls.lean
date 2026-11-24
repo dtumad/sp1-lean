@@ -55,7 +55,8 @@ private theorem typed_pull (env : Environment (ZMod p)) (gate : Expression (ZMod
       memoryChannel.pulledIfValue (env gate) (eval env msg) :=
   OrdinarySources.evaluated_pull env ⟨.pull, gate, msg⟩ rfl
 
-private theorem host_pulls (family : HostSources.Family) (env : Environment (ZMod p)) :
+/-- Filtering the native host Memory ledger retains exactly its physical predecessor sites. -/
+theorem host_pulls (family : HostSources.Family) (env : Environment (ZMod p)) :
     let input := varFromOffset (HostSources.original (p := p) family).Input 0
     let offset := size (HostSources.original (p := p) family).Input
     ((HostSources.original family).operations.interactionValuesWith memoryChannel.toRaw env).filter

@@ -12,6 +12,8 @@ import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationBuild
+import SP1Clean.Export.WriteObservationReadBuild
+import SP1Clean.Export.WriteSupplyCapacity
 import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WriteObservationSources
 import SP1Clean.Export.WriteObservationReads
@@ -26,6 +28,7 @@ import SP1Clean.Proofs.Completeness.WriteCountedData
 import SP1Clean.Proofs.Completeness.WriteCountedHints
 import SP1Clean.Proofs.Completeness.WriteCountedRouting
 import SP1Clean.Proofs.Completeness.WriteCountedTables
+import SP1Clean.Proofs.Completeness.WriteCountedCost
 import SP1Clean.Proofs.Completeness.WriteEffectRows
 import SP1Clean.Proofs.Completeness.WriteFixedDataCapacity
 import SP1Clean.Proofs.Completeness.WriteGroupRows
