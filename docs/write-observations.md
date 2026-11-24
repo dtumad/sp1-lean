@@ -180,14 +180,19 @@ The backend rejects a changed tail on its aligned padding word and a changed ter
 allocation frontier.
 [Physical reader](../SP1Clean/Native/Operations/HintQueueSnapshot.lean) · [Constructive ledger](../SP1Clean/Proofs/Completeness/HintSnapshotLedger.lean) · [Capacity](../SP1Clean/Export/HintSnapshotCapacity.lean) · [Backend fixture](../rust/sp1-comparison/tests/hint_source_export.rs)
 
-Raw native acceptance forces the terminal walk to visit every public word in physical
-order. Its initial head comes from the private seal row. Within a buffer all its word
-rows use the same head and tail. The last word moves to the next node, and an empty
-outgoing queue forces the starting head to be null. Once the node and word requests
-identify a common persistent store, this walk determines the exact outgoing byte
-strings in that store. [Installed walk and queue decoding](../SP1Clean/Export/HintSnapshotWalk.lean)
+Raw acceptance of the native observer determines a unique persistent hint store. The
+incoming snapshot fixes the original nodes. The physical allocation walk gives one fresh
+pointer per active node in order, and the word walk recovers its exact byte length and
+contents, including empty buffers and aligned terminal padding. This covers popped nodes
+and words with no later readers. Following the sealed head in this store returns exactly
+the public outgoing hint buffers. [Native store uniqueness](../SP1Clean/Export/WriteAllocationStoreUnique.lean)
 
-The full native theorem still needs to construct that store from the actual queue updates
-at each execution clock, including fresh nodes consumed within the shard, and to connect
-the ordered WRITE calls to every stream position. The stock SDK digest statement above
-applies independently.
+At the fixed-provider preset, the grouped guest words, fixed endpoint blocks and four
+allocation tables share a single funded word array. Their three private allocation
+channels and the external block channel balance and satisfy Clean’s field-count check.
+The table heights bound the full block ledger by 939,524,096 occurrences, including
+inactive rows and repeated lookups. [Preset bound](../SP1Clean/Export/WriteBlockPreset.lean) · [Physical installation](../SP1Clean/Export/WriteFundedInstallation.lean)
+
+The full host soundness statement must still identify each raw WRITE with its ordered
+guest bytes, stream position and descriptor effect. The stock verifier exposes the public
+values digest. [Stock public statement](../SP1Clean/FormalModel/Contracts/StockPublicOutput.lean)

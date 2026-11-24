@@ -51,6 +51,7 @@ public import ToClean.Air.ComponentOutput
 public import ToClean.Air.ComponentReplacement
 public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
+public import ToClean.Air.DemandHeightInterval
 public import ToClean.Air.DemandPadding
 public import ToClean.Air.GuardedDemandTable
 public import ToClean.Air.GuardedLedger
