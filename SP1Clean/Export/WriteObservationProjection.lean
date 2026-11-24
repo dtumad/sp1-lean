@@ -18,6 +18,11 @@ attribute [local irreducible] preprocessing
 def observed (w : EnsembleWitness (assembly image source target final)) : EnsembleWitness (preprocessing image source target final) :=
   w.withEnsemble _ (by unfold assembly withCursors; rfl)
 
+
+/-- Use the same physical witness and canonical data with the two public WRITE checks installed. -/
+def withPublicChecks (w : EnsembleWitness (preprocessing image source target final)) : EnsembleWitness (assembly image source target final) :=
+  w.withEnsemble _ (by unfold assembly withCursors; rfl)
+
 theorem observed_constraints (w : EnsembleWitness (assembly image source target final)) :
     w.Constraints ↔ (observed w).Constraints := Iff.rfl
 
@@ -43,6 +48,13 @@ theorem observed_ledger (w : EnsembleWitness (assembly image source target final
   rw [withCursors_ledger]
   simp [Channel.pushedValue, Channel.pulledValue, cursor, close, prev]
   rfl
+
+/-- Adding the public verifiers preserves every occurrence on a previously registered silent channel. -/
+theorem withPublicChecks_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
+    (registered : ch ∈ (preprocessing image source target final).channels)
+    (silent : ch.name ∉ [(WriteEffects.cursorChannel (p := SP1Prime)).name, (WriteEffects.closeChannel (p := SP1Prime)).name]) :
+    (withPublicChecks w).interactionsWith ch = w.interactionsWith ch :=
+  (observed_ledger (withPublicChecks w) ch registered silent).symm
 
 /-- Per-channel balance transports across both public projections precisely on silent channels. -/
 theorem observed_balance (w : EnsembleWitness (assembly image source target final)) (fit : w.InteractionsFit .logUp)
