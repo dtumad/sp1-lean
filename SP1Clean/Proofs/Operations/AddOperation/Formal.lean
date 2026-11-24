@@ -1,13 +1,11 @@
-import SP1Clean.Native.Operations.AddOperation.RawSpec
+import SP1Clean.Native.Operations.AddOperation.Carries
 import SP1Clean.Native.Operations.AddOperation.Populate
 import SP1Clean.Native.Operations.AddOperation.Defs
 
 /-! # `AddOperation` — the `FormalAssertion` (soundness / completeness / contract)
 
-The local addition gadget as a Clean `FormalAssertion`. Soundness/completeness route through
-`RawSpec`'s `addSemantics_of_carries`/`carries_of_addSemantics`; `populate_spec` lets the composing
-chip discharge its `assertion`-side obligation. Arithmetic core in `RawSpec`, circuit in `Defs`, and
-witness in `Populate`; no Rust operation artifact is part of this proof. -/
+The bundled addition assertion connects each result-limb byte lookup to `Word.isU64`
+and its four binary carries to addition modulo $2^{64}$. -/
 
 namespace SP1Clean.AddOperation
 
@@ -27,7 +25,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   circuit_proof_start
   obtain ⟨hab_imp, hbin⟩ := h_assumptions
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
-  have h65536 : (2 : ℕ) ^ 16 = 65536 := by norm_num
   simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨hr0, hr1, hr2, hr3, _hbool, hgc0, hgc1, hgc2, hgc3⟩ := h_holds
   -- The four trailing conjuncts are the limb byte pulls' own `Requirements` — vacuous off-gate (`cedc171b`).
@@ -37,13 +34,16 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   have R0 := hr0 hneg; have R1 := hr1 hneg; have R2 := hr2 hneg; have R3 := hr3 hneg
   rw [← c16] at R0 R1 R2 R3
   rw [hr1eq, one_mul] at hgc0 hgc1 hgc2 hgc3
-  refine addSemantics_of_carries ha hb ?_ ?_
-  · simp only [AssertSpec]
-    exact ⟨bool_of_mul_pred hgc0, bool_of_mul_pred hgc1, bool_of_mul_pred hgc2, bool_of_mul_pred hgc3⟩
-  · simp only [InteractSpec]
-    rw [← h65536]
-    exact ⟨(byteRowSpec_range _ sixteen_lt).mp R0, (byteRowSpec_range _ sixteen_lt).mp R1,
-      (byteRowSpec_range _ sixteen_lt).mp R2, (byteRowSpec_range _ sixteen_lt).mp R3⟩
+  have bounded : Word.isU64 input_cols_value := Word.isU64_of_cases ((byteRowSpec_range _ sixteen_lt).mp R0)
+    ((byteRowSpec_range _ sixteen_lt).mp R1) ((byteRowSpec_range _ sixteen_lt).mp R2)
+    ((byteRowSpec_range _ sixteen_lt).mp R3)
+  refine ⟨bounded, addSemantics_of_carries ha hb bounded ?_⟩
+  intro i
+  fin_cases i
+  · exact IsBool.iff_mul_sub_one.mpr hgc0
+  · exact IsBool.iff_mul_sub_one.mpr hgc1
+  · exact IsBool.iff_mul_sub_one.mpr hgc2
+  · exact IsBool.iff_mul_sub_one.mpr hgc3
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
@@ -61,14 +61,18 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     · simp [h0]
     · obtain ⟨hv, hbv⟩ := h_spec h1
       obtain ⟨ha, hb⟩ := hab_imp h1
-      obtain ⟨⟨hc0, hc1, hc2, hc3⟩, _⟩ := carries_of_addSemantics ha hb hv hbv
+      have binary := carries_of_addSemantics ha hb hv hbv
       rw [h1]
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · simp
-      · rw [one_mul]; rcases hc0 with h | h <;> rw [h] <;> simp
-      · rw [one_mul]; rcases hc1 with h | h <;> rw [h] <;> simp
-      · rw [one_mul]; rcases hc2 with h | h <;> rw [h] <;> simp
-      · rw [one_mul]; rcases hc3 with h | h <;> rw [h] <;> simp
+      · rw [one_mul]
+        exact IsBool.iff_mul_sub_one.mp (binary 0)
+      · rw [one_mul]
+        exact IsBool.iff_mul_sub_one.mp (binary 1)
+      · rw [one_mul]
+        exact IsBool.iff_mul_sub_one.mp (binary 2)
+      · rw [one_mul]
+        exact IsBool.iff_mul_sub_one.mp (binary 3)
 
 /-- The proof-oriented local addition gadget as a Clean-native `FormalAssertion`. -/
 def circuit : FormalAssertion (ZMod p) Inputs where

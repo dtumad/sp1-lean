@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Chips.BranchChip.Contracts
 import SP1Clean.Proofs.Chips.BranchChip.Populate
 import SP1Clean.Proofs.CircuitProofStart
-import SP1Clean.Native.Operations.AddOperation.RawSpec
+import SP1Clean.Native.Operations.AddOperation.Carries
 
 /-! # Exact Branch circuit proof
 
@@ -76,8 +76,8 @@ theorem soundness :
     Word.isU64_four
   have h_sig_bin :=
     (signed_selector_valid hbeq hbne hblt hbge hbltu hbgeu h_bin).1
-  have nextInteract (hr1 : input_is_real = 1) :
-      AddOperation.InteractSpec next := by
+  have nextBounded (hr1 : input_is_real = 1) :
+      Word.isU64 next := by
     have h0 := h_byte1 hr1
     have h1 := h_byte2 hr1
     have h2 := h_byte3 hr1
@@ -89,29 +89,22 @@ theorem soundness :
     have r0 := (byteRowSpec_range _ SP1Clean.BranchChip.h14p).mp h0
     have r1 := (byteRowSpec_range _ SP1Clean.sixteen_lt).mp h1
     have r2 := (byteRowSpec_range _ SP1Clean.sixteen_lt).mp h2
-    simp only [AddOperation.InteractSpec, next, Vector.getElem_mk,
-      List.getElem_toArray, List.getElem_cons_zero,
-      List.getElem_cons_succ, ZMod.val_zero]
-    exact ⟨val_lt_65536_of_mul_inv_four_lt r0, r1, r2, by omega⟩
+    apply Word.isU64_of_cases (val_lt_65536_of_mul_inv_four_lt r0) r1 r2
+    change (0 : ZMod p).val < 2 ^ 16
+    simp
   have takenSemantics (hr1 : input_is_real = 1)
       (hbr1 : env.get (i₀ + 10) = 1) :
       Word.toBitVec64 next =
         Word.toBitVec64 pc + Word.toBitVec64 imm := by
     rw [hbr1, one_mul] at h_taken0 h_taken1 h_taken2 h_taken3
-    have hAssert : AddOperation.AssertSpec pc imm next := by
-      simp only [AddOperation.AssertSpec, pc, imm, next,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ]
-      exact
-        ⟨SP1Clean.bool_of_mul_pred h_taken0,
-          SP1Clean.bool_of_mul_pred h_taken1,
-          SP1Clean.bool_of_mul_pred h_taken2,
-          (by
-            simpa only [zero_add, sub_zero] using
-              (SP1Clean.bool_of_mul_pred h_taken3))⟩
-    exact
-      (AddOperation.addSemantics_of_carries hpcU himmU hAssert
-        (nextInteract hr1)).2
+    apply AddOperation.addSemantics_of_carries hpcU himmU (nextBounded hr1)
+    intro i
+    fin_cases i
+    · exact IsBool.iff_mul_sub_one.mpr h_taken0
+    · exact IsBool.iff_mul_sub_one.mpr h_taken1
+    · exact IsBool.iff_mul_sub_one.mpr h_taken2
+    · simpa only [AddOperation.carries, Fin.getElem_fin, pc, imm, next, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using IsBool.iff_mul_sub_one.mpr h_taken3
   have fallSemantics (hr1 : input_is_real = 1)
       (hbr0 : env.get (i₀ + 10) = 0) :
       Word.toBitVec64 next =
@@ -125,21 +118,17 @@ theorem soundness :
       rw [← h_realsum, hr1, hbr0]
       simp
     rw [hgate, one_mul] at h_fall0 h_fall1 h_fall2 h_fall3
-    have hAssert :
-        AddOperation.AssertSpec pc
-          (#v[(4 : ZMod p), 0, 0, 0] : Word (ZMod p)) next := by
-      simp only [AddOperation.AssertSpec, pc, next,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        add_zero, zero_add, sub_zero]
-      exact
-        ⟨SP1Clean.bool_of_mul_pred h_fall0,
-          SP1Clean.bool_of_mul_pred h_fall1,
-          SP1Clean.bool_of_mul_pred h_fall2,
-          SP1Clean.bool_of_mul_pred h_fall3⟩
-    exact
-      (AddOperation.addSemantics_of_carries hpcU h4U hAssert
-        (nextInteract hr1)).2
+    apply AddOperation.addSemantics_of_carries hpcU h4U (nextBounded hr1)
+    intro i
+    fin_cases i
+    · simpa only [AddOperation.carries, Fin.getElem_fin, pc, next, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using IsBool.iff_mul_sub_one.mpr h_fall0
+    · simpa only [AddOperation.carries, Fin.getElem_fin, pc, next, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using IsBool.iff_mul_sub_one.mpr h_fall1
+    · simpa only [AddOperation.carries, Fin.getElem_fin, pc, next, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using IsBool.iff_mul_sub_one.mpr h_fall2
+    · simpa only [AddOperation.carries, Fin.getElem_fin, pc, next, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using IsBool.iff_mul_sub_one.mpr h_fall3
   refine
     ⟨⟨?_, h_bin,
       ⟨hbeq, hbne, hblt, hbge, hbltu, hbgeu, hisbr⟩,
@@ -488,24 +477,6 @@ theorem completeness :
             Word.toBitVec64 (#v[(4 : ZMod p), 0, 0, 0] :
               Word (ZMod p)) :=
     AddOperation.spec_populate h_pcU h4U (1 : ZMod p) rfl
-  have hBranchAssert :
-      AddOperation.AssertSpec
-        #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
-        input_adapter_op_c_imm
-        (AddOperation.populate
-          #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
-          input_adapter_op_c_imm) :=
-    (AddOperation.carries_of_addSemantics h_pcU h_imm
-      hBranchSemantics.1 hBranchSemantics.2).1
-  have hFallAssert :
-      AddOperation.AssertSpec
-        #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
-        #v[4, 0, 0, 0]
-        (AddOperation.populate
-          #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
-          #v[4, 0, 0, 0]) :=
-    (AddOperation.carries_of_addSemantics h_pcU h4U
-      hFallSemantics.1 hFallSemantics.2).1
   have nextEqBranch (hr1 : input_is_real = 1)
       (hbr1 : env.get (i₀ + 10) = 1) :
       (#v[env.get (i₀ + 11), env.get (i₀ + 12), env.get (i₀ + 13), 0] :
@@ -556,22 +527,6 @@ theorem completeness :
     · simp only [Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_succ, List.getElem_cons_zero]
       exact (h_ft3 hr1 (he_br.symm.trans hbr0)).symm
-  have branchCarries (hr1 : input_is_real = 1)
-      (hbr1 : env.get (i₀ + 10) = 1) :
-      AddOperation.AssertSpec
-        #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
-        input_adapter_op_c_imm
-        #v[env.get (i₀ + 11), env.get (i₀ + 12), env.get (i₀ + 13), 0] := by
-    rw [nextEqBranch hr1 hbr1]
-    exact hBranchAssert
-  have fallCarries (hr1 : input_is_real = 1)
-      (hbr0 : env.get (i₀ + 10) = 0) :
-      AddOperation.AssertSpec
-        #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
-        #v[4, 0, 0, 0]
-        #v[env.get (i₀ + 11), env.get (i₀ + 12), env.get (i₀ + 13), 0] := by
-    rw [nextEqFall hr1 hbr0]
-    exact hFallAssert
   have real_of_branching (hbr1 : env.get (i₀ + 10) = 1) :
       input_is_real = 1 := by
     rcases h_bin with hr0 | hr1
@@ -581,9 +536,6 @@ theorem completeness :
       rw [hbr0] at hbr1
       exact zero_ne_one hbr1
     · exact hr1
-  have mulPred_of_bool {x : ZMod p} (hx : x = 0 ∨ x = 1) :
-      x * (x - 1) = 0 := by
-    rcases hx with h | h <;> rw [h] <;> simp
   have branchPredicates (hr1 : input_is_real = 1)
       (hbr1 : env.get (i₀ + 10) = 1) :
       let c0 :=
@@ -599,15 +551,13 @@ theorem completeness :
         (input_adapter_op_c_imm[3] + c2) * (65536 : ZMod p)⁻¹
       c0 * (c0 - 1) = 0 ∧ c1 * (c1 - 1) = 0 ∧
         c2 * (c2 - 1) = 0 ∧ c3 * (c3 - 1) = 0 := by
-    have hc := branchCarries hr1 hbr1
-    simp only [AddOperation.AssertSpec, Vector.getElem_mk,
-      List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ,
-      zero_add, sub_zero] at hc ⊢
-    exact
-      ⟨mulPred_of_bool hc.1,
-        mulPred_of_bool hc.2.1,
-        mulPred_of_bool hc.2.2.1,
-        mulPred_of_bool hc.2.2.2⟩
+    have binary := AddOperation.carries_of_addSemantics h_pcU h_imm hBranchSemantics.1 hBranchSemantics.2
+    rw [← nextEqBranch hr1 hbr1] at binary
+    have gate (i : ℕ) (small : i < 4) := IsBool.iff_mul_sub_one.mp (binary ⟨i, small⟩)
+    have gates := And.intro (gate 0 (by decide)) (And.intro (gate 1 (by decide))
+      (And.intro (gate 2 (by decide)) (gate 3 (by decide))))
+    simpa only [AddOperation.carries, Fin.getElem_fin, Vector.getElem_mk, List.getElem_toArray,
+      List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using gates
   have fallPredicates (hr1 : input_is_real = 1)
       (hbr0 : env.get (i₀ + 10) = 0) :
       let c0 :=
@@ -622,15 +572,13 @@ theorem completeness :
       let c3 := c2 * (65536 : ZMod p)⁻¹
       c0 * (c0 - 1) = 0 ∧ c1 * (c1 - 1) = 0 ∧
         c2 * (c2 - 1) = 0 ∧ c3 * (c3 - 1) = 0 := by
-    have hc := fallCarries hr1 hbr0
-    simp only [AddOperation.AssertSpec, Vector.getElem_mk,
-      List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ,
-      zero_add, add_zero, sub_zero] at hc ⊢
-    exact
-      ⟨mulPred_of_bool hc.1,
-        mulPred_of_bool hc.2.1,
-        mulPred_of_bool hc.2.2.1,
-        mulPred_of_bool hc.2.2.2⟩
+    have binary := AddOperation.carries_of_addSemantics h_pcU h4U hFallSemantics.1 hFallSemantics.2
+    rw [← nextEqFall hr1 hbr0] at binary
+    have gate (i : ℕ) (small : i < 4) := IsBool.iff_mul_sub_one.mp (binary ⟨i, small⟩)
+    have gates := And.intro (gate 0 (by decide)) (And.intro (gate 1 (by decide))
+      (And.intro (gate 2 (by decide)) (gate 3 (by decide))))
+    simpa only [AddOperation.carries, Fin.getElem_fin, Vector.getElem_mk, List.getElem_toArray,
+      List.getElem_cons_succ, List.getElem_cons_zero, zero_add, add_zero, sub_zero] using gates
   simp only [SP1Clean.BranchChip.committedNextPc,
     SP1Clean.BranchChip.branchTargetWord,
     SP1Clean.BranchChip.fallThroughWord, populateBranching, populateComparison,

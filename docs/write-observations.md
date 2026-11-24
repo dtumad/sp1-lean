@@ -25,6 +25,14 @@ bytes, queued hints and matched requests and replies. Values enqueued by WRITE c
 later HINT_READ even when the caller only inspects the final guest state.
 [Guest WRITE wrapper](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/io.rs#L13-L31) · [Guest HALT](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/zkvm/entrypoint/src/syscalls/halt.rs#L24-L42) · [COMMIT AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/syscall/instructions/air.rs#L350-L367) · [SDK verification](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/sdk/src/prover.rs#L172-L220)
 
+Lean exposes the SDK check as `StockPublicOutput.acceptsCore` for a list of typed Core shard
+records and `Claim.accepts` for the exit code and digest shared by Core and Compressed. The last
+Core record supplies the claim. Its 32 bytes match either SHA-256 or BLAKE3 of the supplied
+public bytes. The default status requires success. The native header and the release commitment
+adapter project to the same claim when their exit codes agree. Version, layout and cryptographic
+proof checks surround this public-output check in the SDK.
+[Formal statement](../SP1Clean/FormalModel/Contracts/StockPublicOutput.lean) · [Release-vector tests](../SP1CleanTest/Core/StockPublicOutput.lean)
+
 ## Physical memory versions
 
 Each incoming CPU clock falls between two successive effect-slot pushes at a given register
@@ -46,6 +54,53 @@ for a source-only location, register the observer alongside the physical produce
 constrain the host effects of the selected packet.
 [Typed Memory record intervals](../SP1Clean/Proofs/Completeness/MemoryVersionHistory.lean)
 
+## Native probe table
+
+An active `WriteProbe.component` row pulls one private version containing the location, a
+closed clock interval, and a four-limb word. The circuit enforces a canonical x12 or aligned
+RAM key, 16-bit limbs, and inclusive integer clock comparisons. It pushes the same key and
+word together with the absolute incoming clock. The demand guard compares that full receipt
+with the requested read. Padding gives both messages zero multiplicity. Probes use neither
+a guest event nor a new guest Memory timestamp.
+[Observer circuit](../SP1Clean/Proofs/Operations/WriteProbe.lean) · [Physical signed messages](../SP1Clean/Proofs/Operations/WriteProbeLedger.lean)
+
+`installed_table` builds an ordinary Clean table from a finite list of requests at checked
+physical execution cuts. Repeated requests retain their positions and values. Genesis admits
+clock zero and a final version admits the largest 48-bit clock. When a physical provider
+offers a smaller range inside an authentic version, `installed_read_of_restriction` identifies
+the checked result with the held Sail word at the same cut. The enclosing host assembly must
+authenticate every version supply and balance both private channels.
+[Interval encoding and replay](../SP1Clean/Proofs/Completeness/WriteProbeInputs.lean) · [Table generation](../SP1Clean/Proofs/Completeness/WriteProbeTables.lean)
+
+## Physical sources
+
+The two verifier-fixed x12 rows bind the first and last CPU cuts to the actual snapshot
+register. Register refreshes retain both original bus timestamps and the unchanged word.
+The ordinary, ECALL and HINT_READ components publish each original Memory predecessor from
+its previous timestamp through the incoming CPU clock. A genuine push at the incoming
+clock is value-preserving. The eight-tick gap between CPU cuts ensures that truncating a
+mutating access's predecessor interval at its incoming clock retains every eligible probe.
+The chronological selector picks the first later push, or the final suffix when none exists.
+[Incoming-cut proof and selector](../SP1Clean/Proofs/Completeness/WriteAccessIntervals.lean)
+
+Both ordered finalizers publish the actual last Memory record through the largest 48-bit
+clock. Valid queries outside the touched inventory enter both sorted boundaries. The batch
+builder runs the source and final circuits at every new key and returns their physical row
+arrays. The snapshot circuit supplies the authentic zero-timestamp word. Its unit Memory push
+cancels the finalizer's unit pull, and the suffix covers every representable clock.
+[Sparse boundary construction](../SP1Clean/Proofs/Completeness/WriteSparseBoundaries.lean) · [Fixed x12 rows](../SP1Clean/Native/Operations/WriteProbeRegisterBoundary.lean)
+
+The 25 protected ordinary families, ECALL, both HINT_READ word variants, the register refresh
+and both ordered finalizers form a 31-component source group. The raw LogUp bound counts
+the supplier height plus each source height times its number of pull sites, including padding.
+When this total fits the prime field, raw receipt balance and the supplier’s physical constraints
+trace each positive version to a specific original source. All original guest Memory multiplicities and padding are preserved. At canonical
+ordinary-block data, mixed execution constructs each protected ordinary table with one to
+three predecessor occurrences on every physical row. ECALL contributes three and each
+HINT_READ word contributes one. The observer installs each publisher at its original physical position. Projecting an accepted native
+witness back to the supervisor still requires recovering its State and Memory histories alongside the eighth host receiver.
+[Source inventory](../SP1Clean/Soundness/WriteAccessInventory.lean) · [Mixed ordinary construction](../SP1Clean/Proofs/Completeness/WriteOrdinaryTables.lean) · [Mixed refresh construction](../SP1Clean/Export/WriteRefreshTables.lean)
+
 ## Read-only probe demand
 
 Along a successful execution, let `C` count WRITE packets, `W` count the aligned words
@@ -55,6 +110,38 @@ buffer endpoints gives `8W ≤ B + 14C`. These bounds cover ignored descriptors 
 callbacks and ordinary outputs.
 
 At `fixedProviderPreset`, `C ≤ 63,550` and `W ≤ 266,449,516`. Together at most
-266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` if a table uses one
-row per probe. Shared-channel capacity for a physical observer depends on the interactions
-emitted by its actual rows. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
+266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` for the native table's
+one row per probe. Each physical row contributes one occurrence to each of its two private
+channels, including zero-weight padding. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
+
+## Physical buffer coverage
+
+Each native buffer span consumes the authenticated WRITE header. It seeds a cursor at
+`address / 8` and closes it at `(address + length + 7) / 8`, using the full byte sum.
+Each buffer word consumes one read-only receipt for the aligned RAM address at the
+incoming ECALL clock and advances that cursor by one. Balance forces every index in
+the interval to occur exactly once. An empty unaligned buffer observes its containing
+word. An empty aligned buffer at `2^48` has no word rows and preserves the one-past
+endpoint. The span and word rows forward the complete checked header and raw word to
+the host-effect receivers. [Physical components](../SP1Clean/Proofs/Operations/WriteBufferPhysical.lean) · [Exact coverage](../SP1Clean/Soundness/WriteBufferCoverage.lean) · [Table construction](../SP1Clean/Proofs/Completeness/WriteBufferTables.lean)
+
+## Native stream and queue endpoints
+
+The native observer decorates 31 of the supervisor’s 98 tables. Its packet, span, word and
+lane tables join memory observations by the full incoming clock and address. A selected
+byte also carries its destination position. For each active fixed transcript record, the
+public source and target snapshots determine the bytes, hook ordinal and metadata. The
+public checker enforces the three output prefixes, the consumed reply prefix, the matching
+request suffix, and representability of every fixed record. Every resource-admissible mixed
+execution satisfies these checks. [Observer assembly](../SP1Clean/Export/WriteObservationAssembly.lean) · [Execution theorem](../SP1Clean/Proofs/Completeness/WriteStreamExecution.lean)
+
+To recover the outgoing hints, follow the final private head through the persistent store.
+Each node lookup fixes its tail and length. Each word lookup fixes eight bytes and the
+last-word flag, including the padding word of an empty hint. Reaching pointer zero after
+the last target buffer establishes equality of the complete queue. This permits a final
+head or allocation frontier larger than the queue length after a pop.
+[Snapshot lookup characterization](../SP1Clean/Semantics/Host/HintQueueSnapshot.lean)
+
+The full native acceptance theorem still needs to connect consecutive WRITE clocks, close
+all per-stream positions, and connect the final queue walk to the physical host state and
+node providers. The stock SDK digest statement above applies independently.

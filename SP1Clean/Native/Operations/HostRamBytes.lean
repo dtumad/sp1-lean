@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.Contracts.HostRamBytes
 import SP1Clean.Circuits.Gadgets.U16toU8Safe
+import SP1Clean.Semantics.Specs.U16toU8Bytes
 
 /-! # A byte-decoding consumer of host RAM reads
 
@@ -15,10 +16,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 def bytes {R : Type} [Sub R] [Mul R] (inverse : R) (input : Inputs R) : Vector R 8 :=
-  #v[input.low[0], (input.read.value[0] - input.low[0]) * inverse,
-    input.low[1], (input.read.value[1] - input.low[1]) * inverse,
-    input.low[2], (input.read.value[2] - input.low[2]) * inverse,
-    input.low[3], (input.read.value[3] - input.low[3]) * inverse]
+  U16toU8OperationSafe.bytes inverse input.read.value input.low
 
 def populate (read : HostRamReadChip.Message (ZMod p)) : Inputs (ZMod p) :=
   ⟨read, (U16toU8OperationSafe.populate read.value).low_bytes⟩

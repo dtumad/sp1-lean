@@ -18,31 +18,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 private theorem bytes_spec (input : Inputs (ZMod p)) (read : input.read.Valid)
     (decoded : U16toU8OperationSafe.DecompSpec input.read.value ⟨input.low⟩) :
     Spec input (bytes (256 : ZMod p)⁻¹ input) := by
-  have bounded : ∀ index : Fin 8, (bytes (256 : ZMod p)⁻¹ input)[index].val < 256 := by
-    intro index
-    fin_cases index
-    · exact (decoded 0).1
-    · exact (decoded 0).2.1
-    · exact (decoded 1).1
-    · exact (decoded 1).2.1
-    · exact (decoded 2).1
-    · exact (decoded 2).2.1
-    · exact (decoded 3).1
-    · exact (decoded 3).2.1
-  have packed : Word.ofBytes (bytes (256 : ZMod p)⁻¹ input) = input.read.value := by
-    apply Vector.ext
-    intro index bound
-    interval_cases index
-    all_goals simp only [Word.ofBytes, bytes, circuit_norm]
-    all_goals rw [mul_left_comm, mul_inv_cancel₀ val_256_ne_zero, mul_one, add_sub_cancel]
-  exact ⟨read, bounded, packed ▸ Word.toBitVec64_ofByteFields _ bounded⟩
+  exact ⟨read, decoded.bytes⟩
 
 theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main
     (fun _ _ => True) (fun input output _ => Spec input output) := by
   circuit_proof_start [U16toU8OperationSafe.circuit, U16toU8OperationSafe.Assumptions,
-    HostRamReadChip.channel, bytes]
+    HostRamReadChip.channel, bytes, U16toU8OperationSafe.bytes]
   obtain ⟨decoded, read⟩ := h_holds
-  simpa only [Spec, bytes, circuit_norm] using bytes_spec ⟨_, _⟩ read (decoded rfl)
+  simpa only [Spec, bytes, U16toU8OperationSafe.bytes, circuit_norm] using bytes_spec ⟨_, _⟩ read (decoded rfl)
 
 theorem completeness : GeneralFormalCircuit.Completeness (ZMod p) main
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by
@@ -57,7 +40,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (ZMod p) main
 def circuit : GeneralFormalCircuit (ZMod p) Inputs (fields 8) where
   main
   elaborated
-  computableWitnesses := by computable_witnesses [bytes]
+  computableWitnesses := by computable_witnesses [bytes, U16toU8OperationSafe.bytes]
   Spec input output _ := Spec input output
   ProverAssumptions input _ _ := ProverAssumptions input
   soundness

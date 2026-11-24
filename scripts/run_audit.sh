@@ -126,7 +126,9 @@ echo "== A2 proof-deferral inventory (gate: none) =="
 # Both `sorry` and start-of-proof `stop` introduce `sorryAx`; neither is permitted in the main
 # library. Conditional theorem hypotheses and relation parameters are audited at the statement
 # boundary instead of being disguised as proof deferrals.
-sorry_re='(^[[:space:]]*sorry[[:space:]]*$)|(:=[[:space:]]*sorry)|(=>[[:space:]]*sorry)|(^[[:space:]]*stop([[:space:]]|$))'
+# A field declaration such as `stop : fields 3 F` is a Lean identifier. Treat a leading
+# stop as a command unless its next nonblank token is the field's colon.
+sorry_re='(^[[:space:]]*sorry[[:space:]]*$)|(:=[[:space:]]*sorry)|(=>[[:space:]]*sorry)|(^[[:space:]]*stop([[:space:]]+[^[:space:]:]|[[:space:]]*$))|([[:space:]]by[[:space:]]+stop([[:space:]]|$))'
 actual=$(grep -rlE "$sorry_re" SP1Clean ToClean ToMathlib SP1CleanTest --include='*.lean' | sort)
 grep -rnE "$sorry_re" SP1Clean ToClean ToMathlib SP1CleanTest --include='*.lean'
 if [ -z "$actual" ]; then

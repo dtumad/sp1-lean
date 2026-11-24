@@ -7,6 +7,7 @@ public import ToClean.Circuit.SubcircuitProjection
 public import ToClean.Circuit.VerifierAssertions
 public import ToClean.Circuit.VerifierInteractions
 public import ToClean.Circuit.Receipt
+public import ToClean.Circuit.ReceiptList
 public import ToClean.Circuit.Guarded
 public import ToClean.Air.RowProjection
 public import ToClean.Air.EnsembleProjection
@@ -44,6 +45,7 @@ public import ToClean.Air.ComponentReplacement
 public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
 public import ToClean.Air.DemandPadding
+public import ToClean.Air.GuardedDemandTable
 public import ToClean.Circuit.StaticTable
 public import ToClean.Air.TableBuild
 public import ToClean.Air.LookupFree
@@ -56,5 +58,6 @@ public import ToClean.Tactic.GetElemFastPath
 public import ToClean.Air.Realizes
 
 public import ToClean.Gadgets.Equality
+public import ToClean.Specs.BLAKE3
 
 import ToClean.Circuit.ComputableWitnesses
