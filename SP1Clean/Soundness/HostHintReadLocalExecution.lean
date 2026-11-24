@@ -27,24 +27,21 @@ private theorem eval_records (env : Environment (ZMod p)) (row : Var HostHintRea
   simp only [HostHintReadChip.Inputs.endStep, circuit_norm, and_self]
 
 /-- The actual handler pulls both its node header and its terminal word record. -/
-theorem handler_records (env : Environment (ZMod p)) :
+theorem handler_records (env : Environment (ZMod p)) (active : env activity = 1) :
     handler.operations.interactionValuesWith nodeChannel.toRaw env =
       [nodeChannel.pulledValue (input env).node] ∧
     handler.operations.interactionValuesWith wordChannel.toRaw env =
       [wordChannel.pulledValue (input env).endStep.word] := by
   constructor
-  all_goals
-    simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  · change (((HostHintReadChip.main (varFromOffset HostHintReadChip.Inputs 0)).operations
-      (size HostHintReadChip.Inputs)).interactionsWith nodeChannel.toRaw).map _ = _
-    rw [HostHintReadChip.main_node_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pulled, (eval_records _ _).1,
-      eval_varFromOffset_valueFromOffset, input]
-  · change (((HostHintReadChip.main (varFromOffset HostHintReadChip.Inputs 0)).operations
-      (size HostHintReadChip.Inputs)).interactionsWith wordChannel.toRaw).map _ = _
-    rw [HostHintReadChip.main_word_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pulled, (eval_records _ _).2,
-      eval_varFromOffset_valueFromOffset, input]
+  all_goals simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  · change ((HostHintReadChip.guardedCircuit.main (varFromOffset HostHintReadChip.RowInput 0)).operations
+      (size HostHintReadChip.RowInput)).interactionValuesWith nodeChannel.toRaw env = _
+    rw [HostHintReadChip.guarded_node_values,(eval_records _ _).1,decoded_input]
+    exact congrArg (fun g => [nodeChannel.pulledIfValue g (input env).node]) active
+  · change ((HostHintReadChip.guardedCircuit.main (varFromOffset HostHintReadChip.RowInput 0)).operations
+      (size HostHintReadChip.RowInput)).interactionValuesWith wordChannel.toRaw env = _
+    rw [HostHintReadChip.guarded_word_values,(eval_records _ _).2,decoded_input]
+    exact congrArg (fun g => [wordChannel.pulledIfValue g (input env).endStep.word]) active
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_word (env : Environment (ZMod p)) (row : Var HintReadWordChip.Inputs (ZMod p))
@@ -76,13 +73,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem handler_pull_mem (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (channel : RawChannel (ZMod p)) (interaction : Interaction (ZMod p))
     (present : interaction ∈ handler.operations.interactionValuesWith channel env) :
     interaction ∈ witness.interactionsWith channel := by
   apply EnsembleWitness.mem_interactionsWith.mpr
   refine Or.inr ⟨handlerTable witness, handlerTable_mem witness, ?_⟩
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
+  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp (List.mem_filter.mp member).1
   apply List.mem_flatMap.mpr
   refine ⟨physical, physicalMem, ?_⟩
   have shared : (handlerTable witness).data = witness.data :=
@@ -123,14 +120,14 @@ private theorem consumer_pointer (witness : EnsembleWitness (ensemble image sour
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (wordSpecs : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (row : HintReadCoverage.Row (p := p))
     (rowMem : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness))
     (clock : HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous =
       HostHintReadPartition.callClock env) :
     ((HintReadCoverage.rowInput row).step row.1).word.pointer = (input env).node.pointer := by
   have selected := balanced_for_of_channels witness interface constraints ordering calls cursor env member
-  rw [handler_cursor] at selected
+  rw [handler_cursor,show env activity = 1 from of_decide_eq_true (List.mem_filter.mp member).2] at selected
   rw [HintReadCoverage.cursor_interactions] at selected
   have specs := wordSpecs.select (fun row =>
     HostHintReadPartition.keepWord (HostHintReadPartition.callClock env) row.1 row.2)
@@ -159,26 +156,26 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
     (store finalStore : Store) (extension : Extends store finalStore)
     (authenticated : RecordAuthentication witness finalStore)
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (hints : List Bytes) (current : (input env).previous.Binds store hints) :
     (input env).node.Binds store ∧ (input env).endStep.word.Binds store ∧
       ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness),
         HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous = HostHintReadPartition.callClock env →
           ((HintReadCoverage.rowInput row).step row.1).word.Binds store := by
   have valid : handler.Spec env := by
-    obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
+    obtain ⟨physical, present, rfl⟩ := List.mem_map.mp (List.mem_filter.mp member).1
     have shared : (handlerTable witness).data = witness.data :=
       witness.same_data _ (handlerTable_mem witness)
     simpa only [Table.environment, shared, handlerTable_component witness] using
       handlerSpecs physical present
   have bound : Address.toNat (input env).node.pointer ≤ store.size := by
-    have head : (input env).previous.head = (input env).node.pointer := valid.2.2.2.2.2.1
+    have head : (input env).previous.head = (input env).node.pointer := (active_spec env valid (of_decide_eq_true (List.mem_filter.mp member).2)).2.2.2.2.2.1
     rw [← head]
     exact current.2.2.2.bound
   have node := (node_authenticated witness finalStore authenticated records.node (input env).node
-    (handler_pull_mem witness env member _ _ (by rw [(handler_records env).1]; exact List.mem_cons_self ..))).2
+    (handler_pull_mem witness env member _ _ (by rw [(handler_records env (of_decide_eq_true (List.mem_filter.mp member).2)).1]; exact List.mem_cons_self ..))).2
   have ending := (word_authenticated witness finalStore authenticated records.word (input env).endStep.word
-    (handler_pull_mem witness env member _ _ (by rw [(handler_records env).2]; exact List.mem_cons_self ..))).2
+    (handler_pull_mem witness env member _ _ (by rw [(handler_records env (of_decide_eq_true (List.mem_filter.mp member).2)).2]; exact List.mem_cons_self ..))).2
   refine ⟨node.restrict extension bound, ending.restrict extension bound, ?_⟩
   intro row rowMem clock
   apply (consumer_word_binding witness finalStore authenticated records.word row rowMem).restrict extension
@@ -201,7 +198,7 @@ theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image 
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (finalStore : Store) (authenticated : RecordAuthentication witness finalStore)
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (host : HostState) (store : Store) (extension : Extends store finalStore)
     (current : (input env).previous.Binds store host.io.hints)
     (running : host.exitCode = none) (context : HostReadContext)

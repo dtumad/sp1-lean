@@ -41,7 +41,10 @@ theorem handler_channels :
       [HostHintQueue.nodeChannel.toRaw, HostCallChip.channel.toRaw, HostHintQueue.stateChannel.toRaw,
        HostHintQueue.stateChannel.toRaw, HintReadWordChip.stateChannel.toRaw, HintReadWordChip.stateChannel.toRaw] := by
   rw [Component.interactions_eq]
-  simp only [HostHintReadCoverage.handler, Component.rowOperations, HostHintReadChip.circuit, HostHintReadChip.main,
+  change (((Guarded.main HostHintReadChip.circuit inferInstance (varFromOffset HostHintReadChip.RowInput 0)).operations
+    (size HostHintReadChip.RowInput)).interactions.map _) = _
+  rw [Guarded.main_interactions]
+  simp only [HostHintReadChip.circuit, HostHintReadChip.main,
     FormalCircuit.toSubcircuit_interactions, GeneralFormalCircuit.toSubcircuit_interactions,
     FormalAssertion.toSubcircuit_interactions, HintReadSpan.circuit, HintReadSpan.main, HintReadStep.circuit,
     HintReadStep.main, ClockOrder.circuit, AddressDiv8.circuit, AddressOrder.circuit, AddrAddOperation.circuit,

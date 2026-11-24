@@ -103,6 +103,23 @@ omit [Fact (2 ^ 25 < p)] in
 private theorem length_strict (empty : Bool) (input : HostHintLengthChip.Inputs (ZMod p))
     (valid : HostHintLengthChip.Spec empty input) : time input.previous < time input.next := valid.2.1.2.2.2.2
 
+/-- A selected nonpadding row enforces the complete active HINT_LEN semantics. -/
+theorem length_active_spec (empty : Bool) (env : Environment (ZMod p))
+    (valid : (view (some empty)).component.Spec env)
+    (active : env (view (some empty)).activity = 1) :
+    HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.Inputs 0 env) := by
+  simp only [view, lengthView] at valid active
+  change env (varFromOffset HostHintLengthChip.RowInput 0).2 = 1 at active
+  rw [Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at active
+  rw [← length_input]
+  exact valid.2 active
+
+/-- A selected nonpadding row enforces the complete active HINT_READ semantics. -/
+theorem read_active_spec (env : Environment (ZMod p)) (valid : (view none).component.Spec env)
+    (active : env (view none).activity = 1) : HostHintReadChip.Spec (HostHintReadCoverage.input env) := by
+  simp only [view, readView] at valid active
+  exact HostHintReadCoverage.active_spec env valid active
+
 theorem view_strict (index : Index) (env : Environment (ZMod p)) (valid : (view index).component.Spec env)
     (active : env (view index).activity = 1) :
     time ((view index).edge env).1 < time ((view index).edge env).2 := by
@@ -120,6 +137,20 @@ theorem view_strict (index : Index) (env : Environment (ZMod p)) (valid : (view 
 
 /-- Physical queue rows with a checked activity of one, in original table order. -/
 def activeRows (tables : List (Table (ZMod p))) := TransitionView.readIndexedActiveRows indices view tables
+
+/-- The active HINT_READ environments in the queue view are precisely the selected rows
+of the first physical table, even when other handler tables contain padding. -/
+theorem read_mem_activeRows (first : Table (ZMod p)) (others : List (Table (ZMod p)))
+    (env : Environment (ZMod p)) :
+    (none, env) ∈ activeRows (first :: others) ↔
+      env ∈ HostHintReadCoverage.activeEnvs first first.data := by
+  rw [activeRows, TransitionView.mem_readIndexedActiveRows]
+  simp only [view, readView]
+  simp only [HostHintReadCoverage.activeEnvs, List.mem_filter, decide_eq_true_eq]
+  apply and_congr_left'
+  cases others with
+  | nil => simp [TransitionView.readIndexedRows, indices, List.mem_map, Table.environment]
+  | cons second rest => cases rest <;> simp [TransitionView.readIndexedRows, indices, List.mem_map, Table.environment]
 
 theorem rows_spec (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun index table => (view index).component = table.component) indices tables)

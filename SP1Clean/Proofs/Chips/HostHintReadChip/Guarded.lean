@@ -71,4 +71,24 @@ theorem guarded_host_values (input : Var RowInput (ZMod p)) (offset : ℕ) (env 
   rw [Guarded.main_interactionValuesWith]
   simp only [circuit, host_values, List.map_cons, List.map_nil, Channel.pulledValue, Channel.pulledIfValue, mul_one]
 
+/-- Exact guarded immutable node requests, including zero-weight padding. -/
+theorem guarded_node_values (input : Var RowInput (ZMod p)) (offset : Nat) (env : Environment (ZMod p)) :
+    (((guardedCircuit).main input).operations offset).interactionValuesWith nodeChannel.toRaw env =
+      [nodeChannel.pulledIfValue (env input.2) (Eval.eval env input.1.node)] := by
+  change ((Guarded.main (circuit) inferInstance input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  change (((main input.1).operations offset).interactionValuesWith nodeChannel.toRaw env).map _ = _
+  rw [Operations.interactionValuesWith,main_node_interactions]
+  simp only [List.map_cons,List.map_nil,Channel.eval_pulled,Channel.pulledValue,Channel.pulledIfValue,mul_one]
+
+/-- Exact guarded immutable word requests, including zero-weight padding. -/
+theorem guarded_word_values (input : Var RowInput (ZMod p)) (offset : Nat) (env : Environment (ZMod p)) :
+    (((guardedCircuit).main input).operations offset).interactionValuesWith wordChannel.toRaw env =
+      [wordChannel.pulledIfValue (env input.2) (Eval.eval env input.1.endStep.word)] := by
+  change ((Guarded.main (circuit) inferInstance input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  change (((main input.1).operations offset).interactionValuesWith wordChannel.toRaw env).map _ = _
+  rw [Operations.interactionValuesWith,main_word_interactions]
+  simp only [List.map_cons,List.map_nil,Channel.eval_pulled,Channel.pulledValue,Channel.pulledIfValue,mul_one]
+
 end SP1Clean.HostHintReadChip

@@ -94,12 +94,13 @@ private theorem control_projection (message : HostCallChip.Message (ZMod p))
         HostReceiptProfile.kinds, HostReceiptProfile.commonKinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
 
 /-- Both queue operations have the exact action decoded from their complete call. -/
-theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Spec row.2) :
+theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Spec row.2)
+    (active : row.2 (view row.1).activity = 1) :
     safe (call row) ∧ project (call row) = some (HostQueueHistory.event row) := by
   rcases row with ⟨index, env⟩
   cases index with
   | none =>
-    change HostHintReadChip.Spec (HostHintReadCoverage.input env) at valid
+    have valid := read_active_spec env valid active
     have length : Word.isU64 (HostHintReadCoverage.input env).call.arg2 := by
       rw [valid.2.2.2.1]
       exact valid.2.2.2.2.2.2.2.1.2.1
@@ -108,7 +109,7 @@ theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Sp
       BitVec.reduceEq, ↓reduceIte, Word.toBitVec64_toNat length, HostQueueHistory.event]
     decide
   | some empty =>
-    change HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.Inputs 0 env) at valid
+    have valid := length_active_spec empty env valid active
     simp only [safe, project, call, valid.1, HostHintLengthChip.codeWord,
       Target.toBitVec64_bitVecToWord, queueCallEvent?, SyscallKind.code,
       ↓reduceIte, HostQueueHistory.event]
@@ -225,18 +226,19 @@ private theorem queue_message (index : Index) (env : Environment (ZMod p)) :
     have evaluated (input : Var HostHintLengthChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
       cases input
       simp only [circuit_norm]
-    simp only [queueReceiver, HostCallReceivers.hintLength, evaluated, eval_varFromOffset_valueFromOffset]
+    simp only [queueReceiver, HostCallReceivers.hintLength, evaluated, HostHintLengthChip.RowInput, varFromOffset_pair, eval_varFromOffset_valueFromOffset]
     rfl
 
 private theorem queue_messages (tables : List (Table (ZMod p))) :
     ReceiverView.messages (indices.map queueReceiver) tables =
-      (TransitionView.readIndexedRows indices tables).map call := by
-  simp only [ReceiverView.messages, TransitionView.readIndexedRows, List.zip_map_left,
+      (activeRows tables).map call := by
+  simp only [ReceiverView.messages, activeRows, TransitionView.readIndexedActiveRows, TransitionView.readIndexedRows, List.zip_map_left,
     List.flatMap_map, List.filter_flatMap, List.filter_map, List.map_flatMap, List.map_map, Function.comp_def]
   apply List.flatMap_congr
   intro pair _
-  have enabled : (queueReceiver (p := p) pair.1).activity = .const 1 := by cases pair.1 <;> rfl
-  simp only [Prod.map, id_eq, enabled, Expression.eval, decide_true, List.filter_true]
+  have enabled (i : Index) : (queueReceiver (p := p) i).activity = (view i).activity := by
+    cases i <;> rfl
+  simp only [Prod.map, id_eq, enabled]
   apply List.map_congr_left
   intro physical _
   exact queue_message pair.1 (pair.2.environment physical)
@@ -266,7 +268,7 @@ theorem controlTables_mem
 theorem calls_split
     (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels)) :
     (HostLocalHandoff.calls witness).Perm
-      ((TransitionView.readIndexedRows indices (queueTables witness)).map call ++
+      ((HostQueueOrder.activeRows (queueTables witness)).map call ++
         ReceiverView.messages ((HostCallReceivers.availableFor (p := p) includeVerify).take 18) (controlTables witness)) := by
   have head : HostLocalHandoff.receiverTables witness =
       handlerTable witness :: (HostLocalHandoff.receiverTables witness).drop 1 := by
@@ -315,15 +317,16 @@ theorem calls_code
   rcases List.mem_append.mp ((calls_split witness).mem_iff.mp member) with queue | control
   · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp queue
     have valid := rows_spec _ (queueTables_aligned witness) specs row rowMem
+    have active := (TransitionView.mem_readIndexedActiveRows.mp rowMem).2
     apply HostReceiptProfile.of_six includeVerify
     rcases row with ⟨index, env⟩
     cases index with
     | none =>
-      change HostHintReadChip.Spec (HostHintReadCoverage.input env) at valid
+      have valid := read_active_spec env valid active
       refine ⟨.hintRead, by decide, (SyscallKind.decode?_eq_some_iff _ _).mpr ?_⟩
       simp only [call, valid.1, HostHintReadChip.codeWord, Target.toBitVec64_bitVecToWord]
     | some empty =>
-      change HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.Inputs 0 env) at valid
+      have valid := length_active_spec empty env valid active
       refine ⟨.hintLength, by decide, (SyscallKind.decode?_eq_some_iff _ _).mpr ?_⟩
       simp only [call, valid.1, HostHintLengthChip.codeWord, Target.toBitVec64_bitVecToWord]
   · exact (control_calls witness interface constraints balanced message control).2.2
@@ -336,7 +339,7 @@ theorem calls_run_or_queue
     (interface : ExtensionInterface (HostCallReceivers.availableFor includeVerify) resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
     (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
-    (∃ row ∈ TransitionView.readIndexedRows indices (queueTables witness), message = call row) ∨
+    (∃ row ∈ HostQueueOrder.activeRows (queueTables witness), message = call row) ∨
     (Word.toBitVec64 message.code ≠ SyscallKind.hintRead.code ∧
       ∀ (host : HostState), host.exitCode = none → ∀ (policy : HostPolicy), policy.characteristic = p →
       ∀ (context : HostReadContext),
@@ -402,12 +405,13 @@ theorem calls_projection
     (specs : ∀ table ∈ queueTables witness, table.Spec) :
     (∀ message ∈ HostLocalHandoff.calls witness, safe message) ∧
       ((HostLocalHandoff.calls witness).filterMap stamped).Perm
-        ((TransitionView.readIndexedRows indices (queueTables witness)).map fun row =>
+        ((HostQueueOrder.activeRows (queueTables witness)).map fun row =>
           (eventTime row, HostQueueHistory.event row)) := by
   apply projection_of_split safe stamped call (fun row => (eventTime row, HostQueueHistory.event row))
     _ _ _ (calls_split witness)
   · intro row member
     have facts := queue_projection row (rows_spec _ (queueTables_aligned witness) specs row member)
+      (TransitionView.mem_readIndexedActiveRows.mp member).2
     refine ⟨facts.1, ?_⟩
     simp only [stamped, facts.2, Option.map_some, call_time]
   · intro message member

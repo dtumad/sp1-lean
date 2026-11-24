@@ -35,9 +35,6 @@ private theorem length_edge (empty : Bool) (env : Environment (ZMod p)) :
     edge (some empty, env) = ((valueFromOffset HostHintLengthChip.Inputs 0 env).previous,
       (valueFromOffset HostHintLengthChip.Inputs 0 env).next) := rfl
 
-private theorem length_component (empty : Bool) :
-    (view (p := p) (some empty)).component = { circuit := HostHintLengthChip.circuit empty, generation := (HostCallReceivers.hintLength (p := p) empty).component.generation, Assumptions := (HostHintLengthChip.circuit empty).Assumptions } := rfl
-
 /-- Queue transitions stamp the successor with the call's incoming CPU clock. -/
 theorem call_time (row : Row (p := p)) :
     clkNat (call row).clk_high (call row).clk_low = eventTime row := by
@@ -46,21 +43,24 @@ theorem call_time (row : Row (p := p)) :
   | none => simp only [call, eventTime, read_edge, time, HostHintReadChip.Inputs.next]
   | some empty => simp only [call, eventTime, length_edge, time, HostHintLengthChip.Inputs.next]
 
-private theorem call_interactions (row : Row (p := p)) :
+private theorem call_interactions (row : Row (p := p)) (active : row.2 (view row.1).activity = 1) :
     (view row.1).component.operations.interactionValuesWith HostCallChip.channel.toRaw row.2 =
       [HostCallChip.channel.pulledValue (call row)] := by
   rcases row with ⟨index, env⟩
   cases index with
-  | none => exact HostHintReadHandoff.handler_values env
+  | none =>
+    simp only [view,readView] at active ⊢
+    rw [HostHintReadHandoff.handler_values]
+    exact congrArg (fun g => [HostCallChip.channel.pulledIfValue g (HostHintReadCoverage.input env).call]) active
   | some empty =>
     have evalCall (input : Var HostHintLengthChip.Inputs (ZMod p)) :
-        eval env input.call = (eval env input).call := by
-      cases input
-      simp only [circuit_norm]
+        eval env input.call = (eval env input).call := by cases input; simp only [circuit_norm]
     have values := (HostCallReceivers.hintLength (p := p) empty).interactions env
-    rw [length_component]
-    simpa only [HostCallReceivers.hintLength, evalCall, eval_varFromOffset_valueFromOffset, call, Expression.eval,
-      Channel.pulledIfValue, Channel.pulledValue] using values
+    simp only [view,lengthView,call] at active ⊢
+    simp only [HostCallReceivers.hintLength,evalCall,HostHintLengthChip.RowInput,varFromOffset_pair,eval_varFromOffset_valueFromOffset] at values
+    simp only [HostHintLengthChip.RowInput,varFromOffset_pair] at active
+    rw [active] at values
+    exact values
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
@@ -74,17 +74,17 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem call_mem
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
+    (row : Row (p := p)) (member : row ∈ HostQueueOrder.activeRows (queueTables witness)) :
     call row ∈ HostLocalHandoff.calls witness := by
   have inside : HostCallChip.channel.pulledValue (call row) ∈
       (queueTables witness).flatMap (·.interactionsWith HostCallChip.channel.toRaw) := by
     rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component)
       _ _ (queueTables_aligned witness)]
     apply List.mem_flatMap.mpr
-    refine ⟨row, member, ?_⟩
+    refine ⟨row, (List.mem_filter.mp member).1, ?_⟩
     change HostCallChip.channel.pulledValue (call row) ∈
       (view row.1).component.operations.interactionValuesWith HostCallChip.channel.toRaw row.2
-    rw [call_interactions]
+    rw [call_interactions row (TransitionView.mem_readIndexedActiveRows.mp member).2]
     exact List.mem_singleton_self _
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp inside
   apply ReceiverView.message_mem_of_pull_mem _ _ (HostLocalHandoff.receiverTables_aligned witness) _
@@ -98,7 +98,7 @@ whose dispatch includes these receiver tables. -/
 theorem call_cpu_of_received
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (received : HostLocalHandoff.calls witness ⊆ HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
+    (row : Row (p := p)) (member : row ∈ HostQueueOrder.activeRows (queueTables witness)) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
       HostCallLedger.call env = call row ∧
       ExecutionRow.syscall (HostCallLedger.input env) ∈
@@ -123,7 +123,7 @@ theorem call_cpu
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
+    (row : Row (p := p)) (member : row ∈ HostQueueOrder.activeRows (queueTables witness)) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
       HostCallLedger.call env = call row ∧
       ExecutionRow.syscall (HostCallLedger.input env) ∈
@@ -140,7 +140,7 @@ theorem call_cpu_at
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness))
+    (row : Row (p := p)) (member : row ∈ HostQueueOrder.activeRows (queueTables witness))
     (cpu : ExecutionRow p) (cpuMember : cpu ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
     (clock : StateMsg.timeNat (cpu.edge witness.data).1 = eventTime row) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
@@ -155,10 +155,11 @@ theorem call_cpu_at
 /-- The actual queue-token walk is strictly ordered by CPU event times. -/
 theorem times_pairwise {path : List (Row (p := p))} {initial final : State (ZMod p)}
     (walk : Walk.IsWalk edge initial final path)
-    (valid : ∀ row ∈ path, (view row.1).component.Spec row.2) :
+    (valid : ∀ row ∈ path, (view row.1).component.Spec row.2)
+    (enabled : ∀ row ∈ path, row.2 (view row.1).activity = 1) :
     (path.map eventTime).Pairwise (· < ·) :=
   RankedGrounding.targetRanks_pairwise_of_isWalk edge time walk
-    (fun row member => view_strict row.1 row.2 (valid row member))
+    (fun row member => view_strict row.1 row.2 (valid row member) (enabled row member))
 
 /-- Queue events occur in the same order in every exhaustive CPU walk. The subsequence includes
 each physical queue occurrence exactly once; ordinary and queue-silent host events may intervene. -/
@@ -169,7 +170,7 @@ theorem clocks_sublist
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (specs : ∀ table ∈ queueTables witness, table.Spec)
     {path : List (Row (p := p))} {initial final : State (ZMod p)}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
+    (queueExhaustive : path.Perm (HostQueueOrder.activeRows (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
@@ -178,6 +179,7 @@ theorem clocks_sublist
     (path.map eventTime).Sublist (cpu.map fun row => StateMsg.timeNat (row.edge witness.data).1) := by
   have queueSorted := times_pairwise queueWalk
     (fun row member => rows_spec _ (queueTables_aligned witness) specs row (queueExhaustive.mem_iff.mp member))
+    (fun _ m => (TransitionView.mem_readIndexedActiveRows.mp (queueExhaustive.mem_iff.mp m)).2)
   have edgeData : ExecutionRow.canonEdge (HostLocalCore.localWitness witness).data =
       ExecutionRow.canonEdge witness.data := funext fun row => row.canonEdge_setData _ _
   have publicInput : (HostLocalCore.localWitness witness).publicInput = witness.publicInput := rfl
@@ -264,7 +266,7 @@ private theorem ordered_history
     {hints : List Bytes} {upper : HintQueue.Store}
     {path : List (Row (p := p))} {initial final : State (ZMod p)}
     (history : HostHintQueueHistory.History hints final upper path)
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
+    (queueExhaustive : path.Perm (HostQueueOrder.activeRows (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
@@ -276,6 +278,7 @@ private theorem ordered_history
     queueExhaustive queueWalk cpuExhaustive cpuWalk
   have queueSorted := times_pairwise queueWalk
     (fun row member => rows_spec _ (queueTables_aligned witness) specs row (queueExhaustive.mem_iff.mp member))
+    (fun _ m => (TransitionView.mem_readIndexedActiveRows.mp (queueExhaustive.mem_iff.mp m)).2)
   have edgeData : ExecutionRow.canonEdge (HostLocalCore.localWitness witness).data =
       ExecutionRow.canonEdge witness.data := funext fun row => row.canonEdge_setData _ _
   have publicInput : (HostLocalCore.localWitness witness).publicInput = witness.publicInput := rfl
@@ -300,7 +303,7 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
       cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ∧
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu ∧
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (HostHintQueueBoundary.projected witness))) ∧
+      path.Perm (HostQueueOrder.activeRows (queueTables (HostHintQueueBoundary.projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       HostHintQueueHistory.History source.host.io.hints final (HintQueue.ofList source.host.io.hints).1 path ∧
       (path.map eventTime).Sublist (cpu.map fun row => StateMsg.timeNat (row.edge witness.data).1) ∧

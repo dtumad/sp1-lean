@@ -69,4 +69,35 @@ theorem guarded_host_values (empty : Bool) (input : Var RowInput (ZMod p)) (offs
   rw [Guarded.main_interactionValuesWith]
   simp only [circuit, host_values, List.map_cons, List.map_nil, Channel.pulledValue, Channel.pulledIfValue, mul_one]
 
+/-- Exact guarded immutable node requests, including zero-weight padding. -/
+theorem guarded_node_values (empty : Bool) (input : Var RowInput (ZMod p)) (offset : Nat) (env : Environment (ZMod p)) :
+    (((guardedCircuit empty).main input).operations offset).interactionValuesWith nodeChannel.toRaw env =
+      if empty then [] else [nodeChannel.pulledIfValue (env input.2) (Eval.eval env input.1.node)] := by
+  change ((Guarded.main (circuit empty) inferInstance input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  change (((main empty input.1).operations offset).interactionValuesWith nodeChannel.toRaw env).map _ = _
+  rw [node_values]; cases empty <;> simp [Channel.pulledValue,Channel.pulledIfValue]
+
+/-- A constrained guarded length row inherits its complete physical specification from its actual node source. -/
+theorem component_spec_of_node
+    (empty : Bool) (env : Environment (ZMod p))
+    (constraints : (component empty).operations.ConstraintsHold env)
+    (node : (component empty).operations.ChannelGuarantees nodeChannel.toRaw env) :
+    (component empty).Spec env := by
+  apply (Component.weakSoundness (by intro _; trivial) constraints ?_).1
+  rw [Operations.guarantees_iff _ _ _ ((component empty).inChannelsOrGuarantees env)]
+  intro selected member
+  cases empty
+  · change selected ∈ [nodeChannel.toRaw, HostCallChip.channel.toRaw, stateChannel.toRaw] at member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl
+    · exact node
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
+  · change selected ∈ [HostCallChip.channel.toRaw, stateChannel.toRaw] at member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
+
 end SP1Clean.HostHintLengthChip

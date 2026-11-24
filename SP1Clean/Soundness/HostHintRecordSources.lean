@@ -72,22 +72,24 @@ theorem source_word_authenticates (hints : List Bytes) (table : Table (ZMod p))
 theorem handler_authenticates (store : Store) :
     Authenticates store (HostHintReadCoverage.handler (p := p)) := by
   constructor
-  · apply Component.Authenticates.of_pulls
-    intro env _ interaction member
+  all_goals
+    apply Component.Authenticates.of_pulls
+    intro env checked interaction member
+    have binary := Guarded.activity_of_constraints HostHintReadChip.circuit inferInstance (varFromOffset HostHintReadChip.RowInput 0)
+      (size HostHintReadChip.RowInput) env ((Component.constraintsHold_iff env).mp checked)
     rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ (((HostHintReadChip.main (varFromOffset HostHintReadChip.Inputs 0)).operations
-      (size HostHintReadChip.Inputs)).interactionsWith nodeChannel.toRaw).map _ at member
-    rw [HostHintReadChip.main_node_interactions] at member
+  · change interaction ∈ ((HostHintReadChip.guardedCircuit.main (varFromOffset HostHintReadChip.RowInput 0)).operations
+      (size HostHintReadChip.RowInput)).interactionValuesWith nodeChannel.toRaw env at member
+    rw [HostHintReadChip.guarded_node_values] at member
     obtain rfl := List.mem_singleton.mp member
-    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue, Interaction.Pull, and_self])
-  · apply Component.Authenticates.of_pulls
-    intro env _ interaction member
-    rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ (((HostHintReadChip.main (varFromOffset HostHintReadChip.Inputs 0)).operations
-      (size HostHintReadChip.Inputs)).interactionsWith wordChannel.toRaw).map _ at member
-    rw [HostHintReadChip.main_word_interactions] at member
+    simp only [Channel.pulledIfValue,Interaction.Pull,true_and]
+    exact binary
+  · change interaction ∈ ((HostHintReadChip.guardedCircuit.main (varFromOffset HostHintReadChip.RowInput 0)).operations
+      (size HostHintReadChip.RowInput)).interactionValuesWith wordChannel.toRaw env at member
+    rw [HostHintReadChip.guarded_word_values] at member
     obtain rfl := List.mem_singleton.mp member
-    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue, Interaction.Pull, and_self])
+    simp only [Channel.pulledIfValue,Interaction.Pull,true_and]
+    exact binary
 
 theorem word_consumer_authenticates (store : Store) (last : Bool) :
     Authenticates store (HintReadCoverage.view (p := p) last).component := by
@@ -114,14 +116,17 @@ theorem hint_length_authenticates (store : Store) (empty : Bool) :
     Authenticates store (HostCallReceivers.hintLength (p := p) empty).component := by
   constructor
   · apply Component.Authenticates.of_pulls
-    intro env _ interaction member
+    intro env checked interaction member
+    have binary := (HostCallReceivers.hintLength empty).activity_of_constraints env checked
+    simp only [HostCallReceivers.hintLength] at binary
     rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ ((HostHintLengthChip.main empty (varFromOffset HostHintLengthChip.Inputs 0)).operations
-      (size HostHintLengthChip.Inputs)).interactionValuesWith nodeChannel.toRaw env at member
-    rw [HostHintLengthChip.node_values] at member
+    change interaction ∈ (((HostHintLengthChip.guardedCircuit empty).main (varFromOffset HostHintLengthChip.RowInput 0)).operations
+      (size HostHintLengthChip.RowInput)).interactionValuesWith nodeChannel.toRaw env at member
+    rw [HostHintLengthChip.guarded_node_values] at member
     cases empty
     · obtain rfl := List.mem_singleton.mp member
-      exact Or.inr ⟨rfl, rfl⟩
+      simp only [Channel.pulledIfValue,Interaction.Pull,true_and]
+      exact binary
     · contradiction
   · apply Component.Authenticates.of_silent
     intro used

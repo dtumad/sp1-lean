@@ -366,7 +366,7 @@ theorem record_channels
   · exact visible_of_name _ (of_decide_eq_true rfl)
   · apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
       (by simp [receiver])
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
+    simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]
   · exact boundary_silent _ (by simp [nodeChannel, stateChannel, Channel.toRaw])
       (by simp [nodeChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [nodeChannel, HostCommitChip.stateChannel, Channel.toRaw])
@@ -374,7 +374,7 @@ theorem record_channels
   · exact visible_of_name _ (of_decide_eq_true rfl)
   · apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
       (by simp [receiver])
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
+    simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]
   · exact boundary_silent _ (by simp [wordChannel, stateChannel, Channel.toRaw])
       (by simp [wordChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [wordChannel, HostCommitChip.stateChannel, Channel.toRaw])
@@ -468,7 +468,7 @@ theorem queue_balanced
       (queueTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw)) := by
   have registered := auxiliary_channel_registered image source HostCallReceivers.available resources channels
     (names := availableNames) (channelNames := channelNames) (tableChannels := availableTableChannels) HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw
-    (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
+    (by simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm])
   exact BalancedInteractions.of_perm
     (balanced stateChannel.toRaw (List.mem_append_left _ registered) (visible_of_name _ (of_decide_eq_true rfl)))
     ((queue_ledger witness silent).trans (List.perm_append_comm ..))
@@ -482,7 +482,7 @@ theorem queue_ordered
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : Balanced witness) :
     ∃ path : List (HostQueueOrder.Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables (projected witness))) ∧
+      path.Perm (HostQueueOrder.activeRows (queueTables (projected witness))) ∧
       Walk.IsWalk HostQueueOrder.edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path := by
   have ordered := HostQueueOrder.ordered _ (queueTables_aligned (projected witness))
     (queue_specs (projected witness) interface store authenticated (projected_constraints witness constraints)
@@ -543,7 +543,7 @@ theorem source_queue_ordered
     (witness : SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : Balanced witness) :
     ∃ path : List (HostQueueOrder.Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables (projected witness))) ∧
+      path.Perm (HostQueueOrder.activeRows (queueTables (projected witness))) ∧
       Walk.IsWalk HostQueueOrder.edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path := by
   apply queue_ordered witness (GroundingResources.sourceInterface source.host.io.hints extra) (HintQueue.ofList source.host.io.hints).1
     _ _ constraints balanced
