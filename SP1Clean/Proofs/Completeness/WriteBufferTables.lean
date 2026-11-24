@@ -63,6 +63,84 @@ theorem wordTable_complete {steps : List (Step (ZMod p))} (valid : ∀ s ∈ ste
   apply Table.ofInputs_valid
   exact WitnessGeneration.guardedRows_all Step.Honest valid
 
+/-- The span table consumes a full original packet for each enabled header. Padding is retained. -/
+theorem spanTable_headers (spans : List (Span (ZMod p))) (data : ProverData (ZMod p)) (bound) :
+    (spanTable spans data bound).interactionsWith WritePacket.channel.toRaw =
+      (WitnessGeneration.guardedRows spans).flatMap (fun r => [WritePacket.channel.pulledIfValue r.2 r.1.header]) := by
+  apply Table.ofInputs_ledger (spanComponent (p := p)) (WitnessGeneration.guardedRows spans) data
+    ((WitnessGeneration.guardedRows_length (F := ZMod p) spans).trans_le bound) (fun _ => trivial)
+  intro env
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((spanComponent.circuit.main (varFromOffset SpanRow 0)).operations (size SpanRow)).interactionValuesWith _ env =
+    [WritePacket.channel.pulledIfValue (valueFromOffset SpanRow 0 env).2 (valueFromOffset SpanRow 0 env).1.header]
+  have proj (i : Var SpanRow (ZMod p)) : eval env i.1.header = (eval env i).1.header := by simp only [circuit_norm]
+  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
+    span_headers (varFromOffset SpanRow 0) (size SpanRow) env
+
+/-- The host effect receiver receives each of those same headers at the same activity. Padding is retained. -/
+theorem spanTable_effect_headers (spans : List (Span (ZMod p))) (data : ProverData (ZMod p)) (bound) :
+    (spanTable spans data bound).interactionsWith effectHeaderChannel.toRaw =
+      (WitnessGeneration.guardedRows spans).flatMap (fun r => [effectHeaderChannel.pushedIfValue r.2 r.1.header]) := by
+  apply Table.ofInputs_ledger (spanComponent (p := p)) (WitnessGeneration.guardedRows spans) data
+    ((WitnessGeneration.guardedRows_length (F := ZMod p) spans).trans_le bound) (fun _ => trivial)
+  intro env
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((spanComponent.circuit.main (varFromOffset SpanRow 0)).operations (size SpanRow)).interactionValuesWith _ env =
+    [effectHeaderChannel.pushedIfValue (valueFromOffset SpanRow 0 env).2 (valueFromOffset SpanRow 0 env).1.header]
+  have proj (i : Var SpanRow (ZMod p)) : eval env i.1.header = (eval env i).1.header := by simp only [circuit_norm]
+  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
+    span_effect_headers (varFromOffset SpanRow 0) (size SpanRow) env
+
+/-- The word table consumes each actual read payload in input order. Padding is retained. -/
+theorem wordTable_reads (steps : List (Step (ZMod p))) (data : ProverData (ZMod p)) (bound) :
+    (wordTable steps data bound).interactionsWith WriteProbe.readChannel.toRaw =
+      (WitnessGeneration.guardedRows steps).flatMap (fun r => [WriteProbe.readChannel.pulledIfValue r.2 r.1.read]) := by
+  apply Table.ofInputs_ledger (wordComponent (p := p)) (WitnessGeneration.guardedRows steps) data
+    ((WitnessGeneration.guardedRows_length (F := ZMod p) steps).trans_le bound) (fun _ => trivial)
+  intro env
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((wordComponent.circuit.main (varFromOffset WordRow 0)).operations (size WordRow)).interactionValuesWith _ env =
+    [WriteProbe.readChannel.pulledIfValue (valueFromOffset WordRow 0 env).2 (valueFromOffset WordRow 0 env).1.read]
+  have proj (i : Var WordRow (ZMod p)) : eval env i.1.read = (eval env i).1.read := by simp only [circuit_norm]
+  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
+    word_reads (varFromOffset WordRow 0) (size WordRow) env
+
+/-- The effect receiver receives the complete raw words in the same order. Padding is retained. -/
+theorem wordTable_values (steps : List (Step (ZMod p))) (data : ProverData (ZMod p)) (bound) :
+    (wordTable steps data bound).interactionsWith wordChannel.toRaw =
+      (WitnessGeneration.guardedRows steps).flatMap (fun r => [wordChannel.pushedIfValue r.2 r.1.read]) := by
+  apply Table.ofInputs_ledger (wordComponent (p := p)) (WitnessGeneration.guardedRows steps) data
+    ((WitnessGeneration.guardedRows_length (F := ZMod p) steps).trans_le bound) (fun _ => trivial)
+  intro env
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((wordComponent.circuit.main (varFromOffset WordRow 0)).operations (size WordRow)).interactionValuesWith _ env =
+    [wordChannel.pushedIfValue (valueFromOffset WordRow 0 env).2 (valueFromOffset WordRow 0 env).1.read]
+  have proj (i : Var WordRow (ZMod p)) : eval env i.1.read = (eval env i).1.read := by simp only [circuit_norm]
+  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
+    word_values (varFromOffset WordRow 0) (size WordRow) env
+
+/-- A constructed walk closes the original signed channel of its two physical tables,
+including all disabled rows at their actual allocated heights. -/
+theorem tables_cursor_closed (span : Span (ZMod p)) (steps : List (Step (ZMod p)))
+    (walk : Soundness.Walk.IsWalk (fun r : Step (ZMod p) => (r.source, r.target)) span.source span.target steps)
+    (data : ProverData (ZMod p)) (hs hw) :
+    BalancedInteractions ((spanTable [span] data hs).interactionsWith channel.toRaw ++
+      (wordTable steps data hw).interactionsWith channel.toRaw) := by
+  rw [spanTable_cursors, wordTable_cursors]
+  let rows := WitnessGeneration.guardedRows (F := ZMod p) steps
+  let edge := fun r : WordRow (ZMod p) => (r.1.source, r.1.target)
+  have binary r (m : r ∈ rows) : IsBool r.2 :=
+    (WitnessGeneration.guardedRows_all (F := ZMod p) (fun _ => True) (fun _ _ => trivial) r m).1
+  change BalancedInteractions (channel.gatedTransitionLedger span.source span.target rows Prod.snd edge)
+  apply (channel.gatedTransitionLedger_balanced_iff _ _ _ _ _ binary).mpr
+  have ends := Soundness.RankedGrounding.endpointBalanced_of_isWalk _ walk
+  have hp : (span.source :: steps.map Step.target).Perm (span.target :: steps.map Step.source) := by
+    simpa only [Soundness.RankedGrounding.EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using ends
+  have active : rows.filter (fun r => @decide (r.2 = 1) (FiniteField.instDecidableEq r.2 1)) =
+      steps.map (fun s => (s, 1)) := by
+    simp [rows, WitnessGeneration.guardedRows, List.filter_map, Function.comp_def]
+  simpa only [active, List.map_map, edge, Function.comp_def] using hp
+
 /-- Every genuine read packet generates both physical tables. The actual bound on guest
 memory supplies the word-table size without an additional shard-preset restriction. -/
 theorem tables_of_read {before : SailState} {call : CoreSyscallEvent} {len : BitVec 64} {buffer : List (BitVec 64)}
@@ -73,8 +151,10 @@ theorem tables_of_read {before : SailState} {call : CoreSyscallEvent} {len : Bit
     ∃ hs hw, (spanTable spans data hs).Constraints ∧ (spanTable spans data hs).Guarantees ∧
       (wordTable steps data hw).Constraints ∧ (wordTable steps data hw).Guarantees ∧
       (spanTable spans data hs).table.length = 1 ∧
-      (wordTable steps data hw).table.length = WitnessGeneration.demandHeight buffer.length := by
-  obtain ⟨span, words, _⟩ := rows_of_read (p := p) read clock
+      (wordTable steps data hw).table.length = WitnessGeneration.demandHeight buffer.length ∧
+      BalancedInteractions ((spanTable spans data hs).interactionsWith channel.toRaw ++
+        (wordTable steps data hw).interactionsWith channel.toRaw) := by
+  obtain ⟨span, words, walk, _⟩ := rows_of_read (p := p) read clock
   obtain ⟨_, _, lo, hi, count, _⟩ := WriteObservations.read?_eq_some_iff.mp read
   let h := headerOfCall (p := p) clock call len
   let steps := wordSteps h.clock (call.arg2.toNat / 8) (buffer.map bitVecToWord)
@@ -88,7 +168,7 @@ theorem tables_of_read {before : SailState} {call : CoreSyscallEvent} {len : Bit
   have physical : WitnessGeneration.demandHeight steps.length ≤ UInt64.size :=
     (WitnessGeneration.demandHeight_le_pow fits).trans (by decide)
   refine ⟨one, physical, spanProof.1, spanProof.2, (wordTable_complete words data physical).1,
-    (wordTable_complete words data physical).2, spanHeight, ?_⟩
+    (wordTable_complete words data physical).2, spanHeight, ?_, tables_cursor_closed _ _ walk _ _ _⟩
   change (wordTable steps data physical).table.length = WitnessGeneration.demandHeight buffer.length
   exact (wordTable_length steps data physical).trans (congrArg WitnessGeneration.demandHeight size)
 

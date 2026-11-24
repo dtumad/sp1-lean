@@ -105,3 +105,14 @@ At `fixedProviderPreset`, `C ≤ 63,550` and `W ≤ 266,449,516`. Together at mo
 266,513,066 x12 and RAM probes fit a power-of-two height of `2^28` for the native table's
 one row per probe. Each physical row contributes one occurrence to each of its two private
 channels, including zero-weight padding. [Semantic packet accounting](../SP1Clean/Proofs/Completeness/WriteProbeDemand.lean) · [Preset bound](../SP1Clean/Export/WriteProbeCapacity.lean)
+
+## Physical buffer coverage
+
+Each native buffer span consumes the authenticated WRITE header. It seeds a cursor at
+`address / 8` and closes it at `(address + length + 7) / 8`, using the full byte sum.
+Each buffer word consumes one read-only receipt for the aligned RAM address at the
+incoming ECALL clock and advances that cursor by one. Balance forces every index in
+the interval to occur exactly once. An empty unaligned buffer observes its containing
+word. An empty aligned buffer at `2^48` has no word rows and preserves the one-past
+endpoint. The span and word rows forward the complete checked header and raw word to
+the host-effect receivers. [Physical components](../SP1Clean/Proofs/Operations/WriteBufferPhysical.lean) · [Exact coverage](../SP1Clean/Soundness/WriteBufferCoverage.lean) · [Table construction](../SP1Clean/Proofs/Completeness/WriteBufferTables.lean)
