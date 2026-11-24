@@ -23,6 +23,7 @@ public import ToClean.Air.FixedRows
 public import ToClean.Air.HintIndex
 public import ToClean.Air.MessageIndex
 public import ToClean.Air.StaticProvider
+public import ToClean.Air.StaticMembershipTable
 public import ToClean.Circuit.WitnessCombinator
 public import Clean.Circuit.Theorems
 public import Clean.Circuit.Subcircuit
