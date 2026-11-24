@@ -15,7 +15,9 @@ open Circuit
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+/-- The original address with its floor-division witness. -/
 def Span.startEndpoint {F : Type} (s : Span F) : Endpoint F := ⟨s.header.address, s.startQuotients, s.first⟩
+/-- The exclusive full byte endpoint with its ceiling-division witness. -/
 def Span.endEndpoint {F : Type} (s : Span F) : Endpoint F := ⟨s.finish, s.endQuotients, s.stop⟩
 
 /-- First possible guest RAM cell expressed as a word index. -/
@@ -32,6 +34,7 @@ def spanMain (s : Var Span (ZMod p)) : Circuit (ZMod p) Unit := do
   WritePacket.channel.pull s.header
   channel.push s.source
   channel.pull s.target
+  effectHeaderChannel.push s.header
 
 instance spanElaborated : ElaboratedCircuit (ZMod p) Span unit spanMain := by elaborate_circuit
 
@@ -48,6 +51,7 @@ def stepMain (s : Var Step (ZMod p)) : Circuit (ZMod p) Unit := do
   channel.pull s.source
   WriteProbe.readChannel.pull s.read
   channel.push s.target
+  wordChannel.push s.read
 
 instance stepElaborated : ElaboratedCircuit (ZMod p) Step unit stepMain := by elaborate_circuit
 

@@ -85,17 +85,17 @@ def stepCircuit : GeneralFormalCircuit (ZMod p) Step unit where
   main := stepMain
   elaborated := stepElaborated
   computableWitnesses := by computable_witnesses [Step.division, Step.source, Step.target, Address.asWord]
-  channelsWithRequirements := [channel.toRaw]
+  channelsWithRequirements := [channel.toRaw, wordChannel.toRaw]
   Spec s _ _ := s.Valid
   ProverAssumptions s _ _ := s.Honest
   soundness := by
     circuit_proof_start [stepMain, AddressDiv8.circuit, Gadgets.Equality.circuit, AddrAddOperation.circuit,
-      channel, WriteProbe.readChannel, eval_division, eval_asWord]
+      channel, wordChannel, WriteProbe.readChannel, eval_division, eval_asWord]
     obtain ⟨d, index, aligned, successor⟩ := h_holds
     exact step_sound _ d index aligned successor
   completeness := by
     circuit_proof_start [stepMain, AddressDiv8.circuit, Gadgets.Equality.circuit, AddrAddOperation.circuit,
-      channel, WriteProbe.readChannel, eval_division, eval_asWord]
+      channel, wordChannel, WriteProbe.readChannel, eval_division, eval_asWord]
     obtain ⟨valid, prepared⟩ := h_assumptions
     have a : AddressDiv8.ProverAssumptions _ := ⟨Address.isU64_asWord valid.1,
       by simpa only [Step.division, Address.toNat_asWord] using Address.toNat_lt valid.1, prepared⟩
@@ -197,17 +197,17 @@ def spanCircuit : GeneralFormalCircuit (ZMod p) Span unit where
   main := spanMain
   elaborated := spanElaborated
   computableWitnesses := by computable_witnesses [Span.startEndpoint, Span.endEndpoint, Span.source, Span.target]
-  channelsWithRequirements := [channel.toRaw]
+  channelsWithRequirements := [channel.toRaw, effectHeaderChannel.toRaw]
   Spec s _ _ := s.Valid
   ProverAssumptions s _ _ := s.Honest
   soundness := by
     circuit_proof_start [spanMain, Endpoint.circuit, WordRangeCheck.circuit, WordRangeCheck.Assumptions,
-      WordRangeCheck.Spec, AddOperation.circuit, AddressOrder.circuit, WritePacket.channel, channel, eval_first, eval_last, Vector.map_id']
+      WordRangeCheck.Spec, AddOperation.circuit, AddressOrder.circuit, WritePacket.channel, effectHeaderChannel, channel, eval_first, eval_last, Vector.map_id']
     obtain ⟨start, last, len, top, sum, lower⟩ := h_holds
     exact span_sound _ start last len top sum lower
   completeness := by
     circuit_proof_start [spanMain, Endpoint.circuit, WordRangeCheck.circuit, WordRangeCheck.Assumptions,
-      WordRangeCheck.Spec, AddOperation.circuit, AddressOrder.circuit, WritePacket.channel, channel, eval_first, eval_last, Vector.map_id']
+      WordRangeCheck.Spec, AddOperation.circuit, AddressOrder.circuit, WritePacket.channel, effectHeaderChannel, channel, eval_first, eval_last, Vector.map_id']
     obtain ⟨valid, start, last⟩ := h_assumptions
     exact ⟨start, last, span_checks _ valid⟩
 

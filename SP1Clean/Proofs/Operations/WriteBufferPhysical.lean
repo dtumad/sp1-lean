@@ -2,6 +2,7 @@ import SP1Clean.Proofs.Operations.WriteBuffer
 import ToClean.Circuit.Guarded
 import ToClean.Air.HintIndex
 import Clean.Air.FlatComponent
+import ToClean.Circuit.InteractionRecovery
 
 /-! # Physical native WRITE buffer table family
 
@@ -11,8 +12,55 @@ Clean's guard checks the entire selected input receipt. Both row types keep zero
 
 namespace SP1Clean.WriteBuffer
 open Circuit Air.Flat Channels
+open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem no_general {I O : TypeMap} [ProvableType I] [ProvableType O]
+    (c : GeneralFormalCircuit (ZMod p) I O) (target : RawChannel (ZMod p)) (outside : target ∉ c.channels)
+    (args : Var I (ZMod p)) (n : ℕ) :
+    ((FlatOperation.interactions (c.toSubcircuit n args).ops.toFlat).filter (fun i => decide (i.channel = target))) = [] := by
+  rw [GeneralFormalCircuit.toSubcircuit_interactions]
+  exact InteractionRecovery.interactionsWith_main_eq_nil c.base target args n outside
+
+/-- The span arithmetic contributes only the existing Byte range requests. -/
+theorem span_nonbyte (s : Var Span (ZMod p)) (offset : ℕ) (target : RawChannel (ZMod p))
+    (other : target ≠ byteChannel.toRaw) :
+    ((spanMain s).operations offset).interactionsWith target =
+      [(WritePacket.channel.pulled s.header).toRaw, (channel.pushed s.source).toRaw, (channel.pulled s.target).toRaw,
+       (effectHeaderChannel.pushed s.header).toRaw].filter
+        (fun i => decide (i.channel = target)) := by
+  have endpoint (roundUp : Bool) := no_general (Endpoint.circuit roundUp) target
+    (by simpa [GeneralFormalCircuit.channels, Endpoint.circuit, Endpoint.elaborated, circuit_norm] using other)
+  have range (args : Var Word (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil WordRangeCheck.circuit target args
+      List.not_mem_nil List.not_mem_nil (n := n)
+  have order (args : Var AddressOrder.Inputs (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddressOrder.circuit target args
+      List.not_mem_nil List.not_mem_nil (n := n)
+  have sum (args : Var AddOperation.Inputs (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddOperation.circuit target args
+      (by simpa [AddOperation.circuit, circuit_norm] using other) List.not_mem_nil (n := n)
+  simp only [spanMain, circuit_norm, List.nil_append]
+  simp only [endpoint, range, order, sum, List.filter_cons, List.filter_nil, List.nil_append, circuit_norm]
+  simp [FormalAssertion.toSubcircuit_interactions, circuit_norm, Operations.interactions]
+
+/-- Every non-Byte word occurrence in actual circuit order. -/
+theorem step_nonbyte (s : Var Step (ZMod p)) (offset : ℕ) (target : RawChannel (ZMod p))
+    (other : target ≠ byteChannel.toRaw) :
+    ((stepMain s).operations offset).interactionsWith target =
+      [(channel.pulled s.source).toRaw, (WriteProbe.readChannel.pulled s.read).toRaw, (channel.pushed s.target).toRaw,
+       (wordChannel.pushed s.read).toRaw].filter
+        (fun i => decide (i.channel = target)) := by
+  have division := no_general (AddressDiv8.circuit (p := p)) target (by simp [GeneralFormalCircuit.channels,
+    AddressDiv8.circuit, AddressDiv8.elaborated, circuit_norm])
+  have sum (args : Var AddrAddOperation.Inputs (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddrAddOperation.circuit target args
+      (by simpa [AddrAddOperation.circuit, circuit_norm] using other) List.not_mem_nil (n := n)
+  simp only [stepMain, circuit_norm, List.nil_append]
+  simp only [division, sum, List.filter_cons, List.filter_nil, List.nil_append, circuit_norm]
+  simp [Gadgets.Equality.circuit, circuit_norm]
 
 private theorem span_lookups (input : Var Span (ZMod p)) (offset : ℕ) :
     ((spanMain input).operations offset).lookups = [] := by
@@ -32,28 +80,41 @@ instance spanGuardSupported : Guarded.Supported (spanCircuit (p := p)) :=
   Guarded.Supported.of_emitted_requirements _ span_lookups
     (by
       intro selected member
-      change selected ∈ _ ++ [channel.toRaw] at member
-      have registered : selected = byteChannel.toRaw ∨ selected = WritePacket.channel.toRaw ∨ selected = channel.toRaw := by
-        simpa [spanCircuit, spanElaborated, Endpoint.circuit, Endpoint.elaborated, circuit_norm,
+      have registered : selected = byteChannel.toRaw ∨ selected = WritePacket.channel.toRaw ∨ selected = channel.toRaw ∨ selected = effectHeaderChannel.toRaw := by
+        simpa [GeneralFormalCircuit.channels, spanCircuit, spanElaborated, Endpoint.circuit, Endpoint.elaborated, circuit_norm,
           or_assoc, or_left_comm, or_comm] using member
-      rcases registered with rfl | rfl | rfl <;> infer_instance)
+      rcases registered with rfl | rfl | rfl | rfl <;> infer_instance)
     (by
-      intro _ _ selected required outside _ _
+      intro input offset selected required outside interaction present
+      change selected ∈ [channel.toRaw, effectHeaderChannel.toRaw] at required
+      rcases List.mem_cons.mp required with rfl | required
+      · exact (outside (by simp [spanCircuit, spanElaborated, circuit_norm])).elim
       obtain rfl := List.mem_singleton.mp required
-      exact (outside (by simp [spanCircuit, spanElaborated, circuit_norm])).elim)
+      change interaction ∈ ((spanMain input).operations offset).interactionsWith effectHeaderChannel.toRaw at present
+      rw [span_nonbyte _ _ _ (by simp [effectHeaderChannel, byteChannel, circuit_norm])] at present
+      simp [channel, WritePacket.channel, effectHeaderChannel, circuit_norm] at present
+      subst interaction
+      rfl)
 
 instance stepGuardSupported : Guarded.Supported (stepCircuit (p := p)) :=
   Guarded.Supported.of_emitted_requirements _ step_lookups
     (by
       intro selected member
-      have registered : selected = byteChannel.toRaw ∨ selected = channel.toRaw ∨ selected = WriteProbe.readChannel.toRaw := by
+      have registered : selected = byteChannel.toRaw ∨ selected = channel.toRaw ∨ selected = WriteProbe.readChannel.toRaw ∨ selected = wordChannel.toRaw := by
         simpa [GeneralFormalCircuit.channels, stepCircuit, stepElaborated, circuit_norm,
           or_assoc, or_left_comm, or_comm] using member
-      rcases registered with rfl | rfl | rfl <;> infer_instance)
+      rcases registered with rfl | rfl | rfl | rfl <;> infer_instance)
     (by
-      intro _ _ selected required outside _ _
+      intro input offset selected required outside interaction present
+      change selected ∈ [channel.toRaw, wordChannel.toRaw] at required
+      rcases List.mem_cons.mp required with rfl | required
+      · exact (outside (by simp [stepCircuit, stepElaborated, circuit_norm])).elim
       obtain rfl := List.mem_singleton.mp required
-      exact (outside (by simp [stepCircuit, stepElaborated, circuit_norm])).elim)
+      change interaction ∈ ((stepMain input).operations offset).interactionsWith wordChannel.toRaw at present
+      rw [step_nonbyte _ _ _ (by simp [wordChannel, byteChannel, circuit_norm])] at present
+      simp [channel, WriteProbe.readChannel, wordChannel, circuit_norm] at present
+      subst interaction
+      rfl)
 
 /-- Guarded table row with an explicit physical activity. -/
 abbrev SpanRow := ProvablePair Span field
