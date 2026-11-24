@@ -126,6 +126,17 @@ theorem compiled_sparse_read {image : ProgramImage} {source target : ExecutionSn
     omega
   · exact covered
 
+/-- The original mixed table occurrence which will supply a packet read before its event
+replaces that word. The bounds use the displaced record time and its true incoming CPU clock. -/
+def CompiledPredecessor (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent)
+    (rows : List MixedCompiledRow) (cut : ℕ) (read : Read F) : Prop :=
+  ∃ (i : Fin rows.length) (before : ExecutionState) (a : MemoryHistoryAccess) (call : CoreSyscallEvent),
+      events[cut]? = some (.syscall call) ∧ call.rawCode = SyscallKind.write.code ∧
+      executionTrajectory (policy SP1Prime image) image.program source.realize events i.val = some before ∧
+      a ∈ MixedMemoryHistory.batch image source events rows i ∧ ValidKey a.loc.busAddress ∧
+      a.previous ≤ call.clock ∧ call.clock ≤ before.clock ∧ before.clock < 2 ^ 48 ∧
+      read = ⟨Address.ofNat a.loc.busAddress, Address.ofNat call.clock, Target.bitVecToWord a.pulled⟩
+
 /-- Each read of each actual WRITE is already funded by a live installed finalizer, or it is
 precisely the prior word of an actual compiled row at a clock covered by that row. This includes
 both the otherwise untouched case and exhaustion of a nonempty Memory history. -/
@@ -142,12 +153,7 @@ theorem compiled_read_source {image : ProgramImage} {source target : ExecutionSn
     let w := build image source target endQueue stream (demandKeys events packets) (MixedMemoryHistory.canonical run routed)
       data hint header suffix registered
     (∃ r ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers r read) ∨
-    (∃ (i : Fin rows.length) (before : ExecutionState) (a : MemoryHistoryAccess) (call : CoreSyscallEvent),
-      events[cut]? = some (.syscall call) ∧ call.rawCode = SyscallKind.write.code ∧
-      executionTrajectory (policy SP1Prime image) image.program source.realize events i.val = some before ∧
-      a ∈ MixedMemoryHistory.batch image source events rows i ∧ ValidKey a.loc.busAddress ∧
-      a.previous ≤ call.clock ∧ call.clock ≤ before.clock ∧ before.clock < 2 ^ 48 ∧
-      read = ⟨Address.ofNat a.loc.busAddress, Address.ofNat call.clock, Target.bitVecToWord a.pulled⟩) := by
+    CompiledPredecessor image source events rows cut read := by
   intro tape w
   by_cases occupied : Address.toNat read.key ∈ (memoryInitialEntries tape).map MemRecordEntry.addr
   swap
@@ -182,22 +188,27 @@ theorem compiled_read_source {image : ProgramImage} {source target : ExecutionSn
     rw [same] at cover
     exact Or.inl ⟨record, live, encoded _ word ▸ cover⟩
 
-/-- One admissible mixed execution generates both source and demand inventories. Every otherwise
-untouched request is funded on each canonical supervisor built with their six registered boundary tables. -/
-theorem sparse_suppliers_of_admissibleExecution {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+/-- One native execution generates its original six Memory boundary tables and all packet reads.
+The six tables meet their actual component constraints and channel guarantees. Every read is
+funded at a registered finalizer or identifies the original mixed row which displaced its word. -/
+theorem sources_of_admissibleExecution {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events) :
     ∃ packets rows, WriteObservations.packets? (policy SP1Prime image) image.program source.realize events = some packets ∧
       ∃ routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows,
         let stream := MixedMemoryHistory.stream image source events rows
+        let requested := demandKeys events packets
+        (∀ data hint t, t ∈ boundaryTables source.sail.memorySnapshot stream requested (MixedMemoryHistory.canonical run routed) data hint →
+          t.Constraints ∧ t.Guarantees) ∧
         ∀ endQueue data hint header suffix registered,
-          let w := build image source target endQueue stream (demandKeys events packets) (MixedMemoryHistory.canonical run routed)
+          let w := build image source target endQueue stream requested (MixedMemoryHistory.canonical run routed)
             data hint header suffix registered
           ∀ cut read, (cut, read) ∈ readDemand (packetRows events packets) →
-            Address.toNat read.key ∉ (memoryInitialEntries stream).map MemRecordEntry.addr →
-              ∃ record ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers record read := by
+            (∃ record ∈ Counted.live (AccessInventory.records (WriteSourceRegistry.raw w)), Counted.Covers record read) ∨
+            CompiledPredecessor image source events rows cut read := by
   obtain ⟨packets, collected⟩ := WriteObservations.admissible_packets run
   obtain ⟨rows, routed, _⟩ := admissibleExecution_routeMixedRows run
-  exact ⟨packets, rows, collected, routed, fun endQueue data hint header suffix registered _ _ member fresh =>
-    compiled_sparse_read run collected routed member endQueue fresh data hint header suffix registered⟩
+  refine ⟨packets, rows, collected, routed, ?_, fun endQueue data hint header suffix registered _ _ member =>
+    compiled_read_source run collected routed member endQueue data hint header suffix registered⟩
+  exact fun data hint => boundaryTables_valid _ _ _ (MixedMemoryHistory.addresses_in_layout run routed) data hint
 
 end SP1Clean.Export.WriteBoundaryBuild

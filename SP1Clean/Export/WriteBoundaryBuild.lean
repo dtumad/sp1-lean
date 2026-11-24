@@ -36,9 +36,9 @@ theorem boundaryTables_registered (image : ProgramImage) (source target : Execut
 
 /-- Every table in the six-slot prefix satisfies its original circuit and channel guarantees. -/
 theorem boundaryTables_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData F) (hint : ProverHint F) :
-    ∀ t ∈ boundaryTables snapshot stream requested (canonical_addresses guest) data hint, t.Constraints ∧ t.Guarantees := by
+    ∀ t ∈ boundaryTables snapshot stream requested guest.canonical data hint, t.Constraints ∧ t.Guarantees := by
   have reg := compiled_boundaries_valid snapshot stream requested guest data hint false
   have ram := compiled_boundaries_valid snapshot stream requested guest data hint true
   have bounded := fun r hr => (terminals_valid snapshot stream requested guest data hint r hr).key_lt
@@ -80,10 +80,10 @@ theorem build_prefix_ledger (image : ProgramImage) (source target : ExecutionSna
 physical table constructors supply theirs. -/
 theorem build_constraints (image : ProgramImage) (source target : ExecutionSnapshot) (endQueue : HostHintQueue.State F)
     (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData F) (hint : ProverHint F) (header : SP1PublicIO F) (suffix : List (Table F)) (registered)
     (checked : ∀ t ∈ suffix, t.Constraints) :
-    (build image source target endQueue stream requested (canonical_addresses guest) data hint header suffix registered).Constraints := by
+    (build image source target endQueue stream requested guest.canonical data hint header suffix registered).Constraints := by
   intro t member row included
   have free := HostObserved.lookupFree (image := image) (source := source) (target := target) (final := endQueue)
     t.component (EnsembleWitness.component_mem_tables_of_mem member)

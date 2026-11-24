@@ -1,3 +1,4 @@
+import SP1Clean.Semantics.Memory.NativeLayout
 import SP1Clean.Semantics.Transition.AccessSchedule
 import SP1Clean.Proofs.Completeness.Providers
 
@@ -385,6 +386,22 @@ theorem canonical_of_mem_touched {stream : List MemoryHistoryAccess}
     MemoryHistoryAccess.CanonicalAddress loc := by
   rcases mem_touchedMemoryLocations.mp member with ⟨access, accessMem, rfl⟩
   exact canonical access accessMem
+
+/-- Register locations are native by construction, and each RAM address lies within the guest
+window enforced by the physical Memory providers. -/
+def MemoryAddressesInLayout (stream : List MemoryHistoryAccess) : Prop :=
+  ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress
+
+/-- Native guest RAM accesses and register indices have noncolliding 48-bit Memory encodings. -/
+theorem MemoryAddressesInLayout.canonical {stream : List MemoryHistoryAccess}
+    (guest : MemoryAddressesInLayout stream) :
+    MemoryAddressesCanonical stream := by
+  intro access member
+  cases eq : access.loc with
+  | reg idx => trivial
+  | ram cell =>
+    have h := guest access member cell eq
+    exact ⟨le_trans (by decide : 32 ≤ 2 ^ 16) h.1, h.2⟩
 
 /-- Canonical boundary rows have no duplicate addresses, so both provider inventories are unique at
 the exact key granularity used by the Memory-boundary soundness assumptions. -/

@@ -113,20 +113,22 @@ theorem hint_at_cell {image : ProgramImage} {source target : ExecutionSnapshot} 
     (by have := span.2.2; unfold HintQueue.wordCount at pos; omega)
   exact ⟨entry, by simpa only [found, Option.getD_some] using member, auth⟩
 
-private theorem canonical_schedule {base : ℕ} {schedule : AccessSchedule}
-    (honest : ∀ touch ∈ schedule.stampedTouches, touch.touch.loc.CanonicalAddress) :
-    MemoryAddressesCanonical (MemoryHistoryAccess.ofAccessSchedule base schedule) := by
+private theorem schedule_in_layout {base : ℕ} {schedule : AccessSchedule}
+    (honest : ∀ touch ∈ schedule.stampedTouches, ∀ cell, touch.touch.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress) :
+    MemoryAddressesInLayout (MemoryHistoryAccess.ofAccessSchedule base schedule) := by
   intro record present
   obtain ⟨access, occurs, found⟩ := List.mem_flatMap.mp present
   rcases List.mem_append.mp found with bump | ordinary
   · obtain ⟨event, _, rfl⟩ := List.mem_map.mp bump
-    trivial
+    intro cell impossible
+    cases impossible
   · cases List.mem_singleton.mp ordinary
     exact honest access.stamped (List.mem_map_of_mem occurs)
 
-private theorem canonical_hint {request : HintReadTransfers.Request} {frontier : AccessFrontier} {sail : SailState}
+private theorem hint_in_layout {request : HintReadTransfers.Request} {frontier : AccessFrontier} {sail : SailState}
     (span : HintReadSpan.Domain request.address request.bytes.length)
-    {entry : Bool × HintReadWordChip.RowInput F} (present : entry ∈ request.rows frontier sail) : (hint entry.2).loc.CanonicalAddress := by
+    {entry : Bool × HintReadWordChip.RowInput F} (present : entry ∈ request.rows frontier sail) (requested : RamCell) (atRam : (hint entry.2).loc = .ram requested) :
+    NativeLayout.guestMemory.Contains (MemLoc.ram requested).busAddress := by
   have observed := List.mem_map_of_mem (f := fun pair : Bool × HintReadWordChip.RowInput F =>
     (Address.toNat pair.2.1.address, Word.toBitVec64 pair.2.1.ram.new_value)) present
   rw [request.writes frontier sail span] at observed
@@ -141,18 +143,18 @@ private theorem canonical_hint {request : HintReadTransfers.Request} {frontier :
     simp only [cell, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : (request.address + index * 8) / 8 < 2 ^ 61)]
     omega
   have loc := hint_location (input := entry.2) (key.trans address.symm) (by omega) (by omega)
-  rw [loc]
-  change 32 ≤ cell.toNat * 8 ∧ cell.toNat * 8 < 2 ^ 48
+  rw [MemLoc.ram.inj (atRam.symm.trans loc)]
+  change 2 ^ 16 ≤ cell.toNat * 8 ∧ cell.toNat * 8 < 2 ^ 48
   omega
 
-/-- Every exposed original transfer has a canonical Memory address in the compiled mixed stream.
+/-- Every generated RAM transfer satisfies the actual native guest memory window.
 The enabled ordinary instruction's own guest-window bound covers RAM. The HINT_READ queue and
 padded word domain authenticate every host word address. -/
-theorem canonical {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+theorem addresses_in_layout {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
     {rows : List MixedCompiledRow}
     (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows) :
-    MemoryAddressesCanonical (stream image source events rows) := by
+    MemoryAddressesInLayout (stream image source events rows) := by
   obtain ⟨actual, same, size⟩ := admissibleExecution_routeMixedRows run
   have length : rows.length = events.length := Option.some.inj (routed.symm.trans same) ▸ size
   intro access member
@@ -171,27 +173,35 @@ theorem canonical {image : ProgramImage} {source target : ExecutionSnapshot} {ev
     have atRow := (List.getElem?_eq_some_iff.mp found).2
     rw [show HintReadTransfers.rowsAt? image source events i.val = some [] by simp [HintReadTransfers.rowsAt?, present]] at record
     simp only [Fin.getElem_fin, atRow, Option.getD_some, List.map_nil, List.append_nil] at record
-    apply canonical_schedule (schedule := row.schedule) _ access record
-    intro touch occurs
-    apply ((run.2.1 _ _ _ present atCut).2 rfl).canonical_locations (run.1.frame_prefix atCut).1 projected (compileInstructionEvent?_accessPlan made)
+    apply schedule_in_layout (schedule := row.schedule) _ access record
+    intro touch occurs cell atRam
+    apply ((run.2.1 _ _ _ present atCut).2 rfl).guest_ram (run.1.frame_prefix atCut).1 projected (compileInstructionEvent?_accessPlan made)
     rw [← compileInstructionEvent?_stamped_touches made]
-    exact List.mem_map_of_mem (List.mem_map_of_mem occurs)
+    exact atRam ▸ List.mem_map_of_mem (List.mem_map_of_mem occurs)
   | syscall call =>
     have atRow := (List.getElem?_eq_some_iff.mp route).2
     rcases List.mem_append.mp record with cpuAccess | word
     · simp only [Fin.getElem_fin, atRow] at cpuAccess
-      apply canonical_schedule (schedule := scheduleAccessPlan incoming before.clock (syscallRegisterPlan call)) _ access cpuAccess
+      apply schedule_in_layout (schedule := scheduleAccessPlan incoming before.clock (syscallRegisterPlan call)) _ access cpuAccess
       intro touch occurs
       have planned := List.mem_map_of_mem (f := StampedTouch.touch) occurs
       rw [scheduleAccessPlan_erase] at planned
       simp only [syscallRegisterPlan, List.mem_cons, List.not_mem_nil, or_false] at planned
-      rcases planned with eq | eq | eq <;> rw [eq] <;> trivial
+      rcases planned with eq | eq | eq <;> rw [eq] <;> intro cell impossible <;> cases impossible
     · obtain ⟨entry, listed, rfl⟩ := List.mem_map.mp word
       by_cases read : call.rawCode = SyscallKind.hintRead.code
       · obtain ⟨request, _, _, found, _, _, span⟩ := issued_hint run present read
         rw [found, Option.getD_some] at listed
-        exact canonical_hint span listed
+        exact hint_in_layout span listed
       · simp [HintReadTransfers.rowsAt?, present, read] at listed
+
+/-- The native guest range and disjoint register indices give canonical addresses on the whole compiled stream. -/
+theorem canonical {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows) :
+    MemoryAddressesCanonical (stream image source events rows) :=
+  (addresses_in_layout run routed).canonical
 
 /-- A boundary location absent from the genuine mixed transfer stream still has timestamp zero at
 every compiler cut. This includes all three ECALL registers, every padded HINT_READ word and every

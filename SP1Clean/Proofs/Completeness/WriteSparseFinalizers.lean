@@ -290,17 +290,6 @@ theorem terminals_fit (ram : Bool) (snapshot : MemorySnapshot) (stream : List Me
   rw [orderedInputs_length]
   exact terminal_count_fit ram snapshot stream requested canonical data hint
 
-/-- Native guest RAM accesses and register indices have noncolliding 48-bit Memory encodings. -/
-theorem canonical_addresses {stream : List MemoryHistoryAccess}
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress) :
-    MemoryAddressesCanonical stream := by
-  intro access member
-  cases eq : access.loc with
-  | reg idx => trivial
-  | ram cell =>
-    have h := guest access member cell eq
-    exact ⟨le_trans (by decide : 32 ≤ 2 ^ 16) h.1, h.2⟩
-
 /-- The actual terminal payloads appear in strict physical address order. -/
 theorem terminals_ordered (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
     (canonical : MemoryAddressesCanonical stream) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
@@ -311,7 +300,7 @@ theorem terminals_ordered (snapshot : MemorySnapshot) (stream : List MemoryHisto
 
 /-- Both touched and untouched payloads belong to their original register/RAM row domains. -/
 theorem terminals_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∀ row ∈ terminals snapshot stream requested data hint, row.Valid := by
   intro row member
@@ -333,11 +322,11 @@ theorem terminals_valid (snapshot : MemorySnapshot) (stream : List MemoryHistory
 /-- If touched guest RAM belongs to the native guest address range, the generated tables
 satisfy both original finalizers. Registers are in range by construction. -/
 theorem compiled_finalizers_valid (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess) (requested : List ℕ)
-    (guest : ∀ a ∈ stream, ∀ cell, a.loc = .ram cell → NativeLayout.guestMemory.Contains (MemLoc.ram cell).busAddress)
+    (guest : MemoryAddressesInLayout stream)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (ram : Bool) :
     let rows := terminals snapshot stream requested data hint
     ∃ fit, (finalTable ram rows data fit).Constraints ∧ (finalTable ram rows data fit).Guarantees := by
-  have canonical := canonical_addresses guest
+  have canonical := guest.canonical
   exact ⟨terminals_fit ram snapshot stream requested canonical data hint, finalTable_valid ram _ data _
     (terminals_ordered snapshot stream requested canonical data hint) (terminals_valid snapshot stream requested guest data hint)⟩
 
