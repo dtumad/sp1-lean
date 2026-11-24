@@ -27,6 +27,7 @@ public import ToClean.Air.ReaderCounts
 public import ToClean.Air.StaticPayloadTable
 public import ToClean.Air.StaticMembershipTable
 public import ToClean.Air.StaticMembershipReaders
+import ToClean.Air.StaticReadCounts
 public import ToClean.Circuit.WitnessCombinator
 public import Clean.Circuit.Theorems
 public import Clean.Circuit.Subcircuit
