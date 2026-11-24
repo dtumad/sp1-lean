@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Operations.WriteAllocation
-import SP1Clean.Proofs.Operations.HintQueuePrepend
+import SP1Clean.Proofs.Completeness.WriteAllocations
 import SP1Clean.Proofs.Operations.ClockOrderPopulate
 import SP1Clean.Math.SP1Field
 
@@ -106,10 +106,7 @@ theorem Batch.openRow_valid (batch : Batch) (prior clk : Nat) (store : Store) (h
   · change Cursor.mk _ _ _ = _
     rw [src,count]
     simp [Batch.cursorAt,Batch.openRow,Open.outgoing,HintNodeAllocate.prefixState,HostHintQueue.State.encode,hi,lo]
-  · have last : (prepend store head batch.buffers).2 = if batch.buffers.length = 0 then head else store.size + batch.buffers.length := by
-      cases batch.buffers with
-      | nil => rfl
-      | cons bytes tail => simp [prepend,prepend_size,Nat.add_assoc]
+  · have last := prepend_head store head batch.buffers
     change Cursor.mk _ _ row.outgoing = _
     rw [post,src]
     simp [Batch.cursorAt,HintNodeAllocate.prefixState,prepend_size,last,Address.ofNat_zero]
@@ -153,7 +150,8 @@ theorem Batch.steps_at (batch : Batch) (clk : Nat) (store : Store) (head : Nat) 
       r.before = batch.cursorAt clk head store.size i ∧ r.after = batch.cursorAt clk head store.size (i + 1 : Nat) ∧
       r.contents.pointer = Address.ofNat (store.size + i + 1) ∧ r.contents.length = Address.ofNat bytes.length ∧
       r.contents.index = Address.ofNat (batch.buffers.length - (i + 1 : Nat)) ∧
-      r.readers = readers r.node.node := by
+      r.readers = readers r.node.node ∧ r.node.node = NodeRecord.encode (store.size + i + 1)
+        ⟨bytes, if i.val = 0 then head else store.size + i⟩ := by
   let buffers := batch.buffers
   have inside : i.val < buffers.reverse.length := by simp [buffers]
   let bytes := buffers.reverse[i.val]'inside
@@ -164,12 +162,11 @@ theorem Batch.steps_at (batch : Batch) (clk : Nat) (store : Store) (head : Nat) 
     simp [HintNodeAllocate.compilePrepend,List.getElem?_map,List.getElem?_zipIdx,List.getElem?_eq_getElem inside,node,state,bytes]
   have got : (batch.steps clk store head readers)[i.val]? = some r := by
     simp [Batch.steps,List.getElem?_map,List.getElem?_zipIdx,r,show batch.buffers = buffers from rfl,inputAt]
-  have good := HintNodeAllocate.compilePrepend_spec (p := SP1Prime) clk store head hints buffers rep space node (List.mem_of_getElem? inputAt)
+  obtain ⟨issued,atNode,record,good,_,_⟩ := HintNodeAllocate.compilePrepend_records (p := SP1Prime)
+    clk store head hints buffers rep space i
+  obtain rfl : issued = node := Option.some.inj (atNode.symm.trans inputAt)
   have word := lengthWord bytes (sizes bytes (List.mem_reverse.mp (List.getElem_mem inside)))
-  have bounded : store.size + i.val < 2^48 := by have := i.isLt; omega
-  have ptr : node.node.pointer = Address.ofNat (store.size + i + 1) := by
-    change Address.ofNat (Address.toNat (Address.ofNat (p := SP1Prime) (store.size + i.val)) + 1) = _
-    rw [Address.toNat_ofNat _ bounded]
+  have ptr : node.node.pointer = Address.ofNat (store.size + i + 1) := congrArg NodeRecord.pointer record
   have len : r.length = Address.ofNat bytes.length := step_length (r := r) word
   have next : node.next = HintNodeAllocate.prefixState clk head store.size (i.val + 1) := node_next ptr
   have src : r.source = batch.source store.size := by
@@ -184,7 +181,7 @@ theorem Batch.steps_at (batch : Batch) (clk : Nat) (store : Store) (head : Nat) 
         _ = _ := ptr.trans (by rw [ix,Nat.add_zero])
       rw [direct_source on,ptr',len,value]
       rfl
-  refine ⟨r,got,⟨?_,good,?_,?_⟩,?_,?_,?_,len,rfl,rfl⟩
+  refine ⟨r,got,⟨?_,good,?_,?_⟩,?_,?_,?_,len,rfl,rfl,?_⟩
   · cases batch <;> simp [r,Batch.step,Batch.source,IsBool]
   · change (bitVecToWord (p := SP1Prime) (BitVec.ofNat 64 bytes.length))[3] = 0
     rw [word]; rfl
@@ -197,5 +194,6 @@ theorem Batch.steps_at (batch : Batch) (clk : Nat) (store : Store) (head : Nat) 
   · change Cursor.mk r.source _ node.next = _
     rw [src,next]; rfl
   · exact ptr
+  · exact record
 
 end SP1Clean.WriteAllocation

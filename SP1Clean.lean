@@ -46,6 +46,9 @@ import SP1Clean.Proofs.Completeness.WriteDispatchReplay
 import SP1Clean.Proofs.Completeness.WriteAllocationBatch
 import SP1Clean.Proofs.Completeness.WriteAllocationExecution
 import SP1Clean.Proofs.Completeness.WriteAllocationStore
+import SP1Clean.Proofs.Completeness.WriteAllocationWordRows
+import SP1Clean.Proofs.Completeness.WriteAllocationWordTables
+import SP1Clean.Proofs.Completeness.WriteAllocationStoredWords
 import SP1Clean.Proofs.Completeness.WritePlacementCapacity
 import SP1Clean.Proofs.Completeness.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.WriteStreamExecution

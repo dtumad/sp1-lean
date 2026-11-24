@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.WriteAllocationExecution
+import SP1Clean.Proofs.Completeness.WriteAllocationStoredWords
 
 /-! # WRITE allocation rows over the actual persistent store
 
@@ -78,7 +79,7 @@ theorem native_store_at {image : ProgramImage} {source target : ExecutionSnapsho
           row.first = batch.cursorAt current.clock cursor.2 cursor.1.size 0 ∧
           row.last = batch.cursorAt current.clock cursor.2 cursor.1.size batch.buffers.length ∧
           after = prepend cursor.1 cursor.2 batch.buffers ∧ cursor.1.size + batch.buffers.length < 2^48 ∧
-          ∀ b ∈ batch.buffers, b.length < 2^48 := by
+          (∀ b ∈ batch.buffers, b.length < 2^48) ∧ batch.Publishes current.clock cursor after.1 := by
   obtain ⟨current,next,length,buffer,read,atCurrent,atNext,effect,_⟩ := groups_of_admissibleExecution run present write
   obtain ⟨left,cursor,_,beforePath,beforeStore,rep,_⟩ := admissibleExecution_hintInventory run cut
   obtain ⟨right,after,_,post,afterStore,repAfter,_,_,space,_⟩ := admissibleExecution_hintInventory run (cut+1)
@@ -115,14 +116,16 @@ theorem native_store_at {image : ProgramImage} {source target : ExecutionSnapsho
   have same : after = prepend cursor.1 cursor.2 batch.buffers := buffers ▸ postState
   obtain ⟨valid,first,last,outgoing⟩ := batch.openRow_valid ((events.take cut).foldl advanceQueueClock 0) left.clock
     cursor.1 cursor.2 (by omega) (by omega)
-  refine ⟨valid,ticket.symm,same ▸ outgoing,first,last,same,?_,?_⟩
-  · rw [same,prepend_size] at space
-    exact space
-  · intro b member
+  have capacity : cursor.1.size + batch.buffers.length < 2^48 := by
+    rwa [same,prepend_size] at space
+  have sizes (b : Bytes) (member : b ∈ batch.buffers) : b.length < 2^48 := by
     have mem : b ∈ right.host.io.hints := by
       rw [effect.queue]
       exact List.mem_append_left _ (buffers ▸ member)
     exact (List.le_sum_of_mem (List.mem_map_of_mem (f := List.length) mem)).trans_lt
       (live.trans_lt (by decide))
+  refine ⟨valid,ticket.symm,same ▸ outgoing,first,last,same,capacity,sizes,?_⟩
+  rw [same]
+  exact batch.publishes_prepend left.clock cursor.1 cursor.2 left.host.io.hints rep capacity sizes
 
 end SP1Clean.WriteAllocation
