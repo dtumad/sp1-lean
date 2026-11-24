@@ -128,19 +128,18 @@ private theorem combined_balance {α : Type} (positions : List α) (batch : α �
     simp only [List.flatMap_cons, Function.comp_apply, List.flatMap_append, balanceOf_append]
     linear_combination one + rest
 
-private theorem padding_zero (n : ℕ) (msg : Array F) :
-    balanceOf ((List.replicate n (0 : RowInput F)).flatMap cursorValues) msg = 0 := by
-  induction n with
-  | zero => rfl
-  | succ n ih =>
-    rw [List.replicate_succ, List.flatMap_cons, balanceOf_append, ih, cursor_delta]
-    change 0 * _ + 0 = (0 : F)
-    simp
-
-private theorem split_sum (entries : List Entry) (msg : Array F) :
-    balanceOf ((selected false entries).flatMap cursorValues) msg +
-      balanceOf ((selected true entries).flatMap cursorValues) msg =
-      balanceOf (entries.flatMap (fun e => cursorValues e.2)) msg := by
+/-- Both demand-padded word variants recover the signed sum of the original chronological rows
+on any channel whose disabled physical row has zero weight. -/
+theorem physical_sum (values : RowInput F → List (Interaction F)) (entries : List Entry) (msg : Array F)
+    (off : balanceOf (values 0) msg = 0) :
+    balanceOf ((physicalInputs false entries).flatMap values) msg +
+      balanceOf ((physicalInputs true entries).flatMap values) msg =
+      balanceOf (entries.flatMap (fun e => values e.2)) msg := by
+  have padding (n : ℕ) : balanceOf ((List.replicate n (0 : RowInput F)).flatMap values) msg = 0 := by
+    induction n with
+    | zero => rfl
+    | succ n ih => rw [List.replicate_succ, List.flatMap_cons, balanceOf_append, ih, off, add_zero]
+  simp only [physicalInputs, List.flatMap_append, balanceOf_append, padding, add_zero]
   induction entries with
   | nil => simp [selected, balanceOf]
   | cons entry rest ih =>
@@ -167,17 +166,18 @@ theorem tables_cursor_closed {image : ProgramImage} {source target : ExecutionSn
   obtain ⟨lastHeight, lastConstraints, lastGuarantees⟩ := tables_of_admissibleExecution execution true data
   refine ⟨nextHeight, lastHeight, nextConstraints, nextGuarantees, lastConstraints, lastGuarantees, ?_⟩
   intro msg
-  have physical (last : Bool) (height) :
-      balanceOf ((wordTable last entries data height).interactionsWith stateChannel.toRaw) msg =
-        balanceOf ((selected last entries).flatMap cursorValues) msg := by
-    rw [wordTable_cursors]
-    change balanceOf (((selected last entries) ++ _).flatMap cursorValues) msg = _
-    rw [List.flatMap_append, balanceOf_append, padding_zero, add_zero]
+  have physical := physical_sum cursorValues entries msg (by
+    rw [cursor_delta]
+    change 0 * _ = (0 : F)
+    simp)
   have sum := combined_balance (List.finRange events.length)
     (fun i => (rowsAt? image source events i.val).getD []) msg (fun i _ => at_closed execution (List.getElem?_eq_getElem i.isLt))
   change balanceOf (endpointLedger image source events) msg +
     balanceOf (entries.flatMap (fun e => cursorValues e.2)) msg = 0 at sum
-  rw [balanceOf_append, balanceOf_append, physical, physical, add_assoc, split_sum]
+  rw [balanceOf_append, balanceOf_append, wordTable_cursors, wordTable_cursors, add_assoc]
+  change balanceOf _ msg + (balanceOf ((physicalInputs false entries).flatMap cursorValues) msg +
+    balanceOf ((physicalInputs true entries).flatMap cursorValues) msg) = 0
+  rw [physical]
   exact sum
 
 end SP1Clean.TraceGen.HintReadTransfers

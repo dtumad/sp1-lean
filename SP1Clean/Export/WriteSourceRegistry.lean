@@ -142,6 +142,24 @@ private theorem prefix_core_slot (i : ℕ) (inside : i < 7) (reg : i ≠ 3) (ram
   rw [List.getElem?_append_left (by simp only [List.length_set, LocalCore.tables_length]; omega),
     List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega), List.getElem?_set_ne (by omega)]
 
+/-- The original lookup and boundary tables survive all ordinary, HALT and ECALL wrappers
+outside the three replaced core positions and the instruction band. -/
+theorem retained_core_at (i : ℕ) (hi : i < 61) (outsideInstructions : i < 7 ∨ 32 ≤ i)
+    (reg : i ≠ 3) (ram : i ≠ 4) (halt : i ≠ 57) (syscall : i ≠ 58) :
+    (base image source target final).tables[i]? = (LocalCore.tables (p := SP1Prime) image source)[i]? := by
+  rcases outsideInstructions with lo | lo
+  · exact prefix_core_slot _ _ _ _ i lo reg ram
+  · rw [core _ _ _ _ i lo (by omega) halt,List.getElem?_set_ne (by omega),ProtectedLocalCore.tables,
+      List.getElem?_append_left (by simp only [List.length_set,LocalCore.tables_length]; omega),
+      List.getElem?_set_ne (by omega),List.getElem?_set_ne (by omega),List.getElem?_set_ne (by omega),List.getElem?_set_ne (by omega)]
+
+/-- The padding component replaced by the HALT wrapper has the original position 57. -/
+theorem halt_at : (base image source target final).tables[57]? = some HaltPaddingChip.component := by
+  rw [outside _ _ _ _ _ (by decide),initial,HostFinalMemory.Installed,HostFinalMemory.tables_eq,
+    List.getElem?_set_ne (by decide),List.getElem?_set_ne (by decide),List.getElem?_set_self]
+  rw [List.length_append,HostFinalMemory.prefix_length]
+  omega
+
 /-- The fixed Program provider keeps its exact position after host and receipt installation. -/
 theorem program_at :
     (base image source target final).tables[6]? = some (FixedProgramProvider.Preprocessed.component image) := by

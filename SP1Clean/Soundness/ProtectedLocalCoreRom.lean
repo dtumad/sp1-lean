@@ -14,12 +14,6 @@ open Circuit Air.Flat SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
-private theorem destination_memWrite {F : Type} [DecidableEq F] [Zero F] (flag : F) :
-    (Trace.CommitEffect.destination flag).memWrite = none := by
-  unfold Trace.CommitEffect.destination
-  split <;> rfl
-
 /-- Only the four store families need byte permissions; all other instruction views have no RAM write. -/
 theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
     (noWrite : ∀ row, row.commit.memWrite = none → property row) (id : InstructionChipId)
@@ -64,7 +58,7 @@ theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
   | jal | jalr | uType =>
     intro _
     apply noWrite
-    exact destination_memWrite _
+    exact Trace.CommitEffect.destination_memWrite _
   | _ => intro _; exact noWrite _ rfl
 
 end SP1Clean.Soundness.ProtectedLocalCore

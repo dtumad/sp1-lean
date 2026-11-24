@@ -1,3 +1,4 @@
+import SP1Clean.Proofs.Completeness.MemoryInstructionRows
 import SP1Clean.Export.WriteGeneratedRegisterSources
 
 /-! # Original RAM receipts from generated loads and stores
@@ -14,11 +15,6 @@ open WriteProbe WriteProbe.AccessInventory Soundness.Target
 
 private abbrev F := ZMod SP1Prime
 private abbrev installed := ProtectedOrdinaryReceipt.component (p := SP1Prime)
-
-private def ramEvent? : RoutedEvent → Option MemoryEvent
-  | ⟨.loadByte, e⟩ | ⟨.loadHalf, e⟩ | ⟨.loadWord, e⟩ | ⟨.loadDouble, e⟩ | ⟨.loadX0, e⟩
-    | ⟨.storeByte, e⟩ | ⟨.storeHalf, e⟩ | ⟨.storeWord, e⟩ | ⟨.storeDouble, e⟩ => some e
-  | _ => none
 
 private def ramEntry (e : MemoryEvent) : MemRecordEntry := ⟨e.addr / 8 * 8, e.prevMem, e.prevTsMem, true⟩
 
@@ -59,12 +55,12 @@ private theorem ramPrior_of_spec (e : MemoryEvent) (fits : e.addr < 2 ^ 48)
   rfl
 
 private theorem generated_ram_payload (id : InstructionChipId) (e : id.Event) {ram : MemoryEvent}
-    (family : ramEvent? ⟨id, e⟩ = some ram) (valid : id.Valid e) (cols : (supportedChipFor id).kind.Cols F)
+    (family : RoutedEvent.memoryEvent? ⟨id, e⟩ = some ram) (valid : id.Valid e) (cols : (supportedChipFor id).kind.Cols F)
     (data : ProverData F) (spec : (installed id).circuit.Spec (InstalledInstructionTables.activeInput id e) cols data)
     (active : ((supportedChipFor id).kind.view (InstalledInstructionTables.activeInput id e) cols).is_real = 1) :
     ramPriorMessage (((supportedChipFor id).kind.ramAccess (InstalledInstructionTables.activeInput id e) cols).getD zeroRamAccess) =
       (ramEntry ram).toMemoryMsg := by
-  cases id <;> simp only [ramEvent?, reduceCtorEq] at family
+  cases id <;> simp only [RoutedEvent.memoryEvent?, reduceCtorEq] at family
   all_goals
     have same : e = ram := Option.some.inj family
     subst ram
@@ -96,24 +92,13 @@ private theorem generated_ram_payload (id : InstructionChipId) (e : id.Event) {r
     have original : StoreDoubleChip.Spec e.toStoreDoubleInputs cols data := spec
     exact ramPrior_of_spec e valid.1.addr_lt _ (original.1.2.2.2 active) rfl rfl rfl rfl rfl rfl
 
-private theorem ram_soundness_inputs (id : InstructionChipId) (e : id.Event) {ram : MemoryEvent}
-    (family : ramEvent? ⟨id, e⟩ = some ram) (data : ProverData F) :
-    (installed id).circuit.Assumptions (InstalledInstructionTables.activeInput id e) data := by
-  cases id <;> simp only [ramEvent?, reduceCtorEq] at family
-  case loadByte | loadHalf | loadWord | loadDouble | loadX0 =>
-    exact ⟨wordOfNat_isU64 _, wordOfNat_isU64 _, wordOfNat_isU64 _⟩
-  case storeDouble => exact ⟨wordOfNat_isU64 _, wordOfNat_isU64 _⟩
-  case storeByte => exact ⟨wordOfNat_isU64 _, wordOfNat_isU64 _, fun _ => storeLimb_isU64 _ _ (storeByteLimb_lt _ _ _)⟩
-  case storeHalf => exact ⟨wordOfNat_isU64 _, wordOfNat_isU64 _, fun _ => storeLimb_isU64 _ _ (Nat.mod_lt _ (by decide))⟩
-  case storeWord => exact ⟨wordOfNat_isU64 _, wordOfNat_isU64 _, fun _ => storeWordValue_isU64 _ _ _⟩
-
-private theorem ram_consumed (id : InstructionChipId) (e : id.Event) {ram : MemoryEvent} (family : ramEvent? ⟨id, e⟩ = some ram)
+private theorem ram_consumed (id : InstructionChipId) (e : id.Event) {ram : MemoryEvent} (family : RoutedEvent.memoryEvent? ⟨id, e⟩ = some ram)
     (cells : Array F) (data : ProverData F)
     (real : ((supportedChipFor id).decodeRow data cells).is_real = 1) :
     let row : DecodedInstructionRow SP1Prime := ⟨supportedChipFor id, cells⟩
     ramPriorMessage (decodedRamAccess row data) ∈ row.consumedMemoryMessages data := by
   intro row
-  cases id <;> simp only [ramEvent?, reduceCtorEq] at family
+  cases id <;> simp only [RoutedEvent.memoryEvent?, reduceCtorEq] at family
   case loadByte => rw [consumedMemoryMessages_eq_of_loadShape loadByteChip_loadMemoryInteractionShape row data rfl real]; exact List.mem_cons_self
   case loadHalf => rw [consumedMemoryMessages_eq_of_loadShape loadHalfChip_loadMemoryInteractionShape row data rfl real]; exact List.mem_cons_self
   case loadWord => rw [consumedMemoryMessages_eq_of_loadShape loadWordChip_loadMemoryInteractionShape row data rfl real]; exact List.mem_cons_self
@@ -124,12 +109,8 @@ private theorem ram_consumed (id : InstructionChipId) (e : id.Event) {ram : Memo
   case storeWord => rw [consumedMemoryMessages_eq_of_immutableRamShape storeWordChip_immutableRamMemoryInteractionShape row data rfl real]; exact List.mem_cons_self
   case storeDouble => rw [consumedMemoryMessages_eq_of_immutableRamShape storeDoubleChip_immutableRamMemoryInteractionShape row data rfl real]; exact List.mem_cons_self
 
-private theorem generated_outputs (id : InstructionChipId) (env : Environment F) :
-    (installed id).rowOutput env = (supportedChipFor id).table.rowOutput env := by
-  cases id <;> rfl
-
 private theorem generated_ram_entry (id : InstructionChipId) (events : List id.Event) {e : id.Event}
-    (used : e ∈ events) (valid : id.Valid e) {ram : MemoryEvent} (family : ramEvent? ⟨id, e⟩ = some ram)
+    (used : e ∈ events) (valid : id.Valid e) {ram : MemoryEvent} (family : RoutedEvent.memoryEvent? ⟨id, e⟩ = some ram)
     (data evaluation : ProverData F) (hint : ProverHint F) (fit) :
     let base := (RoutedEvent.mk id e).clock
     ∃ cells ∈ (InstalledInstructionTables.table id events data hint fit).table,
@@ -147,10 +128,7 @@ private theorem generated_ram_entry (id : InstructionChipId) (events : List id.E
   have present : cells ∈ original.table := by
     apply List.mem_map_of_mem (f := fun x => c.buildRow x original.data hint)
     exact List.mem_append_left _ (List.mem_map_of_mem used)
-  have spec := (c.buildRow_spec_requirements input original.data hint (InstalledInstructionTables.activeInput_valid id e valid _ _)
-    (ram_soundness_inputs id e family original.data)).1
-  change c.circuit.Spec (c.rowInput (Environment.fromArray cells original.data)) (c.rowOutput (Environment.fromArray cells original.data)) original.data at spec
-  rw [c.rowInput_buildRow input original.data original.data hint, generated_outputs id, Component.rowOutput_congr (supportedChipFor id).table (env := Environment.fromArray cells original.data) (env' := env) rfl] at spec
+  have spec := InstalledInstructionTables.active_memory_spec id e valid family original.data evaluation hint
   have active := InstalledInstructionTables.active_is_real id e valid original.data evaluation hint
   have activeInput : ((supportedChipFor id).kind.view input cols).is_real = 1 := by
     change ((supportedChipFor id).kind.view (c.rowInput env) cols).is_real = 1 at active
@@ -185,7 +163,7 @@ private theorem ram_prior_large (e : MemoryEvent) (a : e.opA < 32) (b : e.opB < 
 
 private theorem ram_origin (id : InstructionChipId) (e : id.Event) (valid : id.Valid e) {r : MemRecordEntry}
     (used : r ∈ (RoutedEvent.mk id e).predecessors) (large : 32 ≤ r.addr) :
-    ∃ memory, ramEvent? ⟨id, e⟩ = some memory ∧ r = ramEntry memory := by
+    ∃ memory, RoutedEvent.memoryEvent? ⟨id, e⟩ = some memory ∧ r = ramEntry memory := by
   cases id with
   | add | sub | subw => exact False.elim ((rType_prior_small _ valid.opA_lt valid.opB_lt valid.opC_lt _ used).not_ge large)
   | mul | divRem => exact False.elim ((rType_prior_small _ valid.1.opA_lt valid.1.opB_lt valid.1.opC_lt _ used).not_ge large)

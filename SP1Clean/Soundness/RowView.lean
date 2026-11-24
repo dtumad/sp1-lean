@@ -134,6 +134,12 @@ physical table across both cases, so their architectural effect is selected here
 inventing separate chip kinds. -/
 def destination {F : Type} [DecidableEq F] [Zero F] (opA0 : F) : CommitEffect F :=
   if opA0 = 0 then regWrite else noWrite
+/-- Either outcome of the destination register selector leaves RAM unchanged. -/
+theorem destination_memWrite {F : Type} [DecidableEq F] [Zero F] (flag : F) :
+    (destination flag).memWrite = none := by
+  unfold destination
+  split <;> rfl
+
 /-- No register write, one contiguous memory write — the stores (`op_a = rs2` is a read-back
 self-write). -/
 def store {F : Type} (mw : MemWrite F) : CommitEffect F := ⟨false, some mw⟩

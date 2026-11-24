@@ -172,6 +172,40 @@ theorem ofChronological_append (left right : List RoutedEvent) (id : Instruction
       ofChronological left id ++ ofChronological right id := by
   simp [ofChronological]
 
+/-- Reattach the known registry identifier to each event of the actual typed buckets. -/
+def physical (events : List RoutedEvent) : List RoutedEvent :=
+  InstructionChipId.all.flatMap fun id => (ofChronological events id).map (RoutedEvent.mk id)
+
+private theorem one_per_registry (r : RoutedEvent) :
+    (InstructionChipId.all.flatMap fun id => (r.forId? id).toList.map (RoutedEvent.mk id)) = [r] := by
+  obtain ⟨chip,e⟩ := r
+  have selection (ids : List InstructionChipId) :
+      (ids.flatMap fun id => ((RoutedEvent.mk chip e).forId? id).toList.map (RoutedEvent.mk id)) =
+        (ids.filter (· = chip)).map (fun _ => RoutedEvent.mk chip e) := by
+    induction ids with
+    | nil => rfl
+    | cons id ids ih =>
+      by_cases eqn : chip = id
+      · subst id
+        simp [ih]
+      · rw [List.flatMap_cons,ih,RoutedEvent.forId?_eq_none_of_ne _ eqn]
+        simp [Ne.symm eqn]
+  rw [selection,List.filter_eq,InstructionChipId.all_nodup.count_of_mem (InstructionChipId.mem_all chip)]
+  rfl
+
+/-- The actual typed registry buckets partition the chronological stream with repetitions preserved. -/
+theorem physical_perm (events : List RoutedEvent) : (physical events).Perm events := by
+  induction events with
+  | nil => simp [physical]
+  | cons r rest ih =>
+    let added (id : InstructionChipId) := (r.forId? id).toList.map (RoutedEvent.mk id)
+    let old (id : InstructionChipId) := (ofChronological rest id).map (RoutedEvent.mk id)
+    have shuffled := (List.flatMap_append_perm InstructionChipId.all added old).symm
+    change (InstructionChipId.all.flatMap (fun id => added id ++ old id)).Perm
+      (InstructionChipId.all.flatMap added ++ physical rest) at shuffled
+    rw [show InstructionChipId.all.flatMap added = [r] from one_per_registry r] at shuffled
+    simpa only [physical,ofChronological_cons,List.map_append] using shuffled.trans (List.Perm.cons r ih)
+
 end EventBuckets
 
 end SP1Clean.TraceGen

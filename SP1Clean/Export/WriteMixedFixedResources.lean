@@ -206,6 +206,38 @@ noncomputable def install (remaining : Remaining image source target finish) :
         rw [position_of_indexAt found, ← List.getElem?_drop, List.getElem?_eq_getElem i.isLt] at atSlot
         exact (table_component run routed data hint packets id).trans (Option.some.inj atSlot).symm⟩
 
+/-- The physical row arrays for every counted resource survive installation alongside the
+Memory and host providers and canonicalization against the supervisor's public input. -/
+theorem original_arrays (header : SP1PublicIO F) (remaining : Remaining image source target finish) (id : Index) :
+    let host := install run routed data hint packets remaining
+    let w := WriteMixedSourceTables.ofExecution run routed finish data hint header (WriteMixedHostTables.install run.1 data host) packets
+    (w.tables.map Table.table)[position id]? = some (table run routed data hint packets id).table := by
+  intro host w
+  have location : 6 ≤ position id ∧ sourceAt (position id) = none ∧ WriteMixedHostTables.indexAt (position id) = none ∧ indexAt (position id) = some id := by
+    cases id <;> first | (rename_i flag; cases flag <;> decide) | decide
+  have size := (List.getElem?_eq_some_iff.mp (registered_at image source target finish id)).1
+  let i : Fin ((base image source target finish).tables.drop 6).length := ⟨position id - 6, by rw [List.length_drop]; omega⟩
+  have offset : 6 + i.val = position id := by dsimp only [i]; omega
+  have absent : sourceAt (6 + i.val) = none := offset ▸ location.2.1
+  have old : WriteMixedHostTables.indexAt (6 + i.val) = none := offset ▸ location.2.2.1
+  have found : indexAt (6 + i.val) = some id := offset ▸ location.2.2.2
+  have physical : (w.tables.map Table.table)[6 + i.val]? = some ((WriteMixedHostTables.install run.1 data host i absent).1.table) :=
+    WriteMixedSourceTables.remaining_arrays image source target finish rows (HintReadTransfers.history image source events)
+      (WriteMixedSourceTables.heights run routed) data hint (WriteMixedHostTables.install run.1 data host) _ _ _ header i absent
+  have same : (WriteMixedHostTables.install run.1 data host i absent).1 = table run routed data hint packets id := by
+    dsimp only [WriteMixedHostTables.install]
+    split
+    · dsimp only [host,install]
+      split
+      · rename_i missing
+        exact False.elim (by rw [found] at missing; cases missing)
+      · rename_i other h
+        cases Option.some.inj (h.symm.trans found)
+        rfl
+    · rename_i other h
+      exact False.elim (by rw [old] at h; cases h)
+  rwa [same,offset] at physical
+
 /-- Each generated resource slot discharges its own local constraints and guarantees. -/
 theorem install_valid (remaining : Remaining image source target finish)
     (checked : ∀ i absent old missing, let t := (remaining i absent old missing).1; t.Constraints ∧ t.Guarantees) :

@@ -168,6 +168,14 @@ import SP1Clean.Proofs.Completeness.HintQueuePublishedHistory
 import SP1Clean.Proofs.Completeness.HintQueueFreshCoverage
 import SP1Clean.Proofs.Completeness.HintQueueAllocationLedgers
 import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
+import SP1Clean.Export.WriteSupervisorPermissions
+import SP1Clean.Export.WritePermissionSupport
+import SP1Clean.Export.WritePermissionInstallation
+import SP1Clean.Export.WriteMixedPermissionLedger
+import SP1Clean.Proofs.Completeness.MemoryInstructionRows
+import SP1Clean.Proofs.Completeness.StorePermissionRows
+import SP1Clean.Proofs.Completeness.StorePermissionLedger
+import SP1Clean.Proofs.Completeness.HintPermissionLedger
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming

@@ -316,17 +316,10 @@ private def instructionStateLink {p : ℕ} [NeZero p] (routed : RoutedEvent) :
     LookupKey × LookupKey :=
   (routed.pullState.key (p := p), routed.rawPushState.key (p := p))
 
-/-- Instruction links in physical chip-table order. -/
-private def bucketInstructionStateLinks {p : ℕ} [NeZero p] :
-    List InstructionChipId → List RoutedEvent → List (LookupKey × LookupKey)
-  | [], _ => []
-  | id :: ids, events =>
-      (events.filter fun routed => routed.id = id).map (instructionStateLink (p := p)) ++
-          bucketInstructionStateLinks (p := p) ids events
-
+/-- State links in the stable physical registry order of the typed instruction buckets. -/
 def physicalInstructionStateLinks {p : ℕ} [NeZero p] (events : List RoutedEvent) :
     List (LookupKey × LookupKey) :=
-  bucketInstructionStateLinks (p := p) InstructionChipId.all events
+  (EventBuckets.physical events).map (instructionStateLink (p := p))
 
 /-- Refresh links in their separate physical table order. -/
 def physicalStateBumpLinks {p : ℕ} [NeZero p] (events : List RoutedEvent) :
@@ -335,61 +328,13 @@ def physicalStateBumpLinks {p : ℕ} [NeZero p] (events : List RoutedEvent) :
     if routed.rawPushState = routed.nextState then []
     else [(routed.rawPushState.key (p := p), routed.nextState.key (p := p))]
 
-private theorem bucketInstructionStateLinks_cons_of_not_mem {p : ℕ} [NeZero p]
-    (ids : List InstructionChipId) (routed : RoutedEvent) (rest : List RoutedEvent)
-    (notMem : routed.id ∉ ids) :
-    bucketInstructionStateLinks (p := p) ids (routed :: rest) =
-      bucketInstructionStateLinks (p := p) ids rest := by
-  induction ids with
-  | nil => rfl
-  | cons id ids ih =>
-      have ne : routed.id ≠ id := fun eq => notMem (by simp [eq])
-      have notTail : routed.id ∉ ids := fun mem => notMem (by simp [mem])
-      simp [bucketInstructionStateLinks, ne, ih notTail]
-
-/-- Adding one event to a complete, duplicate-free bucket inventory inserts its instruction link
-at exactly one bucket; moving that link to the front is a permutation. -/
-private theorem bucketInstructionStateLinks_cons_perm {p : ℕ} [NeZero p]
-    (ids : List InstructionChipId) (routed : RoutedEvent) (rest : List RoutedEvent)
-    (nodup : ids.Nodup) (member : routed.id ∈ ids) :
-    (bucketInstructionStateLinks (p := p) ids (routed :: rest)).Perm
-      (instructionStateLink (p := p) routed ::
-        bucketInstructionStateLinks (p := p) ids rest) := by
-  induction ids with
-  | nil => simp at member
-  | cons id ids ih =>
-      have idNotMem : id ∉ ids := (List.nodup_cons.mp nodup).1
-      have tailNodup : ids.Nodup := (List.nodup_cons.mp nodup).2
-      by_cases routeEq : routed.id = id
-      · have routeNotTail : routed.id ∉ ids := by simpa [routeEq] using idNotMem
-        simp [bucketInstructionStateLinks, routeEq,
-          bucketInstructionStateLinks_cons_of_not_mem ids routed rest routeNotTail,
-          instructionStateLink]
-      · have routeMem : routed.id ∈ ids := (List.mem_cons.mp member).resolve_left routeEq
-        have tailPerm := ih tailNodup routeMem
-        have moved := tailPerm.append_left
-          ((rest.filter fun item => item.id = id).map (instructionStateLink (p := p)))
-        have result := moved.trans
-          (List.perm_middle
-            (l₁ := (rest.filter fun item => item.id = id).map
-              (instructionStateLink (p := p)))
-            (l₂ := bucketInstructionStateLinks (p := p) ids rest)
-            (a := instructionStateLink (p := p) routed))
-        simpa [bucketInstructionStateLinks, instructionStateLink, routeEq] using result
-
 /-- Stable registry bucketing is a permutation, not an execution ordering. -/
 theorem physicalInstructionStateLinks_perm {p : ℕ} [NeZero p]
     (events : List RoutedEvent) :
     (physicalInstructionStateLinks (p := p) events).Perm
       (events.map fun routed =>
-        (routed.pullState.key (p := p), routed.rawPushState.key (p := p))) := by
-  induction events with
-  | nil => simp [physicalInstructionStateLinks, InstructionChipId.all,
-      bucketInstructionStateLinks]
-  | cons routed rest ih =>
-      exact (bucketInstructionStateLinks_cons_perm InstructionChipId.all routed rest
-          InstructionChipId.all_nodup (InstructionChipId.mem_all routed.id)).trans
-        (List.Perm.cons (instructionStateLink (p := p) routed) ih)
+        (routed.pullState.key (p := p), routed.rawPushState.key (p := p))) :=
+  (EventBuckets.physical_perm events).map (instructionStateLink (p := p))
 
 /-- The generic shuffle which moves each row's bump links out of the separate tail and places them
 immediately after that row's instruction link. -/
