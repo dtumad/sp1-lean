@@ -142,7 +142,7 @@ private def instructionTable (rows : List (Inputs Fp))
 
 private def handlerTable (rows : List (HostHintReadChip.Inputs Fp))
     (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
-  tableOf Soundness.HostHintReadCoverage.handler rows bounded
+  tableOf Soundness.HostHintReadCoverage.handler (rows.map fun row => (row, (1 : Fp))) ((List.length_map (f := fun row : HostHintReadChip.Inputs Fp => (row, (1 : Fp)))).le.trans bounded)
 
 private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp))
     (instructionBound : instructions.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide)
@@ -241,7 +241,7 @@ private def registeredTables : List (Table Fp) :=
     else if index.val = 2 then tableOf (Soundness.HostCallReceivers.profileNoop (p := SP1Prime) true).component
       [enterMessage] (by exact (show 1 ≤ UInt64.size from by decide))
     else if index.val = 19 then tableOf (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
-      [lengthHandler] (by exact (show 1 ≤ UInt64.size from by decide))
+      [(lengthHandler, 1)] (by exact (show 1 ≤ UInt64.size from by decide))
     else tableOf views[index].component [] (by exact Nat.zero_le _) (by
       fin_cases index <;> trivial)
 

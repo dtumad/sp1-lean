@@ -65,7 +65,7 @@ theorem of_witness
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
+      path.Perm (HostQueueOrder.activeRows (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final upper path := by
   obtain ⟨path, exhaustive, walk⟩ := queue_ordered witness interface upper authenticated silent constraints balanced
@@ -79,6 +79,7 @@ theorem of_witness
   have physical := exhaustive.mem_iff.mp member
   exact HostQueueHistory.advance row upper
     (rows_spec _ (queueTables_aligned (projected witness)) specs row physical)
+    (TransitionView.mem_readIndexedActiveRows.mp physical).2
     (HostQueueHistory.records_of_witness (projected witness) upper authenticated records row physical)
 
 
@@ -92,7 +93,7 @@ theorem source_history
     (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
+      path.Perm (HostQueueOrder.activeRows (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final (ofList source.host.io.hints).1 path := by
   apply of_witness witness (GroundingResources.sourceInterface source.host.io.hints extra) _ (.refl _)

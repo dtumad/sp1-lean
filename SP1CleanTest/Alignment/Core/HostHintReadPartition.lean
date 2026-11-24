@@ -74,7 +74,8 @@ private theorem orphanWords_bounded :
 
 private def handlers (calls : List (HostHintReadChip.Inputs Fp))
     (bounded : calls.length ≤ UInt64.size) : Table Fp :=
-  StaticMembership.buildTable HostHintReadCoverage.handler calls [] (ProverData.empty Fp) (ProverHint.empty Fp) bounded
+  StaticMembership.buildTable HostHintReadCoverage.handler (calls.map fun row => (row, (1 : Fp))) []
+    (ProverData.empty Fp) (ProverHint.empty Fp) ((List.length_map (f := fun row : HostHintReadChip.Inputs Fp => (row, (1 : Fp)))).le.trans bounded)
 
 private def consumers (rows : List HintReadFixtures.Row)
     (bounded : rows.length ≤ UInt64.size) : List (Table Fp) :=
@@ -200,7 +201,7 @@ private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
 private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (permissions : List (WritePermissionProvider.RowInput Fp)) (index : ℕ) : List (List Fp) :=
   if index == 61 then permissions.map (fun row => (toElements row).toList)
-  else if index == 63 then calls.map (fun row => (toElements row).toList)
+  else if index == 63 then calls.map (fun row => (toElements (M := HostHintReadChip.RowInput) (row, 1)).toList)
   else if index == 84 || index == 85 then
     (rows.filter (fun row => row.1 == (index == 85))).map (fun row => (toElements row.2).toList)
   else []
@@ -236,8 +237,8 @@ theorem installedCursor :
     let tables := HostHintReadLocal.wordTables witness
     let cursor := cursorLedger witness.interactions
     witness.tables.length = 86 ∧ handler.table = (handlers calls calls_bounded).table ∧
-      witness.data.tables "sp1.native.hint_read" (size HostHintReadChip.Inputs) =
-        (calls.map toElements).toArray ∧
+      witness.data.tables "sp1.native.hint_read" (size HostHintReadChip.RowInput) =
+        (calls.map fun row => toElements (M := HostHintReadChip.RowInput) (row, 1)).toArray ∧
       tables.map (·.table) = (consumers rows reversedWords_bounded).map (·.table) ∧
       (handler :: tables).all (fun table => (checked witness.data table).1) = true ∧
       cursor = (checked witness.data handler).2 ++ (tables.map (checked witness.data)).flatMap (·.2) ∧
@@ -484,13 +485,14 @@ private def historyTables (forge : Bool) : List (Table Fp) :=
       else row
     else lengths
   [handlers [call 1 545 553 65536, call 2 273 281 65536, call 3 1 9 65536] (by decide),
-   StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) false).component lengths.reverse [] (ProverData.empty Fp) (ProverHint.empty Fp) (by
+   StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) false).component (lengths.reverse.map fun row => (row, 1)) [] (ProverData.empty Fp) (ProverHint.empty Fp) (by
+     apply (List.length_map (f := fun row : HostHintLengthChip.Inputs Fp => (row, (1 : Fp)))).le.trans
      have count : lengths.length = 3 := by cases forge <;> rfl
      exact (show lengths.reverse.length = lengths.length from List.length_reverse).le.trans (count.le.trans (by decide))),
-   StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) true).component [lengthCall 0 553 817] [] (ProverData.empty Fp) (ProverHint.empty Fp) (by decide)]
+   StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) true).component [(lengthCall 0 553 817, 1)] [] (ProverData.empty Fp) (ProverHint.empty Fp) (by decide)]
 
 private def historyPath (forge : Bool) : List (HostQueueOrder.Row (p := SP1Prime)) :=
-  (TransitionView.readIndexedRows HostQueueOrder.indices (historyTables forge)).mergeSort
+  (HostQueueOrder.activeRows (historyTables forge)).mergeSort
     (fun first second => HostQueueOrder.time (HostQueueOrder.edge first).2 ≤
       HostQueueOrder.time (HostQueueOrder.edge second).2)
 
@@ -530,13 +532,13 @@ private def cpuQueueTables : List (Table Fp) :=
   [handlers [call 1 (cpuTime 6) (cpuTime 7) 65536,
       call 2 (cpuTime 3) (cpuTime 5) 65536, call 3 (cpuTime 0) (cpuTime 2) 65536] (by decide),
    StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) false).component
-     [lengthCall 1 (cpuTime 5) (cpuTime 6), lengthCall 2 (cpuTime 2) (cpuTime 3), lengthCall 3 0 (cpuTime 0)]
+     [(lengthCall 1 (cpuTime 5) (cpuTime 6), 1), (lengthCall 2 (cpuTime 2) (cpuTime 3), 1), (lengthCall 3 0 (cpuTime 0), 1)]
      [] (ProverData.empty Fp) (ProverHint.empty Fp) (by decide),
-   StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) true).component [lengthCall 0 (cpuTime 7) (cpuTime 8)]
+   StaticMembership.buildTable (HostCallReceivers.hintLength (p := SP1Prime) true).component [(lengthCall 0 (cpuTime 7) (cpuTime 8), 1)]
      [] (ProverData.empty Fp) (ProverHint.empty Fp) (by decide)]
 
 private def cpuQueuePath : List (HostQueueOrder.Row (p := SP1Prime)) :=
-  (TransitionView.readIndexedRows HostQueueOrder.indices cpuQueueTables).mergeSort
+  (HostQueueOrder.activeRows cpuQueueTables).mergeSort
     (fun first second => HostQueueCPUOrder.eventTime first ≤ HostQueueCPUOrder.eventTime second)
 
 private def enterCall (index : ℕ) : HostCallChip.Message Fp :=

@@ -89,6 +89,23 @@ theorem bumpTables_registerValid (registers : List MemoryBumpEvent) (states : Li
   · apply Table.build_guarantees
     exact rows
 
+/-- The companion CPU-state table uses its own rounded demand height. -/
+theorem bumpTables_stateLength (registers : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
+    (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size) (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size) :
+    (bumpTables registers states data mh sh).2.length = WitnessGeneration.demandHeight states.length :=
+  (List.length_map ..).trans (state_height states)
+
+/-- Every actual normalization and every disabled row of its native component is valid. -/
+theorem bumpTables_stateValid (registers : List MemoryBumpEvent) (states : List StateBumpEvent) (data : ProverData Fp)
+    (mh : WitnessGeneration.demandHeight registers.length ≤ UInt64.size) (sh : WitnessGeneration.demandHeight states.length ≤ UInt64.size)
+    (valid : ∀ e ∈ states, e.WellFormed) :
+    (bumpTables registers states data mh sh).2.Constraints ∧ (bumpTables registers states data mh sh).2.Guarantees := by
+  have rows := padded_valid _ _ (StateBumpChip.Spec (p := SP1Prime)) (stateBumpTraceInputs_spec valid) StateBumpChip.spec_paddingInputs
+  dsimp only [bumpTables]
+  constructor
+  · exact Table.build_constraints _ _ _ _ _ _ _ rows
+  · exact Table.build_guarantees _ _ _ _ _ _ _ rows
+
 /-- The construction simultaneously satisfies both circuits on one
 shared prover input. Their heights are the ones charged by the 44-component preset. -/
 theorem bump_constructed_tables (ctx : Context) {events : List ExecutionEvent}
@@ -113,13 +130,10 @@ theorem bump_constructed_tables (ctx : Context) {events : List ExecutionEvent}
     omega
   refine ⟨inputs, routed, height _ mem, height _ (by omega), rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact bumpTables_registerLength ..
-  · exact (List.length_map ..).trans (state_height (MixedBumpInput.stateRows inputs))
+  · exact bumpTables_stateLength ..
   · exact (bumpTables_registerValid _ _ _ _ _ mv).1
   · exact (bumpTables_registerValid _ _ _ _ _ mv).2
-  all_goals dsimp only [bumpTables]
-  · apply Table.build_constraints
-    exact padded_valid _ _ StateBumpChip.Spec (stateBumpTraceInputs_spec sv) StateBumpChip.spec_paddingInputs
-  · apply Table.build_guarantees
-    exact padded_valid _ _ StateBumpChip.Spec (stateBumpTraceInputs_spec sv) StateBumpChip.spec_paddingInputs
+  · exact (bumpTables_stateValid _ _ _ _ _ sv).1
+  · exact (bumpTables_stateValid _ _ _ _ _ sv).2
 
 end SP1Clean.Export.InstalledAssembly

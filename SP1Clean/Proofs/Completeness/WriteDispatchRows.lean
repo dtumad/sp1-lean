@@ -1,3 +1,4 @@
+import SP1Clean.Proofs.Operations.WriteClassifiedRoute
 import SP1Clean.Proofs.Completeness.WriteDestination
 import SP1Clean.Native.Operations.WriteCursorBoundary
 
@@ -37,23 +38,6 @@ theorem dispatch_clock_le {policy : HostPolicy} {program : GuestProgram} {source
       simp only [advanceWriteClock]
       split <;> omega
 
-/-- The five explicit equality flags for a semantic route. -/
-def routeFlags : WriteRoute → DispatchFlags F
-  | .ignored => ⟨1,0,0,0,0⟩
-  | .stdout => ⟨0,1,0,0,0⟩
-  | .stderr => ⟨0,0,1,0,0⟩
-  | .publicValues => ⟨0,0,0,1,0⟩
-  | .hint => ⟨0,0,0,0,1⟩
-  | .hook _ => ⟨0,0,0,0,0⟩
-
-private theorem semantic_flags (fd : BitVec 64) :
-    flagsFor ((WriteRoute.ofDescriptor fd).tag : F) = routeFlags (WriteRoute.ofDescriptor fd) := by
-  unfold WriteRoute.ofDescriptor
-  split_ifs with _ _ _ _ hooks
-  all_goals try decide
-  simp only [hookDescriptors, List.mem_cons, List.not_mem_nil, or_false] at hooks
-  rcases hooks with h|h|h|h|h|h|h <;> rw [h] <;> decide
-
 /-- Counter consumed by this dispatch's arithmetic step. -/
 def previousCount (route : WriteRoute) (earlier : WriteStreams) : Nat :=
   match route with
@@ -66,22 +50,6 @@ def countDelta (route : WriteRoute) (length : Nat) : Nat :=
   | .stdout | .stderr | .publicValues => length
   | .hook _ => 1
   | .ignored | .hint => 0
-
-/-- The four stream lengths carried between successive dispatches. -/
-structure StreamCounts where
-  /-- Bytes written to stdout during this shard. -/
-  stdout : Nat
-  /-- Bytes written to stderr during this shard. -/
-  stderr : Nat
-  /-- Bytes appended to the public-values stream. -/
-  publicValues : Nat
-  /-- Replies consumed by WRITE hooks. -/
-  hooks : Nat
-deriving Inhabited
-
-/-- Project a complete stream transcript to the four physical cursor positions. -/
-def StreamCounts.ofStreams (s : WriteStreams) : StreamCounts :=
-  ⟨s.stdout.length,s.stderr.length,s.publicOutput.length,s.hooks.length⟩
 
 /-- The existing dispatch encoding with its natural positions already computed. -/
 def dispatchColumns (fd address length : BitVec 64) (callClock previousClock : Nat) (incoming : StreamCursor F)

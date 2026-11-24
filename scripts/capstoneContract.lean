@@ -12,6 +12,8 @@ import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
 import SP1Clean.Export.WriteInstalledAllocations
 import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
 import SP1Clean.Export.WriteJointObservation
+import SP1Clean.Export.WriteRealizedTranscript
+import SP1Clean.Proofs.Completeness.HintHandlerPadding
 import SP1Clean.Export.WriteAllocationStoreUnique
 import SP1Clean.Export.WriteDirectLanes
 import SP1Clean.Export.WriteHookCallBuffers
@@ -245,6 +247,15 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.installed_funded_write_allocation,
   ``SP1Clean.Export.WriteObservationAssembly.installed_effect_joins,
   ``SP1Clean.Export.WriteObservationAssembly.compiled_observation_allocation,
+  ``SP1Clean.Export.WriteMixedControlTables.remaining_count,
+  ``SP1Clean.TraceGen.HintHandlerPadding.installed_three_calls,
+  ``SP1Clean.TraceGen.HintHandlerPadding.read_zero_rejected,
+  ``SP1Clean.TraceGen.HintHandlerPadding.length_zero_rejected,
+  ``SP1Clean.TraceGen.HintHandlers.tables_checked,
+  ``SP1Clean.TraceGen.HintHandlers.transfer_matches,
+  ``SP1Clean.Export.InstalledAssembly.native_immutable_queue,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_immutable_ledgers,
+  ``SP1Clean.Export.WriteObservationAssembly.native_realized_write_tape,
   ``SP1Clean.Export.InstalledAssembly.compiled_outgoing_snapshot,
   ``SP1Clean.WriteEffects.Witness.native_slice_table,
   ``SP1Clean.Export.WriteObservationAssembly.installed_endpoint_ledgers,
@@ -254,7 +265,9 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.native_block_origin,
   ``SP1Clean.Export.WriteObservationAssembly.native_direct_group,
   ``SP1Clean.Export.WriteObservationAssembly.native_returned_bytes,
-  ``SP1Clean.Export.WriteObservationAssembly.native_direct_lanes,
+  ``SP1Clean.Export.WriteObservationAssembly.native_placement_block,
+  ``SP1Clean.Export.WriteObservationAssembly.native_guest_lane,
+  ``SP1Clean.Export.WriteObservationAssembly.native_public_group_lane,
   ``SP1Clean.Export.WriteObservationAssembly.native_returned_buffer,
   ``SP1Clean.Export.WriteObservationAssembly.native_hook_batch,
   ``SP1Clean.WriteEffects.closeTable_valid,

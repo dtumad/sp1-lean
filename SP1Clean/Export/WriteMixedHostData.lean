@@ -1,5 +1,5 @@
 import SP1Clean.Export.WriteMixedHostAssembly
-import SP1Clean.Export.WriteObservationBuild
+import SP1Clean.Export.WriteOriginalInstallation
 
 /-! # Authenticated bank and ordinary observation tables at the complete observer's data
 
@@ -56,38 +56,6 @@ private theorem channel_transfer (id : Index) (i : Interaction F) (member : i.ch
         exact valid
   exact every _ member i rfl accepted
 
-private theorem checks_of_cells {id : Index} {actual original : Table F}
-    (actualComponent : actual.component = component id) (originalComponent : original.component = component id)
-    (cells : actual.table = original.table) (checked : original.Constraints ∧ original.Guarantees)
-    (free : (component id).operations.lookups = []) :
-    actual.Constraints ∧ actual.Guarantees ∧ ∀ ch, actual.interactionsWith ch = original.interactionsWith ch := by
-  have same := actualComponent.trans originalComponent.symm
-  have interactions : actual.interactions = original.interactions := by
-    simp only [Table.interactions, Table.environment, same, cells]
-    apply List.flatMap_congr
-    exact fun _ _ => Operations.interactionValues_congr rfl
-  refine ⟨?_, actual.guarantees_iff_forall.mpr ?_, ?_⟩
-  · intro row present
-    have before := checked.1 row (cells ▸ present)
-    rw [← originalComponent] at free
-    have valid := original.component.constraintsHold_setData (data' := actual.data) free before
-    change actual.component.operations.ConstraintsHold (Environment.fromArray row actual.data)
-    rwa [same]
-  · intro i present
-    exact channel_transfer id i (actualComponent ▸ actual.channel_mem_channels_of_mem_interactions i present)
-      (original.guarantees_iff_forall.mp checked.2 i (interactions ▸ present))
-  · intro ch
-    rw [Table.interactionsWith_eq_filter, Table.interactionsWith_eq_filter, interactions]
-
-private theorem full_components (id : Index) :
-    (WriteObservationAssembly.preprocessing image source target finish).tables[position id]? = some (component id) := by
-  let appended := WriteObservationAssembly.appended image source target finish
-  have before := registered_at image source target finish id
-  have inside := (List.getElem?_eq_some_iff.mp before).1
-  rw [appended.tables, List.getElem?_append_left (by rw [← (sameRows image source target finish).length]; exact inside),
-    tables_eq, List.getElem?_mapIdx, before]
-  simp only [Option.map_some, decorate, outside_memory, Option.elim_none]
-
 /-- A generated provider occupies its original position at the full witness's shared data.
 Its committed cells and all signed channel occurrences are exactly the generator's. -/
 def InstalledAt (full : EnsembleWitness (WriteObservationAssembly.preprocessing image source target finish))
@@ -106,30 +74,13 @@ theorem installed_at (suffix : List (Table F)) (registeredSuffix : suffix.map Ta
     let full := WriteObservationAssembly.build w suffix registeredSuffix
     InstalledAt full id original := by
   intro original w full
-  have whereAt := full_components (image := image) (source := source) (target := target) (finish := finish) id
-  have inside := (List.getElem?_eq_some_iff.mp whereAt).1
+  have reg := registered run.1 data id
   have old := registered_at image source target finish id
-  have inOriginal := (List.getElem?_eq_some_iff.mp old).1
-  have inReceipt : position id < (withSources image source target finish).tables.length := by rwa [← (sameRows image source target finish).length]
-  let actual := full.tables[position id]'(by rw [← full.same_length]; exact inside)
-  have located : full.tables[position id]? = some actual := List.getElem?_eq_getElem _
-  have own := congrArg (fun cs : List (Component F) => cs[position id]?) full.tables_map_component
-  simp only [List.getElem?_map, located, Option.map_some, whereAt] at own
-  have componentEq := Option.some.inj own
-  have arrays : full.tables.map Table.table = ((installSources w).tables ++ suffix).map Table.table := by
-    dsimp only [full, WriteObservationAssembly.build, Ensemble.AppendedTables.extend]
-    rw [EnsembleWitness.ofTables_tables, withDerivedData_map_table]
-  have sameRow := (sameRows image source target finish).symm.rows w ⟨position id, inReceipt⟩
-  have previous := original_arrays run routed data hint header remaining packets id
-  change (w.tables.map Table.table)[position id]? = some original.table at previous
-  rw [List.getElem?_map, List.getElem?_eq_getElem (by rw [← w.same_length]; exact inOriginal)] at previous
-  have cells := congrArg (fun rs : List (List (Array F)) => rs[position id]?) arrays
-  simp only [List.getElem?_map, located, Option.map_some] at cells
-  rw [List.getElem?_append_left (by rw [← (installSources w).same_length]; exact inReceipt),
-    List.getElem?_eq_getElem (by rw [← (installSources w).same_length]; exact inReceipt), Option.map_some] at cells
-  have exactRows : actual.table = original.table := (Option.some.inj cells).trans (sameRow.trans (Option.some.inj previous))
-  have free := HostObserved.lookupFree (image := image) (source := source) (target := target) (final := finish)
-    (component id) (List.mem_of_getElem? old)
-  exact ⟨actual, located, componentEq, exactRows, full.same_data _ (List.mem_of_getElem? located), checks_of_cells componentEq (registered run.1 data id) exactRows (valid run.1 data id) free⟩
+  have atSlot : (base image source target finish).tables[position id]? = some original.component := old.trans (congrArg some reg.symm)
+  obtain ⟨actual,located,comp,cells,shared⟩ := WriteObservationAssembly.build_original_cells w suffix registeredSuffix atSlot (outside_memory id)
+    (original_arrays run routed data hint header remaining packets id)
+  have free := HostObserved.lookupFree (image := image) (source := source) (target := target) (final := finish) original.component (List.mem_of_getElem? atSlot)
+  exact ⟨actual,located,comp.trans reg,cells,shared,WriteObservationAssembly.checks_of_original_cells comp cells (valid run.1 data id) free
+    (fun i member => channel_transfer id i (reg ▸ member))⟩
 
 end SP1Clean.Export.WriteMixedHostTables

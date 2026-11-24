@@ -124,9 +124,10 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     2 ^ 16 ≤ Address.toNat (HintReadCoverage.rowInput row).address := by
-  obtain ⟨env, handlerMem, clock⟩ := consumer_has_handler_of_balancedChannel witness interface cursor wordSpecs row member
+  obtain ⟨env, handlerMem, clock⟩ := consumer_has_handler_of_balancedChannel witness interface constraints cursor wordSpecs row member
   have selected := balanced_for_of_channels witness interface constraints ordering calls cursor env handlerMem
-  rw [HostHintReadCoverage.handler_cursor] at selected
+  have enabled : env HostHintReadCoverage.activity = 1 := of_decide_eq_true (List.mem_filter.mp handlerMem).2
+  rw [HostHintReadCoverage.handler_cursor,enabled] at selected
   rw [HintReadCoverage.cursor_interactions] at selected
   have lower := HintReadCoverage.address_lower _ _ _
     (wordSpecs.select (fun row => HostHintReadPartition.keepWord
@@ -138,13 +139,13 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
         simp only [HostHintReadPartition.keepWord, HostHintReadPartition.keepState,
           HintReadCoverage.rowInput]
         exact decide_eq_true clock.symm⟩)
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handlerMem
+  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp (List.mem_filter.mp handlerMem).1
   have valid := handlerSpecs physical physicalMem
   have shared : (handlerTable witness).data = witness.data :=
     witness.same_data _ (handlerTable_mem witness)
   rw [Table.environment, shared, handlerTable_component] at valid
   have span : HintReadSpan.Spec (HostHintReadCoverage.input (Environment.fromArray physical witness.data)).span :=
-    valid.2.2.2.2.2.2.2.1
+    (HostHintReadCoverage.active_spec _ valid enabled).2.2.2.2.2.2.2.1
   exact le_trans span.2.2.1.1 lower
 
 private theorem permission_request_lower (tables : List (Table (ZMod p)))
@@ -224,7 +225,7 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
     (handlerSpecs : (handlerTable witness).Spec)
     (wordSpecs : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (host : HostState) (store : HintQueue.Store)
     (current : (HostHintReadCoverage.input env).previous.Binds store host.io.hints)
     (header : (HostHintReadCoverage.input env).node.Binds store)
@@ -242,11 +243,11 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
         HintReadWrites.produced).Perm (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by
   have shared : (handlerTable witness).data = witness.data :=
     witness.same_data _ (handlerTable_mem witness)
-  have present : env ∈ (handlerTable witness).table.map (fun row => (handlerTable witness).environment row) := by
-    simpa only [Table.environment, shared] using member
+  have present : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) (handlerTable witness).data := by
+    simpa only [shared] using member
   have unique := handler_clocks_nodup_of_channels witness interface constraints ordering calls
-  exact HostHintReadPartition.run_of_shared_tables (handlerTable witness) (handlerTable_component witness) handlerSpecs (wordTables witness) (wordTables_aligned witness) wordSpecs env present
-    (by simpa only [Table.environment, shared] using unique)
+  exact HostHintReadPartition.run_of_shared_tables (handlerTable witness) (handlerTable_component witness) (constraints _ (handlerTable_mem witness)) handlerSpecs (wordTables witness) (wordTables_aligned witness) wordSpecs env present
+    (by simpa only [shared] using unique)
     (cursor_balanced_of_balancedChannel witness interface cursor)
     host store current header ending words running ⟨{ readOnly := image.readOnly }, p⟩ context
     (word_permission_policy witness interface pulls members constraints permissions membershipBalance ordering calls cursor handlerSpecs wordSpecs) code arg1 arg2

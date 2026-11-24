@@ -22,7 +22,7 @@ abbrev hostWitness (witness : EnsembleWitness (HostObserved.ensemble image sourc
   HostHintQueueBoundary.projected (HostFinalMemory.baseWitness (HostObserved.baseWitness witness))
 
 /-- The ECALL instruction and every word row survive all three witness projections. -/
-private theorem host_arrays (witness : EnsembleWitness (HostObserved.ensemble image source target final)) :
+theorem host_arrays (witness : EnsembleWitness (HostObserved.ensemble image source target final)) :
     ((hostWitness witness).tables.drop 58).map (·.table) = (witness.tables.drop 58).map (·.table) := by
   rw [hostWitness, HostHintQueueBoundary.projected_drop _ _ (by decide), List.map_drop,
     HostFinalMemory.baseWitness_rows, HostObserved.baseWitness_rows witness, List.map_drop]

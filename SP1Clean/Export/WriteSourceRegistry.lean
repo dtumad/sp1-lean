@@ -160,6 +160,13 @@ theorem halt_at : (base image source target final).tables[57]? = some HaltPaddin
   rw [List.length_append,HostFinalMemory.prefix_length]
   omega
 
+/-- The original state-normalization table sits directly after the register refresh. -/
+theorem stateBump_at : (base image source target final).tables[56]? = some (providerTableFor .stateBump) := by
+  rw [core _ _ _ _ 56 (by decide) (by decide) (by decide),List.getElem?_set_ne (by decide),ProtectedLocalCore.tables,
+    List.getElem?_append_left (by simp only [List.length_set,LocalCore.tables_length]; decide),
+    List.getElem?_set_ne (by decide),List.getElem?_set_ne (by decide),List.getElem?_set_ne (by decide),List.getElem?_set_ne (by decide)]
+  rfl
+
 /-- The fixed Program provider keeps its exact position after host and receipt installation. -/
 theorem program_at :
     (base image source target final).tables[6]? = some (FixedProgramProvider.Preprocessed.component image) := by

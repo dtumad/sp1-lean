@@ -101,7 +101,14 @@ theorem available_lookupFree (includeVerify : Bool := true) :
   simp only [HostCallReceivers.availableFor, List.mem_append, List.mem_cons, List.mem_ofFn,
     List.not_mem_nil, or_false] at member
   rcases member with (((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩) | rfl | rfl
-  all_goals first | exact noop_lookupFree includeVerify | row_lookups
+  · row_lookups
+  · exact noop_lookupFree includeVerify
+  · row_lookups
+  · row_lookups
+  · rw [Component.lookups_eq]
+    exact Guarded.main_lookups (HostHintLengthChip.circuit false) inferInstance _ _
+  · rw [Component.lookups_eq]
+    exact Guarded.main_lookups (HostHintLengthChip.circuit true) inferInstance _ _
 
 /-- The ordinary observation consumer and its three terminals are lookup-free. -/
 theorem observation_lookupFree : LookupFree (Soundness.OrdinaryObservation.tables (p := p)) := by
@@ -122,7 +129,9 @@ theorem registered_lookupFree (hints : List Bytes) :
     LookupFree ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
       (·.component) ++
         (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources hints)) := by
-  refine LookupFree.append (LookupFree.cons (by row_lookups) available_lookupFree) ?_
+  refine LookupFree.append (LookupFree.cons ?_ available_lookupFree) ?_
+  · rw [Component.lookups_eq]
+    exact Guarded.main_lookups HostHintReadChip.circuit inferInstance _ _
   simp only [HostHintReadLocal.sourceResources, ← List.append_assoc]
   refine LookupFree.append ?_ observation_lookupFree
   simp only [HostHintReadHandoff.wordResources, HostHintReadLocal.bankResources, List.cons_append,

@@ -34,6 +34,16 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 def queueTables (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels)) :=
   handlerTable witness :: (HostLocalHandoff.receiverTables witness).drop 19
 
+/-- The first registered queue table contributes exactly its enabled handler environments. -/
+theorem handler_mem_queue
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify)
+      resources channels names channelNames tableChannels))
+    (env : Environment (ZMod p)) :
+    (none, env) ∈ HostQueueOrder.activeRows (queueTables witness) ↔
+      env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data := by
+  have shared : (handlerTable witness).data = witness.data := witness.same_data _ (handlerTable_mem witness)
+  rw [queueTables, HostQueueOrder.read_mem_activeRows, shared]
+
 def extraTables (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels)) :=
   (HostLocalHandoff.resourceTables witness).drop 2
 
@@ -117,7 +127,7 @@ theorem queue_interactions
         (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) := by
   rw [HostLocalCore.interactions_split_new witness _ (by
     apply tableChannels HostHintReadCoverage.handler (by simp [receiver])
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]) queue_fresh
+    simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]) queue_fresh
     (by simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw])
     (by simp [stateChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])]
   have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith stateChannel.toRaw = [] := by
@@ -181,11 +191,11 @@ theorem queue_ordered_of_endpoints
     (endpoints : (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) =
       [stateChannel.pushedValue initial, stateChannel.pulledValue final]) :
     ∃ path : List (HostQueueOrder.Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness)) ∧
+      path.Perm (HostQueueOrder.activeRows (queueTables witness)) ∧
       Walk.IsWalk HostQueueOrder.edge initial final path := by
   have ledger := balanced stateChannel.toRaw (auxiliary_channel_registered image source (HostCallReceivers.availableFor includeVerify)
     resources channels HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw (by
-      simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]))
+      simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]))
   change BalancedInteractions (witness.interactionsWith stateChannel.toRaw) at ledger
   rw [queue_interactions, endpoints] at ledger
   exact HostQueueOrder.ordered _ (queueTables_aligned witness)
@@ -200,7 +210,7 @@ theorem queue_rows_nil_of_silent_resources
     (authenticated : RecordAuthentication witness store)
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) = [] := by
+    HostQueueOrder.activeRows (queueTables witness) = [] := by
   have extra : (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
@@ -210,7 +220,7 @@ theorem queue_rows_nil_of_silent_resources
     exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   have ledger := balanced stateChannel.toRaw (auxiliary_channel_registered image source (HostCallReceivers.availableFor includeVerify)
     resources channels HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw (by
-      simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]))
+      simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]))
   change BalancedInteractions (witness.interactionsWith stateChannel.toRaw) at ledger
   rw [queue_interactions, extra, List.append_nil] at ledger
   exact HostQueueOrder.rows_nil_of_balanced _ (queueTables_aligned witness)
@@ -233,7 +243,7 @@ theorem source_queue_rows_nil {extra : List (Component (ZMod p))}
       nodeChannel.toRaw ∉ component.circuit.channels ∧ wordChannel.toRaw ∉ component.circuit.channels)
     (queue : ∀ component ∈ extra, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) = [] := by
+    HostQueueOrder.activeRows (queueTables witness) = [] := by
   apply queue_rows_nil_of_silent_resources witness interface
     (HintQueue.ofList source.host.io.hints).1
     (source_record_authentication witness records _ (.refl _) constraints) _ constraints balanced

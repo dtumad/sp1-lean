@@ -110,9 +110,10 @@ private theorem quiet_projection (deferred : Bool) (receiver : HostLocalHandoff.
       bankKind, SyscallKind.code, Word.toBitVec64, Word.toNat, three, twentySeven]
 
 private theorem queue_silent (deferred : Bool) (row : HostQueueOrder.Row (p := p))
-    (valid : (HostQueueOrder.view row.1).component.Spec row.2) :
+    (valid : (HostQueueOrder.view row.1).component.Spec row.2)
+    (active : row.2 (HostQueueOrder.view row.1).activity = 1) :
     stamped deferred (HostQueueCPUOrder.call row) = none := by
-  have projected := (queue_projection row valid).2
+  have projected := (queue_projection row valid active).2
   simp only [project, queueCallEvent?] at projected
   split_ifs at projected with length read
   · cases deferred <;> simp [stamped, bankCall?, length, bankKind, SyscallKind.code]
@@ -227,6 +228,7 @@ private theorem calls_projection_generic (deferred : Bool)
   apply project_split (stamped deferred) HostQueueCPUOrder.call _ _ _ _ (calls_split witness)
   · intro row member
     exact queue_silent deferred row (HostQueueOrder.rows_spec _ (queueTables_aligned witness) specs row member)
+      (TransitionView.mem_readIndexedActiveRows.mp member).2
   · simpa only [controlTables, control_slot_tables] using
       control_calls deferred witness interface constraints bytes
 

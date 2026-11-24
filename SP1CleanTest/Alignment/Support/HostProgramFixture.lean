@@ -106,7 +106,7 @@ def ecall (construction : Construction) (policy : HostPolicy) (program : Target.
       let handler := HostHintLengthChip.populate next.store next.queueHead next.queueClock before.clock executed
       return { next with
         queueClock := before.clock
-        consumers := next.consumers ++ [⟨if next.queueHead = 0 then 83 else 82, (toElements handler).toList⟩] }
+        consumers := next.consumers ++ [⟨if next.queueHead = 0 then 83 else 82, (toElements (M := HostHintLengthChip.RowInput) (handler,1)).toList⟩] }
     let handler := HostHintReadChip.populate next.store next.queueHead next.queueClock before.clock executed
     let some node := HintQueue.node? next.store next.queueHead | throw "missing hint node"
     for index in List.range (HintQueue.wordCount node.bytes) do
@@ -125,7 +125,7 @@ def ecall (construction : Construction) (policy : HostPolicy) (program : Target.
         consumers := next.consumers ++ [⟨if last then 85 else 84, (toElements transfer).toList⟩] }
     return { next with
       queueClock := before.clock, queueHead := node.tail
-      consumers := next.consumers ++ [⟨63, (toElements handler).toList⟩] }
+      consumers := next.consumers ++ [⟨63, (toElements (M := HostHintReadChip.RowInput) (handler,1)).toList⟩] }
   let deferred := decide (event.rawCode = 26)
   unless event.rawCode = 16 || deferred do throw "fixture expected COMMIT or HALT"
   if bound : event.arg1.toNat < 8 then

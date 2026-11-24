@@ -106,7 +106,7 @@ theorem RecordChannels.of_balanced
   all_goals
     apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
       (by simp [receiver])
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
+    simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]
 
 theorem node_authenticated (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
     (store : Store) (authenticated : RecordAuthentication witness store)
@@ -119,7 +119,7 @@ theorem node_authenticated (witness : EnsembleWitness (ensemble image source oth
     (fun record => record.Valid ∧ record.Binds store)
     (fun table member => (authenticated table member).1) balanced record member
   · apply tableChannels HostHintReadCoverage.handler (by simp [receiver])
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
+    simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]
 
 theorem word_authenticated (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
     (store : Store) (authenticated : RecordAuthentication witness store)
@@ -132,7 +132,7 @@ theorem word_authenticated (witness : EnsembleWitness (ensemble image source oth
     (fun record => record.Valid ∧ record.Binds store)
     (fun table member => (authenticated table member).2) balanced record member
   · apply tableChannels HostHintReadCoverage.handler (by simp [receiver])
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
+    simp [HostHintReadCoverage.handler,HostHintReadChip.component,HostHintReadChip.guardedCircuit,Guarded.circuit, HostHintReadChip.circuit, circuit_norm]
 
 theorem node_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
     (store : Store) (authenticated : RecordAuthentication witness store)
@@ -154,7 +154,7 @@ private theorem handler_spec_of_channels (env : Environment (ZMod p))
     (nodes : HostHintReadCoverage.handler.operations.ChannelGuarantees nodeChannel.toRaw env)
     (words : HostHintReadCoverage.handler.operations.ChannelGuarantees wordChannel.toRaw env) :
     HostHintReadCoverage.handler.Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
+  apply (Component.weakSoundness (by intro _; trivial) constraints ?_).1
   rw [Operations.guarantees_iff _ _ _ (HostHintReadCoverage.handler.inChannelsOrGuarantees env)]
   intro channel member
   change channel ∈ [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, wordChannel.toRaw,

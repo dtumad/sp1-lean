@@ -64,20 +64,15 @@ private theorem byte_data {i : Interaction F} {a b : ProverData F} (onByte : i.c
   subst ch
   exact valid
 
-/-- Removing the WRITE tables can remove Byte consumers. Every retained original record still
-inherits the actual provider's guarantee at the original supervisor's canonical data. -/
-theorem supervisor_byte (w : EnsembleWitness (preprocessing image source target final))
-    (checked : w.Constraints) (funded : w.BalancedChannel byteChannel.toRaw) :
-    ∀ t ∈ (supervisor w).tables, t.ChannelGuarantees byteChannel.toRaw := by
+/-- Every original signed Byte interaction, including verifier reads, inherits its genuine
+provider guarantee at any canonical prover data. The Byte predicate uses only the message. -/
+theorem supervisor_byte_interaction (w : EnsembleWitness (preprocessing image source target final))
+    (checked : w.Constraints) (funded : w.BalancedChannel byteChannel.toRaw)
+    (i : Interaction F) (inOld : i ∈ (supervisor w).interactionsWith byteChannel.toRaw) (data : ProverData F) : i.Guarantees data := by
   obtain ⟨verifier, all⟩ := byte_guarantees w checked funded
   let install := appended image source target final
   have prior := project_ledger (install.project w) byteChannel.toRaw (fun eq =>
     Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq))
-  intro t included
-  rw [t.channelGuarantees_iff_forall]
-  intro i emitted
-  have inOld : i ∈ (supervisor w).interactionsWith byteChannel.toRaw :=
-    EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨t, included, emitted⟩)
   have full : i ∈ w.interactionsWith byteChannel.toRaw := by
     rw [install.ledger]
     exact List.mem_append_left _ (prior ▸ inOld)
@@ -87,6 +82,15 @@ theorem supervisor_byte (w : EnsembleWitness (preprocessing image source target 
   · have data : row.data = w.data := w.same_data row member
     rw [← data]
     exact (row.channelGuarantees_iff_forall _).mp (all row member) i seen
+
+/-- Every original supervisor table retains its actual provider's Byte guarantees. -/
+theorem supervisor_byte (w : EnsembleWitness (preprocessing image source target final))
+    (checked : w.Constraints) (funded : w.BalancedChannel byteChannel.toRaw) :
+    ∀ t ∈ (supervisor w).tables, t.ChannelGuarantees byteChannel.toRaw := by
+  intro t member
+  rw [t.channelGuarantees_iff_forall]
+  intro i emitted
+  exact supervisor_byte_interaction w checked funded i (EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨t,member,emitted⟩)) _
 
 /-- Both original HINT_READ word tables, at positions 84 and 85, have authentic Byte reads. -/
 theorem hint_word_bytes (w : EnsembleWitness (preprocessing image source target final))

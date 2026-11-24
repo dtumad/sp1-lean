@@ -13,12 +13,7 @@ open Semantics Machine FormalModel.Shard TraceGen
 
 /-- Advance the four positions using the same event and packet as the original dispatcher. -/
 def advance (s : StreamCounts) : ExecutionEvent → Option WriteObservations.Packet → StreamCounts
-  | .syscall call, some p => match WriteRoute.ofDescriptor call.arg1 with
-    | .stdout => {s with stdout := s.stdout + p.1.toNat}
-    | .stderr => {s with stderr := s.stderr + p.1.toNat}
-    | .publicValues => {s with publicValues := s.publicValues + p.1.toNat}
-    | .hook _ => {s with hooks := s.hooks + 1}
-    | _ => s
+  | .syscall call, some p => s.record (WriteRoute.ofDescriptor call.arg1) p.1.toNat
   | _, _ => s
 
 private theorem same (earlier : WriteStreams) :
@@ -33,8 +28,8 @@ private theorem write_count (earlier : WriteStreams) {source target : HostState}
   | hook fd =>
     rw [route] at effect
     obtain ⟨_,_,head,_⟩ := effect
-    simp [advance,ofStreams,route,WriteStreams.append,WriteStreams.ofEvent,head]
-  | _ => simp [advance,ofStreams,route,WriteStreams.append,WriteStreams.ofEvent,size]
+    simp [advance,record,ofStreams,route,WriteStreams.append,WriteStreams.ofEvent,head]
+  | _ => simp [advance,record,ofStreams,route,WriteStreams.append,WriteStreams.ofEvent,size]
 
 /-- Every real mixed step preserves the running-count invariant at the next host state. -/
 theorem advance_correct {host : HostPolicy} {program : Soundness.Target.GuestProgram}

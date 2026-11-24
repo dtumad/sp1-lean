@@ -22,7 +22,8 @@ private abbrev original (w : EnsembleWitness (preprocessing image source target 
 
 attribute [local irreducible] withSources preprocessing
 
-private def hostComponents (source target : ExecutionSnapshot) : List (Component F) :=
+/-- Components of the original host receiver and resource block in registration order. -/
+def hintHostComponents (source target : ExecutionSnapshot) : List (Component F) :=
   ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component)) ++
      (HostHintReadHandoff.wordResources ++ (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables target.sail.memorySnapshot))
 
@@ -30,7 +31,7 @@ private def hostRows (w : EnsembleWitness (preprocessing image source target fin
   HostLocalCore.auxiliaryTables (hostWitness (original w))
 
 private theorem host_components (w : EnsembleWitness (preprocessing image source target final)) :
-    (hostRows w).map (·.component) = hostComponents source target := HostLocalCore.auxiliaryTables_components _
+    (hostRows w).map (·.component) = hintHostComponents source target := HostLocalCore.auxiliaryTables_components _
 
 private theorem host_size (w : EnsembleWitness (preprocessing image source target final)) : (hostRows w).length = 35 := by
   have size := congrArg List.length (host_components w)
@@ -42,10 +43,25 @@ assembly is 63 plus the given index. -/
 def hintHostTable (w : EnsembleWitness (preprocessing image source target final)) (i : Fin 35) : Table F :=
   (hostRows w)[i.val]'((host_size w).symm ▸ i.isLt)
 
-private theorem host_component (w : EnsembleWitness (preprocessing image source target final)) (i : Fin 35) :
-    (hintHostTable w i).component = (hostComponents source target)[i.val] := by
+/-- Original component at the projected physical host slot. -/
+theorem hintHostTable_component (w : EnsembleWitness (preprocessing image source target final)) (i : Fin 35) :
+    (hintHostTable w i).component = (hintHostComponents source target)[i.val] := by
   have h := List.getElem_of_eq (host_components w) (i := i.val) (by rw [List.length_map, host_size]; exact i.isLt)
   simpa only [List.getElem_map, hintHostTable] using h
+
+/-- The projected host circuit reads the very same physical array at its supervisor offset. -/
+theorem hintHostTable_cells (w : EnsembleWitness (preprocessing image source target final)) (i : Fin 35) :
+    ((supervisor w).tables.map Table.table)[(63 : Nat) + i.val]? = some (hintHostTable w i).table := by
+  have eqn := congrArg (fun xs : List (List (Array F)) => xs[(5 : Nat) + i.val]?) (WriteSourceRegistry.host_arrays (supervisor w))
+  simp only [List.map_drop,List.getElem?_drop] at eqn
+  rw [← Nat.add_assoc] at eqn
+  change ((hostWitness (original w)).tables.map Table.table)[(63 : Nat) + i.val]? = _ at eqn
+  rw [← eqn, List.getElem?_map, List.getElem?_eq_getElem (by
+    have inside : i.val < (hostRows w).length := (host_size w).symm ▸ i.isLt
+    change i.val < ((hostWitness (original w)).tables.drop 63).length at inside
+    rw [List.length_drop] at inside
+    omega),Option.map_some]
+  simp only [hintHostTable,hostRows,HostLocalCore.auxiliaryTables,List.getElem_drop]
 
 private theorem host_constraints (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
     (i : Fin 35) : (hintHostTable w i).Constraints := by
@@ -55,31 +71,31 @@ private theorem host_constraints (w : EnsembleWitness (preprocessing image sourc
   exact inner _ (List.mem_of_mem_drop (List.getElem_mem (l := hostRows w) _))
 
 private def hostUsed (source target : ExecutionSnapshot) (ch : RawChannel F) (i : Fin 35) : Bool :=
-  ((hostComponents source target)[i.val].circuit.channels.map RawChannel.name).contains ch.name
+  ((hintHostComponents source target)[i.val].circuit.channels.map RawChannel.name).contains ch.name
 
 private def hostSupport (source target : ExecutionSnapshot) (ch : RawChannel F) : List (Fin 35) :=
   (List.finRange 35).filter (hostUsed source target ch)
 
 private theorem host_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
-    (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw) :
+    (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw ∨ ch = HintReadWordChip.stateChannel.toRaw) :
     (supervisor w).interactionsWith ch =
       (hostSupport source target ch).flatMap (fun i => (hintHostTable w i).interactionsWith ch) := by
   let host := hostWitness (original w)
   have registered : ch ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: HostFinalMemory.sourceChannels target.sail.memorySnapshot) := by
-    rcases which with rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
+    rcases which with rfl | rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
   have fresh : ch ∉ (LocalCore.baseEnsemble (p := SP1Prime) image source).channels := by
     apply LocalCore.not_mem_baseEnsemble_channels
-    rcases which with rfl | rfl <;> simp [LocalCore.baseChannelNames, nodeChannel, wordChannel, Channel.toRaw]
+    rcases which with rfl | rfl | rfl <;> simp [LocalCore.baseChannelNames, nodeChannel, wordChannel, HintReadWordChip.stateChannel, Channel.toRaw]
   have split := HostLocalCore.interactions_split_new host ch registered fresh
-    (by rcases which with rfl | rfl <;> simp [nodeChannel,wordChannel,WritePermissionProvider.channel,Channel.toRaw])
-    (by rcases which with rfl | rfl <;> simp [nodeChannel,wordChannel,StaticTable.channel,ProgramImage.writePermissionTable,StaticTable.ofRows,Channel.toRaw])
+    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,WritePermissionProvider.channel,Channel.toRaw])
+    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,StaticTable.channel,ProgramImage.writePermissionTable,StaticTable.ofRows,Channel.toRaw])
   have quiet : (HostLocalCore.hostCallTable host).interactionsWith ch = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [HostLocalCore.hostCallTable_component]
     intro used
     have found := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    rcases which with rfl | rfl <;> exact Bool.noConfusion (show false = true from found)
-  have transport := host_protocol_ledger (original w) ch (by rcases which with rfl | rfl <;> simp)
+    rcases which with rfl | rfl | rfl <;> exact Bool.noConfusion (show false = true from found)
+  have transport := host_protocol_ledger (original w) ch (by rcases which with rfl | rfl | rfl <;> simp)
   change (original w).interactionsWith ch = _
   rw [← transport,split,quiet,List.nil_append]
   have rows : hostRows w = (List.finRange 35).map (hintHostTable w) := by
@@ -100,7 +116,7 @@ private theorem host_ledger (w : EnsembleWitness (preprocessing image source tar
         have empty : (hintHostTable w i).interactionsWith ch = [] := by
           apply Table.interactionsWith_nil_of_channel_not_mem
           intro present
-          rw [host_component] at present
+          rw [hintHostTable_component] at present
           exact Bool.noConfusion ((List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) present)).symm.trans yes)
         simp [yes,ih,empty]
   exact select _
@@ -121,7 +137,16 @@ theorem original_hint_words (w : EnsembleWitness (preprocessing image source tar
       ((hintHostTable w 22).interactionsWith ch ++ (hintHostTable w 24).interactionsWith ch)) := by
   let ch := (wordChannel (p := SP1Prime)).toRaw
   have mask : hostSupport source target ch = [0,21,22,24] := rfl
-  simpa only [mask,List.flatMap_cons,List.flatMap_nil,List.append_nil] using host_ledger w ch (Or.inr rfl)
+  simpa only [mask,List.flatMap_cons,List.flatMap_nil,List.append_nil] using host_ledger w ch (Or.inr (Or.inl rfl))
+
+/-- The HINT_READ header and its two physical word transfer tables carry the entire private transfer cursor. -/
+theorem original_hint_cursors (w : EnsembleWitness (preprocessing image source target final)) :
+    let ch := (HintReadWordChip.stateChannel (p := SP1Prime)).toRaw
+    (supervisor w).interactionsWith ch = (hintHostTable w 0).interactionsWith ch ++
+      ((hintHostTable w 21).interactionsWith ch ++ (hintHostTable w 22).interactionsWith ch) := by
+  let ch := (HintReadWordChip.stateChannel (p := SP1Prime)).toRaw
+  have mask : hostSupport source target ch = [0,21,22] := rfl
+  simpa only [mask,List.flatMap_cons,List.flatMap_nil,List.append_nil] using host_ledger w ch (Or.inr (Or.inr rfl))
 
 private theorem empty_node (pointer : Nat) : node? #[] pointer = none := by cases pointer <;> rfl
 
@@ -149,10 +174,10 @@ private theorem positive_node_source (w : EnsembleWitness (preprocessing image s
   rw [original_hint_nodes w] at original
   rcases List.mem_append.mp original with receive | others
   · exact False.elim (node_consumer (host_constraints w checked 0)
-      (by rw [host_component]; exact HostHintRecordSources.handler_authenticates #[]) receive push)
+      (by rw [hintHostTable_component]; exact HostHintRecordSources.handler_authenticates #[]) receive push)
   rcases List.mem_append.mp others with length | fixed
   · exact False.elim (node_consumer (host_constraints w checked 19)
-      (by rw [host_component]; exact HostHintRecordSources.hint_length_authenticates #[] false) length push)
+      (by rw [hintHostTable_component]; exact HostHintRecordSources.hint_length_authenticates #[] false) length push)
   exact fixed
 
 private theorem positive_word_source (w : EnsembleWitness (preprocessing image source target final)) (checked : w.Constraints)
@@ -161,13 +186,13 @@ private theorem positive_word_source (w : EnsembleWitness (preprocessing image s
   rw [original_hint_words w] at original
   rcases List.mem_append.mp original with receive | others
   · exact False.elim (word_consumer (host_constraints w checked 0)
-      (by rw [host_component]; exact HostHintRecordSources.handler_authenticates #[]) receive push)
+      (by rw [hintHostTable_component]; exact HostHintRecordSources.handler_authenticates #[]) receive push)
   rcases List.mem_append.mp others with interior | lastOrFixed
   · exact False.elim (word_consumer (host_constraints w checked 21)
-      (by rw [host_component]; exact HostHintRecordSources.word_consumer_authenticates #[] false) interior push)
+      (by rw [hintHostTable_component]; exact HostHintRecordSources.word_consumer_authenticates #[] false) interior push)
   rcases List.mem_append.mp lastOrFixed with last | fixed
   · exact False.elim (word_consumer (host_constraints w checked 22)
-      (by rw [host_component]; exact HostHintRecordSources.word_consumer_authenticates #[] true) last push)
+      (by rw [hintHostTable_component]; exact HostHintRecordSources.word_consumer_authenticates #[] true) last push)
   exact fixed
 
 private theorem authenticated_message {Record : TypeMap} [ProvableType Record] (ch : Channel F Record)
@@ -241,7 +266,7 @@ theorem node_read_origin (w : EnsembleWitness (preprocessing image source target
   rcases List.mem_append.mp member with prior | later
   · have fixed := positive_node_source w checked prior push
     have verified := HostHintQueue.source_authenticates source.host.io.hints (hintHostTable w 23)
-      (host_component w 23) (host_constraints w checked 23)
+      (hintHostTable_component w 23) (host_constraints w checked 23)
     exact Or.inl ⟨⟨i,fixed,push,same⟩,authenticated_message _ verified r fixed push same⟩
   rcases List.mem_append.mp later with snap | fresh
   · exact (snapshot_has_no_push w checked _ (Or.inl rfl) snap push).elim
@@ -269,7 +294,7 @@ theorem word_read_origin (w : EnsembleWitness (preprocessing image source target
   rcases List.mem_append.mp member with prior | later
   · have fixed := positive_word_source w checked prior push
     have verified := HostHintQueue.sourceWord_authenticates source.host.io.hints (hintHostTable w 24)
-      (host_component w 24) (host_constraints w checked 24)
+      (hintHostTable_component w 24) (host_constraints w checked 24)
     exact Or.inl ⟨⟨i,fixed,push,same⟩,authenticated_message _ verified r fixed push same⟩
   rcases List.mem_append.mp later with snap | fresh
   · exact (snapshot_has_no_push w checked _ (Or.inr rfl) snap push).elim
@@ -323,7 +348,8 @@ theorem hint_word_data (w : EnsembleWitness (preprocessing image source target f
   rw [hintWord_ledger w]
   exact List.mem_append_left _ read
 
-private theorem immutable_registered (ch : RawChannel F) (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw) :
+/-- The installed snapshot reader registers both immutable record channels. -/
+theorem immutable_registered (ch : RawChannel F) (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw) :
     ch ∈ (preprocessing image source target final).channels := by
   let reader : TableSlot (preprocessing image source target final).tables (HostHintSnapshot.component target.host.io.hints) := slot image source target final 10
   apply (preprocessing image source target final).tables_channels _ (reader.component_eq ▸ List.getElem_mem reader.index.isLt)

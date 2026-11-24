@@ -40,29 +40,34 @@ private theorem length_clock (empty : Bool) (input : Var HostHintLengthChip.Inpu
   apply checked.1 e
   cases empty <;> simp only [HostHintLengthChip.main,circuit_norm,Gadgets.Equality.circuit,List.mem_append] <;> tauto
 
-/-- Old queue handlers strictly advance time and preserve the permanent allocation frontier,
+/-- Enabled queue handlers strictly advance time and preserve the permanent allocation frontier,
 from their own actual assertions alone. -/
-theorem checked_edge (index : Index) (env : Environment F) (checked : (view index).component.operations.ConstraintsHold env) :
+theorem checked_edge (index : Index) (env : Environment F) (checked : (view index).component.operations.ConstraintsHold env)
+    (active : env (view index).activity = 1) :
     time (edge (index,env)).1 < time (edge (index,env)).2 ∧
     (edge (index,env)).2.allocated = (edge (index,env)).1.allocated := by
   cases index with
   | none =>
-    let input := varFromOffset HostHintReadChip.Inputs (F := F) 0
-    have valid := read_clock input env _ ((Component.constraintsHold_iff _).mp checked)
-    have cells := eval_varFromOffset_valueFromOffset (M := HostHintReadChip.Inputs) (F := F) (offset := 0) (env := env)
+    let input := varFromOffset HostHintReadChip.RowInput (F := F) 0
+    have child := Guarded.constraints_of_active HostHintReadChip.circuit inferInstance input (size HostHintReadChip.RowInput)
+      env active ((Component.constraintsHold_iff _).mp checked)
+    have valid := read_clock input.1 env _ child
     have evaluated (x : Var HostHintReadChip.Inputs F) : eval env x.clock = (eval env x).clock := by
       rcases x with ⟨⟨_,_,_,_,_,_⟩,⟨_,_,_,_⟩,_,_,_,_⟩
       simp only [HostHintReadChip.Inputs.clock,circuit_norm]
-    rw [evaluated,show eval env input = _ from cells] at valid
+    rw [evaluated,HostHintReadCoverage.decoded_input] at valid
     exact ⟨valid.2.2.2.2,rfl⟩
   | some empty =>
-    let input := varFromOffset HostHintLengthChip.Inputs (F := F) 0
-    have valid := length_clock empty input env _ ((Component.constraintsHold_iff _).mp checked)
-    have cells := eval_varFromOffset_valueFromOffset (M := HostHintLengthChip.Inputs) (F := F) (offset := 0) (env := env)
+    let input := varFromOffset HostHintLengthChip.RowInput (F := F) 0
+    have child := Guarded.constraints_of_active (HostHintLengthChip.circuit empty) inferInstance input
+      (size HostHintLengthChip.RowInput) env active ((Component.constraintsHold_iff _).mp checked)
+    have valid := length_clock empty input.1 env _ child
     have evaluated (x : Var HostHintLengthChip.Inputs F) : eval env x.clock = (eval env x).clock := by
       rcases x with ⟨⟨_,_,_,_,_,_⟩,⟨_,_,_,_⟩,_⟩
       simp only [HostHintLengthChip.Inputs.clock,circuit_norm]
-    rw [evaluated,show eval env input = _ from cells] at valid
+    rw [evaluated] at valid
+    change ClockOrder.Spec (HostHintLengthChip.Inputs.clock (eval env (varFromOffset HostHintLengthChip.Inputs 0))) at valid
+    rw [eval_varFromOffset_valueFromOffset] at valid
     exact ⟨valid.2.2.2.2,rfl⟩
 
 end SP1Clean.Soundness.HostQueueOrder

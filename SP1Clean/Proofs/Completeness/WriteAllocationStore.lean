@@ -26,7 +26,8 @@ def advanceQueueClock (previous : Nat) : ExecutionEvent → Nat
   | .ordinary => previous
   | .syscall call => if usesQueue call then call.clock else previous
 
-private theorem queue_clock_before {policy : HostPolicy} {program : Soundness.Target.GuestProgram}
+/-- Every queue clock accumulated on an execution prefix is zero or precedes its endpoint. -/
+theorem queue_clock_before {policy : HostPolicy} {program : Soundness.Target.GuestProgram}
     {source target : ExecutionState} {events : List ExecutionEvent} (path : ExecutionPath policy program source events target)
     (initial : Nat) (ordered : initial = 0 ∨ initial < source.clock) :
     events.foldl advanceQueueClock initial = 0 ∨ events.foldl advanceQueueClock initial < target.clock := by

@@ -93,38 +93,26 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
       (HostHintReadHandoff.wordResources ++ resources)),
     component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
-private theorem handler_queue_member
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
-    (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) := by
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
-  simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
-    List.zip_cons_cons, List.flatMap_cons]
-  refine List.mem_append_left _ (List.mem_map.mpr ⟨physical, physicalMem, ?_⟩)
-  have shared : (handlerTable witness).data = witness.data :=
-    witness.same_data _ (handlerTable_mem witness)
-  simp only [Table.environment, shared]
-
 /-- A consumer on the actual HINT_READ cursor belongs to its full CPU call in any
 dispatch ledger that includes the registered hint receiver. -/
 theorem word_cpu_of_received
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints)
     (received : HostLocalHandoff.calls witness ⊆ HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (steps : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
-    ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
+    ∃ handler ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data,
       ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
         ExecutionRow.syscall (HostCallLedger.input env) ∈
           LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
         cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row := by
-  obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface cursor steps row member
+  obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface constraints cursor steps row member
   obtain ⟨env, active, call, physical, _⟩ := HostQueueCPUOrder.call_cpu_of_received witness received
-    (none, handler) (handler_queue_member witness handler handlerMem)
+    (none, handler) ((handler_mem_queue witness handler).mpr handlerMem)
   rw [queue_read_call] at call
   refine ⟨handler, handlerMem, env, active, call, physical, ?_⟩
   rw [handler_clock] at same
@@ -141,13 +129,13 @@ theorem word_cpu
     (steps : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
-    ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
+    ∃ handler ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data,
       ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
         ExecutionRow.syscall (HostCallLedger.input env) ∈
           LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
         cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row :=
-  word_cpu_of_received witness interface (fun _ seen => (HostLocalHandoff.calls_perm_of_balancedChannel witness
+  word_cpu_of_received witness interface constraints (fun _ seen => (HostLocalHandoff.calls_perm_of_balancedChannel witness
     (resources_hostCall_silent interface) constraints calls).mem_iff.mpr seen) cursor steps row member
 
 /-- An actual handler's active words are exactly its authenticated node's padded write
@@ -161,21 +149,21 @@ theorem handler_writes
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data) :
     ∃ node, HintQueue.node? store (Address.toNat (HostHintReadCoverage.input env).node.pointer) = some node ∧
       ((HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness))).map
           HintReadWrites.produced).Perm
         (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) node.bytes) := by
   have valid : HostHintReadCoverage.handler.Spec env := by
-    obtain ⟨physical, present, same⟩ := List.mem_map.mp member
+    obtain ⟨physical, present, same⟩ := List.mem_map.mp (List.mem_filter.mp member).1
     have checked := handler_spec witness interface store authenticated constraints records physical present
     have shared : (handlerTable witness).data = witness.data :=
       witness.same_data _ (handlerTable_mem witness)
     rwa [Table.environment, shared, handlerTable_component, same] at checked
   have bound := HostQueueHistory.records_of_witness witness store authenticated records
-    (none, env) (handler_queue_member witness env member)
+    (none, env) ((handler_mem_queue witness env).mpr member)
   have steps := word_steps witness interface store authenticated constraints records
-  apply HostHintReadWrites.writes_of_records env _ valid
+  apply HostHintReadWrites.writes_of_records env _ valid (of_decide_eq_true (List.mem_filter.mp member).2)
     (steps.select (fun row => HostHintReadPartition.keepWord
       (HostHintReadPartition.callClock env) row.1 row.2))
     (balanced_for_of_channels witness interface constraints ordering calls cursor env member) store bound.1 bound.2
@@ -200,12 +188,12 @@ theorem handler_wordsAt
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (event : ExecutionRow p) (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
     (env : Environment (ZMod p))
-    (handler : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
+    (handler : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
     wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) event =
       HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness)) := by
   obtain ⟨physical, _, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at witness interface
-    constraints calls ordering (none, env) (handler_queue_member witness env handler) event member clock
+    constraints calls ordering (none, env) ((handler_mem_queue witness env).mpr handler) event member clock
   have same := congrArg (fun message : HostCallChip.Message (ZMod p) =>
     (message.clk_high, message.clk_low)) sameCall
   rw [wordsAt_tables _ _, sameEvent, wrapper_call_clock, same, queue_read_call, handler_clock]
@@ -228,7 +216,7 @@ theorem wordsAt_addresses_nodup
   · simp only [empty, List.map_nil, List.nodup_nil]
   obtain ⟨row, present⟩ := List.exists_mem_of_ne_nil _ empty
   obtain ⟨physical, selected⟩ := List.mem_filter.mp present
-  obtain ⟨handler, member, clock⟩ := consumer_has_handler_of_balancedChannel witness interface cursor
+  obtain ⟨handler, member, clock⟩ := consumer_has_handler_of_balancedChannel witness interface constraints cursor
     (word_steps witness interface store authenticated constraints records) row physical
   have same : HostHintReadPartition.callClock handler = cpuClock witness.data event :=
     clock.trans (of_decide_eq_true selected)
@@ -336,12 +324,13 @@ private theorem wordsAt_nil_of_not_read
   simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at unique
   have sameEvent := List.inj_on_of_nodup_map unique member cpuMem time.symm
   have spec : HostHintReadChip.Spec (HostHintReadCoverage.input handler) := by
-    obtain ⟨physical, physicalMem, same⟩ := List.mem_map.mp handlerMem
+    obtain ⟨physical, physicalMem, same⟩ := List.mem_map.mp (List.mem_filter.mp handlerMem).1
     have checked := handler_spec witness interface _
       authenticated constraints records physical physicalMem
     have shared : (handlerTable witness).data = witness.data :=
       witness.same_data _ (handlerTable_mem witness)
-    rwa [Table.environment, shared, handlerTable_component, same] at checked
+    rw [Table.environment, shared, handlerTable_component, same] at checked
+    exact HostHintReadCoverage.active_spec _ checked (of_decide_eq_true (List.mem_filter.mp handlerMem).2)
   exact notRead _ sameEvent (read_call_code (HostCallLedger.input env) _ sameCall spec)
 
 /-- Only an authenticated HINT_READ can own added hint RAM rows. CPU clock uniqueness rules

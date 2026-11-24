@@ -93,26 +93,5 @@ theorem node_values (empty : Bool) (input : Var Inputs (ZMod p))
   cases empty <;> simp only [Operations.interactionValuesWith, main_node_interactions,
     Bool.false_eq_true, ↓reduceIte, List.map_cons, List.map_nil, Channel.eval_pulled]
 
-theorem component_spec_of_node
-    {generation : WitnessGeneration.Generation (ZMod p) Inputs} (empty : Bool) (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold env)
-    (node : ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees nodeChannel.toRaw env) :
-    ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).inChannelsOrGuarantees env)]
-  intro selected member
-  cases empty
-  · change selected ∈ [nodeChannel.toRaw, HostCallChip.channel.toRaw, stateChannel.toRaw] at member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl
-    · exact node
-    · exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
-    · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
-  · change selected ∈ [HostCallChip.channel.toRaw, stateChannel.toRaw] at member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl
-    · exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
-    · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
-
 end HostHintLengthChip
 end SP1Clean

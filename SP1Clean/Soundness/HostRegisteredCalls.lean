@@ -67,7 +67,7 @@ theorem classified (witness : EnsembleWitness (ensemble includeVerify image sour
     (member : message ∈ HostCallLedger.calls (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness))
       (HostHintQueueBoundary.projected witness).data) :
     HostReceiptProfile.code includeVerify (Word.toBitVec64 message.code) ∧
-    ((∃ row ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables (HostHintQueueBoundary.projected witness)),
+    ((∃ row ∈ HostQueueOrder.activeRows (queueTables (HostHintQueueBoundary.projected witness)),
         message = HostQueueCPUOrder.call row) ∨
       (Word.toBitVec64 message.code ≠ SyscallKind.hintRead.code ∧
         ∀ (host : HostState), host.exitCode = none → ∀ (policy : HostPolicy), policy.characteristic = p →

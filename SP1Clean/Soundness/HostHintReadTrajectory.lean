@@ -129,7 +129,7 @@ theorem GroundingCarrier.hintLength_result (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
-    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+    (handler : (some empty, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
@@ -164,7 +164,7 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
-    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+    (handler : (some empty, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
@@ -215,28 +215,10 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     (HostHintQueueBoundary.source_authentication witness constraints) checks (HostHintQueueBoundary.record_channels witness balanced)
   have spec := HostQueueOrder.rows_spec _ (queueTables_aligned (HostHintQueueBoundary.projected witness))
     tables (some empty, env) handler
+  have spec := HostQueueOrder.length_active_spec empty env spec (TransitionView.mem_readIndexedActiveRows.mp handler).2
   change HostCallLedger.call physical = (valueFromOffset HostHintLengthChip.Inputs 0 env).call at sameCall
   rw [sameCall] at registers
   exact ⟨n, current, atIndex, paired, length_run empty _ spec current.host result running _ _ registers⟩
-
-private theorem read_member {resources : List (Component (ZMod p))}
-    {names : ((HostLocalCore.tables image source
-      ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
-        (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
-  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
-  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
-        (HostHintReadHandoff.wordResources ++ resources)),
-    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
-    (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) := by
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
-  simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
-    List.zip_cons_cons, List.flatMap_cons]
-  have shared : (handlerTable witness).data = witness.data :=
-    witness.same_data _ (handlerTable_mem witness)
-  simp only [Table.environment, shared]
-  exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
 
 /-- HINT_READ dispatch and its exact padded writes follow at the replayed prefix from incoming
 State truth and operand currency. Running status and previous replay are derived internally. -/
@@ -246,8 +228,7 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
-    (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · witness.data))
+    (handler : env ∈ HostHintReadCoverage.activeEnvs (handlerTable (HostHintQueueBoundary.projected witness)) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
@@ -271,7 +252,7 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
   have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have ordering := HostHintQueueBoundary.SourceWitness.orderingChannels witness constraints balanced
   have matched := HostQueueCPUOrder.call_cpu_at (HostHintQueueBoundary.projected witness) interface checks calls ordering
-  have handlerMember := read_member (HostHintQueueBoundary.projected witness) env
+  have handlerMember := (handler_mem_queue (HostHintQueueBoundary.projected witness) env).mpr
   simp only [HostHintQueueBoundary.projected_data] at matched handlerMember
   obtain ⟨physical, active, _, sameEvent⟩ := matched (none, env) (handlerMember handler) event member clock
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.projected witness)

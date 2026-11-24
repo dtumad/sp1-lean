@@ -22,7 +22,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 /-- The handler's authenticated node fixes its complete padded write inventory before the
 execution walk identifies that node with the current host queue. -/
 theorem writes_of_records (env : Environment (ZMod p)) (rows : List (HintReadCoverage.Row (p := p)))
-    (valid : handler.Spec env)
+    (valid : handler.Spec env) (enabled : env activity = 1)
     (wordSpecs : HintReadCoverage.Steps rows)
     (balanced : BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
@@ -35,10 +35,10 @@ theorem writes_of_records (env : Environment (ZMod p)) (rows : List (HintReadCov
         (wordWrites (Address.toNat (input env).span.start) node.bytes) := by
   have headerBinding := header
   obtain ⟨node, read, _, _⟩ := header
-  obtain ⟨_, _, _, _, nodeLength, _, _, span, endStep, nodeValid⟩ := valid
+  obtain ⟨_, _, _, _, nodeLength, _, _, span, endStep, nodeValid⟩ := active_spec env valid enabled
   have count := (span.node_end (input env).node headerBinding nodeValid nodeLength (input env).endStep.word
     ending endStep.1 rfl rfl read).2.1
-  rw [handler_cursor] at balanced
+  rw [handler_cursor,enabled] at balanced
   obtain ⟨path, perm, _, inventory, _⟩ := HintReadWrites.ordered_writes rows
     (input env).first (input env).final wordSpecs balanced store node read words
     (by simp [HostHintReadChip.Inputs.first, Address.toNat]) count
@@ -46,7 +46,7 @@ theorem writes_of_records (env : Environment (ZMod p)) (rows : List (HintReadCov
 
 /-- The actual handler and authenticated consumers produce exactly the current hint's padded words. -/
 theorem complete_writes (env : Environment (ZMod p)) (rows : List (HintReadCoverage.Row (p := p)))
-    (valid : handler.Spec env)
+    (valid : handler.Spec env) (enabled : env activity = 1)
     (wordSpecs : HintReadCoverage.Steps rows)
     (balanced : BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
@@ -60,13 +60,13 @@ theorem complete_writes (env : Environment (ZMod p)) (rows : List (HintReadCover
       ((HintReadCoverage.activeRows rows).map HintReadWrites.produced).Perm
         (wordWrites (Address.toNat (input env).span.start) bytes) := by
   obtain ⟨node, rest, read, head, next, length, count⟩ :=
-    HostHintReadChip.node_effect_of_spec (input env) valid store hints current header ending
-  rw [handler_cursor] at balanced
+    HostHintReadChip.node_effect_of_spec (input env) (active_spec env valid enabled) store hints current header ending
+  rw [handler_cursor,enabled] at balanced
   obtain ⟨path, perm, _, inventory, _⟩ := HintReadWrites.ordered_writes rows
     (input env).first (input env).final wordSpecs balanced store node read words
     (by simp [HostHintReadChip.Inputs.first, Address.toNat]) count
   refine ⟨node.bytes, rest, head, next, ?_, ?_⟩
-  · have argument : (input env).call.arg2 = (input env).span.length.value := valid.2.2.2.1
+  · have argument : (input env).call.arg2 = (input env).span.length.value := (active_spec env valid enabled).2.2.2.1
     rwa [argument] at length
   · exact (perm.map HintReadWrites.produced).symm.trans (List.Perm.of_eq inventory)
 
@@ -91,7 +91,7 @@ private theorem run_of_hint [Fact (2 ^ 17 < p)]
 
 /-- The physical consumer subsystem agrees with the full concrete call, including padded memory effects. -/
 theorem run_of_rows (env : Environment (ZMod p)) (rows : List (HintReadCoverage.Row (p := p)))
-    (valid : handler.Spec env)
+    (valid : handler.Spec env) (enabled : env activity = 1)
     (wordSpecs : HintReadCoverage.Steps rows)
     (balanced : BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
@@ -112,10 +112,10 @@ theorem run_of_rows (env : Environment (ZMod p)) (rows : List (HintReadCoverage.
       ((HintReadCoverage.activeRows rows).map HintReadWrites.produced).Perm
         (wordWrites (Address.toNat (input env).span.start) bytes) := by
   obtain ⟨bytes, rest, hints, next, length, inventory⟩ :=
-    complete_writes env rows valid wordSpecs balanced store host.io.hints current header ending words
+    complete_writes env rows valid enabled wordSpecs balanced store host.io.hints current header ending words
   have permitted := HintReadWriteLedger.permitted_of_inventory rows wordSpecs policy.memory
     (Address.toNat (input env).span.start) bytes inventory permissions
-  exact ⟨bytes, rest, hints, next, run_of_hint (input env) valid host store current header ending
+  exact ⟨bytes, rest, hints, next, run_of_hint (input env) (active_spec env valid enabled) host store current header ending
     bytes rest hints length running policy context permitted code arg1 arg2, inventory⟩
 
 end SP1Clean.Soundness.HostHintReadWrites

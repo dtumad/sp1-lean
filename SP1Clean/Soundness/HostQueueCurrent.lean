@@ -84,7 +84,7 @@ theorem of_prefix
     (cpuWalk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {path : List (Row (p := p))} {initial final : HostHintQueue.State (ZMod p)} {upper : HintQueue.Store}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
+    (queueExhaustive : path.Perm (HostQueueOrder.activeRows (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path)
     (history : HostHintQueueHistory.History source.host.io.hints final upper path)
     (prior rest : List (ExecutionRow p)) (event : ExecutionRow p) (split : cpu = prior ++ event :: rest)
@@ -111,7 +111,8 @@ theorem of_prefix
   rw [prefixEq] at actual
   obtain ⟨store, hints, bounded, observed, binding⟩ := current_at_cpu witness.data history
     (times_pairwise queueWalk (fun row member => rows_spec _ (queueTables_aligned witness) specs row
-      (queueExhaustive.mem_iff.mp member))) row member (split ▸ sorted)
+      (queueExhaustive.mem_iff.mp member))
+      (fun _ seen => (TransitionView.mem_readIndexedActiveRows.mp (queueExhaustive.mem_iff.mp seen)).2)) row member (split ▸ sorted)
     (split ▸ clocks_sublist witness interface constraints calls ordering specs queueExhaustive queueWalk cpuExhaustive cpuWalk) clock
   have equal : hints = current.host.io.hints := Option.some.inj (observed.symm.trans actual)
   exact ⟨store, bounded, equal ▸ binding⟩
@@ -132,7 +133,7 @@ theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostS
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     (prior rest : List (ExecutionRow p)) (event : ExecutionRow p) (split : cpu = prior ++ event :: rest)
     (row : Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows indices (queueTables (HostHintQueueBoundary.projected witness)))
+    (member : row ∈ HostQueueOrder.activeRows (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = eventTime row)
     (policy : HostPolicy) (program : Target.GuestProgram) (current : ExecutionState)
     (replayed : replayEvents? policy program source.realize (prior.map ExecutionRow.event) = some current) :
@@ -202,18 +203,6 @@ theorem source_membership_silent (image : ProgramImage) (source : ExecutionSnaps
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at valid
   contradiction
 
-private theorem read_member
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
-    (none, env) ∈ TransitionView.readIndexedRows indices (queueTables witness) := by
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
-  simp only [TransitionView.readIndexedRows, indices, queueTables, List.zip_cons_cons, List.flatMap_cons]
-  refine List.mem_append_left _ (List.mem_map.mpr ⟨physical, physicalMem, ?_⟩)
-  have shared : (handlerTable witness).data = witness.data :=
-    witness.same_data _ (handlerTable_mem witness)
-  simp only [Table.environment, shared]
-
 private theorem read_edge (env : Environment (ZMod p)) :
     edge (none, env) = ((HostHintReadCoverage.input env).previous, (HostHintReadCoverage.input env).next) := rfl
 
@@ -246,8 +235,7 @@ private theorem registers_of_prefix (valid : image.Valid)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     (prior rest : List (ExecutionRow p)) (event : ExecutionRow p) (split : cpu = prior ++ event :: rest)
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable witness).table.map
-      (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable witness) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = eventTime (none, env))
     (current : ExecutionState)
     (replayed : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -265,7 +253,7 @@ private theorem registers_of_prefix (valid : image.Valid)
     rw [split]
     exact List.mem_append_right _ List.mem_cons_self
   obtain ⟨physical, active, sameCall, sameEvent⟩ := call_cpu_at witness
-    interface constraints calls ordering (none, env) (read_member _ env member) event cpuMember clock
+    interface constraints calls ordering (none, env) ((handler_mem_queue _ env).mpr member) event cpuMember clock
   have time := HostLocalCore.executionRow_time witness constraints ordering cpuExhaustive cpuWalk prior rest event split
   have atTime := time.trans (timeline_at_prefix source.clock cpu prior rest event split).symm
   have atState := (trajectory_at_prefix ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -290,8 +278,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     (prior rest : List (ExecutionRow p)) (event : ExecutionRow p) (split : cpu = prior ++ event :: rest)
     (env : Environment (ZMod p))
-    (member : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · witness.data))
+    (member : env ∈ HostHintReadCoverage.activeEnvs (handlerTable (HostHintQueueBoundary.projected witness)) witness.data)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = eventTime (none, env))
     (current : ExecutionState)
     (replayed : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -335,13 +322,12 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
   rw [sameData, samePublic] at registers
   have registers := by
     exact registers cpuExhaustive cpuWalk prior rest event split env member clock current replayed currency
-  have retainedMember : env ∈ (handlerTable retained).table.map
-      (Environment.fromArray · retained.data) := by
+  have retainedMember : env ∈ HostHintReadCoverage.activeEnvs (handlerTable retained) retained.data := by
     rw [sameData]
     exact member
   obtain ⟨store, extension, binding⟩ := source_current witness constraints balanced cpuExhaustive cpuWalk
     prior rest event split (none, env) (by
-      exact read_member retained env retainedMember)
+      exact (handler_mem_queue retained env).mpr retainedMember)
     clock _ _ current replayed
   rw [read_edge] at binding
   have execution := by
@@ -365,7 +351,7 @@ theorem length_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFina
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     (prior rest : List (ExecutionRow p)) (event : ExecutionRow p) (split : cpu = prior ++ event :: rest)
     (empty : Bool) (env : Environment (ZMod p))
-    (member : (some empty, env) ∈ TransitionView.readIndexedRows indices
+    (member : (some empty, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = eventTime (some empty, env))
     (policy : HostPolicy) (program : Target.GuestProgram) (current : ExecutionState)
@@ -378,11 +364,12 @@ theorem length_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFina
   have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have authentication := HostHintQueueBoundary.source_authentication witness constraints
   have specs := queue_specs (HostHintQueueBoundary.projected witness) interface _ authentication checks records
-  have retainedMember : (some empty, env) ∈ TransitionView.readIndexedRows indices
+  have retainedMember : (some empty, env) ∈ HostQueueOrder.activeRows
       (queueTables (HostHintQueueBoundary.projected witness)) := member
   have advance := HostQueueHistory.advance (some empty, env) _
     (rows_spec _
       (queueTables_aligned (HostHintQueueBoundary.projected witness)) specs _ retainedMember)
+    (TransitionView.mem_readIndexedActiveRows.mp retainedMember).2
     (HostQueueHistory.records_of_witness (HostHintQueueBoundary.projected witness) _ authentication records _ retainedMember)
   obtain ⟨_, _, _, _, applied, _⟩ := advance store current.host.io.hints extension binding
   by_contra different

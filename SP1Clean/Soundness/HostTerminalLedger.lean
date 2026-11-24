@@ -194,9 +194,10 @@ private theorem receipt_none_of_queue (message : HostCallChip.Message (ZMod p))
   exact ite_eq_right nonzero
 
 private theorem queue_receipt (row : HostQueueOrder.Row (p := p))
-    (valid : (HostQueueOrder.view row.1).component.Spec row.2) :
+    (valid : (HostQueueOrder.view row.1).component.Spec row.2)
+    (active : row.2 (HostQueueOrder.view row.1).activity = 1) :
     receipt? (HostQueueCPUOrder.call row) = none :=
-  receipt_none_of_queue _ _ (queue_projection row valid).2
+  receipt_none_of_queue _ _ (queue_projection row valid active).2
 
 private theorem filterMap_right {α β : Type*} (select : α → Option β)
     (all front back : List α) (permutation : all.Perm (front ++ back))
@@ -217,6 +218,7 @@ private theorem calls_receipts
   obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp member
   exact queue_receipt row
     (HostQueueOrder.rows_spec _ (queueTables_aligned witness) specs row rowMem)
+    (TransitionView.mem_readIndexedActiveRows.mp rowMem).2
 
 variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 

@@ -73,28 +73,33 @@ private theorem length_advance [Fact (2 ^ 17 < p)] (empty : Bool) (input : HostH
 
 /-- Actual row contracts turn authenticated later records into a valid current-queue step. -/
 theorem advance (row : Row (p := p)) (upper : Store)
-    (valid : (view row.1).component.Spec row.2) (records : Records upper row) :
+    (valid : (view row.1).component.Spec row.2) (active : row.2 (view row.1).activity = 1) (records : Records upper row) :
     HintQueueHistory.Advances edge event upper row := by
   intro store hints bounded current
   rcases row with ⟨index, env⟩
   cases index with
   | none =>
-    change HostHintReadChip.Spec (HostHintReadCoverage.input env) at valid
+    simp only [view,readView] at active valid
+    have sem : HostHintReadChip.Spec (HostHintReadCoverage.input env) := HostHintReadCoverage.active_spec env valid active
     change (HostHintReadCoverage.input env).node.Binds upper ∧
       (HostHintReadCoverage.input env).endStep.word.Binds upper at records
     simp only [read_edge, event] at current ⊢
-    obtain ⟨nextHints, applied, next⟩ := read_advance (HostHintReadCoverage.input env) valid
+    obtain ⟨nextHints, applied, next⟩ := read_advance (HostHintReadCoverage.input env) sem
       upper store hints bounded records.1 records.2 current
     exact ⟨store, nextHints, .refl _, bounded, applied, next⟩
   | some empty =>
-    change HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.Inputs 0 env) at valid
+    simp only [view,lengthView] at active valid
+    change env (varFromOffset HostHintLengthChip.RowInput 0).2 = 1 at active
+    rw [Guarded.eval_activity,eval_varFromOffset_valueFromOffset] at active
+    have sem : HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.RowInput 0 env).1 := valid.2 active
+    rw [length_input] at sem
     change empty = false → (valueFromOffset HostHintLengthChip.Inputs 0 env).node.Binds upper at records
     simp only [length_edge, event] at current ⊢
-    have step := length_advance empty (valueFromOffset HostHintLengthChip.Inputs 0 env) valid
+    have step := length_advance empty (valueFromOffset HostHintLengthChip.Inputs 0 env) sem
       upper store hints bounded records current
     exact ⟨store, hints, .refl _, bounded, step⟩
 
-private theorem length_record (env : Environment (ZMod p)) :
+private theorem length_record (env : Environment (ZMod p)) (active : env (varFromOffset (F := ZMod p) HostHintLengthChip.RowInput 0).2 = 1) :
     (lengthView false).component.operations.interactionValuesWith nodeChannel.toRaw env =
       [nodeChannel.pulledValue (valueFromOffset HostHintLengthChip.Inputs 0 env).node] := by
   have evalNode (input : Var HostHintLengthChip.Inputs (ZMod p)) :
@@ -103,9 +108,13 @@ private theorem length_record (env : Environment (ZMod p)) :
     cases node
     simp only [circuit_norm]
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((HostHintLengthChip.main false (varFromOffset HostHintLengthChip.Inputs 0)).operations
-    (size HostHintLengthChip.Inputs)).interactionValuesWith nodeChannel.toRaw env = _
-  rw [HostHintLengthChip.node_values, evalNode, eval_varFromOffset_valueFromOffset]
+  change (((HostHintLengthChip.guardedCircuit false).main (varFromOffset HostHintLengthChip.RowInput 0)).operations
+    (size HostHintLengthChip.RowInput)).interactionValuesWith nodeChannel.toRaw env = _
+  rw [HostHintLengthChip.guarded_node_values]
+  dsimp only at active
+  simp only [Bool.false_eq_true,ite_false,evalNode]
+  rw [active]
+  simp only [HostHintLengthChip.RowInput,varFromOffset_pair,eval_varFromOffset_valueFromOffset]
   rfl
 
 open HostHintReadLocal
@@ -122,14 +131,14 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem pull_mem
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness))
+    (row : Row (p := p)) (member : row ∈ HostQueueOrder.activeRows (queueTables witness))
     (channel : RawChannel (ZMod p)) (interaction : Interaction (ZMod p))
     (present : interaction ∈ (view row.1).component.operations.interactionValuesWith channel row.2) :
     interaction ∈ witness.interactionsWith channel := by
   have inside : interaction ∈ (queueTables witness).flatMap (·.interactionsWith channel) := by
     rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component)
       _ _ (queueTables_aligned witness)]
-    exact List.mem_flatMap.mpr ⟨row, member, present⟩
+    exact List.mem_flatMap.mpr ⟨row, (List.mem_filter.mp member).1, present⟩
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp inside
   exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, queueTables_mem witness table tableMem, present⟩)
 
@@ -137,28 +146,30 @@ private theorem pull_mem
 theorem records_of_witness
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (store : Store) (authenticated : RecordAuthentication witness store) (balanced : RecordChannels witness)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
+    (row : Row (p := p)) (member : row ∈ HostQueueOrder.activeRows (queueTables witness)) :
     Records store row := by
   rcases row with ⟨index, env⟩
   cases index with
   | none =>
+    have active : env HostHintReadCoverage.activity = 1 := by
+      simpa only [view,readView] using (TransitionView.mem_readIndexedActiveRows.mp member).2
     constructor
     · apply (node_authenticated witness store authenticated balanced.node _ ?_).2
       apply pull_mem witness (none, env) member
       change _ ∈ HostHintReadCoverage.handler.operations.interactionValuesWith nodeChannel.toRaw env
-      rw [(handler_records env).1]
+      rw [(handler_records env active).1]
       exact List.mem_cons_self ..
     · apply (word_authenticated witness store authenticated balanced.word _ ?_).2
       apply pull_mem witness (none, env) member
       change _ ∈ HostHintReadCoverage.handler.operations.interactionValuesWith wordChannel.toRaw env
-      rw [(handler_records env).2]
+      rw [(handler_records env active).2]
       exact List.mem_cons_self ..
   | some empty =>
     intro nonempty
     subst empty
     apply (node_authenticated witness store authenticated balanced.node _ ?_).2
     apply pull_mem witness (some false, env) member
-    rw [show (view (some false)).component = (lengthView false).component from rfl, length_record]
+    rw [show (view (some false)).component = (lengthView false).component from rfl, length_record env (by simpa only [view,lengthView] using (TransitionView.mem_readIndexedActiveRows.mp member).2)]
     exact List.mem_cons_self ..
 
 end SP1Clean.Soundness.HostQueueHistory

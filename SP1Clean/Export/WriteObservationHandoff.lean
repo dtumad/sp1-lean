@@ -140,4 +140,17 @@ theorem hostCall_ledger (w : EnsembleWitness (preprocessing image source target 
     Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq))
   exact split.trans (congrArg (fun l => l ++ _) prior.symm)
 
+/-- The complete raw HostCall ledger balances all original operations and the true eighth receiver. -/
+theorem native_packet_balance (w : EnsembleWitness (assembly image source target final))
+    (fit : w.InteractionsFit .logUp) (paid : w.Balanced .logUp) :
+    BalancedInteractions ((supervisor (observed w)).interactionsWith HostCallChip.channel.toRaw ++
+      ((packetSlot image source target final).table (observed w)).interactionsWith HostCallChip.channel.toRaw) := by
+  let z := packetSlot image source target final
+  have reg : HostCallChip.channel.toRaw ∈ (preprocessing image source target final).channels :=
+    (preprocessing image source target final).tables_channels _ (z.component_eq ▸ List.getElem_mem z.index.isLt)
+      (show HostCallChip.channel.toRaw ∈ WritePacket.component.circuit.channels from List.mem_cons_self)
+  have h := observed_balance w fit paid _ reg (of_decide_eq_true rfl)
+  change BalancedInteractions ((observed w).interactionsWith HostCallChip.channel.toRaw) at h
+  rwa [hostCall_ledger] at h
+
 end SP1Clean.Export.WriteObservationAssembly

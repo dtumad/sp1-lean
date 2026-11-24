@@ -131,19 +131,24 @@ private theorem hook_node {d : Dispatch F} {c : Open F} {n : Step F}
   have eq := congrArg (fun v : fields 3 F => v[i]) owner
   interval_cases i <;> simpa [Step.source,node,Dispatch.ticket,Dispatch.owner,hook,notDirect,threeLimbs,circuit_norm] using eq
 
-/-- The real dispatch ticket opens one complete batch for the indexed public hook reply.
-Every returned hint is prepended in reverse order at its actual permanent identity, including
-empty buffers. A reply with no hints has an actual matching header and an empty walk. -/
-theorem native_hook_batch (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
-    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) {store : Store} (stored : PersistentQueue w store)
-    (d : Dispatch F) (md : d ∈ allocatingDispatches (observed w)) (hook : d.flags.hook = 1) :
+/-- One physical allocating header and its complete prepend walk bind the public hook's
+returned buffers, in their original indexed order, to the actual persistent store. -/
+def ReturnedBatchAt (w : EnsembleWitness (native image source target)) (store : Store) (d : Dispatch F) : Prop :=
     ∃ call ∈ (allocationInputs (observed w)).1, call.ticket = d.ticket d.flags ∧ ∃ reply rows,
       (WriteStreams.fromEndpoints source.host target.host).hooks[Address.toNat d.previous.replies]? = some reply ∧
       Walk.IsWalk (fun n : Step F => (n.before,n.after)) call.first call.last rows ∧
       rows.length = reply.hints.length ∧ ∀ i : Fin rows.length, let n := rows[i.val]
         n.direct = 0 ∧ n.reply = d.previous.replies ∧ Address.toNat n.index = rows.length-(i.val+1) ∧
         ∃ bytes, reply.hints[rows.length-(i.val+1)]? = some bytes ∧
-          node? store (Address.toNat n.node.node.pointer) = some ⟨bytes,Address.toNat n.node.node.tail⟩ := by
+          node? store (Address.toNat n.node.node.pointer) = some ⟨bytes,Address.toNat n.node.node.tail⟩
+
+/-- The real dispatch ticket opens one complete batch for the indexed public hook reply.
+Every returned hint is prepended in reverse order at its actual permanent identity, including
+empty buffers. A reply with no hints has an actual matching header and an empty walk. -/
+theorem native_hook_batch (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) {store : Store} (stored : PersistentQueue w store)
+    (d : Dispatch F) (md : d ∈ allocatingDispatches (observed w)) (hook : d.flags.hook = 1) :
+    ReturnedBatchAt w store d := by
   obtain ⟨reply,found,number,_,_⟩ := native_hook_reply w ok fit raw d md hook
   have gate := ((native_allocation_tickets w ok fit raw).2 d md).2
   rw [hook] at gate

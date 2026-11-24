@@ -1,3 +1,4 @@
+import SP1Clean.Export.CheckedLedger
 import SP1Clean.Export.WriteObserverSlotLedger
 import SP1Clean.Export.WriteOutgoingSnapshot
 import SP1Clean.Proofs.Completeness.HintQueueFixedReaders
@@ -24,17 +25,6 @@ noncomputable def outgoingTables (data : ProverData F) : List (Table F) :=
   let hints := ctx.target.host.io.hints
   [HostHintSnapshot.tableFor cursor.1 cursor.2 hints (InstalledAssembly.admissible_hint_snapshot_fits run) data,
    HostHintSnapshot.Seal.tableFor hints (outgoingState run) data]
-
-/-- Exact count, signed balance, field fit and active matches for one whole physical ledger. -/
-structure CheckedLedger (ledger : List (Interaction F)) (count : Nat) : Prop where
-  /-- Physical count including zero-weight sites. -/
-  size : ledger.length = count
-  /-- Every encoded value has total signed multiplicity zero. -/
-  signed : LogUpBalanced ledger
-  /-- The entire occurrence count fits the released field. -/
-  fits : (Balance.logUp (F := F)).fits ledger.length = true
-  /-- Every active occurrence has a matching occurrence of opposite sign. -/
-  matched : BalancedInteractions ledger
 
 /-- The generated immutable reader and terminal table both satisfy their local obligations.
 Their actual fixed and padded rows fund the complete private walk. -/

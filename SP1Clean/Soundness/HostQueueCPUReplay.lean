@@ -185,7 +185,7 @@ theorem cpu_projection
     (cpuWalk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {path : List (Row (p := p))} {initial final : HostHintQueue.State (ZMod p)}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
+    (queueExhaustive : path.Perm (HostQueueOrder.activeRows (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path) :
     cpu.filterMap (stampedCPU witness.data) = path.map fun row => (eventTime row, HostQueueHistory.event row) := by
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
@@ -203,6 +203,7 @@ theorem cpu_projection
   simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at cpuSorted
   exact ordered_projection witness.data cpu path projected cpuSorted
     (times_pairwise queueWalk (fun row member => rows_spec _ (queueTables_aligned witness) specs row
-      (queueExhaustive.mem_iff.mp member)))
+      (queueExhaustive.mem_iff.mp member))
+      (fun _ seen => (TransitionView.mem_readIndexedActiveRows.mp (queueExhaustive.mem_iff.mp seen)).2))
 
 end SP1Clean.Soundness.HostQueueCPUReplay

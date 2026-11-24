@@ -54,7 +54,7 @@ theorem word_cpu_eight (witness : EnsembleWitness (HostObserved.ensemble image s
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (HostHintReadLocal.wordTables (hostWitness witness))) :
     let host := hostWitness witness
-    ∃ handler ∈ (HostHintReadLocal.handlerTable host).table.map (Environment.fromArray · host.data),
+    ∃ handler ∈ HostHintReadCoverage.activeEnvs (HostHintReadLocal.handlerTable host) host.data,
       ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable host) host.data,
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
         ExecutionRow.syscall (HostCallLedger.input env) ∈ LocalCore.executionRows (HostLocalCore.localWitness host) ∧
@@ -75,7 +75,7 @@ theorem word_cpu_eight (witness : EnsembleWitness (HostObserved.ensemble image s
     rwa [host_protocol_ledger witness _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))]
   have steps := HostHintReadLocal.word_steps_of_guarantees host physical (localGuarantees _ bytes) (localGuarantees _ wordData)
   have dispatch := eight_calls witness checked packet installed packetChecked balanced
-  exact word_cpu_of_received host interface (fun _ seen => dispatch.mem_iff.mpr (List.mem_append_left _ seen)) localCursor steps row member
+  exact word_cpu_of_received host interface physical (fun _ seen => dispatch.mem_iff.mpr (List.mem_append_left _ seen)) localCursor steps row member
 
 
 private theorem cpuClock_data (event : ExecutionRow SP1Prime) (left right : ProverData Fp) :
