@@ -23,9 +23,12 @@ theorem dispatch_ledger (r : Var Dispatch (ZMod p)) (n : Nat) (ch : RawChannel (
      (queueEffectChannel.pushedIf (r.flags.direct + r.flags.hook) (r.ticket r.flags)).toRaw,
      (positionChannel.pushed (r.start r.flags)).toRaw, (positionChannel.pulled (r.finish r.flags)).toRaw,
      (cursorChannel.pushed (r.next r.flags)).toRaw].filter (fun i => decide (i.channel = ch)) := by
-  have sum (x : Var AddressSum.Inputs (ZMod p)) (off : Nat) :=
-    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddressSum.circuit ch x
-      (by simpa [AddressSum.circuit, AddressSum.elaborated, circuit_norm] using other) List.not_mem_nil (n := off)
+  have sum (x : Var AddressSum.Inputs (ZMod p)) (off : Nat) :
+      (FlatOperation.interactions (AddressSum.circuit.toSubcircuit off x).ops.toFlat).filter (fun i => decide (i.channel = ch)) = [] := by
+    rw [FormalAssertion.toSubcircuit_interactions]
+    change (((AddressSum.main x).operations off).interactions.filter _) = []
+    rw [AddressSum.interactions]
+    rfl
   have pred (x : Var WriteStart.Inputs (ZMod p)) (off : Nat) :=
     InteractionRecovery.filter_interactions_formalAssertion_eq_nil WriteStart.circuit ch x
       (by simpa [WriteStart.circuit, WriteStart.elaborated, circuit_norm] using other) List.not_mem_nil (n := off)
@@ -40,7 +43,7 @@ theorem dispatch_ledger (r : Var Dispatch (ZMod p)) (n : Nat) (ch : RawChannel (
 
 private theorem dispatch_lookups (r : Var Dispatch (ZMod p)) (n : Nat) : ((dispatchMain r).operations n).lookups = [] := by
   simp [dispatchMain, AddressSum.circuit, AddressSum.main, WordRangeCheck.circuit, WordRangeCheck.main,
-    AddrAddOperation.circuit, AddrAddOperation.main, Gadgets.Equality.circuit, Gadgets.Equality.main, Gadgets.IsZeroField.circuit,
+    Gadgets.Equality.circuit, Gadgets.Equality.main, Gadgets.IsZeroField.circuit,
     Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.ToBits.main, Operations.lookups, circuit_norm,
     flagsCircuit, flagsMain, WriteStart.circuit, WriteStart.main, AddOperation.circuit, AddOperation.main]
 

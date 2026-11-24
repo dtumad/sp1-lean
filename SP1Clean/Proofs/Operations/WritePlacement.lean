@@ -51,34 +51,36 @@ def laneComponent : Component (ZMod p) where
 
 variable [Fact (2^17 < p)]
 
-/-- Away from the SP1 Byte range chip, this is the entire position-row ledger. -/
-theorem byteStep_ledger (r : Var ByteStep (ZMod p)) (n : Nat) (ch : RawChannel (ZMod p))
-    (other : ch ≠ Channels.byteChannel.toRaw) :
+/-- The entire position-row ledger; the nonwrapping additions have no interaction traffic. -/
+theorem byteStep_ledger (r : Var ByteStep (ZMod p)) (n : Nat) (ch : RawChannel (ZMod p)) :
     ((byteStepMain r).operations n).interactionsWith ch =
       [(positionChannel.pulled r.previous).toRaw, (byteChannel.pulled r.read).toRaw,
        (recordChannel.pulledIf (1 - r.ignored - r.direct) r.record).toRaw,
        (nodeByteChannel.pushedIf r.direct r.nodeByte).toRaw, (positionChannel.pushed r.next).toRaw].filter
         (fun a => decide (a.channel = ch)) := by
-  have sum (x : Var AddressSum.Inputs (ZMod p)) (off : Nat) :=
-    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddressSum.circuit ch x
-      (by simpa [AddressSum.circuit, AddressSum.elaborated, circuit_norm] using other) List.not_mem_nil (n := off)
+  have sum (x : Var AddressSum.Inputs (ZMod p)) (off : Nat) :
+      (FlatOperation.interactions (AddressSum.circuit.toSubcircuit off x).ops.toFlat).filter (fun i => decide (i.channel = ch)) = [] := by
+    rw [FormalAssertion.toSubcircuit_interactions]
+    change (((AddressSum.main x).operations off).interactions.filter _) = []
+    rw [AddressSum.interactions]
+    rfl
   simp only [byteStepMain, circuit_norm, sum, List.nil_append]
   simp [Gadgets.IsZeroField.circuit, circuit_norm, List.filter_cons]
 
 private theorem byteStep_lookups (r : Var ByteStep (ZMod p)) (n : Nat) : ((byteStepMain r).operations n).lookups = [] := by
   simp [byteStepMain, AddressSum.circuit, AddressSum.main, WordRangeCheck.circuit, WordRangeCheck.main,
-    AddrAddOperation.circuit, AddrAddOperation.main, Gadgets.Equality.main, Gadgets.IsZeroField.circuit,
+    Gadgets.Equality.main, Gadgets.IsZeroField.circuit,
     Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.ToBits.main, Operations.lookups, circuit_norm]
 
 instance byteStepGuardSupported : Guarded.Supported (byteStepCircuit (p := p)) :=
   Guarded.Supported.of_emitted_requirements _ byteStep_lookups
     (by
       intro ch mem
-      have known : ch = positionChannel.toRaw ∨ ch = byteChannel.toRaw ∨ ch = Channels.byteChannel.toRaw ∨
+      have known : ch = positionChannel.toRaw ∨ ch = byteChannel.toRaw ∨
           ch = recordChannel.toRaw ∨ ch = nodeByteChannel.toRaw := by
         simpa [GeneralFormalCircuit.channels, byteStepCircuit, byteStepElaborated, AddressSum.circuit, AddressSum.elaborated,
           circuit_norm, or_assoc, or_comm, or_left_comm] using mem
-      rcases known with rfl | rfl | rfl | rfl | rfl <;> infer_instance)
+      rcases known with rfl | rfl | rfl | rfl <;> infer_instance)
     (by
       intro r n ch required outside act member
       have onlyNode : ch = nodeByteChannel.toRaw := by
@@ -89,7 +91,7 @@ instance byteStepGuardSupported : Guarded.Supported (byteStepCircuit (p := p)) :
         · exact False.elim (outside (by simp [byteStepCircuit, byteStepElaborated, circuit_norm]))
       subst ch
       change act ∈ ((byteStepMain r).operations n).interactionsWith nodeByteChannel.toRaw at member
-      rw [byteStep_ledger _ _ _ (by simp [nodeByteChannel, Channels.byteChannel, circuit_norm])] at member
+      rw [byteStep_ledger] at member
       simp [positionChannel, byteChannel, recordChannel, nodeByteChannel, circuit_norm] at member
       subst act
       rfl)
