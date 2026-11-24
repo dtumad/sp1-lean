@@ -1,7 +1,7 @@
 import SP1Clean.Math.SP1Field
 import SP1Clean.Native.Chips.HaltPaddingChip
 import SP1Clean.FormalModel.Contracts.ShardHeader
-import SP1Clean.Semantics.Execution.HaltReceipts
+import SP1Clean.Semantics.Host.HostReplay
 import SP1Clean.Soundness.BumpDecode
 import ToClean.Air.GuardedDemandTable
 
@@ -76,9 +76,13 @@ theorem ledger (source target : ExecutionSnapshot) (data : ProverData F) :
 another, producing precisely the public header's exit code. -/
 theorem receipt {policy : HostPolicy} {program : Target.GuestProgram} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (path : ExecutionPath policy program source.realize events target.realize) :
-    (inputs source target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap ExecutionEvent.haltReceipt? =
+    (inputs source target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
       [(SP1StateBoundary.haltCode source target).getD 0] := by
-  have actual : events.filterMap ExecutionEvent.haltReceipt? = (SP1StateBoundary.haltCode source target).toList := path.haltReceipts
+  have actual : events.filterMap (hostExitAfter none) = (SP1StateBoundary.haltCode source target).toList := by
+    rw [path.exit_receipts]
+    unfold SP1StateBoundary.haltCode
+    change (if source.host.exitCode = none then target.host.exitCode.toList else []) = _
+    split <;> rfl
   rw [actual]
   unfold inputs
   cases SP1StateBoundary.haltCode source target <;> rfl

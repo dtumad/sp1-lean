@@ -196,7 +196,6 @@ import SP1Clean.Semantics.Execution.ExecutionMemory
 import SP1Clean.Semantics.Execution.ExecutionAccess
 import SP1Clean.Semantics.Execution.ExecutionFrame
 import SP1Clean.Semantics.Execution.ExecutionPath
-import SP1Clean.Semantics.Execution.HaltReceipts
 import SP1Clean.Semantics.Execution.ParkedSyscall
 import SP1Clean.Semantics.Execution.ExecutionReplay
 import SP1Clean.Semantics.Resources.BoundaryGrowth

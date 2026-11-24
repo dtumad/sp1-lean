@@ -98,7 +98,7 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
             (∀ t ∈ (full.tables.drop (installSources w).tables.length).take front.length, t.Constraints ∧ t.Guarantees) ∧
             (∀ id, WriteMixedHostTables.InstalledAt pre id (WriteMixedHostTables.table release.1 data id)) ∧
             (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
-            (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap ExecutionEvent.haltReceipt? =
+            (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
               [(SP1StateBoundary.haltCode ctx.source ctx.target).getD 0] ∧
             (∀ d, LogUpBalanced (full.interactionsWith (HostCommitChip.stateChannel d).toRaw)) ∧
             CheckedLedger (full.interactionsWith WritePermissionProvider.channel.toRaw) (WriteMixedPermissionLedger.occurrences events rows) ∧
