@@ -25,6 +25,25 @@ theorem bounded_of_times (record : Readback (ZMod p))
   unfold clkNat at previous current
   exact ⟨by omega, lo.1, by omega, lo.2⟩
 
+/-- An active physical predecessor receipt covers the word held throughout its closed
+interval. Both endpoints are the original Memory and publication clocks. -/
+theorem covers_predecessor (tape : List (ZMod p × Readback (ZMod p))) (upper : ZMod p × ZMod p)
+    (prior : MemoryMsg (ZMod p)) (occurrence : (1, AccessSupply.atClock upper prior) ∈ tape)
+    (canonical : MemoryBoundary.CanonicalSpec prior) (key : ValidKey (MemoryMsg.locOf prior).busAddress)
+    (word : MemoryMsg.isU64 prior) (time : ℕ) (priorBound : MemoryMsg.ClkBound prior)
+    (covered : upper.2.val < 2 ^ 24 ∧ MemoryMsg.timeNat prior ≤ time ∧ time ≤ clkNat upper.1 upper.2 ∧
+      clkNat upper.1 upper.2 < 2 ^ 48) :
+    ∃ r ∈ live tape, Covers r ⟨Address.ofNat (MemoryMsg.locOf prior).busAddress, Address.ofNat time, prior.value⟩ := by
+  let r := AccessSupply.atClock upper prior
+  have liveRecord : r ∈ live tape := List.mem_map.mpr ⟨(1, r), List.mem_filter.mpr ⟨occurrence, by simp⟩, rfl⟩
+  obtain ⟨low, first, last, bound⟩ := covered
+  have bounded : Bounded r := bounded_of_times r ⟨priorBound, low⟩ ((first.trans last).trans_lt bound) bound
+  have keyBound : Address.Bounded r.key := Address.bounded_of_isU64_asWord canonical.2.1
+  have correct : Address.toNat r.key = (MemoryMsg.locOf prior).busAddress := (Address.toNat_asWord r.key).symm.trans canonical.2.2
+  have covers := covers_record r bounded keyBound (correct ▸ key) word time (last.trans_lt bound) ⟨first, last⟩
+  have fields : Address.ofNat (MemoryMsg.locOf prior).busAddress = r.key := correct ▸ Address.ofNat_toNat keyBound
+  exact ⟨r, liveRecord, by rw [fields]; exact covers⟩
+
 /-- A genuine, live original Memory pull covers its own held value throughout the exact
 physical interval. The clock high limbs follow from integer time bounds. -/
 theorem covers_pull (raw : AccessInventory.Source → Table (ZMod p))
@@ -39,17 +58,8 @@ theorem covers_pull (raw : AccessInventory.Source → Table (ZMod p))
                  clkNat upper.1 upper.2 < 2 ^ 48) :
     ∃ r ∈ live (AccessInventory.records raw),
       Covers r ⟨Address.ofNat (MemoryMsg.locOf prior).busAddress, Address.ofNat time, prior.value⟩ := by
-  let upper := AccessInventory.upper id ((raw id).environment physical)
-  let r := AccessSupply.atClock upper prior
-  have occurrence := AccessInventory.records_of_pull raw registered id physical rowMem 1 prior pull
-  have liveRecord : r ∈ live (AccessInventory.records raw) := List.mem_map.mpr ⟨(1, r), List.mem_filter.mpr ⟨occurrence, by simp⟩, rfl⟩
-  obtain ⟨low, first, last, bound⟩ := covered
-  have bounded : Bounded r := bounded_of_times r ⟨priorBound, low⟩ ((first.trans last).trans_lt bound) bound
-  have keyBound : Address.Bounded r.key := Address.bounded_of_isU64_asWord canonical.2.1
-  have correct : Address.toNat r.key = (MemoryMsg.locOf prior).busAddress := (Address.toNat_asWord r.key).symm.trans canonical.2.2
-  have covers := covers_record r bounded keyBound (correct ▸ key) word time (last.trans_lt bound) ⟨first, last⟩
-  have fields : Address.ofNat (MemoryMsg.locOf prior).busAddress = r.key := correct ▸ Address.ofNat_toNat keyBound
-  exact ⟨r, liveRecord, by rw [fields]; exact covers⟩
+  exact covers_predecessor _ _ prior (AccessInventory.records_of_pull raw registered id physical rowMem 1 prior pull)
+    canonical key word time priorBound covered
 
 /-- For a selected genuine next access, the actual counted sources contain a record for
 the exact semantic word at this incoming cut. Only facts about the original Memory row,

@@ -121,10 +121,10 @@ theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
     intro address bound
     rw [ram, ByteMemory.toSailMemory_get?, ite_eq_left bound]⟩
   have records := HostLocalCore.final_records_canonical_nodup (HostHintQueueBoundary.projected witness)
-    (auxiliaryInterface (GroundingResources.sourceInterface source.host.io.hints extra))
     (source_boundary_silent source _ (by simp))
     (HostHintQueueBoundary.projected_constraints witness constraints)
-    (HostHintQueueBoundary.record_channels witness balanced).byte
+    (HostLocalCore.localWitness_byte _ (auxiliaryInterface (GroundingResources.sourceInterface source.host.io.hints extra))
+      (HostHintQueueBoundary.projected_constraints witness constraints) (HostHintQueueBoundary.record_channels witness balanced).byte)
     (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
   apply (MemorySnapshot.checkFinal_iff_reads _ _ _ ?_ ?_).mpr
   · intro loc bound

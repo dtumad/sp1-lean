@@ -341,20 +341,28 @@ theorem interactionView_interactions_perm {ens : Ensemble F PublicIO}
   simp only [List.append_assoc]
   exact (List.perm_append_comm ..).append_left _
 
+/-- A registered channel absent from the added verifier keeps its literal signed ledger,
+including zero-weight rows, before making any balance assumption. -/
+theorem project_silent_interactions {ens : Ensemble F PublicIO}
+    {registered : closed.circuit.channels ⊆ ens.channels}
+    (witness : EnsembleWitness (closed.install ens registered)) (selected : RawChannel F)
+    (member : selected ∈ ens.channels) (silent : selected ∉ closed.circuit.channels) :
+    (closed.project witness).interactionsWith selected = witness.interactionsWith selected := by
+  change _ = (closed.install ens registered).verifierOperations.interactionValuesWith selected
+    (Environment.fromInput witness.publicInput witness.data) ++ _
+  rw [closed.install_verifier_interactions_of_mem ens registered _ selected member]
+  change _ = (_ ++ closed.interactionsWith witness.data selected) ++ _
+  rw [closed.interactionsWith_nil_of_channel_not_mem _ _ silent, List.append_nil]
+  rfl
+
 /-- Channels unused by the boundary retain balance and the full original occurrence bound. -/
 theorem project_balancedChannel {ens : Ensemble F PublicIO}
     {registered : closed.circuit.channels ⊆ ens.channels}
     (witness : EnsembleWitness (closed.install ens registered)) (selected : RawChannel F)
     (member : selected ∈ ens.channels) (silent : selected ∉ closed.circuit.channels)
     (balanced : witness.BalancedChannel selected) : (closed.project witness).BalancedChannel selected := by
-  have different : closed.channel ens ≠ selected := by
-    intro same
-    exact closed.channel_not_mem ens (show closed.channel ens ∈ ens.channels from same ▸ member)
-  have empty : closed.interactionsWith witness.data selected = [] :=
-    closed.interactionsWith_nil_of_channel_not_mem witness.data selected silent
-  have permutation := closed.interactionView_interactions_perm witness selected
-  rw [closed.interactionView_interactions witness selected different, empty, List.append_nil] at permutation
-  exact BalancedInteractions.of_perm balanced permutation
+  change BalancedInteractions ((closed.project witness).interactionsWith selected)
+  rwa [closed.project_silent_interactions witness selected member silent]
 
 /-- Accepted boundaries retain the original interactions and enforce every assertion. -/
 theorem balanced_iff {ens : Ensemble F PublicIO}

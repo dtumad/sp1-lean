@@ -25,7 +25,8 @@ private theorem instructionRows_advancing {image : ProgramImage} {source : Execu
     StateChronology.Advancing ((ExecutionRow.instruction row).edge witness.data) ∧
       StateMsg.timeNat ((ExecutionRow.instruction row).edge witness.data).2 =
         StateMsg.timeNat ((ExecutionRow.instruction row).edge witness.data).1 + (ExecutionRow.instruction row).duration ∧
-      Semantics.activeClockPhase (StateMsg.timeNat ((ExecutionRow.instruction row).edge witness.data).1) := by
+      Semantics.activeClockPhase (StateMsg.timeNat ((ExecutionRow.instruction row).edge witness.data).1) ∧
+      ((ExecutionRow.instruction row).edge witness.data).1.clk_low.val < 2 ^ 24 := by
   obtain ⟨decodedMem, real⟩ := List.mem_filter.mp member
   have active := of_decide_eq_true real
   have byte := channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
@@ -47,13 +48,15 @@ private theorem haltRows_advancing {image : ProgramImage} {source : ExecutionSna
     StateChronology.Advancing ((ExecutionRow.halt row).edge witness.data) ∧
       StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).2 =
         StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1 + (ExecutionRow.halt row).duration ∧
-      Semantics.activeClockPhase (StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1) := by
+      Semantics.activeClockPhase (StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1) ∧
+      ((ExecutionRow.halt row).edge witness.data).1.clk_low.val < 2 ^ 24 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   have bounds := haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
     (witness.same_data _ (systemTable_mem witness 2))
     (channels.byte _ (systemTable_mem witness 2)) physicalMem real
   have advancing := halt_advancing _ bounds
-  exact ⟨advancing.1, advancing.2, TimeExtraction.clkNat_phase_of_cpuState_bounds _ _ _ bounds.1 bounds.2⟩
+  exact ⟨advancing.1, advancing.2, TimeExtraction.clkNat_phase_of_cpuState_bounds _ _ _ bounds.1 bounds.2,
+    Nat.lt_trans (TimeExtraction.clkVal_small_add_of_cpuState_bounds _ _ 0 (by decide) bounds.1 bounds.2).1 (by decide)⟩
 
 private theorem syscallRows_advancing {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -62,7 +65,8 @@ private theorem syscallRows_advancing {image : ProgramImage} {source : Execution
     StateChronology.Advancing ((ExecutionRow.syscall row).edge witness.data) ∧
       StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).2 =
         StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1 + (ExecutionRow.syscall row).duration ∧
-      Semantics.activeClockPhase (StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1) := by
+      Semantics.activeClockPhase (StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1) ∧
+      ((ExecutionRow.syscall row).edge witness.data).1.clk_low.val < 2 ^ 24 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   have bounds := syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
     (witness.same_data _ (systemTable_mem witness 3))
@@ -72,7 +76,8 @@ private theorem syscallRows_advancing {image : ProgramImage} {source : Execution
     real (syscallInstrsRow_pcArm_spec_of_component _ witness.data (systemTable_component witness 3)
     (witness.same_data _ (systemTable_mem witness 3))
       (systemTable_constraints witness constraints 3) physicalMem)
-  exact ⟨advancing.1, advancing.2, TimeExtraction.clkNat_phase_of_cpuState_bounds _ _ _ bounds.1 bounds.2⟩
+  exact ⟨advancing.1, advancing.2, TimeExtraction.clkNat_phase_of_cpuState_bounds _ _ _ bounds.1 bounds.2,
+    Nat.lt_trans (TimeExtraction.clkVal_small_add_of_cpuState_bounds _ _ 0 (by decide) bounds.1 bounds.2).1 (by decide)⟩
 
 /-- Clock progress and the PC preservation/range-check dichotomy come from each physical row. -/
 theorem executionRows_clock_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
@@ -82,7 +87,8 @@ theorem executionRows_clock_of_orderingChannels {image : ProgramImage} {source :
     StateChronology.Advancing (row.edge witness.data) ∧
       StateMsg.timeNat (row.edge witness.data).2 =
         StateMsg.timeNat (row.edge witness.data).1 + row.duration ∧
-      Semantics.activeClockPhase (StateMsg.timeNat (row.edge witness.data).1) := by
+      Semantics.activeClockPhase (StateMsg.timeNat (row.edge witness.data).1) ∧
+      (row.edge witness.data).1.clk_low.val < 2 ^ 24 := by
   simp only [executionRows, List.mem_append, List.mem_map] at member
   rcases member with (⟨decoded, member, rfl⟩ | ⟨halt, member, rfl⟩) | ⟨syscall, member, rfl⟩
   · exact instructionRows_advancing witness channels member

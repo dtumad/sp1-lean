@@ -62,16 +62,16 @@ private theorem word_clock_time (row : HintReadCoverage.Row (p := p)) :
 private theorem cpu_clock_time (data : ProverData (ZMod p)) (event : ExecutionRow p) :
     clkNat (cpuClock data event).1 (cpuClock data event).2 = StateMsg.timeNat (event.edge data).1 := rfl
 
-private theorem clock_keys_nodup (data : ProverData (ZMod p)) (cpu events : List (ExecutionRow p))
-    (exhaustive : cpu.Perm events)
-    (unique : (events.map (fun event => StateMsg.timeNat (event.edge data).1)).Nodup) :
-    (cpu.map (cpuClock data)).Nodup := by
-  have perm : (cpu.map (fun event => StateMsg.timeNat (event.edge data).1)).Perm
-      (events.map (fun event => StateMsg.timeNat (event.edge data).1)) := exhaustive.map _
-  have ordered : (cpu.map (fun event => StateMsg.timeNat (event.edge data).1)).Nodup := perm.nodup_iff.mpr unique
-  have mapped : ((cpu.map (cpuClock data)).map (fun key => clkNat key.1 key.2)).Nodup := by
-    simpa only [List.map_map, Function.comp_def, cpu_clock_time] using ordered
-  exact List.Nodup.of_map _ mapped
+/-- Unique CPU clocks and an owner for every physical occurrence give an exact partition
+of the word tape, including repeated rows and repeated payloads. -/
+theorem words_partition_of_owned (data : ProverData (ZMod p)) (words : List (HintReadCoverage.Row (p := p)))
+    (cpu : List (ExecutionRow p)) (unique : (cpu.map (cpuClock data)).Nodup)
+    (owned : ∀ row ∈ words, ∃ event ∈ cpu, cpuClock data event = wordClock row) :
+    (cpu.flatMap (wordsAt data words)).Perm words := by
+  have partition := List.flatMap_filter_key_perm (cpu.map (cpuClock data)) words wordClock unique
+    (fun row member => List.mem_map.mpr (owned row member))
+  unfold wordsAt
+  simpa only [List.flatMap_map, Function.comp_def] using partition
 
 private theorem touch_at (data : ProverData (ZMod p)) (event : ExecutionRow p)
     (row : HintReadCoverage.Row (p := p))
@@ -106,6 +106,31 @@ private theorem handler_queue_member
     witness.same_data _ (handlerTable_mem witness)
   simp only [Table.environment, shared]
 
+/-- A consumer on the actual HINT_READ cursor belongs to its full CPU call in any
+dispatch ledger that includes the registered hint receiver. -/
+theorem word_cpu_of_received
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (received : HostLocalHandoff.calls witness ⊆ HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data)
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (steps : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
+    (row : HintReadCoverage.Row (p := p))
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
+    ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
+      ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
+        HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
+        ExecutionRow.syscall (HostCallLedger.input env) ∈
+          LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
+        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row := by
+  obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface cursor steps row member
+  obtain ⟨env, active, call, physical, _⟩ := HostQueueCPUOrder.call_cpu_of_received witness received
+    (none, handler) (handler_queue_member witness handler handlerMem)
+  rw [queue_read_call] at call
+  refine ⟨handler, handlerMem, env, active, call, physical, ?_⟩
+  rw [handler_clock] at same
+  exact (wrapper_call_clock witness.data env).trans
+    ((congrArg (fun message : HostCallChip.Message (ZMod p) => (message.clk_high, message.clk_low)) call).trans same)
+
 /-- Every active word belongs to an actual active syscall with the handler's complete call.
 The clock is derived from the two installed ledgers, independently of Memory-value guarantees. -/
 theorem word_cpu
@@ -121,15 +146,9 @@ theorem word_cpu
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
         ExecutionRow.syscall (HostCallLedger.input env) ∈
           LocalCore.executionRows (HostLocalCore.localWitness witness) ∧
-        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row := by
-  obtain ⟨handler, handlerMem, same⟩ := consumer_has_handler_of_balancedChannel witness interface cursor steps row member
-  obtain ⟨env, active, call, physical, _⟩ := HostQueueCPUOrder.call_cpu witness interface constraints calls
-    (none, handler) (handler_queue_member witness handler handlerMem)
-  rw [queue_read_call] at call
-  refine ⟨handler, handlerMem, env, active, call, physical, ?_⟩
-  rw [handler_clock] at same
-  exact (wrapper_call_clock witness.data env).trans
-    ((congrArg (fun message : HostCallChip.Message (ZMod p) => (message.clk_high, message.clk_low)) call).trans same)
+        cpuClock witness.data (.syscall (HostCallLedger.input env)) = wordClock row :=
+  word_cpu_of_received witness interface (fun _ seen => (HostLocalHandoff.calls_perm_of_balancedChannel witness
+    (resources_hostCall_silent interface) constraints calls).mem_iff.mpr seen) cursor steps row member
 
 /-- An actual handler's active words are exactly its authenticated node's padded write
 inventory. This does not require the current call or its preceding CPU replay to succeed. -/
@@ -360,20 +379,19 @@ theorem words_partition
     (cpu.flatMap (wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables witness)))).Perm
       (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) := by
-  have unique := LocalCore.executionRows_times_nodup_of_orderingChannels (HostLocalCore.localWitness witness)
-    (HostLocalCore.localWitness_constraints witness constraints)
-    ordering
+  have unique := LocalCore.executionRows_clocks_nodup_of_orderingChannels (HostLocalCore.localWitness witness)
+    (HostLocalCore.localWitness_constraints witness constraints) ordering
   simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at unique
-  have uniqueKeys := clock_keys_nodup witness.data cpu _ exhaustive unique
-  have partition := List.flatMap_filter_key_perm
-    (cpu.map (cpuClock witness.data))
-    (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) wordClock uniqueKeys (by
-      intro row member
-      obtain ⟨_, _, env, _, _, physical, time⟩ := word_cpu witness interface constraints calls cursor steps row member
-      exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env),
-        exhaustive.mem_iff.mpr physical, time⟩)
-  unfold wordsAt
-  simpa only [List.flatMap_map, Function.comp_def] using partition
+  apply words_partition_of_owned _ _ _ ((exhaustive.map _).nodup_iff.mpr unique)
+  intro row member
+  obtain ⟨_, _, env, _, _, physical, time⟩ := word_cpu witness interface constraints calls cursor steps row member
+  exact ⟨.syscall (HostCallLedger.input env), exhaustive.mem_iff.mpr physical, time⟩
+
+/-- The physical HINT_READ word tape selected by the installed word and final-word tables. -/
+noncomputable def sourceWords
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames) :=
+  TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+    (wordTables (HostHintQueueBoundary.projected witness))
 
 /-- The source-backed assembly derives every premise of the exact CPU word partition. -/
 theorem source_words_partition

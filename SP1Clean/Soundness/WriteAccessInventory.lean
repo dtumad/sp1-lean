@@ -65,7 +65,8 @@ def Origin (raw : Source → Table (ZMod p)) (id : Source) (record : Readback (Z
   | .refresh => FromRefresh (raw id) record
   | .finalizer ram => FromFinal ram (raw id) record
 
-private theorem authenticates (raw : Source → Table (ZMod p)) (registered : ∀ id, (raw id).component = original id) (id : Source) :
+/-- Each installed source authenticates its original physical predecessor. -/
+theorem publish_authenticates (raw : Source → Table (ZMod p)) (registered : ∀ id, (raw id).component = original id) (id : Source) :
     (publish id (raw id) (registered id)).Authenticates readbackChannel (Origin raw id) := by
   cases id with
   | ordinary instruction => exact OrdinarySources.publish_authenticates instruction _ (registered (.ordinary instruction))
@@ -125,7 +126,7 @@ theorem authenticates_versions (raw : Source → Table (ZMod p)) (registered : �
   refine ReadbackSupply.authenticates_versions _ supply installed checked _ ?_ balanced
   intro table member
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp member
-  exact (authenticates raw registered id).mono (fun _ origin => ⟨id, origin⟩)
+  exact (publish_authenticates raw registered id).mono (fun _ origin => ⟨id, origin⟩)
 
 /-- Actual raw LogUp balance authenticates the source group at its exact occurrence count. -/
 theorem authenticates_of_logUp (raw : Source → Table (ZMod p)) (registered : ∀ id, (raw id).component = original id)

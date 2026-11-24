@@ -35,6 +35,14 @@ variable {components : List (Component F)} {component : Component F}
 def ofIndex (components : List (Component F)) (index : Fin components.length) :
     TableSlot components components[index.val] := ⟨index, rfl⟩
 
+/-- A registry lookup supplies its bounded physical position and exact component identity. -/
+def ofGetElem? {i : ℕ} (found : components[i]? = some component) : TableSlot components component :=
+  let facts := List.getElem?_eq_some_iff.mp found
+  ⟨⟨i, facts.1⟩, facts.2⟩
+
+@[simp] theorem ofGetElem?_index {i : ℕ} (found : components[i]? = some component) :
+    (ofGetElem? found).index.val = i := rfl
+
 /-- Appending resources preserves the positions of an existing component block. -/
 def appendLeft (slot : TableSlot components component) (suffix : List (Component F)) :
     TableSlot (components ++ suffix) component where

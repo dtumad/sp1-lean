@@ -61,6 +61,23 @@ theorem table_records (id : Source) (table : Table (ZMod p)) (registered : table
 noncomputable def records (raw : Source → Table (ZMod p)) : List (ZMod p × Readback (ZMod p)) :=
   sources.flatMap fun id => (raw id).table.flatMap fun row => rowRecords id ((raw id).environment row)
 
+/-- A positive receipt on the flattened source tape arose on a physical array of an actual
+registered publisher with the same complete payload. This is independent of supply funding. -/
+theorem origin_of_record (raw : Source → Table (ZMod p)) (registered : ∀ id, (raw id).component = original id)
+    {gate : ZMod p} {record : Readback (ZMod p)} (member : (gate, record) ∈ records raw) (positive : gate ≠ 0) :
+    ∃ id, Origin raw id record := by
+  obtain ⟨id, _, member⟩ := List.mem_flatMap.mp member
+  have emitted : readbackChannel.pushedIfValue gate record ∈
+      (publish id (raw id) (registered id)).interactionsWith readbackChannel.toRaw := by
+    rw [table_records]
+    exact List.mem_map.mpr ⟨(gate, record), member, rfl⟩
+  obtain ⟨physical, present, occurrence⟩ := List.mem_flatMap.mp emitted
+  obtain ⟨actual, payload, origin⟩ := publish_authenticates raw registered id physical present _ occurrence
+    ⟨positive, fun same => nomatch same⟩
+  have same := congrArg (fromElements (M := Readback)) (Vector.toArray_inj.mp payload)
+  simp only [ProvableType.fromElements_toElements] at same
+  exact ⟨id, same ▸ origin⟩
+
 theorem ledger_records (raw : Source → Table (ZMod p)) (registered : ∀ id, (raw id).component = original id)
     (supply : Table (ZMod p)) :
     ledger raw registered supply = supply.interactionsWith readbackChannel.toRaw ++

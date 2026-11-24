@@ -314,6 +314,16 @@ theorem rowPrefix_buildRow (c : Component F) (input : c.Input F) (data : ProverD
   rw [valueFromOffset_fromArray] at same
   simpa only [ProvableType.toElements_fromElements] using congrArg toElements same
 
+/-- For a preallocated table the official row builder preserves every fixed input cell. -/
+theorem fixedRowsMatch_buildRows (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
+    (hint : ProverHint F) {mode : WitnessGeneration.PreallocatedMode F c.Input}
+    (generation : c.generation = .preallocated mode) :
+    c.FixedRowsMatch (inputs.map (c.buildRow · data hint)) ↔
+      inputs.length = mode.height.toNat ∧
+        ∀ (i : ℕ) (bound : i < inputs.length), mode.FixedAt (UInt64.ofNat i) inputs[i] := by
+  simp only [FixedRowsMatch, generation, List.length_map, List.getElem_map, rowPrefix_buildRow,
+    ProvableType.fromElements_toElements]
+
 end Component
 
 /-! ## Assembling a whole table -/

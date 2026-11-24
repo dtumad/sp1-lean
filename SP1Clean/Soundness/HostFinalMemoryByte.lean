@@ -41,7 +41,8 @@ theorem component_byte_requirements (interface : HostHintReadLocal.ExtensionInte
     · exact not_required _ (by rfl) env checked
   · exact not_required _ (by rfl) env checked
 
-private theorem verifier_requirements (env : Environment (ZMod p)) :
+/-- The original verifier establishes its own outgoing interaction requirements independently of the table ledger. -/
+theorem verifier_requirements (env : Environment (ZMod p)) :
     (ensemble image source target final bankFinal others resources channels names registration).verifierOperations.FullRequirements env := by
   change ((withReceipts image source target final bankFinal others resources channels names registration).verifier.andThen
     ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).program

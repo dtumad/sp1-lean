@@ -8,9 +8,14 @@ public import ToClean.Circuit.VerifierAssertions
 public import ToClean.Circuit.VerifierInteractions
 public import ToClean.Circuit.Receipt
 public import ToClean.Circuit.ReceiptList
+public import ToClean.Circuit.EmptyChannelInterface
 public import ToClean.Circuit.Guarded
 public import ToClean.Air.RowProjection
 public import ToClean.Air.EnsembleProjection
+import ToClean.Air.EnsembleRelabel
+import ToClean.Air.AppendedTables
+import ToClean.Air.AppendedAuthentication
+import ToClean.Air.AppendedBuild
 public import ToClean.Air.ExpressionScope
 public import ToClean.Air.TableSlot
 public import ToClean.Air.FixedPrefix
@@ -46,6 +51,7 @@ public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
 public import ToClean.Air.DemandPadding
 public import ToClean.Air.GuardedDemandTable
+public import ToClean.Air.GuardedLedger
 public import ToClean.Circuit.StaticTable
 public import ToClean.Air.TableBuild
 public import ToClean.Air.LookupFree

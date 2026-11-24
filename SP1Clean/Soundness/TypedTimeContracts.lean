@@ -244,7 +244,8 @@ def StateTimeConstraintShape (chip : SupportedChip p) : Prop :=
       row.is_real = 1 →
         Semantics.StateMsg.timeNat (statePushMessage row) =
           Semantics.StateMsg.timeNat (statePullMessage row) + 8 ∧
-          Semantics.activeClockPhase (Semantics.StateMsg.timeNat (statePullMessage row))
+          Semantics.activeClockPhase (Semantics.StateMsg.timeNat (statePullMessage row)) ∧
+          (statePullMessage row).clk_low.val < 2 ^ 24
 
 /-- Transport a circuit-local clock theorem to its supported descriptor without unfolding the
 dependent registry record. -/
@@ -327,7 +328,8 @@ theorem DecodedInstructionRow.stateTimeStep_of_byteGuarantees
     (real : (decoded.toChipRow data).is_real = 1) :
     Semantics.StateMsg.timeNat (decodedStateEdge data decoded).2 =
       Semantics.StateMsg.timeNat (decodedStateEdge data decoded).1 + 8 ∧
-      Semantics.activeClockPhase (Semantics.StateMsg.timeNat (decodedStateEdge data decoded).1) := by
+      Semantics.activeClockPhase (Semantics.StateMsg.timeNat (decodedStateEdge data decoded).1) ∧
+      (decodedStateEdge data decoded).1.clk_low.val < 2 ^ 24 := by
   exact supportedChip_stateTimeConstraintShape decoded.chip
     (decodedInstructionRows_chip_mem tables decodedMem) data decoded.physical guarantees real
 

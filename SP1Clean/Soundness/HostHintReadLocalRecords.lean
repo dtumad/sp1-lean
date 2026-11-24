@@ -228,12 +228,12 @@ private theorem word_step_of_channels (last : Bool) (input : Var HintReadWordChi
   change HintReadStep.Spec last (eval env (input.step last)) at valid
   rwa [evaluated] at valid
 
-/-- Every installed consumer's authenticated word and exact successor follow from Byte/record
-balance and the bundled step circuit. No prior RAM representation guarantee is required. -/
-theorem word_steps (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface others resources) (store : Store)
-    (authenticated : RecordAuthentication witness store)
-    (constraints : witness.Constraints) (balanced : RecordChannels witness) :
+/-- Word steps need only the physical constraints, byte ranges, and authenticated hint
+word records. All three facts can be projected from a larger host assembly. -/
+theorem word_steps_of_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ wordTables witness, table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (words : ∀ table ∈ wordTables witness, table.ChannelGuarantees wordChannel.toRaw) :
     HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) := by
   constructor
   · exact HintReadCoverage.rows_activity_binary _ (wordTables_aligned witness)
@@ -244,10 +244,10 @@ theorem word_steps (witness : EnsembleWitness (ensemble image source others reso
     obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
     obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
     have component := List.forall₂_zip (wordTables_aligned witness) paired
-    have present := wordTables_mem witness table (List.of_mem_zip paired).2
-    have checked := constraints table present physical physicalMem
-    have bytes := byte_guarantees witness interface constraints balanced.byte table present physical physicalMem
-    have words := word_guarantees witness store authenticated balanced.word table present physical physicalMem
+    have present := (List.of_mem_zip paired).2
+    have checked := constraints table (wordTables_mem witness table present) physical physicalMem
+    have bytes := bytes table present physical physicalMem
+    have words := words table present physical physicalMem
     rw [← component] at checked bytes words
     have valid := word_step_of_channels last (varFromOffset (F := ZMod p) HintReadWordChip.RowInput 0).1
       (size HintReadWordChip.RowInput) (table.environment physical)
@@ -255,6 +255,17 @@ theorem word_steps (witness : EnsembleWitness (ensemble image source others reso
       (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active bytes)
       (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active words)
     rwa [HintReadCoverage.eval_rowInput (last, table.environment physical)] at valid
+
+/-- Every installed consumer's authenticated word and exact successor follow from Byte/record
+balance and the bundled step circuit. No prior RAM representation guarantee is required. -/
+theorem word_steps (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface others resources) (store : Store)
+    (authenticated : RecordAuthentication witness store)
+    (constraints : witness.Constraints) (balanced : RecordChannels witness) :
+    HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :=
+  word_steps_of_guarantees witness constraints
+    (fun table inside => byte_guarantees witness interface constraints balanced.byte table (wordTables_mem witness table inside))
+    (fun table inside => word_guarantees witness store authenticated balanced.word table (wordTables_mem witness table inside))
 
 private theorem word_spec_of_channels (last : Bool) (env : Environment (ZMod p))
     (constraints : (HintReadCoverage.view last).component.operations.ConstraintsHold env)

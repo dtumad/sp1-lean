@@ -76,14 +76,18 @@ private theorem terminal (a : MemoryHistoryAccess) (rest : List MemoryHistoryAcc
     rw [heldAt, ite_eq_right (Nat.not_lt_of_ge (lower.trans after))]
     exact value _ _ after
 
-/-- The timestamp and value of a typed physical touch come directly from its pull and push
-messages. The row's read-slot annotation is separate from both Memory-record timestamps. -/
-def ofTouch {p : ℕ} [NeZero p] (touch : Soundness.TimedGrounding.Touch p) : MemoryHistoryAccess where
-  loc := MemoryMsg.locOf touch.1.1
-  previous := MemoryMsg.timeNat touch.1.1
-  current := MemoryMsg.timeNat touch.2
-  pulled := touch.1.1.value.toBitVec64
-  pushed := touch.2.value.toBitVec64
+/-- The two complete physical Memory records determine the word transition and its exact
+natural timestamps. This projection also applies to refreshes, independently of CPU slots. -/
+def ofRecords {p : ℕ} [NeZero p] (pair : Channels.MemoryMsg (ZMod p) × Channels.MemoryMsg (ZMod p)) : MemoryHistoryAccess where
+  loc := MemoryMsg.locOf pair.1
+  previous := MemoryMsg.timeNat pair.1
+  current := MemoryMsg.timeNat pair.2
+  pulled := pair.1.value.toBitVec64
+  pushed := pair.2.value.toBitVec64
+
+/-- The row's read-slot annotation is separate from both Memory-record timestamps. -/
+def ofTouch {p : ℕ} [NeZero p] (touch : Soundness.TimedGrounding.Touch p) : MemoryHistoryAccess :=
+  ofRecords (touch.1.1, touch.2)
 
 /-- Physical per-location balance forces the head record and every intervening link,
 including aliases within one row; the live predecessor therefore determines every probe
@@ -104,7 +108,7 @@ theorem matchingValues_of_balance {p : ℕ} [NeZero p] {loc : MemLoc} {rowTime :
   rw [matchingValues_eq, ite_eq_left after]
   · cases touches with
     | nil => contradiction
-    | cons a rest => simp [ofTouch]
+    | cons a rest => simp [ofTouch, ofRecords]
   · apply (List.isChain_map ofTouch).mpr
     apply List.IsChain.imp_of_mem_imp _ linked
     intro a b ma mb same

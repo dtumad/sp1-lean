@@ -21,6 +21,7 @@ macro_rules! generated {
         }
     };
 }
+generated!(target_suffix, "hint_target_suffix.rs");
 generated!(nodes, "hint_nodes.rs");
 generated!(words, "hint_words.rs");
 generated!(nodes_empty, "hint_nodes_empty.rs");
@@ -257,4 +258,65 @@ fn node_backend_binds_all_public_fields_counts_and_fixed_height() {
 #[test]
 fn word_backend_binds_all_public_fields_counts_and_fixed_height() {
     backend_mutations!(words, true);
+}
+
+#[test]
+fn outgoing_queue_binds_popped_prefix_padding_and_private_frontier() {
+    // Source node 4 has been popped. The final queue starts at node 3 and still
+    // has the original allocation frontier. Its aligned first buffer needs two words.
+    let target: [&[u8]; 3] = [&[1, 2, 3, 4, 5, 6, 7, 8], &[], &[9]];
+    let public = [vec![F::ZERO, F::from_u64(128)], limbs(3, 3), limbs(4, 3)].concat();
+    let mut private = Vec::new();
+    let mut expected = Vec::new();
+    for (n, bytes) in target.iter().enumerate() {
+        let node = (target.len() - n) as u64;
+        for index in 0..=bytes.len() / 8 {
+            let ordinal = expected.len() as u64;
+            let mut padded = [0_u8; 8];
+            let chunk = &bytes[8 * index..];
+            let used = chunk.len().min(8);
+            padded[..used].copy_from_slice(&chunk[..used]);
+            let shape = [
+                vec![
+                    F::ONE,
+                    F::from_bool(index == 0),
+                    F::from_bool(index == bytes.len() / 8),
+                ],
+                limbs(ordinal, 3),
+                limbs(ordinal + 1, 3),
+                limbs(index as u64, 3),
+                limbs(bytes.len() as u64, 4),
+                limbs(u64::from_le_bytes(padded), 4),
+            ]
+            .concat();
+            let pointers = [limbs(node, 3), limbs(node - 1, 3)].concat();
+            private.extend_from_slice(&pointers);
+            expected.push([shape, pointers, vec![F::ONE]].concat());
+        }
+    }
+    private.extend_from_slice(&public);
+    let witness = target_suffix::generate::<F>(&public, &private, 1).unwrap();
+    assert_eq!(witness.tables[2], expected);
+    assert_eq!(
+        witness.tables[3],
+        vec![[vec![F::ONE], public.clone(), vec![F::ONE]].concat()]
+    );
+    let traces = witness.into_traces().unwrap();
+    let heights: Vec<_> = traces.iter().map(Matrix::height).collect();
+    assert_eq!(heights, vec![4, 8, 4, 1]);
+    let statement = target_suffix::Statement::<F>::new(&heights, 1).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
+
+    // Forge a valid-looking tail on the mandatory padding word and a frontier at the seal.
+    for (table, row, column) in [(2, 1, 3), (3, 0, 5)] {
+        let mut forged = traces.clone();
+        let width = forged[table].width();
+        forged[table].values[row * width + column] += F::ONE;
+        assert_backend_rejection(|| {
+            let proof = key.prove(&statement, forged, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
+        });
+    }
 }
