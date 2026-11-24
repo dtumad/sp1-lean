@@ -157,6 +157,8 @@ import SP1Clean.Proofs.Completeness.FixedProgramReads
 import SP1Clean.Proofs.Completeness.MixedProgramFetches
 import SP1Clean.Proofs.Completeness.PermissionTables
 import SP1Clean.Proofs.Completeness.MixedPermissionDemand
+import SP1Clean.Proofs.Completeness.WriteMetadataTable
+import SP1Clean.Proofs.Completeness.WriteMetadataAvailable
 import SP1Clean.Proofs.Completeness.WriteMetadataDemand
 import SP1Clean.Proofs.Completeness.HintQueueReaders
 import SP1Clean.Proofs.Completeness.HintQueueFixedReaders

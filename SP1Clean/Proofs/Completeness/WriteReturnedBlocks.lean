@@ -15,7 +15,8 @@ open scoped Classical
 
 private abbrev F := ZMod SP1Prime
 
-private theorem step_source (b : Batch) (clk : Nat) (before : Store × Nat) (readers : Readers) {i : Nat} {s : Step F}
+/-- Direct mode, original logical buffer ordinal and reply identity on every generated node row. -/
+theorem step_source (b : Batch) (clk : Nat) (before : Store × Nat) (readers : Readers) {i : Nat} {s : Step F}
     (present : (b.steps clk before.1 before.2 readers.nodes)[i]? = some s) :
     s.contents.direct = (b.source before.1.size).direct ∧
     s.contents.index = Address.ofNat (b.buffers.length - (i+1)) ∧
@@ -57,7 +58,8 @@ private theorem hook_word {b : Batch} {clock previous : Nat} {before : Store × 
     exact ⟨reply,input,hints,rfl,k,bytes,j.val,original,positive,
       Words.populate_returned s.contents bytes j.val reply k _ _ ordinal index⟩
 
-private theorem lookup_return {route : WriteRoute} {current next : HostState} {payload : Bytes}
+/-- The selected returned buffer remains at its original ordinal in the complete public transcript. -/
+theorem lookup_return {route : WriteRoute} {current next : HostState} {payload : Bytes}
     (effect : route.Effect current payload next) {earlier later : WriteStreams} {b : Batch}
     (selected : batchFor route earlier current payload = some b) {reply input : Nat} {hints : List Bytes}
     (hook : b = .hook reply input hints) {k : Nat} {bytes : Bytes} (atHint : hints[k]? = some bytes) :

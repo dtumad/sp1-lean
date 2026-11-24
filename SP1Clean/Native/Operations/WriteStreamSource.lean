@@ -24,7 +24,8 @@ def streamTable (source target : HostState) : StaticTable (ZMod p) Record :=
   StaticTable.ofRows "sp1.native.write_fixed_streams" (if inventoryOK streams then metadataRows streams else [])
 
 omit [Fact p.Prime] in
-private theorem height_bound (source target : HostState) : (streamTable (p := p) source target).height < UInt64.size := by
+/-- The verifier-fixed inventory and its padding always fit Clean’s unsigned row index. -/
+theorem streamTable_height_lt_uint64 (source target : HostState) : (streamTable (p := p) source target).height < UInt64.size := by
   let s := WriteStreams.fromEndpoints source target
   have rows : (streamTable (p := p) source target).length < 2 ^ 48 := by
     change (if inventoryOK s then metadataRows (p := p) s else []).length < 2^48
@@ -37,14 +38,14 @@ private theorem height_bound (source target : HostState) : (streamTable (p := p)
 
 /-- An original fixed-prefix Clean table indexed solely by the public endpoints. -/
 def streamComponent (source target : HostState) : Component (ZMod p) :=
-  (streamTable source target).payloadComponent recordChannel (by intros; trivial) (height_bound source target)
+  (streamTable source target).payloadComponent recordChannel (by intros; trivial) (streamTable_height_lt_uint64 source target)
 
 /-- Every active physical occurrence refers to the actual source reply or destination stream. -/
 theorem stream_authenticates (source target : HostState) (table : Table (ZMod p))
     (component : table.component = streamComponent source target) (checked : table.Constraints) :
     table.Authenticates recordChannel (fun row => row.Binds (.fromEndpoints source target)) := by
   apply ((streamTable source target).payload_authenticates recordChannel (by intros; trivial)
-    (height_bound source target) table component checked).mono
+    (streamTable_height_lt_uint64 source target) table component checked).mono
   intro row member
   let s := WriteStreams.fromEndpoints source target
   change row ∈ (if inventoryOK s then metadataRows s else []) at member
