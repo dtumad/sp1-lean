@@ -27,7 +27,7 @@ theorem native_dispatch_headers (w : EnsembleWitness (assembly image source targ
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
     ((physicalPackets (observed w)).map WritePacket.Inputs.header).Perm
       ((physicalDispatches (observed w)).map fun d => d.request.header) ∧
-    ∀ d ∈ physicalDispatches (observed w),d.request.Valid := by
+    ∀ d ∈ physicalDispatches (observed w), d.request.Valid ∧ ∃ span : WriteBuffer.Span F, span.Valid ∧ span.header = d.request.header := by
   let seen := observed w
   let p := packetSlot image source target final
   let s := slot image source target final 3
@@ -65,11 +65,13 @@ theorem native_dispatch_headers (w : EnsembleWitness (assembly image source targ
     rfl id Dispatch.request request_output_at dispatch_request_at cv.1 (fun r m => (native_dispatch_input_facts w ok fit raw r m).1)
     (observed_balance w fit raw _ (protocol_installed image source target final _ rr) (of_decide_eq_true rfl))
   rw [List.map_id_fun] at requests
-  refine ⟨?_,fun d md => cv.2 _ (requests.mem_iff.mpr (List.mem_map_of_mem md))⟩
-  refine (packets.trans headers).trans ?_
   have eq := requests.map (fun r : Request F => r.header)
   rw [List.map_map] at eq
-  exact eq
+  have all := headers.trans eq
+  refine ⟨packets.trans all,?_⟩
+  intro d md
+  obtain ⟨span,ms,h⟩ := List.mem_map.mp (all.mem_iff.mpr (List.mem_map_of_mem md))
+  exact ⟨cv.2 _ (requests.mem_iff.mpr (List.mem_map_of_mem md)),span,sv.2 span ms,h⟩
 
 private theorem packet_origin (w : EnsembleWitness (assembly image source target final)) (ok : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (p : WritePacket.Inputs F) (mp : p ∈ physicalPackets (observed w)) :
@@ -129,6 +131,6 @@ theorem native_dispatch_origin (w : EnsembleWitness (assembly image source targe
     DispatchOrigin w d := by
   obtain ⟨headers,checked⟩ := native_dispatch_headers w ok fit raw
   obtain ⟨p,mem,header⟩ := List.mem_map.mp (headers.mem_iff.mpr (List.mem_map_of_mem md))
-  exact ⟨checked d md,p,mem,header,packet_origin w ok fit raw p mem⟩
+  exact ⟨(checked d md).1,p,mem,header,packet_origin w ok fit raw p mem⟩
 
 end SP1Clean.Export.WriteObservationAssembly
