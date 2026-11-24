@@ -351,29 +351,60 @@ def withFinalTables (raw : Source → Table (ZMod p)) (rows : List (Terminal (ZM
 
 /-- The actual counted supplier reads the complete active terminal receipt from the selected
 physical register/RAM row, for any original provider data or multiplicities on other tables. -/
-theorem final_mem_live (raw : Source → Table (ZMod p)) (rows : List (Terminal (ZMod p))) (data : ProverData (ZMod p))
-    (fit : ∀ ram, WitnessGeneration.demandHeight (finalInputs ram 0 rows).length ≤ UInt64.size) (r : Terminal (ZMod p)) (member : r ∈ rows) :
-    finalReadback r.record ∈ Counted.live (records (withFinalTables raw rows data fit)) := by
+theorem final_mem_live_of_rows (raw : Source → Table (ZMod p)) (rows : List (Terminal (ZMod p))) (data : ProverData (ZMod p))
+    (fit : ∀ ram, WitnessGeneration.demandHeight (finalInputs ram 0 rows).length ≤ UInt64.size)
+    (same : ∀ ram, (raw (.finalizer ram)).table = (finalTable ram rows data (fit ram)).table)
+    (r : Terminal (ZMod p)) (member : r ∈ rows) :
+    finalReadback r.record ∈ Counted.live (records raw) := by
   obtain ⟨previous, found⟩ := orderedInputs_member (fun prev r => (OrderedMemoryProvider.populate r.record prev r.key).1) member 0
   let input := (OrderedMemoryProvider.populate r.record previous r.key).1
   let c := originalFinal (p := p) r.ram
   let inputs := WitnessGeneration.guardedRows (F := ZMod p) (finalInputs r.ram 0 rows)
   let actual : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p) := (input, 1)
   have occurs : actual ∈ inputs := List.mem_append_left _ (List.mem_map_of_mem found)
-  let table := finalTable r.ram rows data (fit r.ram)
+  let table := raw (.finalizer r.ram)
   let built := c.buildRow actual (c.inputData inputs data) (.empty _)
-  have present : built ∈ table.table := List.mem_map_of_mem occurs
+  have present : built ∈ table.table := (same r.ram) ▸ List.mem_map_of_mem occurs
   let env := table.environment built
   have decoded : valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env = actual :=
     c.rowInput_buildRow actual _ _ _
   have gate : (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 = 1 := congrArg Prod.snd decoded
   have record : finalRecordAt r.ram env = r.record := (finalRecordAt_eq r.ram env).trans
     (congrArg (fun i : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p) => i.1.payload) decoded)
-  have real : (1, finalReadback r.record) ∈ records (withFinalTables raw rows data fit) := by
+  have real : (1, finalReadback r.record) ∈ records raw := by
     refine List.mem_flatMap.mpr ⟨.finalizer r.ram, sources_complete _, List.mem_flatMap.mpr ⟨built, present, ?_⟩⟩
     change (1, finalReadback r.record) ∈ [((valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2, finalReadback (finalRecordAt r.ram env))]
     rw [gate, record]; exact List.mem_singleton_self _
   exact List.mem_map.mpr ⟨(1, finalReadback r.record), List.mem_filter.mpr ⟨real, by simp⟩, rfl⟩
+
+/-- The actual counted supplier reads the complete active terminal receipt from the selected
+physical register/RAM row, for any original provider data or multiplicities on other tables. -/
+theorem final_mem_live (raw : Source → Table (ZMod p)) (rows : List (Terminal (ZMod p))) (data : ProverData (ZMod p))
+    (fit : ∀ ram, WitnessGeneration.demandHeight (finalInputs ram 0 rows).length ≤ UInt64.size) (r : Terminal (ZMod p)) (member : r ∈ rows) :
+    finalReadback r.record ∈ Counted.live (records (withFinalTables raw rows data fit)) :=
+  final_mem_live_of_rows (withFinalTables raw rows data fit) rows data fit (fun _ => rfl) r member
+
+/-- Every otherwise untouched valid requested key is now covered in the actual raw source list
+used by the counted router, throughout the full representable clock range. -/
+theorem sparse_live_covers_of_rows (raw : Source → Table (ZMod p)) (snapshot : MemorySnapshot) (stream : List MemoryHistoryAccess)
+    (requested : List ℕ) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (fit : ∀ ram, WitnessGeneration.demandHeight (finalInputs ram 0 (terminals snapshot stream requested data hint)).length ≤ UInt64.size)
+    (same : ∀ ram, (raw (.finalizer ram)).table = (finalTable ram (terminals snapshot stream requested data hint) data (fit ram)).table)
+    (key : ℕ) (wanted : key ∈ requested) (legal : ValidKey key) (fresh : key ∉ (memoryInitialEntries stream).map MemRecordEntry.addr)
+    (time : ℕ) (bound : time < 2 ^ 48) :
+    ∃ loc : MemLoc, loc.busAddress = key ∧
+      ∃ r ∈ Counted.live (records raw),
+        Counted.Covers r ⟨Address.ofNat key, Address.ofNat time, Soundness.Target.bitVecToWord (snapshot.read loc)⟩ := by
+  obtain ⟨sparse, present, _, checked, record, emitted, address, covered⟩ :=
+    Counted.sparse_covers snapshot stream requested key wanted legal fresh time bound data hint
+  let row := terminalOfRows snapshot data sparse
+  have included : row ∈ terminals snapshot stream requested data hint :=
+    List.mem_mergeSort.mpr (List.mem_append_right _ (List.mem_map_of_mem present))
+  have pushed : readbackChannel.pushedValue (finalReadback row.record) = readbackChannel.pushedValue (finalReadback record) :=
+    List.singleton_inj.mp (checked.2.2.2.2.2.symm.trans emitted)
+  have message : finalReadback row.record = finalReadback record := ProvableType.toElements_inj_iff.mp
+    (Vector.toArray_inj.mp (congrArg Interaction.msg pushed))
+  exact ⟨MemoryMsg.locOf record, address, finalReadback row.record, final_mem_live_of_rows raw _ data fit same row included, message ▸ covered⟩
 
 /-- Every otherwise untouched valid requested key is now covered in the actual raw source list
 used by the counted router, throughout the full representable clock range. -/
@@ -384,17 +415,8 @@ theorem sparse_live_covers (raw : Source → Table (ZMod p)) (snapshot : MemoryS
     (time : ℕ) (bound : time < 2 ^ 48) :
     ∃ loc : MemLoc, loc.busAddress = key ∧
       ∃ r ∈ Counted.live (records (withFinalTables raw (terminals snapshot stream requested data hint) data fit)),
-        Counted.Covers r ⟨Address.ofNat key, Address.ofNat time, Soundness.Target.bitVecToWord (snapshot.read loc)⟩ := by
-  obtain ⟨sparse, present, _, checked, record, emitted, address, covered⟩ :=
-    Counted.sparse_covers snapshot stream requested key wanted legal fresh time bound data hint
-  let row := terminalOfRows snapshot data sparse
-  have included : row ∈ terminals snapshot stream requested data hint :=
-    List.mem_mergeSort.mpr (List.mem_append_right _ (List.mem_map_of_mem present))
-  have pushed : readbackChannel.pushedValue (finalReadback row.record) = readbackChannel.pushedValue (finalReadback record) :=
-    List.singleton_inj.mp (checked.2.2.2.2.2.symm.trans emitted)
-  have same : finalReadback row.record = finalReadback record := ProvableType.toElements_inj_iff.mp
-    (Vector.toArray_inj.mp (congrArg Interaction.msg pushed))
-  exact ⟨MemoryMsg.locOf record, address, finalReadback row.record, final_mem_live raw _ data fit row included, same ▸ covered⟩
+        Counted.Covers r ⟨Address.ofNat key, Address.ofNat time, Soundness.Target.bitVecToWord (snapshot.read loc)⟩ :=
+  sparse_live_covers_of_rows _ snapshot stream requested data hint fit (fun _ => rfl) key wanted legal fresh time bound
 
 /-- Route a valid untouched WRITE demand through counted sources on the generated two original
 finalizers. Both tables fit their physical row type by the address inventory itself. -/

@@ -13,6 +13,7 @@ import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationProjection
 import SP1Clean.Export.WriteObservationBuild
+import SP1Clean.Export.WriteBoundaryBuild
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteSupplyCapacity
 import SP1Clean.Export.WriteObservationByte
