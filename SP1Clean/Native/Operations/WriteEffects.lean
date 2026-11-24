@@ -27,6 +27,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem Request.populate_valid (h : WritePacket.Header (ZMod p)) (bound : h.descriptor.isU64) :
     (Request.populate h).Valid := ⟨bound, rfl⟩
 
+/-- Classify the descriptor in the original header and publish the resulting route. -/
 def requestMain (r : Var Request (ZMod p)) : Circuit (ZMod p) Unit := do
   let route ← WriteDescriptor.circuit r.header.descriptor
   assertZero (r.route - route)
@@ -56,6 +57,7 @@ def requestCircuit : GeneralFormalCircuit (ZMod p) Request unit where
 def WordRow.octets {F : Type} [Sub F] [Mul F] (inverse : F) (r : WordRow F) : Octets F :=
   ⟨r.read.key, r.read.clock, U16toU8OperationSafe.bytes inverse r.read.value r.low⟩
 
+/-- Compute the four low-byte witnesses from the observed word. -/
 def WordRow.populate (read : WriteProbe.Read (ZMod p)) : WordRow (ZMod p) :=
   ⟨read, (U16toU8OperationSafe.populate read.value).low_bytes⟩
 
@@ -73,6 +75,7 @@ theorem WordRow.valid_of_decomp (r : WordRow (ZMod p))
   simp only [Fin.getElem_fin, Vector.getElem_map]
   rfl
 
+/-- Decode the word and publish its ordered byte lanes at the original address and clock. -/
 def wordMain (r : Var WordRow (ZMod p)) : Circuit (ZMod p) Unit := do
   WriteBuffer.wordChannel.pull r.read
   assertion U16toU8OperationSafe.circuit ⟨r.read.value, ⟨r.low⟩, 1⟩

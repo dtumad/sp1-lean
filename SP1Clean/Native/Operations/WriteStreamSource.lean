@@ -18,6 +18,7 @@ def recordChannel : Channel (ZMod p) Record where
   name := "sp1.native.write_fixed_stream"
   Guarantees _ _ := True
 
+/-- Verifier-fixed record inventory for this source and target host. -/
 def streamTable (source target : HostState) : StaticTable (ZMod p) Record :=
   StaticTable.ofRows "sp1.native.write_fixed_streams" (fixedRows (.fromEndpoints source target))
 

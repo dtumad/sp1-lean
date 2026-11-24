@@ -16,9 +16,11 @@ open Circuit Semantics
 
 variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 
+/-- Address the fixed output or hook-request byte at the incoming stream position. -/
 def ByteStep.record {F : Type} [Zero F] [One F] (r : ByteStep F) : Record F :=
   ⟨r.previous.sink, 1, r.previous.owner, #v[0,0,0], r.previous.position, #v[r.value,0,0]⟩
 
+/-- Consume a guest byte, advance the cursor and check its route-specific destination. -/
 def byteStepMain (r : Var ByteStep (ZMod p)) : Circuit (ZMod p) Unit := do
   positionChannel.pull r.previous
   byteChannel.pull r.read
@@ -34,6 +36,7 @@ def byteStepMain (r : Var ByteStep (ZMod p)) : Circuit (ZMod p) Unit := do
 
 instance byteStepElaborated : ElaboratedCircuit (ZMod p) ByteStep unit byteStepMain := by elaborate_circuit
 
+/-- The two bounded positions advance once and the route flags match the sink. -/
 def ByteStep.Valid (r : ByteStep (ZMod p)) : Prop :=
   Address.Bounded r.previous.address ∧ Address.Bounded r.previous.position ∧
   Address.Bounded r.nextAddress ∧ Address.Bounded r.nextPosition ∧
@@ -48,6 +51,7 @@ private theorem unitAddress : Address.Bounded (#v[1,0,0] : fields 3 (ZMod p)) �
   · intro i; fin_cases i <;> simp [ZMod.val_one]
   · simp [Address.toNat, ZMod.val_one]
 
+/-- Checked transition for a single destination position. -/
 def byteStepCircuit : GeneralFormalCircuit (ZMod p) ByteStep unit where
   name := "sp1.native.write_position"
   main := byteStepMain

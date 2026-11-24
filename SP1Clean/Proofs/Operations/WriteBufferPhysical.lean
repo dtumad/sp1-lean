@@ -122,7 +122,7 @@ abbrev SpanRow := ProvablePair Span field
 abbrev WordRow := ProvablePair Step field
 
 /-- The installed packet domain uses full absolute clocks and full cell indices as hint keys. -/
-def hintKey {F : Type} [FiniteField F] (limbs : fields 3 (Expression F)) : Witgen.U64Expr F :=
+def hintKey {F : Type} (limbs : fields 3 (Expression F)) : Witgen.U64Expr F :=
   limbs[0].val + limbs[1].val * 65536 + limbs[2].val * 4294967296
 
 /-- Span rows answer the exact original WRITE packet. -/
