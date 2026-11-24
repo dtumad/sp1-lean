@@ -14,14 +14,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-private theorem supply_lookupFree : (ReadbackSupply.component (p := p)).operations.lookups = [] := by
+theorem supply_lookupFree : (ReadbackSupply.component (p := p)).operations.lookups = [] := by
   apply Component.lookups_eq_nil_of_main
   intro input offset
   change ((ReadbackSupply.main input).operations offset).lookups = []
   simp [ReadbackSupply.main, ClockParts.circuit, ClockParts.main, circuit_norm, Gadgets.ToBits.rangeCheck,
     Gadgets.ToBits.toBits, Gadgets.ToBits.main, Gadgets.Equality.main, Operations.lookups]
 
-private theorem probe_lookupFree : (WriteProbe.component (p := p)).operations.lookups = [] := by
+theorem probe_lookupFree : (WriteProbe.component (p := p)).operations.lookups = [] := by
   apply Component.lookups_eq_nil_of_main
   intro input offset
   exact Guarded.main_lookups WriteProbe.circuit WriteProbe.guardSupported input offset

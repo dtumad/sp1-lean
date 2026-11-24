@@ -22,11 +22,7 @@ variable {F : Type} [FiniteField F] {Public : TypeMap} [ProvableType Public]
 theorem EnsembleWitness.interactionsWith_nil_of_not_registered (w : EnsembleWitness a)
     (ch : RawChannel F) (absent : ch ∉ a.channels) : w.interactionsWith ch = [] := by
   classical
-  have ledgers : w.interactionsWith ch = w.interactions.filter (·.channel = ch) := by
-    simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith, Tables.interactionsWith,
-      EnsembleWitness.toTables, EnsembleWitness.interactions, List.filter_append, List.filter_flatMap,
-      Operations.interactionValuesWith_eq_filter, Table.interactionsWith_eq_filter]
-  apply ledgers.trans
+  rw [w.interactionsWith_eq_filter]
   apply List.filter_eq_nil_iff.mpr
   intro interaction member
   have separate : interaction.channel ≠ ch := fun eq => absent (eq ▸ EnsembleWitness.channel_mem_of_mem_interactions member)
