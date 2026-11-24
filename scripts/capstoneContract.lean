@@ -13,6 +13,7 @@ import SP1Clean.Export.WriteInstalledAllocations
 import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
 import SP1Clean.Export.WriteJointObservation
 import SP1Clean.Export.WriteInstalledHostExit
+import SP1Clean.Export.WriteControlLedgers
 import SP1Clean.Export.WriteRealizedTranscript
 import SP1Clean.Proofs.Completeness.HintHandlerPadding
 import SP1Clean.Export.WriteAllocationStoreUnique
@@ -252,6 +253,8 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteMixedControlTables.remaining_positions,
   ``SP1Clean.Export.WriteObservationAssembly.installed_control_receipts,
   ``SP1Clean.Export.WriteObservationAssembly.installed_host_exit,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_control_ledgers,
+  ``SP1Clean.Export.WriteMixedExitLedger.public_checked,
   ``SP1Clean.TraceGen.ControlHandlers.halt_length,
   ``SP1Clean.TraceGen.ControlHandlers.raw_heights,
   ``SP1Clean.TraceGen.ControlHandlers.tables_checked,
