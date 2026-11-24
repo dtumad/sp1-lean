@@ -61,6 +61,32 @@ theorem table_records (id : Source) (table : Table (ZMod p)) (registered : table
 noncomputable def records (raw : Source → Table (ZMod p)) : List (ZMod p × Readback (ZMod p)) :=
   sources.flatMap fun id => (raw id).table.flatMap fun row => rowRecords id ((raw id).environment row)
 
+/-- The source ledger decodes only the physical row's cells. -/
+theorem rowRecords_setData (id : Source) (cells : Array (ZMod p)) (left right : ProverData (ZMod p)) :
+    rowRecords id (Environment.fromArray cells left) = rowRecords id (Environment.fromArray cells right) := by
+  have values : Expression.eval (Environment.fromArray cells left) = Expression.eval (Environment.fromArray cells right) :=
+    funext (Expression.eval_congr rfl)
+  cases id with
+  | ordinary id =>
+    simp only [rowRecords, CircuitType.eval_expression, ProvableType.eval, values]
+  | host family =>
+    simp only [rowRecords, CircuitType.eval_expression, ProvableType.eval, values]
+  | refresh => rfl
+  | finalizer ram =>
+    have same := ProvableType.valueFromOffset_congr (OrderedMemoryProvider.RowInput MemoryMsg) 0
+      (env := Environment.fromArray cells left) (env' := Environment.fromArray cells right) (fun _ _ => rfl)
+    simp only [rowRecords, finalRecordAt_eq, Soundness.FinalMemoryEnsemble.rowRecord, same]
+
+/-- Ledger order, multiplicities and payloads are determined by the original registered source arrays. -/
+theorem records_eq_of_arrays (left right : Source → Table (ZMod p))
+    (physical : ∀ id, (left id).table = (right id).table) : records left = records right := by
+  apply List.flatMap_congr
+  intro id _
+  rw [physical]
+  apply List.flatMap_congr
+  intro row _
+  exact rowRecords_setData id row _ _
+
 theorem ledger_records (raw : Source → Table (ZMod p)) (registered : ∀ id, (raw id).component = original id)
     (supply : Table (ZMod p)) :
     ledger raw registered supply = supply.interactionsWith readbackChannel.toRaw ++
