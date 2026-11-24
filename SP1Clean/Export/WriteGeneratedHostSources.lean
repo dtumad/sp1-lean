@@ -28,36 +28,9 @@ theorem compiledReadback_covers {base cut : ℕ} {access : MemoryHistoryAccess}
     (legal : ValidKey access.loc.busAddress) (lower : access.previous ≤ cut) (upper : cut ≤ base) (fits : base < 2 ^ 48) :
     Counted.Covers (compiledReadback base access)
       ⟨Address.ofNat access.loc.busAddress, Address.ofNat cut, Target.bitVecToWord access.pulled⟩ := by
-  let r := compiledReadback base access
-  have field := Fact.out (p := 2 ^ 24 < SP1Prime)
-  have bounded : Counted.Bounded r := by
-    change ((access.previous / 2 ^ 24 : ℕ) : F).val < _ ∧ ((access.previous % 2 ^ 24 : ℕ) : F).val < _ ∧
-      ((base / 2 ^ 24 : ℕ) : F).val < _ ∧ ((base % 2 ^ 24 : ℕ) : F).val < _
-    repeat' rw [ZMod.val_natCast_of_lt (by omega)]
-    omega
-  have key : r.key = Address.ofNat access.loc.busAddress := rfl
-  have keyFits : access.loc.busAddress < 2 ^ 48 := by
-    rcases legal with x12 | ram
-    · omega
-    · exact ram.2.1
-  have time (n : ℕ) (fit : n < 2 ^ 48) :
-      clkNat ((n / 2 ^ 24 : ℕ) : F) ((n % 2 ^ 24 : ℕ) : F) = n := by
-    unfold clkNat
-    repeat' rw [ZMod.val_natCast_of_lt (by omega)]
-    omega
-  have word : r.value = Target.bitVecToWord access.pulled := by
-    apply Word.eq_of_toBitVec64_eq (wordOfNat_isU64 _) (Target.isU64_bitVecToWord _)
-    change (wordOfNat (p := SP1Prime) access.pulled.toNat).toBitVec64 = _
-    rw [toBitVec64_wordOfNat, Target.toBitVec64_bitVecToWord, BitVec.ofNat_toNat]
-    rfl
-  have held : clkNat r.previousHigh r.previousLow ≤ cut ∧ cut ≤ clkNat r.currentHigh r.currentLow := by
-    change clkNat ((access.previous / 2 ^ 24 : ℕ) : F) ((access.previous % 2 ^ 24 : ℕ) : F) ≤ _ ∧
-      _ ≤ clkNat ((base / 2 ^ 24 : ℕ) : F) ((base % 2 ^ 24 : ℕ) : F)
-    rw [time _ (by omega), time base fits]
-    exact ⟨lower, upper⟩
-  have cover := Counted.covers_record r bounded (key ▸ Address.bounded_ofNat _) (by rwa [key, Address.toNat_ofNat _ keyFits])
-    (wordOfNat_isU64 _) cut (upper.trans_lt fits) held
-  rwa [key, word] at cover
+  simpa only [compiledReadback, MemoryHistoryAccess.pulledEntry, MemoryHistoryAccess.busAddress,
+    BitVec.ofNat_toNat, BitVec.setWidth_eq] using
+    Counted.covers_compiled_entry (p := SP1Prime) access.pulledEntry base cut legal lower upper fits
 
 /-- Each scheduled ECALL register input from the mixed tape publishes the corresponding
 positive full receipt in the compiled original instruction table. -/
