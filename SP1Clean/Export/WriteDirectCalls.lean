@@ -1,6 +1,6 @@
-import SP1Clean.Export.WritePlacementWalks
+import SP1Clean.Export.WriteDispatchWalk
 
-/-! # Unique direct WRITE dispatchers and their own complete placement walks -/
+/-! # Unique WRITE dispatchers and their own complete placement walks -/
 
 namespace SP1Clean.Export.WriteObservationAssembly
 open Circuit Air.Flat Semantics Soundness WriteAllocation WriteEffects WriteSourceRegistry
@@ -8,22 +8,13 @@ private abbrev F := ZMod SP1Prime
 attribute [local instance 2000] FiniteField.instDecidableEq
 variable {image : ProgramImage} {source target : ExecutionSnapshot}
 
-/-- Complete ticket multiplicities and strictly ordered global queue clocks rule out any
-duplicate allocating dispatcher at the same incoming ECALL clock. -/
+/-- The public stream walk assigns a unique incoming ECALL clock to each physical
+dispatcher, including nonallocating and zero-length calls. -/
 theorem native_dispatch_clocks (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
-    ((allocatingDispatches (observed w)).map (fun d => Address.toNat d.request.header.clock)).Nodup := by
-  let seen := observed w
-  let cs := (allocationInputs seen).1
-  have clock : cs.map (fun c => Address.toNat c.ticket.clock) = cs.map (fun c => HostQueueOrder.time c.outgoing) := by
-    apply List.map_congr_left
-    intro c mem
-    have v := allocation_header_valid seen ((observed_constraints w).mp ok) c mem
-    rw [v.2.2.1]
-    exact c.timestamp.time v.2.1
-  have clocks := (native_allocation_tickets w ok fit raw).1.map (fun t => Address.toNat t.clock)
-  simp only [List.map_map,Function.comp_def] at clocks
-  exact clocks.nodup_iff.mpr (clock ▸ native_allocation_clock_unique w ok fit raw)
+    ((physicalDispatches (observed w)).map (fun d => Address.toNat d.request.header.clock)).Nodup := by
+  obtain ⟨_,path,all,_,times,_,_⟩ := native_dispatch_chronology w ok fit raw
+  exact (all.map (fun d : Dispatch F => Address.toNat d.request.header.clock)).nodup_iff.mp (times.imp Nat.ne_of_lt)
 
 /-- Every active dispatcher is valid, and a route requesting allocation supplies a physical allocating row. -/
 theorem physical_dispatch_valid (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
@@ -74,19 +65,17 @@ private theorem walk_key {groups : List (WriteEffects.Group F)} {start finish : 
     subst start
     exact ih (start := g.next) later
 
-/-- Every actual direct dispatcher has its own complete placement walk to the finish it
-declared. Matching uses the full raw position multisets, route classification and unique
-incoming allocation clock. Each group is an enabled, nonempty physical row. -/
-theorem native_direct_placement (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
-    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (md : d ∈ allocatingDispatches (observed w))
-    (direct : d.flags.direct = 1) :
+/-- Every actual dispatcher has its own complete placement walk to the finish it declared.
+The full position multiset and incoming ECALL clock identify the owner of every endpoint. -/
+theorem native_dispatch_placement (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (md : d ∈ physicalDispatches (observed w)) :
     ∃ groups : List (WriteEffects.Group F),
       Walk.IsWalk (fun g : WriteEffects.Group F => (g.previous,g.next)) (d.start d.flags) (d.finish d.flags) groups ∧
       ∀ g ∈ groups,g ∈ placementSteps (observed w) := by
   let seen := observed w
   let calls := physicalDispatches seen
   obtain ⟨paths,paired,ends,all⟩ := native_placement_walks w ok fit raw
-  have appears : d ∈ (calls.zip paths).map Prod.fst := by rw [List.map_fst_zip paired.length_eq.le]; exact allocating_dispatch_active w ok fit raw d md
+  have appears : d ∈ (calls.zip paths).map Prod.fst := by rw [List.map_fst_zip paired.length_eq.le]; exact md
   obtain ⟨⟨actual,path⟩,both,e⟩ := List.mem_map.mp appears
   change actual = d at e
   subst actual
@@ -96,13 +85,8 @@ theorem native_direct_placement (w : EnsembleWitness (native image source target
   obtain ⟨other,otherMem,endEq⟩ := List.mem_map.mp terminal
   have key := walk_key walk
   rw [← endEq] at key
-  obtain ⟨ov,selected⟩ := physical_dispatch_valid w ok fit raw other otherMem
-  have dv := ((native_allocation_tickets w ok fit raw).2 d md).1
-  have bothRoutes : other.flags.sink = d.flags.sink := key.2.1
-  have otherDirect := (direct_shape ov).1.mpr (bothRoutes.trans ((direct_shape dv).1.mp direct))
-  have liveOther := selected (by rw [(direct_shape ov).2 otherDirect]; simp [DispatchFlags.hook])
   have sameTime : other.request.header.clock = d.request.header.clock := key.1
-  have same := List.inj_on_of_nodup_map (native_dispatch_clocks w ok fit raw) liveOther md (congrArg Address.toNat sameTime)
+  have same := List.inj_on_of_nodup_map (native_dispatch_clocks w ok fit raw) otherMem md (congrArg Address.toNat sameTime)
   subst other
   exact ⟨path.1,endEq.symm ▸ walk,fun g m => all.mem_iff.mp (List.mem_flatMap.mpr ⟨path,inPath,m⟩)⟩
 

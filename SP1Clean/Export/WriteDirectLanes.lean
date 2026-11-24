@@ -81,39 +81,46 @@ theorem native_group_plan (w : EnsembleWitness (assembly image source target fin
     change sliceChannel.pulledValue _ = sliceChannel.pulledIfValue value.2 _
     rw [on]; rfl
 
-/-- Every selected direct-placement guest octet belongs to an actually occupied allocation
-word of the same fresh pointer and block index, even when the group crosses a block boundary. -/
-theorem native_direct_lanes (w : EnsembleWitness (assembly image source target final)) (checked : w.Constraints)
-    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (g : WriteEffects.Group F) (mem : g ∈ allocationGroups (observed w))
-    (direct : g.previous.sink = 14) :
-    ∃ first size offset : Nat, first < 8 ∧ first+size ≤ 8 ∧ offset < 8 ∧ g.plan = .ofNat first size offset ∧
-      ∀ j : Fin 8, j.val < size → ∃ r ∈ allocationWords (observed w), r.directGate = 1 ∧
-        r.prior.contents.pointer = g.previous.owner ∧ r.prior.index = (if offset+j.val < 8 then g.firstBlock else g.nextBlock) ∧
-        g.octets.bytes[(first+j.val)%8] = r.payload.bytes[(offset+j.val)%8] := by
-  obtain ⟨v,first,size,offset,small,room,off,plan⟩ := native_group_plan w checked fit raw g mem
-  refine ⟨first,size,offset,small,room,off,plan,?_⟩
-  have sink : g.previous.sink ≠ 0 := by
-    intro z
-    have bad := congrArg ZMod.val (direct.symm.trans z)
-    rw [show (14 : F).val = 14 by decide,ZMod.val_zero] at bad
-    contradiction
-  have used : g.ignored = 0 := v.2.2.1.trans (ite_eq_right sink)
-  intro j lane
-  have equal := v.2.1.atLane plan small off j lane (fun h => zero_ne_one (used.symm.trans h))
-  by_cases left : offset+j.val < 8
-  · have gate : g.leftGate = 1 := by simp [Group.leftGate,used,plan,SlicePlan.ofNat,show size ≠ 0 by omega]
-    obtain ⟨r,member,active,_,value⟩ := native_direct_group w checked fit raw g mem false gate direct
-    have ptr := congrArg StreamBlock.reply value
-    have pos := congrArg StreamBlock.index value
-    have bytes := congrArg StreamBlock.bytes value
-    change r.payload.bytes = g.left at bytes
-    exact ⟨r,member,active,ptr,by rw [ite_eq_left left]; exact pos,by rwa [ite_eq_left left,← bytes] at equal⟩
-  · have gate : g.rightGate = 1 := by simp [Group.rightGate,used,plan,SlicePlan.ofNat,show 8 < size+offset by omega]
-    obtain ⟨r,member,active,_,value⟩ := native_direct_group w checked fit raw g mem true gate direct
-    have ptr := congrArg StreamBlock.reply value
-    have pos := congrArg StreamBlock.index value
-    have bytes := congrArg StreamBlock.bytes value
-    change r.payload.bytes = g.right at bytes
-    exact ⟨r,member,active,ptr,by rw [ite_eq_right left]; exact pos,by rwa [ite_eq_right left,← bytes] at equal⟩
+/-- Every selected lane of a retained group lies inside the declared occupied extent of
+one genuine pulled block. Its absolute position is preserved across either block boundary. -/
+theorem native_placement_block (w : EnsembleWitness (assembly image source target final)) (checked : w.Constraints)
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (g : WriteEffects.Group F) (mg : g ∈ allocationGroups (observed w))
+    (retained : g.previous.sink ≠ 0) (j : Fin 8) (live : j.val < g.plan.size.val) :
+    ∃ side : Bool, (if side then g.rightGate else g.leftGate) = 1 ∧ ∃ k : Fin 8, k.val < (g.block side).used.val ∧
+      Address.toNat (g.block side).index * 8 + k.val = Address.toNat g.previous.position + j.val ∧
+      g.octets.bytes[(g.plan.first.val + j.val)%8] = (g.block side).bytes[k] := by
+  obtain ⟨v,f,s,o,small,room,off,plan⟩ := native_group_plan w checked fit raw g mg
+  have modulus : 16 < SP1Prime := by decide
+  have firstEq : g.plan.first.val = f := by rw [plan]; exact ZMod.val_natCast_of_lt (by omega)
+  have sizeEq : g.plan.size.val = s := by rw [plan]; exact ZMod.val_natCast_of_lt (by omega)
+  have offEq : g.plan.offset.val = o := by rw [plan]; exact ZMod.val_natCast_of_lt (by omega)
+  have used : g.ignored = 0 := v.2.2.1.trans (ite_eq_right retained)
+  have lanes := v.2.1.atLane plan small off j (sizeEq ▸ live) (fun h => zero_ne_one (used.symm.trans h))
+  let src (a : Nat) : Fin 8 := ⟨(a+j.val)%8,Nat.mod_lt _ (by decide)⟩
+  have field := congrArg (fun a : Nat => g.octets.bytes[src a]) firstEq
+  let k := src o
+  have offset := offEq.symm.trans v.1.2.2.2.1
+  have base := v.1.2.2.1
+  have extents := v.2.2.2.2.2
+  by_cases left : o + j.val < 8
+  · have gate : g.leftGate = 1 := by simp [Group.leftGate,used,plan,SlicePlan.ofNat,show s ≠ 0 by omega]
+    have extent := extents.2.2.2.2.1 gate
+    have decoded : g.plan.firstExtent.val = min 8 (s+o) := by rw [plan]; exact ZMod.val_natCast_of_lt (by omega)
+    refine ⟨false,gate,k,?_,?_,field.trans (by rwa [ite_eq_left left] at lanes)⟩
+    · change (o+j.val)%8 < g.leftSize.val
+      omega
+    · change Address.toNat g.firstBlock * 8 + (o+j.val)%8 = _
+      omega
+  · have gate : g.rightGate = 1 := by simp [Group.rightGate,used,plan,SlicePlan.ofNat,show 8 < s+o by omega]
+    have extent := extents.2.2.2.2.2 gate
+    have decoded : g.plan.secondExtent.val = s+o-8 := by rw [plan]; exact ZMod.val_natCast_of_lt (by omega)
+    have advance := v.1.2.2.2.2.2.2.2.2.2
+    change Address.toNat g.nextBlock = Address.toNat g.firstBlock + Address.toNat (#v[1,0,0] : fields 3 F) at advance
+    rw [show Address.toNat (#v[1,0,0] : fields 3 F) = 1 by decide] at advance
+    refine ⟨true,gate,k,?_,?_,field.trans (by rwa [ite_eq_right left] at lanes)⟩
+    · change (o+j.val)%8 < g.rightSize.val
+      omega
+    · change Address.toNat g.nextBlock * 8 + (o+j.val)%8 = _
+      omega
 
 end SP1Clean.Export.WriteObservationAssembly
