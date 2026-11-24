@@ -43,6 +43,34 @@ private theorem word_access (last : Bool) (input : Var HintReadWordChip.Inputs (
 /-- Every active HINT_READ word contributes a bounded RAM touch at its call clock.
 The actual AIR and Byte balance suffice; prior Memory guarantees and record authentication
 are not premises of this structural step. -/
+theorem word_touches_of_guarantees {image : ProgramImage} {source : ExecutionSnapshot}
+    {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
+    {channels : List (RawChannel (ZMod p))}
+    {names : ((HostLocalCore.tables image source
+      ((receiver :: others).map (·.component) ++ (wordResources ++ resources))).map (·.circuit.name)).Nodup}
+    {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ ((receiver :: others).map (·.component) ++ (wordResources ++ resources)),
+      component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
+    (witness : EnsembleWitness (ensemble image source others resources channels names channelNames tableChannels))
+    (constraints : witness.Constraints) (bytes : ∀ table ∈ wordTables witness, table.ChannelGuarantees byteChannel.toRaw) :
+    ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness),
+      HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram := by
+  intro row member
+  obtain ⟨member, active⟩ := HintReadCoverage.mem_active_rows.mp member
+  obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
+  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
+  have component := List.forall₂_zip (wordTables_aligned witness) paired
+  have present := wordTables_mem witness table (List.of_mem_zip paired).2
+  have checked := constraints table present physical physicalMem
+  have bytes := bytes table (List.of_mem_zip paired).2 physical physicalMem
+  rw [← component] at checked bytes
+  have facts := word_access last (varFromOffset (F := ZMod p) HintReadWordChip.RowInput 0).1
+    (size HintReadWordChip.RowInput) (table.environment physical)
+    (HintReadCoverage.active_constraints (last, table.environment physical) active checked)
+    (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active bytes)
+  rwa [HintReadCoverage.eval_rowInput (last, table.environment physical)] at facts
+
+/-- The original supervisor supplies the two word tables' Byte checks from complete Byte balance. -/
 theorem word_touches {image : ProgramImage} {source : ExecutionSnapshot}
     {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
     {channels : List (RawChannel (ZMod p))}
@@ -55,21 +83,9 @@ theorem word_touches {image : ProgramImage} {source : ExecutionSnapshot}
     (interface : ExtensionInterface others resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel byteChannel.toRaw) :
     ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness),
-      HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram := by
-  intro row member
-  obtain ⟨member, active⟩ := HintReadCoverage.mem_active_rows.mp member
-  obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  have component := List.forall₂_zip (wordTables_aligned witness) paired
-  have present := wordTables_mem witness table (List.of_mem_zip paired).2
-  have checked := constraints table present physical physicalMem
-  have bytes := byte_guarantees witness interface constraints balanced table present physical physicalMem
-  rw [← component] at checked bytes
-  have facts := word_access last (varFromOffset (F := ZMod p) HintReadWordChip.RowInput 0).1
-    (size HintReadWordChip.RowInput) (table.environment physical)
-    (HintReadCoverage.active_constraints (last, table.environment physical) active checked)
-    (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active bytes)
-  rwa [HintReadCoverage.eval_rowInput (last, table.environment physical)] at facts
+      HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram :=
+  word_touches_of_guarantees witness constraints
+    (fun table member => byte_guarantees witness interface constraints balanced table (wordTables_mem witness table member))
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem touch_at_clock (input : HintReadWordChip.Inputs (ZMod p))
