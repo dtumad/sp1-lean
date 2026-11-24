@@ -166,7 +166,7 @@ theorem version_balanced (records : List (Readback (ZMod p))) (requests : List (
   let encode (i : Fin records.length) := (toElements (version i)).toArray
   intro msg
   rw [balanceOf_append, versions, table_versions]
-  simp only [physical, physicalInputs, List.map_append, List.flatMap_append, ← List.map_eq_flatMap, List.map_replicate,
+  simp only [physical, physicalInputs, WitnessGeneration.guardedRows, List.map_append, List.flatMap_append, ← List.map_eq_flatMap, List.map_replicate,
     List.map_map, Function.comp_def, balanceOf_append]
   rw [balance_disabled _ _ (by rfl), balance_disabled _ _ (by simp [Channel.pulledIfValue, Interaction.signedMult]), add_zero, add_zero]
   have pushed : balanceOf ((allocated records requests).map (fun r => versionChannel.emittedValue r.count r.version)) msg =
