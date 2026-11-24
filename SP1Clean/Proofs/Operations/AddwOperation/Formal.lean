@@ -44,7 +44,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
     have R1 := hr1 (by rw [show input_is_real = 1 from hr1eq] : input_is_real = 1)
     rw [← c16] at R1
     show input_cols_value[1].val < 2 ^ 16
-    exact (byteRowSpec_range _ sixteen_lt).mp R1
+    exact (byteRowSpec_u16 _).mp R1
   -- The two direct byte pulls are vacuous off-gate. The composed MSB gadget now exposes its empty
   -- requirement list through canonical metadata, so its local assumption does not leak into this tail.
   refine ⟨⟨(h_msb h_msb_as).1, ?_⟩,
@@ -57,8 +57,8 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   refine addwSemantics_of_carries ha hb ?_ ((h_msb h_msb_as).2 hr1eq)
   simp only [RawSpec]
   refine ⟨bool_of_mul_pred hgc0, bool_of_mul_pred hgc1, ?_, ?_⟩
-  · rw [← h65536]; exact (byteRowSpec_range _ sixteen_lt).mp R0
-  · rw [← h65536]; exact (byteRowSpec_range _ sixteen_lt).mp R1
+  · rw [← h65536]; exact (byteRowSpec_u16 _).mp R0
+  · rw [← h65536]; exact (byteRowSpec_u16 _).mp R1
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
@@ -79,9 +79,9 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   simp only [circuit_norm, byteChannel]
   refine ⟨⟨⟨fun hr1 => (key hr1).1.2, hbin⟩, ⟨h_spec.1, fun hr1 => (key hr1).2.2⟩⟩, ?_, ?_, ?_, ?_, ?_⟩
   · refine fun hneg => ?_
-    rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1.1
+    rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).1.1
   · refine fun hneg => ?_
-    rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1.2
+    rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).1.2
   · -- SP1's ungated `is_real` boolean gate `is_real * (is_real - 1) = 0`
     rcases hbin with h | h <;> rw [h] <;> simp
   · rcases hbin with h0 | h1

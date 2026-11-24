@@ -23,7 +23,8 @@ def instances : List (String × Except String (Context × List Seed × SP1Public
    ("installed_hints_empty", HintProgram.prepare 0),
    ("installed_hints_tail", HintProgram.prepare 9),
    ("installed_hints_aligned", HintProgram.prepare 16),
-   ("installed_enter", EnterAssembly.prepare)]
+   ("installed_enter", EnterAssembly.prepare 2),
+   ("installed_enter_once", EnterAssembly.prepare 0)]
 
 /-- Native rows and the full physical ledger; endpoint and terminal mutations must reject. -/
 def reference (context : Context) (consumers : List Seed) (header : SP1PublicIO Fp) : IO Json := do

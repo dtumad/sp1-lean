@@ -41,6 +41,8 @@ import SP1Clean.Soundness.AllocationWordWalk
 import SP1Clean.Soundness.HintAllocationStore
 import SP1Clean.Soundness.HintQueueClock
 import SP1Clean.Export.WriteFundedInstallation
+import SP1Clean.Export.WriteInstalledControlReceipts
+import SP1Clean.Export.WriteInstalledHostExit
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteInstalledMetadata
 import SP1Clean.Export.WriteObserverRows
@@ -147,6 +149,10 @@ import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Export.WriteMixedFixedResources
 import SP1Clean.Export.WriteOriginalInstallation
 import SP1Clean.Export.WriteMixedControlTables
+import SP1Clean.Export.WriteByteProviderInstallation
+import SP1Clean.Export.WritePublicByteDemand
+import SP1Clean.Export.WriteByteConsumers
+import SP1Clean.Export.WriteByteLedger
 import SP1Clean.Export.WriteMixedHostData
 import SP1Clean.Export.WriteMixedBankBalances
 import SP1Clean.Export.WriteMixedSourceRecords
@@ -304,6 +310,11 @@ import SP1Clean.Proofs.Completeness.AluGeneration
 import SP1Clean.Proofs.Completeness.Assembly
 import SP1Clean.Proofs.Completeness.CanonicalClosure
 import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
+import SP1Clean.Proofs.Completeness.ByteDemandMembership
+import SP1Clean.Proofs.Completeness.ByteProviderDemand
+import SP1Clean.Proofs.Completeness.ByteProviderTables
+import SP1Clean.Proofs.Completeness.ByteReaderTally
+import SP1Clean.Proofs.Completeness.ByteProviderBalance
 import SP1Clean.Proofs.Completeness.ChipLedger
 import SP1Clean.Proofs.Completeness.Closure
 import SP1Clean.Proofs.Completeness.ClosureRealization
@@ -338,6 +349,9 @@ import SP1Clean.Proofs.Completeness.MixedMemoryRecords
 import SP1Clean.Proofs.Completeness.MixedMemorySelection
 import SP1Clean.Proofs.Completeness.MixedMemoryPosts
 import SP1Clean.Proofs.Completeness.MixedMemorySyscall
+import SP1Clean.Proofs.Completeness.HostControlHistory
+import SP1Clean.Proofs.Completeness.HostControlTables
+import SP1Clean.Proofs.Completeness.MixedSyscallHandoff
 import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms

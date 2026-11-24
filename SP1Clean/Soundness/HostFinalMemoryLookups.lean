@@ -48,7 +48,7 @@ attribute [local circuit_norm] ProtectedStore.byte ProtectedStore.half Protected
   HostCommitBoundary.terminal HostCommitBoundary.terminalMain
   WritePermissionProvider.component WritePermissionProvider.membershipComponent
   ProgramImage.writePermissionTable StaticTable.component HostCallLedger.producer
-  HostCallReceivers.halt HostCallReceivers.noop HostCallReceivers.commit
+  HostCallReceivers.halt HostCallReceivers.profileNoop HostCallReceivers.commit
   HostCallReceivers.hintLength HostHintReadHandoff.receiver HostHintReadCoverage.handler
   HintReadCoverage.view HintReadCoverage.component HaltPaddingChip.component
 
@@ -83,15 +83,8 @@ theorem hostTables_lookupFree (image : ProgramImage) (source : ExecutionSnapshot
 private theorem noop_lookupFree (includeVerify : Bool) :
     (HostCallReceivers.profileNoop (p := p) includeVerify).component.operations.lookups = [] := by
   rw [Component.lookups_eq]
-  cases includeVerify with
-  | false =>
-    change ((HostNoopChip.main .enter (varFromOffset HostNoopChip.Inputs (F := ZMod p) 0)).operations
-      (size HostNoopChip.Inputs)).lookups = []
-    simp [circuit_norm]
-  | true =>
-    change ((HostNoopChip.choiceMain (varFromOffset HostNoopChip.Inputs (F := ZMod p) 0)).operations
-      (size HostNoopChip.Inputs)).lookups = []
-    simp [HostNoopChip.choiceMain, circuit_norm]
+  exact Guarded.main_lookups (HostNoopChip.activeCircuit (p := p) includeVerify) inferInstance
+    (varFromOffset HostNoopChip.RowInput 0) (size HostNoopChip.RowInput)
 
 /-- Every implemented control, commitment and HINT_LEN receiver is lookup-free. -/
 theorem available_lookupFree (includeVerify : Bool := true) :

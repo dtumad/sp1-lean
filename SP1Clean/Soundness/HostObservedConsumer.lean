@@ -28,17 +28,21 @@ private theorem verifier_iff (ens : Ensemble (ZMod p) SP1PublicIO) (data : Prove
     Operations.forall_interactionsWith_iff, Operations.interactionValuesWith_eq_map, List.forall_mem_map]
   rfl
 
-/-- Both public checks added to the host supervisor leave its genuine Byte verifier ledger intact. -/
-theorem verifier_byte_requirements (data : ProverData (ZMod p)) :
-    (ensemble image source target final).VerifierChannelRequirements data byteChannel.toRaw := by
+/-- The endpoint and transport wrappers preserve the full original verifier's Byte ledger. -/
+theorem verifier_byte_values (env : Environment (ZMod p)) :
+    (ensemble image source target final).verifierOperations.interactionValuesWith byteChannel.toRaw env =
+      (HostFinalMemory.Installed image source target final).verifierOperations.interactionValuesWith byteChannel.toRaw env := by
   let original := HostFinalMemory.Installed image source target final
   have registered : byteChannel.toRaw ∈ original.channels := byteRegistered
   have different : byteChannel.toRaw ≠ (SP1Clean.OrdinaryObservation.stateChannel (p := p)).toRaw := by
     simp [byteChannel, SP1Clean.OrdinaryObservation.stateChannel, Channel.toRaw]
-  have physical : (ensemble image source target final).verifierOperations.interactionValuesWith byteChannel.toRaw data.publicEnvironment =
-      original.verifierOperations.interactionValuesWith byteChannel.toRaw data.publicEnvironment := by
-    rw [verifier_interactions, ite_eq_right different, List.append_nil]
-    exact (SailBoundary.checker source target).install_verifier_interactions_of_mem original _ _ registered
+  rw [verifier_interactions, ite_eq_right different, List.append_nil]
+  exact (SailBoundary.checker source target).install_verifier_interactions_of_mem original _ _ registered
+
+/-- Both public checks added to the host supervisor leave its genuine Byte verifier ledger intact. -/
+theorem verifier_byte_requirements (data : ProverData (ZMod p)) :
+    (ensemble image source target final).VerifierChannelRequirements data byteChannel.toRaw := by
+  let original := HostFinalMemory.Installed image source target final
   have prior : original.VerifierChannelRequirements data byteChannel.toRaw := by
     intro i mem _
     exact HostFinalMemory.verifier_requirements (image := image) (source := source) (target := target.sail.memorySnapshot)
@@ -46,7 +50,7 @@ theorem verifier_byte_requirements (data : ProverData (ZMod p)) :
       (resources := HostHintReadLocal.sourceResources source.host.io.hints) (channels := HostFinalMemory.sourceChannels target.sail.memorySnapshot)
       (names := HostFinalMemory.source_unique_names image source target.sail.memorySnapshot)
       (registration := HostFinalMemory.source_registration image source target.sail.memorySnapshot) _ i mem
-  rw [verifier_iff, physical]
+  rw [verifier_iff, verifier_byte_values]
   exact (verifier_iff original data).mp prior
 
 /-- Each original observed component satisfies its outgoing Byte requirements, independently

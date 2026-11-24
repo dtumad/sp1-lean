@@ -21,19 +21,26 @@ def ordinaryRowBound (name : String) : Nat :=
   else 0
 private def widthsCheck (names : List String) : Bool :=
   names.eraseDups.all fun name => decide (names.count name ≤ ordinaryRowBound name)
-private def withReceipt (names : List String) : Bool :=
-  widthsCheck (names ++ [(InstructionReceipt.channel (p := SP1Prime)).name])
+private def site (i : AbstractInteraction Fp) : String × Channel.Direction := (i.channel.name,i.direction)
+
+private def checkedSites (sites : List (String × Channel.Direction)) : Bool :=
+  widthsCheck (sites.map Prod.fst) && sites.all fun s => s.1 != (Channels.byteChannel (p := SP1Prime)).name || s.2 == .pull
+
+private def withReceipt (sites : List (String × Channel.Direction)) : Bool :=
+  checkedSites (sites ++ [((InstructionReceipt.channel (p := SP1Prime)).name,.push)])
 
 private theorem raw_receipt {I O : TypeMap} [ProvableType I] [ProvableType O]
     (provider : GeneralFormalCircuit Fp I O) (project : Receipt.Projection Fp I Channels.StateMsg)
     (input : Var I Fp) (offset : ℕ) :
-    (((InstructionReceipt.circuit provider project).main input).operations offset).interactions.map (·.channel.name) =
-    ((provider.main input).operations offset).interactions.map (·.channel.name) ++
-      [(InstructionReceipt.channel (p := SP1Prime)).name] := by
+    (((InstructionReceipt.circuit provider project).main input).operations offset).interactions.map site =
+    ((provider.main input).operations offset).interactions.map site ++
+      [((InstructionReceipt.channel (p := SP1Prime)).name,.push)] := by
   simp only [InstructionReceipt.circuit, Receipt.circuit, Receipt.main,
     GeneralFormalCircuit.toSubcircuit_interactions, circuit_norm, List.map_append, List.map_cons, List.map_nil]
+  rfl
 
 section
+attribute [local circuit_norm] site
 attribute [local circuit_norm] AddChip.main AddOperation.circuit AddOperation.main AddiChip.main
 attribute [local circuit_norm] AddrAddOperation.circuit AddrAddOperation.main AddressOperation.circuit AddressOperation.main
 attribute [local circuit_norm] AddwChip.main AddwOperation.circuit AddwOperation.main AluX0Chip.main
@@ -67,113 +74,113 @@ attribute [local circuit_norm] List.map_append List.map_cons List.map_nil
 local macro "check_ordinary_channels" : tactic => `(tactic| (simp only [circuit_norm]; first | rfl | decide +kernel))
 
 private theorem add_channels (input : Var AddChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((AddChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((AddChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem addi_channels (input : Var AddiChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((AddiChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((AddiChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem addw_channels (input : Var AddwChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((AddwChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((AddwChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem sub_channels (input : Var SubChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((SubChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((SubChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem subw_channels (input : Var SubwChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((SubwChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((SubwChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem bitwise_channels (input : Var BitwiseChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((BitwiseChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((BitwiseChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem lt_channels (input : Var LtChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((LtChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((LtChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem shiftLeft_channels (input : Var ShiftLeftChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((ShiftLeftChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((ShiftLeftChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem shiftRight_channels (input : Var ShiftRightChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((ShiftRightChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((ShiftRightChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem jal_channels (input : Var JalChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((JalChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((JalChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem jalr_channels (input : Var JalrChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((JalrChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((JalrChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem branch_channels (input : Var BranchChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((BranchChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((BranchChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem uType_channels (input : Var UTypeChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((UTypeChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((UTypeChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem loadByte_channels (input : Var LoadByteChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((LoadByteChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((LoadByteChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem loadHalf_channels (input : Var LoadHalfChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((LoadHalfChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((LoadHalfChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem loadWord_channels (input : Var LoadWordChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((LoadWordChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((LoadWordChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem loadDouble_channels (input : Var LoadDoubleChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((LoadDoubleChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((LoadDoubleChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem loadX0_channels (input : Var LoadX0Chip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((LoadX0Chip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((LoadX0Chip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem storeByte_channels (input : Var StoreByteChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((ProtectedStore.byte.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((ProtectedStore.byte.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem storeHalf_channels (input : Var StoreHalfChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((ProtectedStore.half.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((ProtectedStore.half.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem storeWord_channels (input : Var StoreWordChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((ProtectedStore.word.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((ProtectedStore.word.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem storeDouble_channels (input : Var StoreDoubleChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((ProtectedStore.double.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((ProtectedStore.double.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem mul_channels (input : Var MulChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((MulChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((MulChip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 private theorem divRem_channels (input : Var DivRemChip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((DivRemChip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((DivRemChip.main input).operations offset).interactions.map site) := by
   simp only [circuit_norm]
   decide +kernel
 
 private theorem aluX0_channels (input : Var AluX0Chip.Inputs Fp) (offset : ℕ) :
-    withReceipt (((AluX0Chip.main input).operations offset).interactions.map (·.channel.name)) := by
+    withReceipt (((AluX0Chip.main input).operations offset).interactions.map site) := by
   check_ordinary_channels
 
 end
 
 private theorem checked_row (id : InstructionChipId) :
-    widthsCheck (rowChannelNames (ProtectedOrdinaryReceipt.component id)) := by
-  rw [rowChannelNames, Component.interactions_eq, Component.rowOperations]
-  change widthsCheck ((((InstructionReceipt.circuit _ _).main _).operations _).interactions.map _)
-  refine (congrArg widthsCheck (@raw_receipt _ _ (supportedChipFor (p := SP1Prime) id).kind.provableInputs
+    checkedSites ((ProtectedOrdinaryReceipt.component id).operations.interactions.map site) := by
+  rw [ Component.interactions_eq, Component.rowOperations]
+  change checkedSites ((((InstructionReceipt.circuit _ _).main _).operations _).interactions.map _)
+  refine (congrArg checkedSites (@raw_receipt _ _ (supportedChipFor (p := SP1Prime) id).kind.provableInputs
     (supportedChipFor (p := SP1Prime) id).kind.provableCols (ProtectedOrdinaryReceipt.provider id)
     (OrdinaryStateReceipt.projection id) _ _)).trans ?_
   cases id with
@@ -211,9 +218,23 @@ theorem ordinary_row_width (id : InstructionChipId) (name : String) :
   have cost : rowOccurrences table name = (rowChannelNames table).count name := by
     simp [rowOccurrences, rowChannelNames, List.count_eq_countP, List.countP_map, Function.comp_def]
   rw [cost]
+  have counted : widthsCheck (rowChannelNames table) := by
+    have profile := ((Bool.and_eq_true ..).mp (checked_row id)).1
+    simpa only [List.map_map,Function.comp_def,site,rowChannelNames] using profile
   by_cases present : name ∈ rowChannelNames table
-  · exact of_decide_eq_true ((List.all_eq_true.mp (checked_row id)) name (by simpa using present))
+  · exact of_decide_eq_true ((List.all_eq_true.mp counted) name (by simpa using present))
   · simp [List.count_eq_zero.mpr present]
+
+/-- Every actual Byte site on the original 25 instruction circuits is a pull, including
+protected stores and disabled physical rows. -/
+theorem ordinary_byte_direction (id : InstructionChipId) {i : AbstractInteraction Fp}
+    (member : i ∈ (ProtectedOrdinaryReceipt.component id).operations.interactionsWith Channels.byteChannel.toRaw) :
+    i.direction = .pull := by
+  have onByte := Operations.channel_eq_of_mem_interactionsWith member
+  have raw : i ∈ (ProtectedOrdinaryReceipt.component id).operations.interactions := List.mem_of_mem_filter member
+  have dirs := ((Bool.and_eq_true ..).mp (checked_row id)).2
+  have typed := List.all_eq_true.mp dirs (site i) (List.mem_map_of_mem raw)
+  simpa only [site,onByte,Channel.toRaw_name,bne_self_eq_false,Bool.false_or,beq_iff_eq] using typed
 
 /-- The Byte ledger has the largest ordinary-row width across the registry. -/
 theorem ordinaryRowBound_le (name : String) : ordinaryRowBound name ≤ 126 := by

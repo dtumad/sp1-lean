@@ -111,7 +111,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have hguar := h_align (by rw [hr1])
     simp only [byteChannel] at hguar
     rw [← c14] at hguar
-    exact val_mod_four_of_mul_inv_four_lt ((byteRowSpec_range _ h14p).mp hguar)
+    exact val_mod_four_of_mul_inv_four_lt ((byteRowSpec_range (n := 14) _ (by decide)).mp hguar)
   · exact Or.inr ⟨h_bin, h_bin⟩
   · refine Or.inr ⟨h_bin, ?_, h_clk.at_four⟩
     -- RegisterWrite op_a write push: `isU64` of the link value `op_a_value`. On `rd ≠ x0` (`op_a_0 = 0`)
@@ -246,7 +246,7 @@ theorem completeness :
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hav0]
     rw [← c14]
-    exact (byteRowSpec_range _ h14p).mpr (h_align_pa hr1)
+    exact (byteRowSpec_range (n := 14) _ (by decide)).mpr (h_align_pa hr1)
   · exact h_op0_pad
   · rcases h_bin with h | h <;> rw [h] <;> simp
 

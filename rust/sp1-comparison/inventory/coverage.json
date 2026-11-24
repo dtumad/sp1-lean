@@ -379,7 +379,7 @@
     {"name": "sp1.native.write_permission.provider", "width": 8, "inputWidth": 8, "fixedColumns": [0, 1, 2, 3, 4, 5, 6], "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read", "width": 364, "inputWidth": 62, "fixedColumns": [], "group": "host", "lookups": []},
     {"name": "sp1.native.host_halt", "width": 90, "inputWidth": 26, "fixedColumns": [], "group": "host", "lookups": []},
-    {"name": "sp1.native.enter_or_verify", "width": 18, "inputWidth": 18, "fixedColumns": [], "group": "host", "lookups": []},
+    {"name": "sp1.native.enter_or_verify", "width": 19, "inputWidth": 19, "fixedColumns": [], "group": "host", "lookups": []},
     {"name": "sp1.native.commit.0", "width": 251, "inputWidth": 65, "fixedColumns": [], "group": "host", "lookups": []},
     {"name": "sp1.native.commit.1", "width": 251, "inputWidth": 65, "fixedColumns": [], "group": "host", "lookups": []},
     {"name": "sp1.native.commit.2", "width": 251, "inputWidth": 65, "fixedColumns": [], "group": "host", "lookups": []},

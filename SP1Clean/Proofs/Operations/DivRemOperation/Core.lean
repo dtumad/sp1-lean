@@ -237,14 +237,6 @@ theorem forall_of_ownAssertsHold (env : Environment (ZMod p)) {colsV : Var DivRe
   exact h _ hx
 
 
-/-- A width-16 `Range` byte-table row from a `< 2^16` bound (the completeness direction of the
-byte-pull guarantees; numeral-width sibling of `Circuits/Channels/ByteTable`'s `byteRowSpec_range`). -/
-private lemma byteRowSpec_of_isU16 {v : ZMod p} (h : v.val < 2 ^ 16) :
-    ByteRowSpec (⟨6, v, 16, 0⟩ : ByteRow (ZMod p)) := by
-  refine ⟨ByteOpcode.Range, by norm_cast, ?_⟩
-  simp only [ByteOpcode.constrain, DivRemChip.val_16_zmod_p]
-  exact h
-
 set_option linter.unusedSectionVars false in
 /-- One-hot flags select a committed case: with all eight variant flags binary and their `val`s
 summing to one, some `Case` carries flag `1` and every other flag is `0`. -/
@@ -548,38 +540,38 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Co
   all_goals intro hneg
   all_goals replace hByte := hByte hneg
   all_goals obtain ⟨c0, c1, c2, c3, c4, c5, c6, c7, fAc, fAr, fQ, fR, fCtq⟩ := hByte
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eRc, eCar] using c0)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eRc, eCar] using c1)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eRc, eCar] using c2)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eRc, eCar] using c3)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eCar] using c4)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eCar] using c5)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eCar] using c6)
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eCar] using c7)
-  · exact byteRowSpec_of_isU16 (by simpa only [eAc] using fAc 0 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAc] using fAc 1 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAc] using fAc 2 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAc] using fAc 3 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAr] using fAr 0 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAr] using fAr 1 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAr] using fAr 2 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eAr] using fAr 3 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eQ] using fQ 0 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eQ] using fQ 1 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eQ] using fQ 2 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eQ] using fQ 3 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eR] using fR 0 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eR] using fR 1 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eR] using fR 2 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eR] using fR 3 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 0 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 1 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 2 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 3 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 4 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 5 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 6 (by norm_num))
-  · exact byteRowSpec_of_isU16 (by simpa only [eCtq] using fCtq 7 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eRc, eCar] using c0)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eRc, eCar] using c1)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eRc, eCar] using c2)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eRc, eCar] using c3)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eCar] using c4)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eCar] using c5)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eCar] using c6)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq, eCar] using c7)
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAc] using fAc 0 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAc] using fAc 1 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAc] using fAc 2 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAc] using fAc 3 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAr] using fAr 0 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAr] using fAr 1 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAr] using fAr 2 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eAr] using fAr 3 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eQ] using fQ 0 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eQ] using fQ 1 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eQ] using fQ 2 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eQ] using fQ 3 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eR] using fR 0 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eR] using fR 1 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eR] using fR 2 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eR] using fR 3 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 0 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 1 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 2 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 3 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 4 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 5 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 6 (by norm_num))
+  · exact (byteRowSpec_u16 _).mpr (by simpa only [eCtq] using fCtq 7 (by norm_num))
 private theorem main_requirementsChannelsLawful (input_var : Var DivRemChip.Columns (ZMod p)) (i₀ : ℕ) :
     ((main input_var).operations i₀).RequirementsChannelsLawful
       (elaborated (p := p)).channelsWithGuarantees [] := by

@@ -100,7 +100,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   -- The two trailing conjuncts are the byte pulls' own `Requirements` (post-`cedc171b`): each fires only
   -- at an off-gate multiplicity (`-is_real ∉ {0,-1}`), impossible under the binary `Assumptions` — vacuous.
   refine ⟨fun hr1 => ?_, h_assumptions⟩
-  exact ⟨(byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact h_holds.2.1 hr1),
+  exact ⟨(byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact h_holds.2.1 hr1),
     ((byteRowSpec_u8range_pair _ _).mp (h_holds.2.2 hr1)).1⟩
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
@@ -111,7 +111,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   refine ⟨?_, ?_, ?_⟩
   · rcases h_assumptions with h | h <;> simp only [h, sub_self, mul_zero, zero_mul]
   · intro hneg
-    simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ sixteen_lt).mpr (h_spec hneg).1
+    simpa only [Nat.cast_ofNat] using (byteRowSpec_u16 _).mpr (h_spec hneg).1
   · intro hneg
     exact (byteRowSpec_u8range_pair _ _).mpr
       ⟨(h_spec hneg).2, by rw [ZMod.val_zero]; norm_num⟩

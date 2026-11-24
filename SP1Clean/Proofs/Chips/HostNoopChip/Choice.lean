@@ -2,8 +2,8 @@ import SP1Clean.Proofs.Chips.HostNoopChip.Formal
 
 /-! # One physical receipt for constrained ENTER and VERIFY
 
-The code limb selects between the two constrained-replay contracts. Every row consumes one
-complete host call. No selector column, padding row, or auxiliary witness cell is needed.
+The code limb selects between the two constrained-replay contracts on an occupied row.
+The enclosing guarded component controls physical demand padding.
 -/
 
 namespace SP1Clean.HostNoopChip
@@ -45,7 +45,7 @@ private theorem word_eq (word : Word (ZMod p)) (low : ZMod p)
   intro i hi
   interval_cases i <;> assumption
 
-/-- Formal soundness and completeness for the shared, always-active HostCall receipt. -/
+/-- Formal soundness and completeness for the shared active HostCall receipt. -/
 def choiceCircuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.enter_or_verify"
   main := choiceMain

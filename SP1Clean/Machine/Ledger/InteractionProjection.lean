@@ -423,7 +423,7 @@ open SP1Clean.Channels (byteChannel)
 
 /-- `(toElements msg).toList` of a `ByteRow` is its four fields, in field order. See the `combinedSize'`
 note. -/
-private lemma byteRow_toList {T : Type} (msg : ByteRow T) :
+lemma byteRow_toList {T : Type} (msg : ByteRow T) :
     (toElements msg).toList = [msg.opcode, msg.a, msg.b, msg.c] := by
   simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
     Vector.toList_cast]

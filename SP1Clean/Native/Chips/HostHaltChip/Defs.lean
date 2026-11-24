@@ -5,8 +5,8 @@ import Clean.Gadgets.Equality
 
 /-! # The native HALT host consumer
 
-One row consumes one full instruction handoff and checks its canonical exit argument. There is
-no padding. The instruction emits the public Exit value; this handler separately emits the
+An admitted segment has at most one HALT. Its zero- or one-row demand table consumes each
+full instruction handoff and checks the canonical exit argument. The instruction emits the public Exit value; this handler separately emits the
 complete terminal receipt that authenticates optional outgoing status.
 -/
 
