@@ -1,4 +1,5 @@
 import SP1Clean.Export.WriteMixedSupplyBounds
+import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Export.WriteInstalledReadBalances
 import SP1Clean.Proofs.Completeness.WritePacketAssembly
 
@@ -21,7 +22,7 @@ attribute [local irreducible] base withSources
 
 /-- The genuine released mixed run constructs the five native read tables with their complete raw
 balances and exact native padded height vector. The completed five-table block installs unchanged
-into every registered original supervisor and observer suffix. -/
+into the original supervisor with its generated commitment and ordinary observation tables. -/
 theorem counted_packet_tables {events : List ExecutionEvent}
     (run : ReleaseAdmissibleExecution (.native SP1Prime) SP1Prime image source target events)
     (data : ProverData F) (hint : ProverHint F) :
@@ -50,9 +51,9 @@ theorem counted_packet_tables {events : List ExecutionEvent}
         LogUpBalanced (packet.interactionsWith WritePacket.channel.toRaw ++ spans.interactionsWith WritePacket.channel.toRaw) ∧
         LogUpBalanced (spans.interactionsWith WriteBuffer.channel.toRaw ++ words.interactionsWith WriteBuffer.channel.toRaw) ∧
         ∀ (final : HostHintQueue.State F) (header : SP1PublicIO F)
-          (remaining : WriteMixedSourceTables.Remaining image source target final)
+          (remaining : WriteMixedHostTables.Remaining image source target final)
           (tail : List (Table F)) (registered : tail.map (·.component) = (tables source target).drop 5),
-          let w := WriteMixedSourceTables.ofExecution run compiled final data hint header remaining packets
+          let w := WriteMixedSourceTables.ofExecution run compiled final data hint header (WriteMixedHostTables.install run.1 data remaining) packets
           let full := build w (block ++ tail) (by
             rw [List.map_append, show block.map (·.component) = (tables source target).take 5 from rfl,
               registered, List.take_append_drop])
@@ -97,7 +98,7 @@ theorem counted_packet_tables {events : List ExecutionEvent}
     simp only [List.map_cons, List.map_nil, supply_height, qh, ph, sh, wh]
   · intro final header remaining tail registered w full
     have paid : LogUpBalanced (AccessInventory.ledger (raw w) (raw_registered w) supply) := by
-      rw [ledger_records, WriteMixedSourceTables.compiled_records run compiled data hint packets final header remaining]
+      rw [ledger_records, WriteMixedSourceTables.compiled_records run compiled data hint packets final header (WriteMixedHostTables.install run.1 data remaining)]
       rwa [ledger_records] at readback
     have attached : LogUpBalanced ((installSources w).interactionsWith readbackChannel.toRaw ++ supply.interactionsWith readbackChannel.toRaw) :=
       fun msg => (balanceOf_perm (installed_readback_perm w supply)).trans (paid msg)

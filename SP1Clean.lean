@@ -58,6 +58,9 @@ import SP1Clean.Export.WriteGeneratedSelection
 import SP1Clean.Export.WriteInstalledReadBalances
 import SP1Clean.Export.WriteMixedReadFunding
 import SP1Clean.Export.WriteMixedSourceAssembly
+import SP1Clean.Export.WriteMixedHostRegistry
+import SP1Clean.Export.WriteMixedHostTables
+import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Export.WriteMixedSourceRecords
 import SP1Clean.Export.WriteMixedSourceTables
 import SP1Clean.Export.WriteMixedSupplyCapacity
