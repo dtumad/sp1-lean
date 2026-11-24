@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Completeness.WritePacketInputs
-import SP1Clean.Proofs.Chips.WritePacket.Ledger
+import SP1Clean.Proofs.Chips.WritePacket.Physical
 import ToClean.Air.GuardedDemandTable
 import ToClean.Air.Footprint
 
@@ -11,31 +11,6 @@ open Circuit Air.Flat Semantics Machine TraceGen FormalModel.Shard
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-/-- Physical packet input paired with its activity cell. -/
-abbrev Row := ProvablePair Inputs field
-
-/-- These are precisely the three signed occurrences of a physical packet row, including padding. -/
-def rowTraffic (r : Row (ZMod p)) : List (Interaction (ZMod p)) :=
-  [HostCallChip.channel.pulledIfValue r.2 r.1.call, WriteProbe.readChannel.pulledIfValue r.2 r.1.read,
-    channel.pushedIfValue r.2 r.1.header]
-
-/-- The emitted call, x12 length request and header are all computed from the same public row cells. -/
-theorem component_traffic (env : Environment (ZMod p)) : component.operations.interactionValues env =
-    rowTraffic (valueFromOffset Row 0 env) := by
-  let input := varFromOffset Row 0 (F := ZMod p)
-  rw [Operations.interactionValues, Component.interactions_eq]
-  change ((((Guarded.main circuit guardSupported input).operations (size Row)).interactions).map _) = _
-  rw [Guarded.main_interactions]
-  change (((((main input.1).operations (size Row)).interactions.map _).map _)) = _
-  rw [main_interactions]
-  have decode (v : Var Row (ZMod p)) :
-      eval env v.1.call = (eval env v).1.call ∧ eval env v.1.read = (eval env v).1.read ∧
-      eval env v.1.header = (eval env v).1.header := by
-    simp only [Inputs.call, Inputs.read, Inputs.header, ClockParts.address, ClockParts.low24, ClockParts.high24, circuit_norm, and_self]
-  simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_pulled, Channel.eval_pushed,
-    Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue, mul_one, Guarded.eval_activity,
-    (decode input).1, (decode input).2.1, (decode input).2.2, input, eval_varFromOffset_valueFromOffset, rowTraffic]
 
 /-- One normal Clean table build for all packet inputs, padded globally. -/
 def table (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))

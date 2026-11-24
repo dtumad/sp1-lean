@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Operations.WritePlacementPlans
+import SP1Clean.Proofs.Operations.WriteRequestRows
 import SP1Clean.Proofs.Operations.WriteOctetRows
 import SP1Clean.Proofs.Completeness.WriteBlockLedgers
 import SP1Clean.Proofs.Completeness.WriteBufferTables
@@ -30,22 +31,7 @@ theorem requestTable_headers (rows : List (Request F)) (data : ProverData F) (fi
   rw [List.map_eq_flatMap]
   apply Table.ofInputs_ledger requestComponent (WitnessGeneration.guardedRows rows) data
     ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
-  intro env
-  let I := ProvablePair Request field
-  let input := varFromOffset I (F := F) 0
-  rw [Operations.interactionValuesWith,Component.interactionsWith_eq]
-  change ((Guarded.main requestCircuit requestGuardSupported input).operations (size I)).interactionValuesWith _ env =
-    [WriteBuffer.effectHeaderChannel.pulledIfValue (valueFromOffset I 0 env).2 (valueFromOffset I 0 env).1.header]
-  rw [Guarded.main_interactionValuesWith]
-  change (((requestMain input.1).operations (size I)).interactionValuesWith _ env).map _ = _
-  have raw : ((requestMain input.1).operations (size I)).interactionsWith WriteBuffer.effectHeaderChannel.toRaw =
-      [(WriteBuffer.effectHeaderChannel.pulled input.1.header).toRaw] := by
-    rw [request_interactions _ _ _]
-    simp [WriteBuffer.effectHeaderChannel,requestChannel,circuit_norm]
-  have proj (i : Var I F) : eval env i.1.header = (eval env i).1.header := by simp only [I,circuit_norm]
-  rw [Operations.interactionValuesWith,raw]
-  simp only [List.map_cons,List.map_nil,Channel.eval_pulled,Channel.pulledValue,Channel.pulledIfValue,mul_one,
-    Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
+  exact request_header_at
 
 /-- Each classified request is emitted once at its physical activity. -/
 theorem requestTable_requests (rows : List (Request F)) (data : ProverData F) (fit) :
@@ -54,22 +40,7 @@ theorem requestTable_requests (rows : List (Request F)) (data : ProverData F) (f
   rw [List.map_eq_flatMap]
   apply Table.ofInputs_ledger requestComponent (WitnessGeneration.guardedRows rows) data
     ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
-  intro env
-  let I := ProvablePair Request field
-  let input := varFromOffset I (F := F) 0
-  rw [Operations.interactionValuesWith,Component.interactionsWith_eq]
-  change ((Guarded.main requestCircuit requestGuardSupported input).operations (size I)).interactionValuesWith _ env =
-    [requestChannel.pushedIfValue (valueFromOffset I 0 env).2 (valueFromOffset I 0 env).1]
-  rw [Guarded.main_interactionValuesWith]
-  change (((requestMain input.1).operations (size I)).interactionValuesWith _ env).map _ = _
-  have raw : ((requestMain input.1).operations (size I)).interactionsWith requestChannel.toRaw =
-      [(requestChannel.pushed input.1).toRaw] := by
-    rw [request_interactions _ _ _]
-    simp [WriteBuffer.effectHeaderChannel,requestChannel,circuit_norm]
-  have proj (i : Var I F) : eval env i.1 = (eval env i).1 := by simp only [I,circuit_norm]
-  rw [Operations.interactionValuesWith,raw]
-  simp only [List.map_cons,List.map_nil,Channel.eval_pushed,Channel.pushedValue,Channel.pushedIfValue,mul_one,
-    Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
+  exact request_output_at
 
 /-- Decoders pull the exact incoming clock, aligned address and data word. -/
 theorem octetTable_words (rows : List (WordRow F)) (data : ProverData F) (fit) :
@@ -87,22 +58,7 @@ theorem dispatchTable_requests (rows : List (Dispatch F)) (data : ProverData F) 
   rw [List.map_eq_flatMap]
   apply Table.ofInputs_ledger dispatchComponent (WitnessGeneration.guardedRows rows) data
     ((WitnessGeneration.guardedRows_length rows).trans_le fit) (fun _ => trivial)
-  intro env
-  let I := ProvablePair Dispatch field
-  let input := varFromOffset I (F := F) 0
-  rw [Operations.interactionValuesWith,Component.interactionsWith_eq]
-  change ((Guarded.main dispatchCircuit dispatchGuardSupported input).operations (size I)).interactionValuesWith _ env =
-    [requestChannel.pulledIfValue (valueFromOffset I 0 env).2 (valueFromOffset I 0 env).1.request]
-  rw [Guarded.main_interactionValuesWith]
-  change (((dispatchMain input.1).operations (size I)).interactionValuesWith _ env).map _ = _
-  have raw : ((dispatchMain input.1).operations (size I)).interactionsWith requestChannel.toRaw =
-      [(requestChannel.pulled input.1.request).toRaw] := by
-    rw [dispatch_ledger _ _ _ (by simp [requestChannel,Channels.byteChannel,circuit_norm])]
-    simp [requestChannel,cursorChannel,queueEffectChannel,recordChannel,positionChannel,circuit_norm]
-  have proj (i : Var I F) : eval env i.1.request = (eval env i).1.request := by simp only [I,circuit_norm]
-  rw [Operations.interactionValuesWith,raw]
-  simp only [List.map_cons,List.map_nil,Channel.eval_pulled,Channel.pulledValue,Channel.pulledIfValue,mul_one,
-    Guarded.eval_activity,proj,input,eval_varFromOffset_valueFromOffset]
+  exact dispatch_request_at
 
 /-- Each decoder publishes eight checked byte lanes at its original guest key and clock. -/
 theorem octetTable_octets (rows : List (WordRow F)) (data : ProverData F) (fit) :

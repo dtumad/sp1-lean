@@ -69,13 +69,7 @@ theorem spanTable_headers (spans : List (Span (ZMod p))) (data : ProverData (ZMo
       (WitnessGeneration.guardedRows spans).flatMap (fun r => [WritePacket.channel.pulledIfValue r.2 r.1.header]) := by
   apply Table.ofInputs_ledger (spanComponent (p := p)) (WitnessGeneration.guardedRows spans) data
     ((WitnessGeneration.guardedRows_length (F := ZMod p) spans).trans_le bound) (fun _ => trivial)
-  intro env
-  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((spanComponent.circuit.main (varFromOffset SpanRow 0)).operations (size SpanRow)).interactionValuesWith _ env =
-    [WritePacket.channel.pulledIfValue (valueFromOffset SpanRow 0 env).2 (valueFromOffset SpanRow 0 env).1.header]
-  have proj (i : Var SpanRow (ZMod p)) : eval env i.1.header = (eval env i).1.header := by simp only [circuit_norm]
-  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
-    span_headers (varFromOffset SpanRow 0) (size SpanRow) env
+  exact span_input_at
 
 /-- The host effect receiver receives each of those same headers at the same activity. Padding is retained. -/
 theorem spanTable_effect_headers (spans : List (Span (ZMod p))) (data : ProverData (ZMod p)) (bound) :
@@ -83,13 +77,7 @@ theorem spanTable_effect_headers (spans : List (Span (ZMod p))) (data : ProverDa
       (WitnessGeneration.guardedRows spans).flatMap (fun r => [effectHeaderChannel.pushedIfValue r.2 r.1.header]) := by
   apply Table.ofInputs_ledger (spanComponent (p := p)) (WitnessGeneration.guardedRows spans) data
     ((WitnessGeneration.guardedRows_length (F := ZMod p) spans).trans_le bound) (fun _ => trivial)
-  intro env
-  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((spanComponent.circuit.main (varFromOffset SpanRow 0)).operations (size SpanRow)).interactionValuesWith _ env =
-    [effectHeaderChannel.pushedIfValue (valueFromOffset SpanRow 0 env).2 (valueFromOffset SpanRow 0 env).1.header]
-  have proj (i : Var SpanRow (ZMod p)) : eval env i.1.header = (eval env i).1.header := by simp only [circuit_norm]
-  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
-    span_effect_headers (varFromOffset SpanRow 0) (size SpanRow) env
+  exact span_output_at
 
 /-- The word table consumes each actual read payload in input order. Padding is retained. -/
 theorem wordTable_reads (steps : List (Step (ZMod p))) (data : ProverData (ZMod p)) (bound) :

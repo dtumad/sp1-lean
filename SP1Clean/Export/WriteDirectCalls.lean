@@ -36,7 +36,8 @@ private theorem dispatch_valid_mem (w : EnsembleWitness (native image source tar
   apply decide_eq_true
   simp only [ticketGate,enabled,gate,one_mul]
 
-private theorem alloc_mem (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
+/-- An allocating ticket comes from an active physical dispatcher. -/
+theorem allocating_dispatch_active (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (mem : d ∈ allocatingDispatches (observed w)) :
     d ∈ physicalDispatches (observed w) := by
   have gate := ((native_allocation_tickets w ok fit raw).2 d mem).2
@@ -84,7 +85,7 @@ theorem native_direct_placement (w : EnsembleWitness (native image source target
   let seen := observed w
   let calls := physicalDispatches seen
   obtain ⟨paths,paired,ends,all⟩ := native_placement_walks w ok fit raw
-  have appears : d ∈ (calls.zip paths).map Prod.fst := by rw [List.map_fst_zip paired.length_eq.le]; exact alloc_mem w ok fit raw d md
+  have appears : d ∈ (calls.zip paths).map Prod.fst := by rw [List.map_fst_zip paired.length_eq.le]; exact allocating_dispatch_active w ok fit raw d md
   obtain ⟨⟨actual,path⟩,both,e⟩ := List.mem_map.mp appears
   change actual = d at e
   subst actual

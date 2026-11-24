@@ -161,4 +161,28 @@ theorem word_forward_at (env : Environment (ZMod p)) :
   simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
     word_values (varFromOffset WordRow 0) (size WordRow) env
 
+/-- A guarded span consumes a complete packet header. -/
+theorem span_input_at (env : Environment (ZMod p)) :
+    let r := valueFromOffset SpanRow 0 env
+    (spanComponent (p := p)).operations.interactionValuesWith WritePacket.channel.toRaw env =
+      [WritePacket.channel.pulledIfValue r.2 r.1.header] := by
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((spanComponent.circuit.main (varFromOffset SpanRow 0)).operations (size SpanRow)).interactionValuesWith _ env =
+    [WritePacket.channel.pulledIfValue (valueFromOffset SpanRow 0 env).2 (valueFromOffset SpanRow 0 env).1.header]
+  have proj (i : Var SpanRow (ZMod p)) : eval env i.1.header = (eval env i).1.header := by simp only [circuit_norm]
+  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
+    span_headers (varFromOffset SpanRow 0) (size SpanRow) env
+
+/-- A guarded span forwards its original header to the classifier. -/
+theorem span_output_at (env : Environment (ZMod p)) :
+    let r := valueFromOffset SpanRow 0 env
+    (spanComponent (p := p)).operations.interactionValuesWith effectHeaderChannel.toRaw env =
+      [effectHeaderChannel.pushedIfValue r.2 r.1.header] := by
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((spanComponent.circuit.main (varFromOffset SpanRow 0)).operations (size SpanRow)).interactionValuesWith _ env =
+    [effectHeaderChannel.pushedIfValue (valueFromOffset SpanRow 0 env).2 (valueFromOffset SpanRow 0 env).1.header]
+  have proj (i : Var SpanRow (ZMod p)) : eval env i.1.header = (eval env i).1.header := by simp only [circuit_norm]
+  simpa only [Guarded.eval_activity, proj, eval_varFromOffset_valueFromOffset] using
+    span_effect_headers (varFromOffset SpanRow 0) (size SpanRow) env
+
 end SP1Clean.WriteBuffer
