@@ -16,6 +16,8 @@ open Circuit Air.Flat Semantics Machine TraceGen FormalModel.Shard WriteProbe Ac
 open WriteEffects.Witness
 private abbrev F := ZMod SP1Prime
 
+variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State F}
+
 private theorem public_read (pre : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
     (member : ch ∈ readProtocols) :
     (withPublicChecks pre).interactionsWith ch = pre.interactionsWith ch := by
