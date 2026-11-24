@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.WriteSparseInitializers
+import SP1Clean.Proofs.Completeness.SnapshotReadDirections
 import ToClean.Air.StaticMembershipReaders
 
 /-! # Funding the original source register and RAM membership providers
@@ -8,7 +9,7 @@ membership pulls determine the counts at each verifier-fixed register or interva
 -/
 
 namespace SP1Clean.WriteProbe.SparseBoundary
-open Circuit Air.Flat Semantics Soundness TraceGen FormalModel.Shard
+open Circuit Air.Flat Semantics Soundness TraceGen FormalModel.Shard SnapshotReadDirections
 
 private abbrev F := ZMod SP1Prime
 
@@ -34,37 +35,6 @@ private theorem member_name (snapshot : MemorySnapshot) (ram : Bool) :
   cases ram
   · simp only [members, MemorySnapshot.registerTable, StaticTable.channel, Channel.toRaw_name, StaticTable.ofRows, Bool.false_eq_true, ↓reduceIte]
   · rfl
-
-private def allowed (a : AbstractInteraction F) : Bool :=
-  a.direction == .pull || a.channel.name != "sp1.native.initial_memory"
-
-private theorem otherChannels {I O : TypeMap} [ProvableType I] [ProvableType O]
-    (c : FormalCircuitBase F I O) (free : c.channels.all (fun ch => ch.name != "sp1.native.initial_memory") = true)
-    (i : Var I F) (n : ℕ) : ((c.main i).operations n).interactions.all allowed = true := by
-  apply List.all_eq_true.mpr
-  intro a present
-  have member : a.channel ∈ c.channels := c.channels_subset i n (List.mem_map.mpr ⟨a,present,rfl⟩)
-  simp only [allowed, List.all_eq_true.mp free a.channel member, Bool.or_true]
-
-private theorem lookupAllowed (s : MemorySnapshot) (i : Var Word F) (n : ℕ) :
-    ((InitialMemoryLookup.main s.memory (2^48) i).operations n).interactions.all allowed = true := by
-  have range (i : Var Word F) (n : ℕ) : ((WordRangeCheck.circuit.main i).operations n).interactions.all allowed = true :=
-    otherChannels WordRangeCheck.circuit.base (by rfl) i n
-  have cmp (i : Var LtOperationUnsigned.Inputs F) (n : ℕ) : ((LtOperationUnsigned.circuit.main i).operations n).interactions.all allowed = true :=
-    otherChannels LtOperationUnsigned.circuit.base (by rfl) i n
-  simp only [InitialMemoryLookup.main, circuit_norm, FormalAssertion.toSubcircuit_interactions, List.all_append, range, cmp, List.all_cons]
-  rfl
-
-private theorem wordAllowed (s : MemorySnapshot) (i : Var Word F) (n : ℕ) :
-    ((InitialMemoryRead.main s.memory i).operations n).interactions.all allowed = true := by
-  have add (i : Var AddOperation.Inputs F) (n : ℕ) : ((AddOperation.circuit.main i).operations n).interactions.all allowed = true :=
-    otherChannels AddOperation.circuit.base (by rfl) i n
-  simp only [InitialMemoryRead.main, circuit_norm, FormalAssertion.toSubcircuit_interactions, GeneralFormalCircuit.toSubcircuit_interactions,
-    InitialMemoryLookup.circuitNamed, List.all_append, lookupAllowed, List.all_flatten]
-  apply List.all_eq_true.mpr
-  intro ls inside
-  obtain ⟨j,rfl⟩ := List.mem_ofFn.mp inside
-  simp only [List.all_append, add, lookupAllowed, Bool.and_self]
 
 private theorem reads (snapshot : MemorySnapshot) (ram : Bool) :
     ∀ a ∈ (source (p := SP1Prime) snapshot ram).operations.interactionsWith (members snapshot ram).channel.toRaw, a.direction = .pull := by
@@ -99,16 +69,20 @@ private theorem reads (snapshot : MemorySnapshot) (ram : Bool) :
     change (x.direction == .pull || "sp1.native.source_registers" == "SP1Memory") = true at checked
     simpa [AbstractInteraction.guard] using checked
   · obtain ⟨raw, same⟩ := List.mem_filter.mp present
-    have all (i : Var Word F) (n : ℕ) : ((SnapshotRamProvider.main snapshot i).operations n).interactions.all allowed = true := by
-      have addr (i : Var AddressOperation.Inputs F) (n : ℕ) : ((AddressOperation.circuit.main i).operations n).interactions.all allowed = true :=
-        otherChannels AddressOperation.circuit.base (by rfl) i n
+    have all (i : Var Word F) (n : ℕ) : ((SnapshotRamProvider.main snapshot i).operations n).interactions.all (allowed false) = true := by
+      have addr (i : Var AddressOperation.Inputs F) (n : ℕ) : ((AddressOperation.circuit.main i).operations n).interactions.all (allowed false) = true :=
+        otherChannels false AddressOperation.circuit.base (by rfl) i n
+      have word (i : Var Word F) (n : ℕ) : ((InitialMemoryRead.main snapshot.memory i).operations n).interactions.all (allowed false) = true :=
+        wordAllowed false snapshot.memory i n
       simp only [SnapshotRamProvider.main, circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, InitialMemoryRead.circuit,
-        InitialMemoryRead.circuitNamed, List.all_append, addr, wordAllowed]
+        InitialMemoryRead.circuitNamed, List.all_append, addr, word]
       rfl
     have checked := List.all_eq_true.mp (all _ _) x raw
     have ch : x.channel = (members snapshot true).channel.toRaw := of_decide_eq_true same
     change x.direction = .pull
-    simpa only [allowed, ch, member_name, ↓reduceIte, bne_self_eq_false, Bool.or_false, beq_iff_eq] using checked
+    change (x.direction == .pull || x.channel.name != "sp1.native.initial_memory") = true at checked
+    rw [ch,member_name] at checked
+    simpa using checked
 
 /-- For the actual initializer's ordered signed ledger, all physical preallocated membership
 counts, original row checks and weighted balance are obtained from the generated Memory history. -/

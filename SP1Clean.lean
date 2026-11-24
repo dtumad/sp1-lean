@@ -85,6 +85,7 @@ import SP1Clean.Proofs.Completeness.MixedCommitCalls
 import SP1Clean.Proofs.Completeness.MixedCommitHistory
 import SP1Clean.Proofs.Completeness.MixedCommitTables
 import SP1Clean.Proofs.Completeness.MixedCommitLedger
+import SP1Clean.Proofs.Completeness.SnapshotReadDirections
 import SP1Clean.Proofs.Completeness.MixedSnapshotMembership
 import SP1Clean.Proofs.Completeness.FixedProgramReads
 import SP1Clean.Proofs.Completeness.MixedProgramFetches
