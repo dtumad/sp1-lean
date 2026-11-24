@@ -25,7 +25,8 @@ theorem native_dispatch_clocks (w : EnsembleWitness (native image source target)
   simp only [List.map_map,Function.comp_def] at clocks
   exact clocks.nodup_iff.mpr (clock ▸ native_allocation_clock_unique w ok fit raw)
 
-private theorem dispatch_valid_mem (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
+/-- Every active dispatcher is valid, and a route requesting allocation supplies a physical allocating row. -/
+theorem physical_dispatch_valid (w : EnsembleWitness (native image source target)) (ok : w.Constraints)
     (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) (d : Dispatch F) (mem : d ∈ physicalDispatches (observed w)) :
     d.Valid ∧ (d.flags.direct+d.flags.hook = 1 → d ∈ allocatingDispatches (observed w)) := by
   obtain ⟨r,kept,rfl⟩ := List.mem_map.mp mem
@@ -95,7 +96,7 @@ theorem native_direct_placement (w : EnsembleWitness (native image source target
   obtain ⟨other,otherMem,endEq⟩ := List.mem_map.mp terminal
   have key := walk_key walk
   rw [← endEq] at key
-  obtain ⟨ov,selected⟩ := dispatch_valid_mem w ok fit raw other otherMem
+  obtain ⟨ov,selected⟩ := physical_dispatch_valid w ok fit raw other otherMem
   have dv := ((native_allocation_tickets w ok fit raw).2 d md).1
   have bothRoutes : other.flags.sink = d.flags.sink := key.2.1
   have otherDirect := (direct_shape ov).1.mpr (bothRoutes.trans ((direct_shape dv).1.mp direct))

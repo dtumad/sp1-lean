@@ -140,6 +140,16 @@ theorem native_dispatch_walk (w : EnsembleWitness (assembly image source target 
     (fun c => Address.toNat c.clock) _ _ balance increases
   exact ⟨_,path,Multiset.coe_eq_coe.mp exhaustive,walk⟩
 
+private theorem endpoint_replies (w : EnsembleWitness (assembly image source target final))
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
+    Address.toNat (finalCursor (p := SP1Prime) target.clock (.fromEndpoints source.host target.host)).replies =
+      (WriteStreams.fromEndpoints source.host target.host).hooks.length := by
+  let checker := WriteEffects.checker (p := SP1Prime) source.host target.host
+  have owned := ((checker.project_balanced_iff (ens := withCursors image source target final) w).mp
+    (w.balancedChannels_of_balanced fit raw)).2
+  have publicStreams := (checker_checks source.host target.host w.publicInput w.data).mp owned
+  exact Address.toNat_ofNat _ (hooks_lt_of_inventory publicStreams.2)
+
 /-- The entire physical dispatch list can be sorted by the actual incoming clocks. At
 every position its reply ordinal is exactly the number of preceding classified hooks.
 The terminal counters are fixed even for a segment with no WRITE. -/
@@ -149,6 +159,7 @@ theorem native_dispatch_chronology (w : EnsembleWitness (assembly image source t
       Walk.IsWalk (fun d : Dispatch F => (d.previous,d.next d.flags)) (initialCursor source.clock)
         ({finalCursor target.clock (.fromEndpoints source.host target.host) with clock := prior}) path ∧
       (path.map (fun d => Address.toNat d.request.header.clock)).Pairwise (· < ·) ∧
+      path.countP (fun d => decide (d.flags.hook = 1)) = (WriteStreams.fromEndpoints source.host target.host).hooks.length ∧
       ∀ i : Fin path.length, Address.toNat path[i.val].previous.replies =
         (path.take i.val).countP (fun d => decide (d.flags.hook = 1)) := by
   obtain ⟨prior,path,all,walk⟩ := native_dispatch_walk w ok fit raw
@@ -156,9 +167,13 @@ theorem native_dispatch_chronology (w : EnsembleWitness (assembly image source t
     obtain ⟨r,kept,rfl⟩ := List.mem_map.mp (all.mem_iff.mp m)
     obtain ⟨active,on⟩ := List.mem_filter.mp kept
     exact (native_dispatch_input_facts w ok fit raw r active).2 (of_decide_eq_true on)
-  refine ⟨prior,path,all,walk,dispatch_walk_order walk valid,fun i => ?_⟩
-  have ord := dispatch_walk_ordinals walk valid i
-  have zero : Address.toNat (initialCursor (p := SP1Prime) source.clock).replies = 0 := by change Address.toNat (Address.ofNat (p := SP1Prime) 0) = 0; decide
-  simpa only [zero,zero_add] using ord
+  have zero : Address.toNat (initialCursor (p := SP1Prime) source.clock).replies = 0 := by
+    change Address.toNat (Address.ofNat (p := SP1Prime) 0) = 0
+    decide
+  refine ⟨prior,path,all,walk,dispatch_walk_order walk valid,?_,fun i => ?_⟩
+  · have total := dispatch_walk_total walk valid
+    change Address.toNat (finalCursor (p := SP1Prime) target.clock (.fromEndpoints source.host target.host)).replies = _ at total
+    rwa [endpoint_replies w fit raw,zero,zero_add,eq_comm] at total
+  · simpa only [zero,zero_add] using dispatch_walk_ordinals walk valid i
 
 end SP1Clean.Export.WriteObservationAssembly
