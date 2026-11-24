@@ -3,6 +3,11 @@ import SP1Clean.FormalModel.Contracts.StockPublicOutput
 import Lean
 import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.WriteProbeCapacity
+import SP1Clean.Export.WriteObservationAssembly
+import SP1Clean.Export.WriteStreamCapacity
+import SP1Clean.Proofs.Completeness.HintQueueSnapshot
+import SP1Clean.Proofs.Completeness.WritePacketHandoff
+import SP1Clean.Proofs.Completeness.WriteBufferTables
 import SP1Clean.Proofs.Completeness.MemoryVersionHistory
 import SP1CleanTest.Alignment.Core.MixedStateBumpEdges
 import SP1Clean.Soundness.Shard.Contract
@@ -169,6 +174,12 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.WriteObservations.read?_eq_some_iff,
   ``SP1Clean.TraceGen.WriteObservations.of_admissibleExecution,
   ``SP1Clean.TraceGen.WriteObservations.packets_at,
+  ``SP1Clean.Export.WriteObservationAssembly.statement_iff,
+  ``SP1Clean.Export.WriteObservationAssembly.statement_iff_of_execution,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_stream_height,
+  ``SP1Clean.TraceGen.admissibleExecution_hintSnapshot,
+  ``SP1Clean.TraceGen.admissibleExecution_writePacket,
+  ``SP1Clean.WriteBuffer.tables_cursor_closed,
   ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_probe_bound,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionBuckets,
   ``SP1Clean.TraceGen.releaseAdmissibleExecution_instructionTables,
