@@ -59,7 +59,8 @@ private theorem placements_checked (w : EnsembleWitness (preprocessing image sou
   have v := guarded_group_valid (varFromOffset (ProvablePair WriteEffects.Group field) 0) _ _ ((Component.constraintsHold_iff _).mp c)
   rwa [eval_varFromOffset_valueFromOffset] at v
 
-private theorem step_origin (w : EnsembleWitness (preprocessing image source target final)) (ok : w.Constraints)
+/-- Every positive position transition has an enabled placement and a nonempty slice. -/
+theorem placement_step_active (w : EnsembleWitness (preprocessing image source target final)) (ok : w.Constraints)
     (g : WriteEffects.Group F) (mem : g ∈ placementSteps w) : g ∈ allocationGroups w ∧ g.plan.nonempty = 1 := by
   obtain ⟨r,kept,rfl⟩ := List.mem_map.mp mem
   obtain ⟨present,selected⟩ := List.mem_filter.mp kept
@@ -126,7 +127,7 @@ theorem native_placement_walks (w : EnsembleWitness (assembly image source targe
     simp only [starts,stops,rows,edge,physicalDispatches,enabledInputs,placementSteps,List.map_map,Function.comp_def]
     exact ends
   have grows (g) (m : g ∈ rows) : Address.toNat g.previous.position < Address.toNat g.next.position := by
-    obtain ⟨present,flag⟩ := step_origin seen checks g m
+    obtain ⟨present,flag⟩ := placement_step_active seen checks g m
     obtain ⟨v,f,s,o,_,bound,_,plan⟩ := native_group_plan w ok fit raw g present
     exact increased g v plan bound flag
   obtain ⟨paths,walk,term,used⟩ := Walk.partition_ranked edge (fun p => Address.toNat p.position) starts stops rows

@@ -46,7 +46,8 @@ private theorem alloc_mem (w : EnsembleWitness (native image source target)) (ok
   have active : r.2 = 1 := by simpa only [ticketGate,gate,mul_one] using field
   exact List.mem_map.mpr ⟨r,List.mem_filter.mpr ⟨present,decide_eq_true active⟩,rfl⟩
 
-private theorem direct_shape {d : Dispatch F} (v : d.Valid) :
+/-- The checked dispatcher selects tag 14 exactly for the one-hot direct route. -/
+theorem direct_shape {d : Dispatch F} (v : d.Valid) :
     (d.flags.direct = 1 ↔ d.flags.sink = 14) ∧
     (d.flags.direct = 1 → d.flags = ⟨0,0,0,0,1⟩) := by
   rw [v.1]
