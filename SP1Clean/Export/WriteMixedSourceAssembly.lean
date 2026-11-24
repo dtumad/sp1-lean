@@ -23,6 +23,14 @@ Memory read-backs. The index rules out supplying replacements for any Memory pro
 def Remaining := (i : Fin (components image source target finish).length) → sourceAt (6 + i.val) = none →
   { t : Table F // t.component = (components image source target finish)[i] }
 
+/-- The 98-table supervisor has exactly 63 complementary slots after the six ordered boundaries
+and the 29 remaining Memory publishers have been installed. -/
+theorem remaining_count :
+    ((List.range' 6 (components image source target finish).length).filter (fun i => (sourceAt i).isNone)).length = 63 := by
+  rw [show (components image source target finish).length = 92 from
+    (List.length_drop.trans (by rw [base_length]))]
+  decide
+
 variable (rows : List MixedCompiledRow) (words : List (Bool × HintReadWordChip.RowInput F))
     (fit : Heights rows words) (data : ProverData F) (hint : ProverHint F)
     (remaining : Remaining image source target finish)
