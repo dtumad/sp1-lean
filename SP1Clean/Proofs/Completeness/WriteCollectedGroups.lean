@@ -11,14 +11,6 @@ namespace SP1Clean.WriteEffects.Witness
 open Circuit Air.Flat Semantics Machine FormalModel.Shard TraceGen WriteAllocation Soundness.Target
 private abbrev F := ZMod SP1Prime
 
-private def readKey (route : WriteRoute) (reply : Nat) : Option StreamKey :=
-  match route with
-  | .stdout => some .stdout
-  | .stderr => some .stderr
-  | .publicValues => some .publicOutput
-  | .hook _ => some (.request reply)
-  | _ => none
-
 private def selectedOwner (route : WriteRoute) (dispatch : Dispatch F) : fields 3 F :=
   match route with
   | .hint => dispatch.pointer
@@ -30,7 +22,7 @@ private def fromPacket (full : WriteStreams) (d : Dispatch F) (packet : WriteObs
   let route := WriteRoute.ofDescriptor h.descriptor.toBitVec64
   let address := h.address.toBitVec64.toNat
   let bytes := WriteObservations.payload packet.2 address packet.1.toNat
-  let key := readKey route (Address.toNat d.baseCounter)
+  let key := destinationKey route (Address.toNat d.baseCounter)
   packetGroups (Address.toNat h.clock) address packet.1.toNat (effectSink route : F) (selectedOwner route d)
     packet.2 (Address.toNat d.basePosition) ((key.bind (StreamKey.contents full)).getD bytes)
 
@@ -68,12 +60,12 @@ private theorem packet_eq {fd address len : BitVec 64} {clk prev : Nat} {earlier
   have count : Address.toNat d.baseCounter = previousCount route earlier := Address.toNat_ofNat _ countFits
   have offset : Address.toNat d.basePosition = destinationOffset route earlier := Address.toNat_ofNat _ offsetFits
   have ownerEq := packet_owner route d earlier store rfl rfl
-  have keyEq : readKey route (previousCount route earlier) = destinationKey route earlier := by cases route <;> rfl
+  have keyEq : destinationKey route (previousCount route earlier) = destinationKey route earlier.hooks.length := by cases route <;> rfl
   change fromPacket full d (len,buf) = packetGroups clk address.toNat len.toNat (effectSink route : F)
     (Address.ofNat (destinationOwner route earlier store)) buf (destinationOffset route earlier)
     (destinationBytes route earlier full (WriteObservations.payload buf address.toNat len.toNat))
   simp only [fromPacket,addressDecoded,fdDecoded,clockDecoded,count,offset]
-  change packetGroups _ _ _ _ (selectedOwner route d) _ _ ((readKey route (previousCount route earlier)).bind _ |>.getD _) = _
+  change packetGroups _ _ _ _ (selectedOwner route d) _ _ ((destinationKey route (previousCount route earlier)).bind _ |>.getD _) = _
   rw [ownerEq,keyEq]
   rfl
 
@@ -138,7 +130,7 @@ theorem native_public_groups {image : ProgramImage} {source target : ExecutionSn
       intro b requested
       let route := WriteRoute.ofDescriptor call.arg1
       let earlier := WriteStreams.fromEndpoints source.host current.host
-      by_cases key : (destinationKey route earlier).isSome
+      by_cases key : (destinationKey route earlier.hooks.length).isSome
       · obtain ⟨k,has⟩ := Option.isSome_iff_exists.mp key
         have lookup := covered k has g group
         rcases List.mem_append.mp requested with left | right

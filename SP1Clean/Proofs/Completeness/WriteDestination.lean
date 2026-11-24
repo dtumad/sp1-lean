@@ -1,3 +1,4 @@
+import SP1Clean.FormalModel.Contracts.WriteStreamPositions
 import SP1Clean.Proofs.Completeness.WriteWindowTape
 import SP1Clean.Proofs.Completeness.WriteStreamExecution
 import SP1Clean.Proofs.Completeness.HintInventory
@@ -13,15 +14,6 @@ namespace SP1Clean.WriteEffects
 
 open Semantics Machine FormalModel.Shard TraceGen Soundness
 
-/-- The public byte string receiving this packet, when the route has an endpoint-owned payload. -/
-def destinationKey (route : WriteRoute) (earlier : WriteStreams) : Option StreamKey :=
-  match route with
-  | .stdout => some .stdout
-  | .stderr => some .stderr
-  | .publicValues => some .publicOutput
-  | .hook _ => some (.request earlier.hooks.length)
-  | .hint | .ignored => none
-
 /-- Output bytes already placed in this shard. Each request or private hint has its own origin. -/
 def destinationOffset (route : WriteRoute) (earlier : WriteStreams) : Nat :=
   match route with
@@ -31,7 +23,7 @@ def destinationOffset (route : WriteRoute) (earlier : WriteStreams) : Nat :=
   | _ => 0
 
 private theorem offset_of_no_key (route : WriteRoute) (earlier : WriteStreams)
-    (none : destinationKey route earlier = .none) : destinationOffset route earlier = 0 := by
+    (none : destinationKey route earlier.hooks.length = .none) : destinationOffset route earlier = 0 := by
   cases route <;> simp_all [destinationKey, destinationOffset]
 
 /-- A hook uses its ordinal in the supplied reply prefix. A direct hint uses the next
@@ -45,14 +37,14 @@ def destinationOwner (route : WriteRoute) (earlier : WriteStreams) (store : Hint
 /-- Outputs and hook inputs take their bytes from the public endpoint stream.
 The direct-hint and ignored routes use the observed guest payload. -/
 def destinationBytes (route : WriteRoute) (earlier full : WriteStreams) (payload : Bytes) : Bytes :=
-  ((destinationKey route earlier).bind (StreamKey.contents full)).getD payload
+  ((destinationKey route earlier.hooks.length).bind (StreamKey.contents full)).getD payload
 
 private theorem destination_split {route : WriteRoute} {host next : HostState} {payload : Bytes}
     (effect : route.Effect host payload next) (earlier later : WriteStreams) :
     let full := earlier.append ((WriteStreams.ofEvent route host payload).append later)
     ∃ before after : Bytes, destinationOffset route earlier = before.length ∧
       destinationBytes route earlier full payload = before ++ payload ++ after ∧
-      ∀ k, destinationKey route earlier = some k → k.contents full = some (before ++ payload ++ after) := by
+      ∀ k, destinationKey route earlier.hooks.length = some k → k.contents full = some (before ++ payload ++ after) := by
   cases route with
   | stdout => exact ⟨earlier.stdout, later.stdout, rfl, (List.append_assoc ..).symm, by intro k h; cases h; simp [WriteStreams.ofEvent, WriteStreams.append, StreamKey.contents, List.append_assoc]⟩
   | stderr => exact ⟨earlier.stderr, later.stderr, rfl, (List.append_assoc ..).symm, by intro k h; cases h; simp [WriteStreams.ofEvent, WriteStreams.append, StreamKey.contents, List.append_assoc]⟩
@@ -97,7 +89,7 @@ private theorem block_of_window {p : ℕ} [Fact p.Prime] (octets : Octets (ZMod 
 private theorem packet_blocks {p : ℕ} [Fact p.Prime] (route : WriteRoute) (earlier full : WriteStreams)
     (store : HintQueue.Store) (clk address length : Nat) (buffer : List (BitVec 64)) (start : Nat) (dest : Bytes)
     (count : buffer.length = WriteObservations.wordCount address length) (paid : start + length ≤ dest.length)
-    (key : StreamKey) (selected : destinationKey route earlier = some key) (found : key.contents full = some dest) :
+    (key : StreamKey) (selected : destinationKey route earlier.hooks.length = some key) (found : key.contents full = some dest) :
     ∀ row ∈ packetGroups clk address length (effectSink route : ZMod p) (Address.ofNat (destinationOwner route earlier store)) buffer start dest,
       ∀ right : Bool, (if right then row.rightGate else row.leftGate) = 1 → row.block right ∈ dataBlocks full := by
   have coords : key.coordinates = (effectSink route, destinationOwner route earlier store, 0) := by
@@ -130,11 +122,11 @@ theorem native_destination_groups {image : ProgramImage} {source target : Execut
       let dest := destinationBytes route earlier full bytes
       let groups := packetGroups current.clock call.arg2.toNat length.toNat (effectSink route : ZMod SP1Prime)
         (Address.ofNat (destinationOwner route earlier cursor.1)) buffer (destinationOffset route earlier) dest
-      (∀ key, destinationKey route earlier = some key → key.contents full = some dest) ∧
+      (∀ key, destinationKey route earlier.hooks.length = some key → key.contents full = some dest) ∧
       groups.length = buffer.length ∧ groups.map (·.octets) =
         (effectRows (p := SP1Prime) current.clock call.arg1 call.arg2 length buffer).2.map (WordRow.octets (256 : ZMod SP1Prime)⁻¹) ∧
       (∀ row ∈ groups, row.Valid ∧ row.HonestCoordinates) ∧
-      ∀ key, destinationKey route earlier = some key → ∀ row ∈ groups, ∀ right : Bool,
+      ∀ key, destinationKey route earlier.hooks.length = some key → ∀ row ∈ groups, ∀ right : Bool,
         (if right then row.rightGate else row.leftGate) = 1 → (blockTable (p := SP1Prime) full).Contains (row.block right) := by
   obtain ⟨current, next, length, buffer, read, currentAt, nextAt, effect, _⟩ := groups_of_admissibleExecution run present write
   obtain ⟨_, cursor, _, _, beforeStore, _, _, _, _, _, _, _, _, _⟩ := admissibleExecution_hintInventory run cut
@@ -154,13 +146,13 @@ theorem native_destination_groups {image : ProgramImage} {source target : Execut
   rw [← joined] at placed keys
   change destinationOffset route earlier = before.length at offset
   change destinationBytes route earlier full bytes = before ++ bytes ++ after at placed
-  change ∀ k, destinationKey route earlier = some k → k.contents full = some (before ++ bytes ++ after) at keys
+  change ∀ k, destinationKey route earlier.hooks.length = some k → k.contents full = some (before ++ bytes ++ after) at keys
   obtain ⟨_, _, lower, upper, bufferCount, _⟩ := WriteObservations.read?_eq_some_iff.mp read
   refine ⟨_, length, buffer, cursor, currentAt, read, beforeStore, ?_⟩
   dsimp only
   refine ⟨fun k h => (keys k h).trans (congrArg some placed.symm), packetGroups_length .., packetGroups_octets .., ?_⟩
   have width : before.length + length.toNat < 2^48 := by
-    cases selected : destinationKey route earlier with
+    cases selected : destinationKey route earlier.hooks.length with
     | none =>
       have empty := offset_of_no_key route earlier selected
       omega

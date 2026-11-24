@@ -140,15 +140,20 @@ theorem native_dispatch_walk (w : EnsembleWitness (assembly image source target 
     (fun c => Address.toNat c.clock) _ _ balance increases
   exact ⟨_,path,Multiset.coe_eq_coe.mp exhaustive,walk⟩
 
-private theorem endpoint_replies (w : EnsembleWitness (assembly image source target final))
-    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
-    Address.toNat (finalCursor (p := SP1Prime) target.clock (.fromEndpoints source.host target.host)).replies =
-      (WriteStreams.fromEndpoints source.host target.host).hooks.length := by
+/-- The public verifier enforces the full host boundary comparison and the natural
+bounds on the fixed stream records in every raw balanced native witness. -/
+theorem native_stream_boundary (w : EnsembleWitness (assembly image source target final))
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) : boundarySpec source.host target.host := by
   let checker := WriteEffects.checker (p := SP1Prime) source.host target.host
   have owned := ((checker.project_balanced_iff (ens := withCursors image source target final) w).mp
     (w.balancedChannels_of_balanced fit raw)).2
-  have publicStreams := (checker_checks source.host target.host w.publicInput w.data).mp owned
-  exact Address.toNat_ofNat _ (hooks_lt_of_inventory publicStreams.2)
+  exact (checker_checks source.host target.host w.publicInput w.data).mp owned
+
+private theorem endpoint_replies (w : EnsembleWitness (assembly image source target final))
+    (fit : w.InteractionsFit .logUp) (raw : w.Balanced .logUp) :
+    Address.toNat (finalCursor (p := SP1Prime) target.clock (.fromEndpoints source.host target.host)).replies =
+      (WriteStreams.fromEndpoints source.host target.host).hooks.length :=
+  Address.toNat_ofNat _ (hooks_lt_of_inventory (native_stream_boundary w fit raw).2)
 
 /-- The entire physical dispatch list can be sorted by the actual incoming clocks. At
 every position its reply ordinal is exactly the number of preceding classified hooks.
