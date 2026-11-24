@@ -72,7 +72,7 @@ theorem terminalTable_ledger (name : String) (distinct : name ≠ "SP1Byte") (ro
     (fun row => [ch.pulledValue row.previous, ch.pushedValue OrderedMemoryEnsemble.endKey]) view.interactions
   exact ledger
 
-private def edgeValues {Payload : TypeMap} [ProvableType Payload] (name : String)
+private def edgeValues {Payload : TypeMap} (name : String)
     (row : OrderedMemoryProvider.RowInput Payload (ZMod p)) : List (Interaction (ZMod p)) :=
   let ch := OrderedBoundary.channel (p := p) name
   [ch.pulledIfValue row.2 row.1.link.previous, ch.pushedIfValue row.2 row.1.link.current]
@@ -145,7 +145,7 @@ private theorem steps_sum (name : String) (previous : ℕ) (rows : List (Termina
       linear_combination tail
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem active_steps {Payload : TypeMap} [ProvableType Payload] (name : String) (ram : Bool)
+private theorem active_steps {Payload : TypeMap} (name : String) (ram : Bool)
     (make : ℕ → Terminal (ZMod p) → OrderedMemoryProvider.Inputs Payload (ZMod p))
     (link : ∀ previous r, (make previous r).link.previous = cursor previous ∧ (make previous r).link.current = cursor (r.key + 1))
     (previous : ℕ) (rows : List (Terminal (ZMod p))) :
@@ -260,7 +260,7 @@ theorem final_order_balanced (rows : List (Terminal (ZMod p))) (data : ProverDat
   exact end_balance _ _ rows data _ _ (final_order_sum false rows data _) (final_order_sum true rows data _)
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem edgeValues_length {Payload : TypeMap} [ProvableType Payload] (name : String)
+private theorem edgeValues_length {Payload : TypeMap} (name : String)
     (rows : List (OrderedMemoryProvider.RowInput Payload (ZMod p))) :
     (rows.flatMap (edgeValues name)).length = 2 * rows.length := by
   induction rows with
