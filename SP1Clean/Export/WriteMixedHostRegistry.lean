@@ -21,17 +21,21 @@ inductive Index
   | observation (slot : Fin 4)
   deriving DecidableEq
 
+/-- Enumerate the participants in both bank histories and the ordinary observation protocol. -/
 def indices : List Index :=
   [false,true].flatMap (fun d => HostCommitBank.indices.map (.bank d)) ++ (List.finRange 4).map .observation
 
+/-- Physical table index in the original supervisor component list. -/
 def position : Index → ℕ
   | .bank d i => 63 + HostTableRegistry.bankPosition d i
   | .observation i => 90 + i.val
 
+/-- The original Clean component at a commitment or observation slot. -/
 def component : Index → Component F
   | .bank d i => (HostCommitBank.view d i).component
   | .observation i => (Soundness.OrdinaryObservation.tables (p := SP1Prime))[i.val]'i.isLt
 
+/-- Find the generated bank or observation participant at a supervisor position. -/
 def indexAt (i : ℕ) : Option Index := indices.find? (fun id => position id == i)
 
 theorem position_of_indexAt {i : ℕ} {id : Index} (found : indexAt i = some id) : position id = i :=
