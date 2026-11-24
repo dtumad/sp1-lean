@@ -54,6 +54,7 @@ import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
 import SP1Clean.Soundness.MemoryRecordChain
+import SP1Clean.Soundness.MemoryWordRanges
 import SP1Clean.Export.WriteMemoryRecordChain
 import SP1Clean.Export.WritePhysicalCuts
 import SP1Clean.Export.WritePhysicalCoverage
