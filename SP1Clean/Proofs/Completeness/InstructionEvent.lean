@@ -1766,6 +1766,10 @@ def RoutedEvent.storeSpan? : RoutedEvent → Option MemorySpan
   | ⟨.storeDouble, e⟩ => some ⟨e.addr, 8⟩
   | _ => none
 
+/-- Ordered byte addresses of the store, or the empty footprint on other ordinary instructions. -/
+def RoutedEvent.storeBytes (row : RoutedEvent) : List ℕ :=
+  row.storeSpan?.toList.flatMap (fun span => List.range' span.address span.length)
+
 private def storeSize : Soundness.Opcode → Option ℕ
   | .SB => some 1 | .SH => some 2 | .SW => some 4 | .SD => some 8 | _ => none
 

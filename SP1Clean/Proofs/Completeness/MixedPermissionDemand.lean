@@ -17,7 +17,7 @@ open Circuit Air.Flat WitnessGeneration Semantics Soundness.Target Machine Forma
 
 /-- Byte sequence of one original store input, including stores of unchanged bytes. -/
 def store : MixedCompiledRow → List ℕ
-  | .ordinary row => row.routed.storeSpan?.toList.flatMap (fun span => List.range' span.address span.length)
+  | .ordinary row => row.routed.storeBytes
   | .syscall .. => []
 
 /-- Exact padded byte range requested from the released HINT_READ label. -/
@@ -35,7 +35,7 @@ private theorem store_length (row : MixedCompiledRow) : (store row).length ≤ 8
   | syscall => exact Nat.zero_le _
   | ordinary row =>
     obtain ⟨⟨id,e⟩,plan,schedule⟩ := row
-    cases id <;> simp [store,RoutedEvent.storeSpan?]
+    cases id <;> simp [store,RoutedEvent.storeBytes,RoutedEvent.storeSpan?]
 
 private theorem stores_length (rows : List MixedCompiledRow) : (rows.flatMap store).length ≤ 8 * rows.length := by
   induction rows with
