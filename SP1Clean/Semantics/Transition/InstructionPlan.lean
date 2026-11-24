@@ -230,15 +230,25 @@ read-backs rather than architectural writes. -/
 def InstructionPlanReady (decoded : instruction) (source target : SailState) : Prop :=
   ∃ plan, instructionAccessPlan? decoded source target = some plan
 
-/-- The role-only projection of the canonical instruction plan. This carries no values, clocks,
-or alternative execution semantics; the event compiler uses it to check adapter shape agreement. -/
-def instructionAccessSlots : instruction → List AccessSlot
-  | .RTYPE _ | .RTYPEW _ | .MUL _ | .MULW _ | .DIV _ | .DIVW _ | .REM _ | .REMW _ =>
-      [.opC, .opB, .opA]
-  | .ITYPE _ | .JALR _ | .BTYPE _ | .SHIFTIOP _ | .SHIFTIWOP _ | .ADDIW _ => [.opB, .opA]
-  | .UTYPE _ | .JAL _ => [.opA]
-  | .LOAD _ | .STORE _ => [.ram, .opB, .opA]
+/-- Operand roles and decoded register indices in SP1's genuine ascending access order.
+RAM's runtime address comes from the base register and signed immediate. -/
+def instructionOperands : instruction → List (AccessSlot × Option (BitVec 5))
+  | .RTYPE (c, b, a, _) | .RTYPEW (c, b, a, _) | .MUL (c, b, a, _) | .MULW (c, b, a)
+    | .DIV (c, b, a, _) | .DIVW (c, b, a, _) | .REM (c, b, a, _) | .REMW (c, b, a, _) =>
+    [(.opC, some (regidxBits c)), (.opB, some (regidxBits b)), (.opA, some (regidxBits a))]
+  | .ITYPE (_, b, a, _) | .JALR (_, b, a) | .BTYPE (_, b, a, _) | .SHIFTIOP (_, b, a, _)
+    | .SHIFTIWOP (_, b, a, _) | .ADDIW (_, b, a) =>
+    [(.opB, some (regidxBits b)), (.opA, some (regidxBits a))]
+  | .UTYPE (_, a, _) | .JAL (_, a) => [(.opA, some (regidxBits a))]
+  | .LOAD (_, b, a, _, _) | .STORE (_, a, b, _) => [(.ram, none), (.opB, some (regidxBits b)), (.opA, some (regidxBits a))]
   | _ => []
+
+/-- Instruction access roles, projected from the same decoded physical operands. -/
+def instructionAccessSlots (decoded : instruction) : List AccessSlot := (instructionOperands decoded).map Prod.fst
+
+/-- Recover the register index of a concrete planned operand, or the RAM role. -/
+def PlannedTouch.operand (touch : PlannedTouch) : AccessSlot × Option (BitVec 5) :=
+  (touch.slot, match touch.loc with | .reg i => some i | .ram _ => none)
 
 private theorem byShape_of_extracted {decoded : instruction} {source target : SailState}
     {plan : InstructionAccessPlan} (generated : instructionAccessPlan? decoded source target = some plan) :
@@ -248,11 +258,11 @@ private theorem byShape_of_extracted {decoded : instruction} {source target : Sa
   · contradiction
   · exact generated
 
-/-- Erasing values from a successful canonical extraction yields exactly its instruction roles. -/
-theorem instructionAccessPlan_slots {decoded : instruction} {source target : SailState}
-    {plan : InstructionAccessPlan}
-    (generated : instructionAccessPlan? decoded source target = some plan) :
-    plan.map PlannedTouch.slot = instructionAccessSlots decoded := by
+/-- Erasing words from an actual plan preserves all decoded register indices and their roles.
+This includes both occurrences of an aliased register and the reversed register naming of stores. -/
+theorem instructionAccessPlan_operands {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan} (generated : instructionAccessPlan? decoded source target = some plan) :
+    plan.map PlannedTouch.operand = instructionOperands decoded := by
   have byShape := byShape_of_extracted generated
   clear generated
   cases decoded <;> rename_i chunk <;> cases chunk <;>
@@ -263,6 +273,13 @@ theorem instructionAccessPlan_slots {decoded : instruction} {source target : Sai
     rcases byShape with ⟨certified, generated, rfl⟩
     repeat' rcases generated with ⟨_, _, generated⟩
   all_goals rfl
+
+/-- Erasing values from a successful canonical extraction yields exactly its instruction roles. -/
+theorem instructionAccessPlan_slots {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan}
+    (generated : instructionAccessPlan? decoded source target = some plan) :
+    plan.map PlannedTouch.slot = instructionAccessSlots decoded := by
+  simpa only [instructionAccessSlots, List.map_map, Function.comp_def, PlannedTouch.operand] using congrArg (List.map Prod.fst) (instructionAccessPlan_operands generated)
 
 private theorem get_reg?_of_x0 (source : SailState) {rd : regidx}
     (zero : SP1Clean.Soundness.Target.regidxIsX0 rd = true) :
