@@ -14,13 +14,12 @@ open Circuit Air.Flat Semantics HintQueue Machine TraceGen FormalModel.Shard
 
 private abbrev F := ZMod SP1Prime
 
-/-- Physical validity and closure of all three inter-table channels for one collected batch. -/
-def BatchRows.Tables (r : BatchRows) (data : ProverData F) : Prop :=
-  let nodes := r.nodes.map NodeRows.step
-  let seeds := nodes.map Step.contents
-  let words := r.nodes.flatMap NodeRows.words
+/-- Real component constraints, guarantees and the three internal protocol balances of four
+once-padded WRITE allocation tables. -/
+def PhysicalTables (openings : List (Open F)) (nodes : List (Step F)) (seeds : List (Contents F))
+    (words : List (Words.Row F)) (data : ProverData F) : Prop :=
   ∃ hc hn hs hw,
-    let call := openTable [r.opening] data hc
+    let call := openTable openings data hc
     let steps := stepTable nodes data hn
     let starts := Words.seedTable seeds data hs
     let body := Words.wordTable words data hw
@@ -30,12 +29,10 @@ def BatchRows.Tables (r : BatchRows) (data : ProverData F) : Prop :=
     LogUpBalanced (steps.interactionsWith contentsChannel.toRaw ++ starts.interactionsWith contentsChannel.toRaw) ∧
     LogUpBalanced (starts.interactionsWith Words.cursorChannel.toRaw ++ body.interactionsWith Words.cursorChannel.toRaw)
 
-private theorem words_valid (readers : Readers) (step : Step F) (bytes : Bytes)
-    (valid : step.Valid) (size : bytes.length < 2^48) : ∀ r ∈ (nodeRows readers step bytes).words, r.Valid := by
-  intro r mem
-  obtain ⟨i,rfl⟩ := List.mem_ofFn.mp mem
-  have node := valid.2.1.2.2.2.2.1
-  exact Words.populate_valid _ _ i.val _ _ valid.1 node.1 (Nat.zero_lt_of_lt node.2.2.1) size i.isLt
+/-- Specialize the physical construction to one collected allocation batch. -/
+def BatchRows.Tables (r : BatchRows) (data : ProverData F) : Prop :=
+  let nodes := r.nodes.map NodeRows.step
+  PhysicalTables [r.opening] nodes (nodes.map Step.contents) (r.nodes.flatMap NodeRows.words) data
 
 /-- A generated allocation opening and all its actual node/seed/word rows have valid physical
 tables and closed private ledgers. The total word bound is on the immutable post-call store. -/
@@ -94,9 +91,9 @@ theorem Batch.rows_tables (batch : Batch) (previous clock : Nat) (before after :
       (Words.wordTable (rows.nodes.flatMap NodeRows.words) data hw).Guarantees := by
     apply Table.ofInputs_valid
     apply WitnessGeneration.guardedRows_all Words.Row.Valid
-    rw [mapped,List.flatMap_map]
-    intro r mem; obtain ⟨x,atPair,inNode⟩ := List.mem_flatMap.mp mem
-    exact words_valid readers x.1 x.2 (facts x atPair).1 (sizes _ (facts x atPair).2.2) r inNode
+    intro r mem
+    obtain ⟨node,atNode,inNode⟩ := List.mem_flatMap.mp mem
+    exact (batch.rows_valid previous clock before after.1 issued readers space sizes node atNode).2 r inNode
   refine ⟨hc,hn,hs,hw,openOK.1,openOK.2,nodeOK.1,nodeOK.2,seedOK.1,seedOK.2,wordOK.1,wordOK.2,?_,
     contents_balanced _ data hn hs,?_⟩
   · have chain := batch.steps_walk clock before after.1 issued readers.nodes
