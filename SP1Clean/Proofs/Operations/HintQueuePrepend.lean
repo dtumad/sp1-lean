@@ -14,12 +14,21 @@ open Circuit Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-def compilePrepend (clock : ℕ) (store : Store) (head : ℕ) : List Bytes → List (Inputs (ZMod p))
-  | [] => []
-  | bytes :: rest =>
-      let next := HintQueue.prepend store head rest
-      compilePrepend clock store head rest ++
-        [populate (HostHintQueue.State.encode clock next.2 next.1.size) bytes]
+/-- After a nonempty allocation prefix its newest fresh pointer is the frontier. At
+the first node the previous head may be an older surviving pointer. -/
+def prefixState (clock head frontier count : ℕ) : HostHintQueue.State (ZMod p) :=
+  HostHintQueue.State.encode clock (if count = 0 then head else frontier+count) (frontier+count)
+
+/-- Compile each fresh node once, from the end of the returned list to its front. -/
+def compilePrepend (clock : ℕ) (store : Store) (head : ℕ) (added : List Bytes) : List (Inputs (ZMod p)) :=
+  added.reverse.zipIdx.map fun (bytes,i) => populate (prefixState clock head store.size i) bytes
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Consing an earlier buffer adds one allocation after the existing suffix's genuine endpoint. -/
+theorem compilePrepend_cons (clock : ℕ) (store : Store) (head : ℕ) (bytes : Bytes) (rest : List Bytes) :
+    compilePrepend (p := p) clock store head (bytes :: rest) = compilePrepend clock store head rest ++
+      [populate (HostHintQueue.State.encode clock (prepend store head rest).2 (prepend store head rest).1.size) bytes] := by
+  simp [compilePrepend,List.zipIdx_append,prefixState,prepend_head,prepend_size]
 
 /-- Check full before/after cursor continuity, including clocks and the allocation frontier. -/
 def replayCursors (initial : HostHintQueue.State (ZMod p)) (rows : List (Inputs (ZMod p))) :
@@ -30,9 +39,7 @@ def replayCursors (initial : HostHintQueue.State (ZMod p)) (rows : List (Inputs 
 omit [Fact (2 ^ 17 < p)] in
 theorem compilePrepend_length (clock : ℕ) (store : Store) (head : ℕ) (added : List Bytes) :
     (compilePrepend (p := p) clock store head added).length = added.length := by
-  induction added with
-  | nil => rfl
-  | cons bytes rest ih => simp [compilePrepend, ih]
+  simp [compilePrepend]
 
 /-- Successful semantic prepends require no extra row-readiness premise. -/
 theorem compilePrepend_spec (clock : ℕ) (store : Store) (head : ℕ)
@@ -48,7 +55,7 @@ theorem compilePrepend_spec (clock : ℕ) (store : Store) (head : ℕ)
       omega
     have represented := prepend_represents current rest
     intro input member
-    simp only [compilePrepend, List.mem_append, List.mem_singleton] at member
+    simp only [compilePrepend_cons, List.mem_append, List.mem_singleton] at member
     rcases member with earlier | rfl
     · exact ih small input earlier
     · apply populate_spec _ bytes _ (rest ++ hints) (HostHintQueue.State.encode_binds clock represented (by omega))
@@ -69,7 +76,7 @@ theorem compilePrepend_replay (clock : ℕ) (store : Store) (head : ℕ) (added 
     have small : store.size + rest.length < 2 ^ 48 := by
       simp only [List.length_cons] at capacity
       omega
-    simp only [compilePrepend, replayCursors, List.foldlM_append] at ih ⊢
+    simp only [compilePrepend_cons, replayCursors, List.foldlM_append] at ih ⊢
     rw [ih small]
     simp only [Bind.bind, Option.bind_some, List.foldlM_cons, List.foldlM_nil, pure,
       populate, ite_true, Inputs.next, HostHintQueue.State.encode, NodeRecord.encode,

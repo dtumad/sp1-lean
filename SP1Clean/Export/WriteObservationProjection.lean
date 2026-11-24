@@ -1,6 +1,6 @@
 import SP1Clean.Export.WriteObservationAssembly
 
-/-! # Projecting the public WRITE verifiers onto their genuine 113 physical tables
+/-! # Projecting the public WRITE verifiers onto their installed physical tables
 
 The public cursor endpoint emits on two private channels. All other registered channels
 keep exactly the same ordered verifier and table traffic after both public projections.
@@ -14,7 +14,7 @@ private abbrev F := ZMod SP1Prime
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State F}
 attribute [local irreducible] preprocessing
 
-/-- Retain all 113 physical tables and their canonical data beneath the public verifiers. -/
+/-- Retain all physical tables and their canonical data beneath the public verifiers. -/
 def observed (w : EnsembleWitness (assembly image source target final)) : EnsembleWitness (preprocessing image source target final) :=
   w.withEnsemble _ (by unfold assembly withCursors; rfl)
 

@@ -1,97 +1,66 @@
-import SP1Clean.Proofs.Operations.HintNodeWords
+import SP1Clean.Proofs.Operations.HintQueuePrepend
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 import SP1Clean.Semantics.Host.WriteEffects
 
-/-! # Persistent node and word construction for WRITE effects
+/-! # Persistent records of the shared prepend compiler
 
-A direct hint contributes its observed payload. A hook contributes the supplied reply's list
-in reverse allocation order, so the first returned buffer becomes the next visible queue head.
-Every intermediate node retains its complete padded words after later allocations.
+The physical allocation order is the reverse of the logical hint prefix. This theorem
+follows the same indexed row constructor used by direct WRITE and supplied hook replies.
 -/
 
-namespace SP1Clean.WriteEffects
-open Semantics Semantics.HintQueue
-
+namespace SP1Clean.HintNodeAllocate
+open Semantics HintQueue
 variable {p : ℕ} [Fact p.Prime] [Fact (2^17 < p)]
 
-/-- Raw allocation inputs paired with precisely the bytes inhabiting their new node. -/
-abbrev Allocation (p : Nat) := HintNodeAllocate.Inputs (ZMod p) × Bytes
+/-- The generated row at each physical position authenticates the node and every padded word
+at its permanent pointer. The incoming head can be below the allocation frontier. -/
+theorem compilePrepend_records (clock : ℕ) (store : Store) (head : ℕ) (hints added : List Bytes)
+    (rep : Represents store head hints) (space : store.size + added.length < 2^48) (i : Fin added.length) :
+    let bytes := added.reverse[i.val]'(by simp)
+    let pointer := store.size + i + 1
+    let node := Node.mk bytes (if i.val = 0 then head else store.size + i)
+    ∃ row, (compilePrepend (p := p) clock store head added)[i.val]? = some row ∧
+      row.node = NodeRecord.encode pointer node ∧ Spec row ∧ row.node.Binds (prepend store head added).1 ∧
+      ∀ word ∈ nodeWordRows (p := p) pointer bytes, word.Binds (prepend store head added).1 ∧ word.pointer = row.node.pointer := by
+  let bytes := added.reverse[i.val]'(by simp)
+  let state := prefixState (p := p) clock head store.size i
+  let row := populate state bytes
+  have chosen : added.reverse[i.val]? = some bytes := List.getElem?_eq_getElem (by simp)
+  have atRow : (compilePrepend (p := p) clock store head added)[i.val]? = some row := by
+    simp [compilePrepend,row,state,bytes]
+  have read := node?_prepend_at store head added chosen
+  have bounded : store.size + i.val + 1 < 2^48 := by have := i.isLt; omega
+  have tailBound : (if i.val = 0 then head else store.size + i.val) < store.size + i.val + 1 := by
+    have := rep.bound
+    split <;> omega
+  have record : row.node = NodeRecord.encode (store.size + i + 1)
+      ⟨bytes, if i.val = 0 then head else store.size + i⟩ := by
+    change NodeRecord.encode (Address.toNat (Address.ofNat (p := p) (store.size + i.val)) + 1)
+      ⟨bytes,Address.toNat (Address.ofNat (p := p) (if i.val = 0 then head else store.size + i.val))⟩ = _
+    rw [Address.toNat_ofNat _ (by omega),Address.toNat_ofNat _ (by omega)]
+  refine ⟨row,atRow,record,compilePrepend_spec clock store head hints added rep space row (List.mem_of_getElem? atRow),
+    record ▸ NodeRecord.encode_binds read bounded tailBound,?_⟩
+  intro word member
+  refine ⟨nodeWordRows_binds read bounded word member,?_⟩
+  obtain ⟨j,rfl⟩ := List.mem_ofFn.mp member
+  rw [record]
+  rfl
 
-/-- Prepend buffers back-to-front using the actual preceding allocation row. -/
-def allocate (before : HostHintQueue.State (ZMod p)) : List Bytes → List (Allocation p) × HostHintQueue.State (ZMod p)
-  | [] => ([], before)
-  | bytes :: rest =>
-    let old := allocate before rest
-    let row := HintNodeAllocate.populate old.2 bytes
-    (old.1 ++ [(row, bytes)], row.next)
+end SP1Clean.HintNodeAllocate
 
-/-- Authenticated metadata, full padded word payload and fresh identity survive in the resulting store. -/
-def Allocation.Binds (a : Allocation p) (store : Store) : Prop :=
-  HintNodeAllocate.Spec a.1 ∧ a.1.node.Binds store ∧
-    ∀ record ∈ nodeWordRows (p := p) (Address.toNat a.1.node.pointer) a.2,
-      record.Binds store ∧ record.pointer = a.1.node.pointer
+namespace SP1Clean.WriteEffects
+open Semantics HintQueue HintNodeAllocate
+variable {p : ℕ} [Fact p.Prime] [Fact (2^17 < p)]
 
-omit [Fact (2^17 < p)] in
-private theorem Allocation.Binds.extend {a : Allocation p} {old new : Store} (bound : a.Binds old)
-    (grow : Extends old new) : a.Binds new := by
-  refine ⟨bound.1, bound.2.1.extend grow, ?_⟩
-  intro row member
-  obtain ⟨meaning, pointer⟩ := bound.2.2 row member
-  exact ⟨meaning.extend grow, pointer⟩
-
-omit [Fact (2^17 < p)] in
-theorem allocate_bytes (previous : HostHintQueue.State (ZMod p)) (added : List Bytes) :
-    ((allocate previous added).1.map Prod.snd) = added.reverse := by
-  induction added with
-  | nil => rfl
-  | cons first rest ih => simp [allocate, ih]
-
-/-- Each physical row and word authenticates its own permanent position in the same final store. -/
-theorem allocate_binds (previous : HostHintQueue.State (ZMod p)) (store : Store) (hints added : List Bytes)
-    (current : previous.Binds store hints) (fits : store.size + added.length < 2^48) :
-    let final := prepend store (Address.toNat previous.head) added
-    let rows := allocate previous added
-    rows.2.Binds final.1 (added ++ hints) ∧ Address.toNat rows.2.head = final.2 ∧
-      ∀ a ∈ rows.1, Allocation.Binds a final.1 := by
-  induction added with
-  | nil => exact ⟨current, rfl, by simp [allocate]⟩
-  | cons bytes rest ih =>
-    let old := prepend store (Address.toNat previous.head) rest
-    let batch := allocate previous rest
-    have fits' : store.size + rest.length < 2^48 := by simp only [List.length_cons] at fits; omega
-    obtain ⟨represented, head, earlier⟩ := ih fits'
-    change batch.2.Binds old.1 (rest ++ hints) at represented
-    change Address.toNat batch.2.head = old.2 at head
-    let row := HintNodeAllocate.populate batch.2 bytes
-    have capacity : old.1.size + 1 < 2^48 := by
-      change (prepend store _ rest).1.size + 1 < _
-      rw [prepend_size]
-      simp only [List.length_cons] at fits
-      omega
-    have valid := HintNodeAllocate.populate_spec batch.2 bytes old.1 _ represented capacity
-    obtain ⟨next, node, words, grows⟩ := HintNodeAllocate.populate_contents batch.2 bytes old.1 _ represented capacity
-    change row.next.Binds (old.1.push ⟨bytes, Address.toNat batch.2.head⟩) _ at next
-    rw [head] at next node words grows
-    refine ⟨next, ?_, ?_⟩
-    · change Address.toNat row.node.pointer = old.1.size + 1
-      exact HintNodeAllocate.identity_of_spec row valid old.1 _ represented
-    · intro a member
-      change a ∈ batch.1 ++ [(row, bytes)] at member
-      rcases List.mem_append.mp member with prior | fresh
-      · exact (earlier a prior).extend grows
-      · obtain rfl := List.mem_singleton.mp fresh
-        exact ⟨valid, node, words⟩
-
-/-- Apply the actual descriptor's allocations, including the matched hook's empty or multiple hints. -/
+/-- Replaying the physical prepend rows yields the complete host effect's outgoing queue. -/
 theorem allocate_effect {route : WriteRoute} {source target : HostState} {bytes : Bytes}
-    (effect : route.Effect source bytes target) (previous : HostHintQueue.State (ZMod p))
-    (store : Store) (current : previous.Binds store source.io.hints)
-    (fits : store.size + (route.allocations source bytes).length < 2^48) :
+    (effect : route.Effect source bytes target) (clock : ℕ) (store : Store) (head : ℕ)
+    (current : Represents store head source.io.hints) (fits : store.size + (route.allocations source bytes).length < 2^48) :
     let added := route.allocations source bytes
-    let final := prepend store (Address.toNat previous.head) added
-    let rows := allocate previous added
-    rows.2.Binds final.1 target.io.hints ∧
-      rows.1.map Prod.snd = added.reverse ∧ ∀ a ∈ rows.1, Allocation.Binds a final.1 := by
-  obtain ⟨cursor, _, bound⟩ := allocate_binds previous store source.io.hints _ current fits
-  exact ⟨effect.queue ▸ cursor, allocate_bytes .., bound⟩
+    let final := prepend store head added
+    let outgoing := HostHintQueue.State.encode (p := p) clock final.2 final.1.size
+    replayCursors (HostHintQueue.State.encode clock head store.size) (compilePrepend clock store head added) = some outgoing ∧
+      outgoing.Binds final.1 target.io.hints :=
+  ⟨compilePrepend_replay clock store head _ fits, effect.queue ▸ compilePrepend_binds clock store head _ _ current fits⟩
 
 end SP1Clean.WriteEffects

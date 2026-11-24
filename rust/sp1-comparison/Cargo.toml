@@ -102,6 +102,10 @@ name = "write_permission_export"
 required-features = ["clean-export"]
 
 [[test]]
+name = "write_allocation_export"
+required-features = ["instruction-export"]
+
+[[test]]
 name = "hint_source_export"
 required-features = ["clean-export"]
 
