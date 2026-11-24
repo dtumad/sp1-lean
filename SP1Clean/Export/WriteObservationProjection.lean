@@ -1,6 +1,6 @@
 import SP1Clean.Export.WriteObservationAssembly
 
-/-! # Projecting the public WRITE verifiers onto their genuine 113 physical tables
+/-! # Projecting the public WRITE verifiers onto their installed physical tables
 
 The public cursor endpoint emits on two private channels. All other registered channels
 keep exactly the same ordered verifier and table traffic after both public projections.
@@ -14,8 +14,13 @@ private abbrev F := ZMod SP1Prime
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State F}
 attribute [local irreducible] preprocessing
 
-/-- Retain all 113 physical tables and their canonical data beneath the public verifiers. -/
+/-- Retain all physical tables and their canonical data beneath the public verifiers. -/
 def observed (w : EnsembleWitness (assembly image source target final)) : EnsembleWitness (preprocessing image source target final) :=
+  w.withEnsemble _ (by unfold assembly withCursors; rfl)
+
+
+/-- Use the same physical witness and canonical data with the two public WRITE checks installed. -/
+def withPublicChecks (w : EnsembleWitness (preprocessing image source target final)) : EnsembleWitness (assembly image source target final) :=
   w.withEnsemble _ (by unfold assembly withCursors; rfl)
 
 theorem observed_constraints (w : EnsembleWitness (assembly image source target final)) :
@@ -43,6 +48,13 @@ theorem observed_ledger (w : EnsembleWitness (assembly image source target final
   rw [withCursors_ledger]
   simp [Channel.pushedValue, Channel.pulledValue, cursor, close, prev]
   rfl
+
+/-- Adding the public verifiers preserves every occurrence on a previously registered silent channel. -/
+theorem withPublicChecks_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
+    (registered : ch ∈ (preprocessing image source target final).channels)
+    (silent : ch.name ∉ [(WriteEffects.cursorChannel (p := SP1Prime)).name, (WriteEffects.closeChannel (p := SP1Prime)).name]) :
+    (withPublicChecks w).interactionsWith ch = w.interactionsWith ch :=
+  (observed_ledger (withPublicChecks w) ch registered silent).symm
 
 /-- Per-channel balance transports across both public projections precisely on silent channels. -/
 theorem observed_balance (w : EnsembleWitness (assembly image source target final)) (fit : w.InteractionsFit .logUp)

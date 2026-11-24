@@ -3,6 +3,8 @@ import SP1Clean.Native.Operations.HintQueueSeal
 import SP1Clean.Proofs.Chips.WritePacket.Ledger
 import SP1Clean.Proofs.Operations.WriteProbeLedger
 import SP1Clean.Proofs.Operations.WriteDispatch
+import SP1Clean.Proofs.Operations.WriteAllocation
+import SP1Clean.Proofs.Operations.WriteAllocationWords
 import SP1Clean.Proofs.Operations.WriteGroup
 import SP1Clean.Native.Operations.WriteCursorBoundary
 import SP1Clean.Native.Operations.WriteStreamSource
@@ -14,7 +16,8 @@ The supervisor reads x12 and guest memory at the incoming ECALL clock. This inst
 binds the physical sources, the counted version supply, packet and ordered buffer rows,
 the classified requests, and the chronological placement of every observed word. Public endpoints
 fix the stream blocks, hook metadata and all four final positions. The outgoing queue walk
-checks the target hint transcript; allocation of fresh nodes during WRITE is a separate obligation.
+checks the target hint transcript. Allocating calls share its queue state and issue one
+contents demand per genuinely fresh persistent node.
 -/
 
 namespace SP1Clean.Export.WriteObservationAssembly
@@ -31,7 +34,8 @@ def channels : List (RawChannel F) :=
    WriteBuffer.effectHeaderChannel.toRaw, WriteBuffer.wordChannel.toRaw, WriteEffects.requestChannel.toRaw,
    WriteEffects.octetsChannel.toRaw, WriteEffects.recordChannel.toRaw, WriteEffects.positionChannel.toRaw,
    HostHintSnapshot.channel.toRaw, WriteEffects.cursorChannel.toRaw, WriteEffects.queueEffectChannel.toRaw,
-   WriteEffects.sliceChannel.toRaw, WriteEffects.blockChannel.toRaw, WriteEffects.closeChannel.toRaw]
+   WriteEffects.sliceChannel.toRaw, WriteEffects.blockChannel.toRaw, WriteEffects.closeChannel.toRaw,
+   WriteAllocation.cursorChannel.toRaw, WriteAllocation.contentsChannel.toRaw, WriteAllocation.Words.cursorChannel.toRaw]
 
 /-- Packet and preprocessing components in physical order. -/
 def tables (source target : ExecutionSnapshot) : List (Component F) :=
@@ -39,20 +43,24 @@ def tables (source target : ExecutionSnapshot) : List (Component F) :=
     WriteBuffer.wordComponent, WriteEffects.requestComponent, WriteEffects.wordComponent,
     WriteEffects.streamComponent source.host target.host, WriteEffects.dispatchComponent, WriteEffects.groupComponent,
     HostHintSnapshot.component target.host.io.hints, HostHintSnapshot.Seal.component target.host.io.hints,
-    WriteEffects.blockComponent source.host target.host, WriteEffects.planComponent, WriteEffects.closeComponent source target]
+    WriteEffects.blockComponent source.host target.host, WriteEffects.planComponent, WriteEffects.closeComponent source target,
+    WriteAllocation.openComponent, WriteAllocation.stepComponent, WriteAllocation.Words.seedComponent, WriteAllocation.Words.wordComponent]
 
 private def protocols : List (RawChannel F) :=
   HostCallChip.channel.toRaw :: byteChannel.toRaw :: readbackChannel.toRaw :: HostHintQueue.nodeChannel.toRaw ::
   HostHintQueue.wordChannel.toRaw :: HostHintQueue.stateChannel.toRaw :: channels
 
+private instance : NeZero protocols.length := ⟨by decide⟩
+
 /-- Channel registration slots for every entry of the physical suffix. Entries retain
 their original order and duplicate channel declarations. -/
-private def protocolSlots : List (List (Fin 22)) :=
+private def protocolSlots : List (List (Fin protocols.length)) :=
   [[2,6],[6,7],[0,7,8],[1,1,1,1,1,1,8,9,9,10],[1,9,7,9,11],[10,12],[11,1,13],[14],
    [12,17,1,1,1,1,14,14,14,15,14,18,15,17],[13,19,15,20,20,20,15],
-   [16,3,4,16,3,4],[5,16,5,16],[20],[19],[17,21]]
+   [16,3,4,16,3,4],[5,16,5,16],[20],[19],[17,21],[18,5,22,22,5],[1,22,14,14,3,23,22],
+   [23,24],[24,20,20,4,24]]
 
-private def registeredChannel (i : Fin 22) : RawChannel F := protocols[i.val]'(by exact i.isLt)
+private def registeredChannel (i : Fin protocols.length) : RawChannel F := protocols[i.val]'(by exact i.isLt)
 
 private theorem suffix_channels (source target : ExecutionSnapshot) :
     (tables source target).map (·.circuit.channels) = protocolSlots.map (List.map registeredChannel) := by
@@ -73,9 +81,10 @@ suffix after the original seven physical packet, classifier and decoder componen
 theorem effect_lookupFree (source target : ExecutionSnapshot) : LookupFree ((tables source target).drop 7) := by
   change LookupFree [WriteEffects.streamComponent source.host target.host,WriteEffects.dispatchComponent,WriteEffects.groupComponent,
     HostHintSnapshot.component target.host.io.hints,HostHintSnapshot.Seal.component target.host.io.hints,
-    WriteEffects.blockComponent source.host target.host,WriteEffects.planComponent,WriteEffects.closeComponent source target]
+    WriteEffects.blockComponent source.host target.host,WriteEffects.planComponent,WriteEffects.closeComponent source target,
+    WriteAllocation.openComponent,WriteAllocation.stepComponent,WriteAllocation.Words.seedComponent,WriteAllocation.Words.wordComponent]
   simp only [LookupFree.cons_iff,LookupFree.nil,and_true]
-  refine ⟨?_,?_,?_,?_,?_,?_,?_,?_⟩
+  refine ⟨?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩
   all_goals apply Component.lookups_eq_nil_of_main; intro input offset
   · rfl
   · exact Guarded.main_lookups WriteEffects.dispatchCircuit WriteEffects.dispatchGuardSupported input offset
@@ -86,6 +95,11 @@ theorem effect_lookupFree (source target : ExecutionSnapshot) : LookupFree ((tab
   · rfl
   · simp only [WriteEffects.closeComponent,WriteEffects.closeCircuit,WriteEffects.closeMain,AddressSum.circuit,AddressSum.main,
       WordRangeCheck.circuit,WordRangeCheck.main,Gadgets.ToBits.rangeCheck,Gadgets.toBits,Gadgets.ToBits.main,Gadgets.Equality.main,Operations.lookups,circuit_norm]
+
+  · exact Guarded.main_lookups WriteAllocation.openCircuit WriteAllocation.openSupported input offset
+  · exact Guarded.main_lookups WriteAllocation.stepCircuit WriteAllocation.stepSupported input offset
+  · exact Guarded.main_lookups WriteAllocation.Words.seedCircuit WriteAllocation.Words.seedSupported input offset
+  · exact Guarded.main_lookups WriteAllocation.Words.wordCircuit WriteAllocation.Words.wordSupported input offset
 
 variable (image : ProgramImage) (source target : ExecutionSnapshot) (final : HostHintQueue.State F)
 
@@ -122,7 +136,9 @@ private def packetTableNames := ["sp1.native.write_readback_supply", "sp1.native
 
 private def queueTableNames := [HostHintSnapshot.tableName, HostHintSnapshot.Seal.name]
 
-private def groupedSourceNames := ["sp1.native.write_stream_blocks.source", "sp1.native.write_slice_plan.source", "sp1.native.write_output_terminal"]
+private def groupedSourceNames := ["sp1.native.write_stream_blocks.source", "sp1.native.write_slice_plan.source", "sp1.native.write_output_terminal",
+    "sp1.native.hint_allocation_call","sp1.native.hint_allocation_node",
+    "sp1.native.write_allocation_word_start","sp1.native.write_allocation_word"]
 
 private def tableNames := packetTableNames ++ queueTableNames ++ groupedSourceNames
 
@@ -161,7 +177,7 @@ private theorem grouped_names_disjoint :
   supervisor_names
   intro a old member
   simp only [groupedSourceNames,List.mem_cons,List.not_mem_nil,or_false] at member
-  rcases member with rfl | rfl | rfl <;> revert old <;> exact of_decide_eq_true rfl
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> revert old <;> exact of_decide_eq_true rfl
 
 private theorem freshTables :
     ((decorated image source target final).tables ++ tables source target).map (·.circuit.name) |>.Nodup := by
@@ -220,13 +236,13 @@ def preprocessing : Ensemble F SP1PublicIO :=
       · exact protocols_registered image source target final (tables_registered _ _ c newRow used) }
 
 /-- The 98 supervisor components retain their positions; the packet, effect and outgoing queue tables follow. -/
-theorem table_count : (preprocessing image source target final).tables.length = 113 := by
+theorem table_count : (preprocessing image source target final).tables.length = 117 := by
   change ((withSources image source target final).tables ++ tables source target).length = _
   rw [List.length_append, WriteSourceRegistry.tables_eq, List.length_mapIdx, base_length]
   rfl
 
 /-- Read an observation component at its physical suffix position without consulting a name or a hint. -/
-def slot (index : Fin 15) : TableSlot (preprocessing image source target final).tables
+def slot (index : Fin 19) : TableSlot (preprocessing image source target final).tables
     (tables source target)[index.val] :=
   (TableSlot.ofIndex (tables source target) ⟨index.val, index.isLt⟩).appendRight
     (withSources image source target final).tables
@@ -240,6 +256,28 @@ theorem queue_slots :
   change (_ ++ tables source target)[108]? = _ ∧ (_ ++ tables source target)[109]? = _
   simp only [List.getElem?_append_right (by omega : (decorated image source target final).tables.length ≤ 108),
     List.getElem?_append_right (by omega : (decorated image source target final).tables.length ≤ 109),size]
+  exact ⟨rfl,rfl⟩
+
+/-- The demand-mode ticket and fresh-node receivers are installed immediately after the stream terminal. -/
+theorem allocation_slots :
+    (preprocessing image source target final).tables[113]? = some WriteAllocation.openComponent ∧
+    (preprocessing image source target final).tables[114]? = some WriteAllocation.stepComponent := by
+  have size : (decorated image source target final).tables.length = 98 := by
+    rw [decorated,WriteSourceRegistry.tables_eq,List.length_mapIdx,base_length]
+  change (_ ++ tables source target)[113]? = _ ∧ (_ ++ tables source target)[114]? = _
+  simp only [List.getElem?_append_right (by omega : (decorated image source target final).tables.length ≤ 113),
+    List.getElem?_append_right (by omega : (decorated image source target final).tables.length ≤ 114),size]
+  exact ⟨rfl,rfl⟩
+
+/-- Each fresh node's contents ticket starts the actual padded immutable word producer. -/
+theorem allocation_word_slots :
+    (preprocessing image source target final).tables[115]? = some WriteAllocation.Words.seedComponent ∧
+    (preprocessing image source target final).tables[116]? = some WriteAllocation.Words.wordComponent := by
+  have size : (decorated image source target final).tables.length = 98 := by
+    rw [decorated,WriteSourceRegistry.tables_eq,List.length_mapIdx,base_length]
+  change (_ ++ tables source target)[115]? = _ ∧ (_ ++ tables source target)[116]? = _
+  simp only [List.getElem?_append_right (by omega : (decorated image source target final).tables.length ≤ 115),
+    List.getElem?_append_right (by omega : (decorated image source target final).tables.length ≤ 116),size]
   exact ⟨rfl,rfl⟩
 
 /-- The public verifier emits the initial cursor and consumes the expected final ticket.

@@ -49,11 +49,16 @@ import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.WriteEffects
 import SP1Clean.FormalModel.Contracts.WriteChronology
+import SP1Clean.FormalModel.Contracts.WriteAllocation
+import SP1Clean.FormalModel.Contracts.WriteAllocationWords
 import SP1Clean.FormalModel.Contracts.WriteGroup
 import SP1Clean.FormalModel.Contracts.WriteSlice
 import SP1Clean.Native.Operations.WriteBlockSource
 import SP1Clean.Native.Operations.WriteCursorBoundary
 import SP1Clean.Native.Operations.WriteDispatch
+import SP1Clean.Native.Operations.WriteAllocation
+import SP1Clean.Native.Operations.WriteAllocationPayload
+import SP1Clean.Native.Operations.WriteAllocationWords
 import SP1Clean.Native.Operations.WriteGroup
 import SP1Clean.Native.Operations.WriteGroupBytes
 import SP1Clean.Native.Operations.WriteGroupCoordinates
@@ -61,6 +66,8 @@ import SP1Clean.Native.Operations.WriteRouteFlags
 import SP1Clean.Native.Operations.WriteSliceSource
 import SP1Clean.Native.Operations.WriteStart
 import SP1Clean.Proofs.Operations.WriteDispatch
+import SP1Clean.Proofs.Operations.WriteAllocation
+import SP1Clean.Proofs.Operations.WriteAllocationWords
 import SP1Clean.Proofs.Operations.WriteGroup
 import SP1Clean.Semantics.Host.WriteStreamBlocks
 import SP1Clean.Semantics.Host.WriteStreamMetadata
@@ -203,6 +210,7 @@ import SP1Clean.FormalModel.Contracts.HintQueueSnapshot
 import SP1Clean.Native.Operations.HintQueueSnapshot
 import SP1Clean.Native.Operations.HintQueueSeal
 import SP1Clean.Proofs.Operations.HintQueueSnapshot
+import SP1Clean.Proofs.Operations.HintRecordPublications
 import SP1Clean.Proofs.Operations.HintSnapshotPositions
 import SP1Clean.Semantics.Host.HintQueueWordRecords
 import SP1Clean.Semantics.Host.HintQueueWords
