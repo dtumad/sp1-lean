@@ -27,25 +27,29 @@ def payloadInputs (t : StaticTable F Row) (counts : Fin t.height → F) :
 theorem payloadInputs_length (t : StaticTable F Row) (counts : Fin t.height → F) :
     (t.payloadInputs counts).length = t.height := List.length_ofFn
 
+/-- Both static-provider modes use the same committed multiplicity and verifier-fixed prefix. -/
+theorem countedInput_fixedAt (t : StaticTable F Row) (bounded : t.height < UInt64.size)
+    (counts : Fin t.height → F) (i : Fin t.height) :
+    (t.generation bounded).FixedAt (UInt64.ofNat i.val) (t.fixedEntry i.val, counts i) := by
+  rw [← t.fixedRow_evalRow bounded i]
+  apply PreallocatedMode.fixedAt_of_typed_prefix (row := t.fixedRow .idx) (suffix := (.multiplicity : Cell F)) _ rfl
+  intro cell mem
+  change cell ∈ [.multiplicity] at mem
+  exact List.mem_singleton.mp mem ▸ rfl
+
 /-- The generated prefix matches every verifier-fixed cell at its original position. -/
 theorem payloadInputs_fixed (t : StaticTable F Row) (target : Channel F Row) (valid : ∀ row, t.Spec row → ∀ data, target.Guarantees row data) (bounded : t.height < UInt64.size)
     (counts : Fin t.height → F) (data : ProverData F) (hint : ProverHint F) :
     let c := t.payloadComponent target valid bounded
     c.FixedRowsMatch ((t.payloadInputs counts).map (c.buildRow · data hint)) := by
-  let c := t.payloadComponent target valid bounded
-  apply (c.fixedRowsMatch_buildRows _ _ _ (mode := t.payloadGeneration target bounded) rfl).mpr
+  apply ((t.payloadComponent target valid bounded).fixedRowsMatch_buildRows _ _ _ (mode := t.payloadGeneration target bounded) rfl).mpr
   refine ⟨(t.payloadInputs_length counts).trans (UInt64.toNat_ofNatLT ..).symm,?_⟩
   intro i inside
-  have ok : i < t.height := inside.trans_eq (t.payloadInputs_length counts)
-  change (t.payloadGeneration target bounded).FixedAt (UInt64.ofNat i) ((t.payloadInputs counts)[i].1,(t.payloadInputs counts)[i].2)
+  have ok := inside.trans_eq (t.payloadInputs_length counts)
   have indexed : (t.payloadInputs counts)[i] = (t.fixedEntry i,counts ⟨i,ok⟩) := List.getElem_ofFn ..
+  change (t.payloadGeneration target bounded).FixedAt (UInt64.ofNat i) ((t.payloadInputs counts)[i].1,(t.payloadInputs counts)[i].2)
   rw [indexed]
-  dsimp only
-  rw [← t.fixedRow_evalRow bounded ⟨i,ok⟩]
-  apply PreallocatedMode.fixedAt_of_typed_prefix (row := t.fixedRow .idx) (suffix := (.multiplicity : Cell F)) _ rfl
-  intro cell mem
-  change cell ∈ [.multiplicity] at mem
-  exact List.mem_singleton.mp mem ▸ rfl
+  exact t.countedInput_fixedAt bounded counts ⟨i,ok⟩
 
 /-- Fill every physical row using the verifier's typed prefix and the assigned reader count. -/
 def buildPayload (t : StaticTable F Row) (target : Channel F Row) (valid : ∀ row, t.Spec row → ∀ data, target.Guarantees row data) (bounded : t.height < UInt64.size)

@@ -158,6 +158,33 @@ theorem Transfers.first_word {f g : AccessFrontier} {s t : LocationValues} {reco
     | cons a rest => exact congrArg Prod.snd h.1
   exact first _ (valid loc)
 
+/-- The final original record at an occupied location holds its actual target word. -/
+theorem Transfers.final_word {f g : AccessFrontier} {s t : LocationValues} {records : List MemoryHistoryAccess}
+    (valid : Transfers f g s t records) {history : MemoryLocationHistory}
+    (inside : history ∈ memoryLocationHistories records) : some history.last.pushed = t history.loc := by
+  have last {xs : List MemoryHistoryAccess} {start stop : ℕ × Option (BitVec 64)} (nonempty : xs ≠ [])
+      (chain : IsHandoffChain start (xs.map endpoints) stop) : some (xs.getLast nonempty).pushed = stop.2 := by
+    induction xs generalizing start with
+    | nil => contradiction
+    | cons a rest ih =>
+      cases rest with
+      | nil => exact congrArg Prod.snd chain.2
+      | cons b later => exact ih (by simp) chain.2
+  obtain ⟨⟨loc,used⟩,_,rfl⟩ := List.mem_map.mp inside
+  exact last (memoryHistoryAt_ne_nil_of_mem used) (valid loc)
+
+/-- An empty local tape hands the incoming word directly to the final state. -/
+theorem Transfers.untouched_word {f g : AccessFrontier} {s t : LocationValues} {records : List MemoryHistoryAccess}
+    (valid : Transfers f g s t records) {loc : MemLoc} (fresh : loc ∉ touchedMemoryLocations records) : s loc = t loc := by
+  have none : memoryHistoryAt records loc = [] := by
+    apply List.eq_nil_iff_forall_not_mem.mpr
+    intro a present
+    obtain ⟨used, same⟩ := List.mem_filter.mp present
+    exact fresh (mem_touchedMemoryLocations.mpr ⟨a,used,of_decide_eq_true same⟩)
+  have strand := valid loc
+  rw [none] at strand
+  exact congrArg Prod.snd strand
+
 /-- Threaded hand-offs from genesis prove the record chronology required by the existing
 per-location boundary and ordered Memory ledger constructors. -/
 theorem Transfers.chronology {final : AccessFrontier} {source target : LocationValues} {records : List MemoryHistoryAccess}

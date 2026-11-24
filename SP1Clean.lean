@@ -121,6 +121,7 @@ import SP1Clean.Export.WriteMixedSourceAssembly
 import SP1Clean.Export.WriteMixedHostRegistry
 import SP1Clean.Export.WriteMixedHostTables
 import SP1Clean.Export.WriteMixedHostAssembly
+import SP1Clean.Export.WriteMixedFixedResources
 import SP1Clean.Export.WriteMixedHostData
 import SP1Clean.Export.WriteMixedBankBalances
 import SP1Clean.Export.WriteMixedSourceRecords
@@ -131,6 +132,13 @@ import SP1Clean.Proofs.Completeness.MixedCommitCalls
 import SP1Clean.Proofs.Completeness.MixedCommitHistory
 import SP1Clean.Proofs.Completeness.MixedCommitTables
 import SP1Clean.Proofs.Completeness.MixedCommitLedger
+import SP1Clean.Proofs.Completeness.SnapshotReadDirections
+import SP1Clean.Proofs.Completeness.MixedSnapshotMembership
+import SP1Clean.Proofs.Completeness.MixedTargetMemory
+import SP1Clean.Proofs.Completeness.MixedTargetChecks
+import SP1Clean.Proofs.Completeness.MixedTargetMembership
+import SP1Clean.Proofs.Completeness.FixedProgramReads
+import SP1Clean.Proofs.Completeness.MixedProgramFetches
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
