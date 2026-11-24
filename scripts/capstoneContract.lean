@@ -12,6 +12,7 @@ import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
 import SP1Clean.Export.WriteInstalledAllocations
 import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
 import SP1Clean.Export.WriteJointObservation
+import SP1Clean.Export.WriteInstalledHostExit
 import SP1Clean.Export.WriteRealizedTranscript
 import SP1Clean.Proofs.Completeness.HintHandlerPadding
 import SP1Clean.Export.WriteAllocationStoreUnique
@@ -248,6 +249,14 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.installed_effect_joins,
   ``SP1Clean.Export.WriteObservationAssembly.compiled_observation_allocation,
   ``SP1Clean.Export.WriteMixedControlTables.remaining_count,
+  ``SP1Clean.Export.WriteMixedControlTables.remaining_positions,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_control_receipts,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_host_exit,
+  ``SP1Clean.TraceGen.ControlHandlers.halt_length,
+  ``SP1Clean.TraceGen.ControlHandlers.raw_heights,
+  ``SP1Clean.TraceGen.ControlHandlers.tables_checked,
+  ``SP1Clean.TraceGen.ControlHandlers.host_matches,
+  ``SP1Clean.TraceGen.ControlHandlers.terminal_closed,
   ``SP1Clean.TraceGen.HintHandlerPadding.installed_three_calls,
   ``SP1Clean.TraceGen.HintHandlerPadding.read_zero_rejected,
   ``SP1Clean.TraceGen.HintHandlerPadding.length_zero_rejected,
