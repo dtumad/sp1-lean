@@ -300,6 +300,8 @@ import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
 import SP1Clean.Proofs.Completeness.ByteDemandMembership
 import SP1Clean.Proofs.Completeness.ByteProviderDemand
 import SP1Clean.Proofs.Completeness.ByteProviderTables
+import SP1Clean.Proofs.Completeness.ByteReaderTally
+import SP1Clean.Proofs.Completeness.ByteProviderBalance
 import SP1Clean.Proofs.Completeness.ChipLedger
 import SP1Clean.Proofs.Completeness.Closure
 import SP1Clean.Proofs.Completeness.ClosureRealization

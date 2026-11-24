@@ -82,16 +82,27 @@ variable {p : ℕ} [Fact p.Prime]
 /-- Match Clean's balance-ledger equality when rewriting filtered interaction lists. -/
 local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
-/-- Casting an ℤ-list sum into `ZMod p` distributes over the list. -/
-private lemma intCast_list_sum (l : List ℤ) :
-    ((l.sum : ℤ) : ZMod p) = (l.map (fun x : ℤ => (x : ZMod p))).sum := by
-  induction l with
-  | nil => simp
-  | cons a t ih => simp [ih]
+/-- The integer ledger of one raw channel recovers its field-valued balance for any queried
+message, including messages absent from the ledger. -/
+theorem intCast_multiplicitySum_message (interactions : List (Interaction (ZMod p)))
+    (channel : RawChannel (ZMod p)) (onChannel : ∀ i ∈ interactions, i.channel = channel)
+    (msg : Array (ZMod p)) :
+    ((multiplicitySum (interactions.map Interaction.toAccess)
+      (kindOf channel.name,channel.name,msg.toList.map ZMod.val) : ℤ) : ZMod p) = balanceOf interactions msg := by
+  induction interactions with
+  | nil => simp [multiplicitySum_nil,balanceOf]
+  | cons i tail ih =>
+    have same : keyOf (Interaction.toAccess i) = (kindOf channel.name,channel.name,msg.toList.map ZMod.val) ↔ i.msg = msg := by
+      simp only [keyOf,Interaction.toAccess,onChannel i List.mem_cons_self,Prod.mk.injEq,true_and]
+      exact (List.map_injective_iff.mpr (ZMod.val_injective p)).eq_iff.trans Array.toList_inj
+    rw [List.map_cons,multiplicitySum_cons,Int.cast_add,balanceOf_cons,ih (fun j h => onChannel j (List.mem_cons_of_mem _ h))]
+    by_cases eq : i.msg = msg
+    · simp only [same,eq,ite_true,add_left_inj]
+      exact intCast_signedVal i.signedMult
+    · simp only [same,eq,ite_false,Int.cast_zero]
 
-/-- At the key of an observed interaction, the native integer multiplicity sum casts back to
-Clean's field-valued balance of that interaction's message.  This is the lossless algebraic core
-shared by both directions of the balance bridge; no binary-multiplicity or count bound is needed. -/
+/-- At the key of an observed interaction the integer ledger recovers precisely its
+message balance. -/
 theorem intCast_multiplicitySum_map_toAccess_eq_balanceOf
     (interactions : List (Interaction (ZMod p))) (channel : RawChannel (ZMod p))
     (h_channel : ∀ i ∈ interactions, i.channel = channel)
@@ -99,32 +110,8 @@ theorem intCast_multiplicitySum_map_toAccess_eq_balanceOf
     ((multiplicitySum (interactions.map Interaction.toAccess)
       (keyOf (Interaction.toAccess i₀)) : ℤ) : ZMod p) =
       balanceOf interactions i₀.msg := by
-  have h_pred : ∀ i ∈ interactions,
-      decide (keyOf (Interaction.toAccess i) = keyOf (Interaction.toAccess i₀)) =
-        decide (i.msg = i₀.msg) := by
-    intro i hi
-    rw [decide_eq_decide]
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · exact Array.toList_inj.mp (List.map_injective_iff.mpr (ZMod.val_injective p)
-        (congrArg (fun t => t.2.2) h))
-    · simp only [Interaction.toAccess, keyOf, h_channel i hi, h_channel i₀ hi₀, h]
-  have h_filter :
-      (interactions.map Interaction.toAccess).filter
-          (fun a => keyOf a = keyOf (Interaction.toAccess i₀)) =
-        (interactions.filter (fun i => i.msg = i₀.msg)).map Interaction.toAccess := by
-    rw [List.filter_map]
-    exact congrArg (List.map Interaction.toAccess) (List.filter_congr h_pred)
-  calc
-    ((multiplicitySum (interactions.map Interaction.toAccess)
-        (keyOf (Interaction.toAccess i₀)) : ℤ) : ZMod p)
-        = ((((interactions.filter (fun i => i.msg = i₀.msg)).map
-            (fun i => signedVal i.signedMult)).sum : ℤ) : ZMod p) := by
-          rw [multiplicitySum, filterKey, h_filter, List.map_map]
-          rfl
-    _ = ((interactions.filter (fun i => i.msg = i₀.msg)).map (fun i => i.signedMult)).sum := by
-          rw [intCast_list_sum, List.map_map]
-          exact congrArg List.sum (List.map_congr_left fun i _ => intCast_signedVal i.signedMult)
-    _ = balanceOf interactions i₀.msg := rfl
+  simpa only [keyOf,Interaction.toAccess,h_channel i₀ hi₀] using
+    intCast_multiplicitySum_message interactions channel h_channel i₀.msg
 
 /-- **Per-key cast-sum zero.** For a single-channel interaction list whose Clean per-message balance
 vanishes, the `Interaction.toAccess`-image's ℤ-multiplicity-sum at *every* `LookupKey` is `≡ 0 (mod p)`
