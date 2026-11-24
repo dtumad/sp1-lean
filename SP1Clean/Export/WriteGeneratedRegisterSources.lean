@@ -224,6 +224,21 @@ private theorem generated_clock (view : Trace.RowView F) (base pc : ℕ) (state 
   congr 1
   exact (by exact_mod_cast congrArg (Nat.cast (R := F)) (show base % 2 ^ 16 + base / 2 ^ 16 % 256 * 65536 = base % 2 ^ 24 by omega))
 
+/-- A genuine Memory predecessor of a built ordinary instruction publishes a private receipt
+at the canonical clock carried by the original executor event. -/
+theorem ordinary_receipt_at_event (id : InstructionChipId) (e : id.Event) (data : ProverData F) (cells : Array F)
+    (decoded : (installed id).rowInput (Environment.fromArray cells data) = InstalledInstructionTables.activeInput id e)
+    {prior : MemoryMsg F} (consumed : prior ∈ (⟨supportedChipFor id, cells⟩ : DecodedInstructionRow SP1Prime).consumedMemoryMessages data) :
+    let base := (RoutedEvent.mk id e).clock
+    (1, AccessSupply.atClock (((base / 2 ^ 24 : ℕ) : F), ((base % 2 ^ 24 : ℕ) : F)) prior) ∈
+      rowRecords (.ordinary id) (Environment.fromArray cells data) := by
+  have clock := generated_clock _ _ _ (generated_view id e data cells decoded).1
+  have receipt := ordinary_row_predecessor id data cells consumed
+  change (1, AccessSupply.atClock (_, _) prior) ∈ _ at receipt
+  dsimp only at clock ⊢
+  rw [← clock]
+  exact receipt
+
 private theorem generated_register_entry (id : InstructionChipId) (events : List id.Event)
     {e : id.Event} (used : e ∈ events) (valid : id.Valid e) {r : MemRecordEntry}
     (entry : r ∈ (RoutedEvent.mk id e).predecessors) (small : r.addr < 32)
@@ -257,10 +272,7 @@ private theorem generated_register_entry (id : InstructionChipId) (events : List
   rw [packedRegister_canonical r small window phase delta] at present
   have consumed := OrdinarySources.registerPriors_consumed id row evaluation rfl checked
     (InstalledInstructionTables.active_is_real id e valid original.data evaluation hint) (sameAdapter ▸ event_imm id e valid) _ present
-  have receipt := ordinary_row_predecessor id evaluation cells consumed
-  have time := generated_clock view base (RoutedEvent.mk id e).pc sameState
-  change (1, AccessSupply.atClock (_, _) r.toMemoryMsg) ∈ _ at receipt
-  exact ⟨cells, inTable, time ▸ receipt⟩
+  exact ⟨cells, inTable, ordinary_receipt_at_event id e evaluation cells (c.rowInput_buildRow input original.data evaluation hint) consumed⟩
 
 /-- Every register predecessor of a compiled ordinary instruction occurs with unit weight in
 that instruction's original built table, with its true previous high window and incoming CPU clock. -/

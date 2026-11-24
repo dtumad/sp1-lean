@@ -49,6 +49,7 @@ import SP1Clean.Export.WriteSourceGrounding
 import SP1Clean.Export.WriteBoundarySourceGrounding
 import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Export.WriteGeneratedHostSources
+import SP1Clean.Export.WriteGeneratedRamSources
 import SP1Clean.Export.WriteGeneratedRegisterSources
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
