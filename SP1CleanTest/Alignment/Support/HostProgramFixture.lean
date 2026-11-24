@@ -99,7 +99,7 @@ def ecall (construction : Construction) (policy : HostPolicy) (program : Target.
   if event.rawCode = 0 then
     return { next with consumers := next.consumers ++ [⟨64, (toElements (HostHaltChip.populate message)).toList⟩] }
   if event.rawCode = SyscallKind.enterUnconstrained.code ∨ event.rawCode = SyscallKind.verifyProof.code then
-    return { next with consumers := next.consumers ++ [⟨65, (toElements message).toList⟩] }
+    return { next with consumers := next.consumers ++ [⟨65, (toElements (M := HostNoopChip.RowInput) (message, 1)).toList⟩] }
   if event.rawCode = 240 ∨ event.rawCode = 241 then
     let some executed := before.host.run policy before.sail.readContext | throw "host dispatch disagreed"
     if event.rawCode = 240 then

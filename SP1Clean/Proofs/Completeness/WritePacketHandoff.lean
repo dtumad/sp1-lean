@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Completeness.MixedSyscallRows
 import SP1Clean.Proofs.Completeness.WriteObservations
-import SP1Clean.Proofs.Chips.HostControlPopulate
+import SP1Clean.Proofs.Completeness.MixedSyscallHandoff
 import SP1Clean.Proofs.Chips.WritePacket.Formal
 
 /-! # Constructing native WRITE packet headers from mixed Sail executions -/
@@ -10,25 +10,6 @@ namespace SP1Clean.TraceGen
 open Circuit Machine Semantics Soundness.Target FormalModel.Shard
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-
-private theorem encodeWord (value : BitVec 64) :
-    wordOfNat (p := p) value.toNat = bitVecToWord value := by
-  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-  apply Word.eq_of_toBitVec64_eq (wordOfNat_isU64 _) (isU64_bitVecToWord _)
-  rw [toBitVec64_wordOfNat, toBitVec64_bitVecToWord, BitVec.ofNat_toNat]
-  rfl
-
-/-- Every compiled ECALL produces exactly the message expected by the host constructors,
-including four complete architectural words and both limbs of the incoming clock. -/
-theorem syscallInstruction_hostMessage (frontier : AccessFrontier) (clock : ℕ) (pc : BitVec 64)
-    (execution : HostExecution) :
-    HostCallChip.message (syscallInstruction (p := p) frontier (execution.toEvent clock pc)) =
-      HostControl.message clock execution := by
-  unfold HostCallChip.message HostControl.message
-  rw [HostCallChip.Message.mk.injEq]
-  refine ⟨?_, clkLow_eq clock pc.toNat, encodeWord _, encodeWord _, encodeWord _, encodeWord _⟩
-  change (cpuStateCols (p := p) clock pc.toNat).clk_high = _
-  rw [cpuStateCols_clk_high, Nat.shiftRight_eq_div_pow]
 
 /-- At an actual WRITE, the released instruction row and the register read feeding the
 native header agree with the same execution prefix. Every length and buffer word comes

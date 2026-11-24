@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Chips.HostControlLedger
+import SP1Clean.Proofs.Chips.HostNoopChip.Guarded
 import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Guarded
 import ToClean.Air.HintIndex
@@ -34,29 +34,19 @@ def halt : ReceiverView (HostCallChip.channel (p := p)) where
       (size HostHaltChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
     exact HostHaltChip.host_values _ _ env
 
-private def noopReceiver (circuit : GeneralFormalCircuit (ZMod p) HostNoopChip.Inputs unit)
-    (values : ∀ input offset env,
-      ((circuit.main input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
-        [HostCallChip.channel.pulledValue (Eval.eval env input)]) :
-    ReceiverView (HostCallChip.channel (p := p)) where
-  component := {
-    circuit
-    Assumptions := circuit.Assumptions
-    generation := Witgen.HintIndex.unitDemand circuit.name HostCallChip.channel .push
-      (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
-      (fun input => input) (fun _ => 1) }
-  message env := eval env (varFromOffset HostNoopChip.Inputs 0)
+/-- The two profiles share the guarded no-effect slot and its physical activity. -/
+def profileNoop (includeVerify : Bool) : ReceiverView (HostCallChip.channel (p := p)) where
+  component := HostNoopChip.component includeVerify
+  message env := eval env (varFromOffset HostNoopChip.RowInput 0).1
+  activity := (varFromOffset HostNoopChip.RowInput 0).2
+  activity_of_constraints := by
+    intro env valid
+    rw [Component.constraintsHold_iff] at valid
+    exact Guarded.activity_of_constraints (HostNoopChip.activeCircuit includeVerify) inferInstance
+      (varFromOffset HostNoopChip.RowInput 0) (size HostNoopChip.RowInput) env valid
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-    exact values _ _ env
-
-/-- A typed receiver for the released ENTER or VERIFY handoff, including its generation slot. -/
-def noop (kind : HostNoopChip.Kind) : ReceiverView (HostCallChip.channel (p := p)) :=
-  noopReceiver (HostNoopChip.circuit kind) (HostNoopChip.host_values kind)
-
-/-- The no-effect receipt slot admits ENTER alone or both no-effect calls, according to the installation. -/
-def profileNoop (includeVerify : Bool) : ReceiverView (HostCallChip.channel (p := p)) :=
-  if includeVerify then noopReceiver HostNoopChip.choiceCircuit HostNoopChip.choice_host_values else noop .enter
+    exact HostNoopChip.guarded_host_values includeVerify _ _ env
 
 def commit (deferred : Bool) (slot : Fin 8) : ReceiverView (HostCallChip.channel (p := p)) where
   component := { circuit := HostCommitChip.circuit deferred slot, Assumptions := (HostCommitChip.circuit deferred slot).Assumptions, generation := HostCommitChip.generation deferred slot }
@@ -94,30 +84,21 @@ theorem halt_message (env : Environment (ZMod p)) :
     simp only [circuit_norm]
   simp only [HostCallReceivers.halt, evaluated, eval_varFromOffset_valueFromOffset]
 
-omit [Fact (2 ^ 25 < p)] in
-/-- Both no-effect receivers read the complete call directly from their physical row. -/
-theorem noop_message (kind : HostNoopChip.Kind) (env : Environment (ZMod p)) :
-    (HostCallReceivers.noop (p := p) kind).message env = valueFromOffset HostNoopChip.Inputs 0 env := by
-  simp only [HostCallReceivers.noop, noopReceiver, eval_varFromOffset_valueFromOffset]
-
-/-- Both profiles retain the original complete message at the no-effect receiver. -/
+/-- The shared receiver recovers the complete call from the occupied input prefix. -/
 theorem profileNoop_message (includeVerify : Bool) (env : Environment (ZMod p)) :
-    (profileNoop (p := p) includeVerify).message env = valueFromOffset HostNoopChip.Inputs 0 env := by
-  cases includeVerify <;> simp only [profileNoop, Bool.false_eq_true, ite_false, ite_true, noop,
-    noopReceiver, eval_varFromOffset_valueFromOffset]
+    (profileNoop (p := p) includeVerify).message env = (valueFromOffset HostNoopChip.RowInput 0 env).1 := by
+  have decode := eval_varFromOffset_valueFromOffset HostNoopChip.RowInput 0 env
+  rw [CircuitType.eval_var_provablePair] at decode
+  exact congrArg Prod.fst decode
 
-/-- A physical no-effect row identifies its selected call and proves the corresponding release contract. -/
+/-- Each enabled no-effect receipt checks the released dispatcher code and x5 result. -/
 theorem profileNoop_spec (includeVerify : Bool) (env : Environment (ZMod p))
-    (checked : (profileNoop includeVerify).component.operations.ConstraintsHold env) :
-    ∃ kind, (kind = .enter ∨ includeVerify = true) ∧
-      HostNoopChip.Spec kind (valueFromOffset HostNoopChip.Inputs 0 env) := by
-  cases includeVerify with
-  | false => exact ⟨.enter, Or.inl rfl, HostNoopChip.row_spec_of_constraints .enter env
-      ((Component.constraintsHold_iff env).mp checked)⟩
-  | true =>
-    rcases HostNoopChip.choice_spec_of_constraints env ((Component.constraintsHold_iff env).mp checked) with enter | verify
-    · exact ⟨.enter, Or.inl rfl, enter⟩
-    · exact ⟨.verify, Or.inr rfl, verify⟩
+    (checked : (profileNoop (p := p) includeVerify).component.operations.ConstraintsHold env)
+    (active : env (profileNoop (p := p) includeVerify).activity = 1) :
+    ∃ kind : HostNoopChip.Kind, (kind = .enter ∨ includeVerify = true) ∧
+      HostNoopChip.Spec kind (valueFromOffset HostNoopChip.RowInput 0 env).1 := by
+  simp only [profileNoop] at checked active
+  exact HostNoopChip.spec_of_active (p := p) includeVerify env checked active
 
 /-- Each commitment receiver reads its row's complete call. -/
 theorem commit_message (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p)) :

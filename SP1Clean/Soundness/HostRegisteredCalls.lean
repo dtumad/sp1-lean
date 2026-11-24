@@ -42,18 +42,16 @@ theorem noopTable_component (witness : EnsembleWitness (ensemble includeVerify i
     (noopTable witness).component = (HostCallReceivers.profileNoop includeVerify).component :=
   HostLocalHandoff.receiverTable_component (HostHintQueueBoundary.projected witness) (noopIndex (p := p) includeVerify)
 
-/-- Every physical receipt counts once and has a distinct instruction clock. This slot has no padding rows. -/
+/-- The active receipts occupy at most the physical height and have distinct instruction clocks. -/
 theorem receipt_heights (witness : EnsembleWitness (ensemble includeVerify image source target final))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     let receipts := ReceiverView.tableMessages (HostCallReceivers.profileNoop includeVerify) (noopTable witness)
-    receipts.length = (noopTable witness).table.length ∧ (receipts.map HostCallLedger.clock).Nodup := by
+    receipts.length ≤ (noopTable witness).table.length ∧ (receipts.map HostCallLedger.clock).Nodup := by
   let physical := HostHintQueueBoundary.projected witness
   have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints
     (FinalMemoryChecks.checkTables target.sail.memorySnapshot) includeVerify
   refine ⟨?_, ?_⟩
-  · have active : (HostCallReceivers.profileNoop (p := p) includeVerify).activity = .const 1 := by
-      cases includeVerify <;> rfl
-    simp [ReceiverView.tableMessages, active, Expression.eval]
+  · simpa only [ReceiverView.tableMessages, List.length_map] using List.length_filter_le _ _
   · exact HostLocalHandoff.receiver_clocks_nodup_of_orderingChannels physical (resources_hostCall_silent interface)
       (HostHintQueueBoundary.projected_constraints witness constraints)
       (HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced)

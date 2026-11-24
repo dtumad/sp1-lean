@@ -127,20 +127,23 @@ theorem observation_registered (ctx : Context) :
       rw [protocol_at ctx 93 (by decide) (by decide)]
       rfl
 
-/-- ENTER and VERIFY occupy the same component in the production export. Each physical row
-consumes one complete HostCall. Both selections have the same 18-cell witness layout. -/
+/-- ENTER and VERIFY occupy the same component in the production export. Each active row
+consumes one complete HostCall. Both selections use the same 19-cell layout and preserve the disabled padding site. -/
 theorem enter_verify_slot (ctx : Context) :
     (assembly ctx).tables[65]? = some (HostCallReceivers.profileNoop (p := SP1Prime) true).component ∧
       (HostCallReceivers.profileNoop (p := SP1Prime) true).component.circuit.name = "sp1.native.enter_or_verify" ∧
-      (HostCallReceivers.profileNoop (p := SP1Prime) true).component.width = 18 ∧
+      (HostCallReceivers.profileNoop (p := SP1Prime) true).component.width = 19 ∧
       ((HostCallReceivers.profileNoop (p := SP1Prime) true).component.operations.interactions.map
         (·.channel.name)) = [(HostCallChip.channel (p := SP1Prime)).toRaw.name] := by
   rw [protocol_at ctx 65 (by decide) (by decide)]
   refine ⟨rfl, rfl, rfl, ?_⟩
   rw [Component.interactions_eq]
-  change (((HostNoopChip.choiceMain (varFromOffset HostNoopChip.Inputs (F := Fp) 0)).operations
-    (size HostNoopChip.Inputs)).interactions.map (·.channel.name)) = _
+  change (((Guarded.main (HostNoopChip.activeCircuit true) inferInstance (varFromOffset HostNoopChip.RowInput (F := Fp) 0)).operations
+    (size HostNoopChip.RowInput)).interactions.map (·.channel.name)) = _
+  rw [Guarded.main_interactions]
+  change (((HostNoopChip.choiceMain _).operations _).interactions.map _).map _ = _
   simp [HostNoopChip.choiceMain, circuit_norm, HostCallChip.channel]
+  rfl
 
 /-- The ten preallocated components in physical order. -/
 def fixedTables (ctx : Context) : List (Component Fp) := fixedOld ctx ++

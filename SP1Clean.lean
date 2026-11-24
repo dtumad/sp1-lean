@@ -41,6 +41,8 @@ import SP1Clean.Soundness.AllocationWordWalk
 import SP1Clean.Soundness.HintAllocationStore
 import SP1Clean.Soundness.HintQueueClock
 import SP1Clean.Export.WriteFundedInstallation
+import SP1Clean.Export.WriteInstalledControlReceipts
+import SP1Clean.Export.WriteInstalledHostExit
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteInstalledMetadata
 import SP1Clean.Export.WriteJointObservation
@@ -331,6 +333,9 @@ import SP1Clean.Proofs.Completeness.MixedMemoryRecords
 import SP1Clean.Proofs.Completeness.MixedMemorySelection
 import SP1Clean.Proofs.Completeness.MixedMemoryPosts
 import SP1Clean.Proofs.Completeness.MixedMemorySyscall
+import SP1Clean.Proofs.Completeness.HostControlHistory
+import SP1Clean.Proofs.Completeness.HostControlTables
+import SP1Clean.Proofs.Completeness.MixedSyscallHandoff
 import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms

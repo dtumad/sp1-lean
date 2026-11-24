@@ -51,7 +51,7 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
     rw [HostCallReceivers.halt_message]
     exact Or.inl valid.1
-  · obtain ⟨kind, permitted, valid⟩ := HostCallReceivers.profileNoop_spec includeVerify env constraints
+  · obtain ⟨kind, permitted, valid⟩ := HostCallReceivers.profileNoop_spec includeVerify env constraints active
     rw [HostCallReceivers.profileNoop_message includeVerify]
     exact Or.inr (Or.inl ⟨kind, permitted, valid.1⟩)
   · rw [HostCallReceivers.commit_activity] at active
@@ -138,7 +138,7 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
     rw [HostCallReceivers.halt_message] at observed ⊢
     exact ⟨_, HostHaltChip.run_of_spec _ valid host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
-  · obtain ⟨kind, permitted, valid⟩ := HostCallReceivers.profileNoop_spec includeVerify env constraints
+  · obtain ⟨kind, permitted, valid⟩ := HostCallReceivers.profileNoop_spec includeVerify env constraints active
     rw [HostCallReceivers.profileNoop_message includeVerify] at observed ⊢
     exact ⟨_, HostNoopChip.run_of_spec kind _ valid host running policy context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
