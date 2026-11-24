@@ -12,6 +12,7 @@ import SP1Clean.Export.InstalledBumpTables
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteObservationSources
+import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot
 import SP1Clean.Export.WriteSourceInstallation
@@ -44,6 +45,8 @@ import SP1Clean.Proofs.Completeness.WriteOrdinaryTables
 import SP1Clean.Soundness.WriteOrdinarySources
 import SP1Clean.Soundness.WriteHostSources
 import SP1Clean.Soundness.WriteAccessInventory
+import SP1Clean.Soundness.WriteProbeConsumers
+import SP1Clean.Soundness.WriteProbeReadAuthentication
 import SP1Clean.Export.WriteRefreshTables
 import SP1Clean.Soundness.WriteReadbackSupply
 import SP1Clean.Soundness.WriteReadbackSources

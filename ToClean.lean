@@ -13,6 +13,7 @@ public import ToClean.Air.RowProjection
 public import ToClean.Air.EnsembleProjection
 import ToClean.Air.EnsembleRelabel
 import ToClean.Air.AppendedTables
+import ToClean.Air.AppendedAuthentication
 public import ToClean.Air.ExpressionScope
 public import ToClean.Air.TableSlot
 public import ToClean.Air.FixedPrefix

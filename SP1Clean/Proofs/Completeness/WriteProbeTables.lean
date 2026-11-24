@@ -49,27 +49,13 @@ private theorem table_ledger (inputs : List (Inputs (ZMod p))) (data : ProverDat
 theorem table_versions (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) (height) :
     (table inputs data height).interactionsWith versionChannel.toRaw =
       (physicalInputs inputs).flatMap fun row => [versionChannel.pulledIfValue row.2 row.1.version] := by
-  apply table_ledger
-  intro env
-  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((guarded.main (varFromOffset RowInput 0)).operations (size RowInput)).interactionValuesWith versionChannel.toRaw env = _
-  have projection (vars : Var RowInput (ZMod p)) : eval env vars.1.version = (eval env vars).1.version := by
-    simp only [circuit_norm]
-  have eq := guarded_versions (varFromOffset RowInput 0) (size RowInput) env
-  simpa only [Guarded.eval_activity, projection, eval_varFromOffset_valueFromOffset] using eq
+  exact table_ledger _ _ _ _ _ component_versions
 
 /-- The complete generated output ledger carries the exact Read message from each active input. -/
 theorem table_reads (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) (height) :
     (table inputs data height).interactionsWith readChannel.toRaw =
       (physicalInputs inputs).flatMap fun row => [readChannel.pushedIfValue row.2 row.1.read] := by
-  apply table_ledger
-  intro env
-  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((guarded.main (varFromOffset RowInput 0)).operations (size RowInput)).interactionValuesWith readChannel.toRaw env = _
-  have projection (vars : Var RowInput (ZMod p)) : ProvableStruct.eval env vars.1 = (eval env vars).1 := by
-    simp only [circuit_norm]
-  have eq := guarded_reads (varFromOffset RowInput 0) (size RowInput) env
-  simpa only [Guarded.eval_activity, projection, eval_varFromOffset_valueFromOffset] using eq
+  exact table_ledger _ _ _ _ _ component_reads
 
 /-- Batch lookup retains the caller's order and repeated requests. Each request carries a
 physical execution cut and the concrete source location to inspect at that cut. -/

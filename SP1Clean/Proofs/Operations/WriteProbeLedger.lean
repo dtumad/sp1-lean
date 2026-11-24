@@ -128,4 +128,26 @@ theorem guarded_reads (input : Var RowInput (ZMod p)) (offset : ℕ) (env : Envi
   simp only [circuit, read_values, List.map_cons, List.map_nil, Channel.pushedValue,
     Channel.pushedIfValue, mul_one]
 
+/-- The versions ledger of any physical probe row, including padding. -/
+theorem component_versions (env : Environment (ZMod p)) :
+    component.operations.interactionValuesWith versionChannel.toRaw env =
+      [versionChannel.pulledIfValue (valueFromOffset RowInput 0 env).2 (valueFromOffset RowInput 0 env).1.version] := by
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((guarded.main (varFromOffset RowInput 0)).operations (size RowInput)).interactionValuesWith versionChannel.toRaw env = _
+  have projection (vars : Var RowInput (ZMod p)) : eval env vars.1.version = (eval env vars).1.version := by
+    simp only [circuit_norm]
+  have eq := guarded_versions (varFromOffset RowInput 0) (size RowInput) env
+  simpa only [Guarded.eval_activity, projection, eval_varFromOffset_valueFromOffset] using eq
+
+/-- The reads ledger of any physical probe row, including padding. -/
+theorem component_reads (env : Environment (ZMod p)) :
+    component.operations.interactionValuesWith readChannel.toRaw env =
+      [readChannel.pushedIfValue (valueFromOffset RowInput 0 env).2 (valueFromOffset RowInput 0 env).1.read] := by
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq]
+  change ((guarded.main (varFromOffset RowInput 0)).operations (size RowInput)).interactionValuesWith readChannel.toRaw env = _
+  have projection (vars : Var RowInput (ZMod p)) : ProvableStruct.eval env vars.1 = (eval env vars).1 := by
+    simp only [circuit_norm]
+  have eq := guarded_reads (varFromOffset RowInput 0) (size RowInput) env
+  simpa only [Guarded.eval_activity, projection, eval_varFromOffset_valueFromOffset] using eq
+
 end SP1Clean.WriteProbe
