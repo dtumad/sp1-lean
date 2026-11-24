@@ -337,6 +337,13 @@
       "typeFingerprint": "4008704623"
     },
     {
+      "bodyFingerprint": "3554057444",
+      "local": true,
+      "module": "ToClean.Air.Footprint",
+      "name": "Air.Flat.Component.channelWidth",
+      "typeFingerprint": "4231049104"
+    },
+    {
       "bodyFingerprint": "327892039",
       "local": false,
       "module": "Clean.Air.FlatComponent",
@@ -37332,6 +37339,20 @@
       "typeFingerprint": "3383032678"
     },
     {
+      "bodyFingerprint": "714426006",
+      "local": true,
+      "module": "SP1Clean.Export.WritePermissionCapacity",
+      "name": "SP1Clean.Export.WriteMixedPermissionLedger.occurrences",
+      "typeFingerprint": "3245623241"
+    },
+    {
+      "bodyFingerprint": "3872243716",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedPermissionLedger",
+      "name": "SP1Clean.Export.WriteMixedPermissionLedger.stores",
+      "typeFingerprint": "3586242361"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Export.WriteMixedSourceTables",
@@ -37661,7 +37682,7 @@
       "typeFingerprint": "1996035518"
     },
     {
-      "bodyFingerprint": "3447567014",
+      "bodyFingerprint": "1078361811",
       "local": true,
       "module": "SP1Clean.Export.WriteJointObservation",
       "name": "SP1Clean.Export.WriteObservationAssembly.ObservationAllocation",
@@ -107346,7 +107367,7 @@
       "typeFingerprint": "2698998087"
     },
     {
-      "bodyFingerprint": "2151448314",
+      "bodyFingerprint": "1027562055",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedPermissionDemand",
       "name": "SP1Clean.TraceGen.MixedPermissionDemand.store",
@@ -107862,6 +107883,13 @@
       "module": "SP1Clean.Proofs.Completeness.EventBuckets",
       "name": "SP1Clean.TraceGen.RoutedEvent.rec",
       "typeFingerprint": "2917651136"
+    },
+    {
+      "bodyFingerprint": "2323253759",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.InstructionEvent",
+      "name": "SP1Clean.TraceGen.RoutedEvent.storeBytes",
+      "typeFingerprint": "2838787881"
     },
     {
       "bodyFingerprint": "665384909",
@@ -125488,6 +125516,20 @@
       "module": "SP1Clean.Export.WriteOutgoingSnapshot",
       "name": "_private.SP1Clean.Export.WriteOutgoingSnapshot.0.SP1Clean.Export.InstalledAssembly.F",
       "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3169270271",
+      "local": true,
+      "module": "SP1Clean.Export.WritePermissionCapacity",
+      "name": "_private.SP1Clean.Export.WritePermissionCapacity.0.SP1Clean.Export.WriteMixedPermissionLedger.bus",
+      "typeFingerprint": "2374769014"
+    },
+    {
+      "bodyFingerprint": "4172426481",
+      "local": true,
+      "module": "SP1Clean.Export.WritePermissionCapacity",
+      "name": "_private.SP1Clean.Export.WritePermissionCapacity.0.SP1Clean.Export.WriteMixedPermissionLedger.storeCost",
+      "typeFingerprint": "1555980534"
     },
     {
       "bodyFingerprint": "4239447094",
