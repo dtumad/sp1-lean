@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.MixedMemoryHistory
+import SP1Clean.Proofs.Completeness.MixedBumpInventory
 import SP1Clean.Soundness.TypedMemoryBalance
 
 /-! # Comparing real Memory writes with the mixed compiler's replay
@@ -49,33 +50,84 @@ theorem heldAt_of_posts {left right : List MemoryHistoryAccess}
   · exact List.pairwise_map.mpr (List.pairwise_map.mp orderedLeft)
   · exact List.pairwise_map.mpr (List.pairwise_map.mp orderedRight)
 
-/-- The original HINT_READ table has exactly the semantic word rows' posted messages.
-It retains the input order of its actual continuing or final variant. -/
-theorem hint_table_posts (last : Bool) (entries : List (Bool × HintReadWordChip.RowInput F))
-    (data : ProverData F) (height) (active : ∀ e ∈ entries, e.2.2 = 1) :
-    producedMessages (typedTableInteractionsWith (HintReadTransfers.wordTable last entries data height) memoryChannel) =
-      (HintReadTransfers.selected last entries).map (fun r => r.1.ram.pushed) := by
-  let inputs := HintReadTransfers.physicalInputs last entries
-  let pair (r : HintReadWordChip.RowInput F) : List (TypedInteraction memoryChannel) :=
-    [TypedInteraction.pulledIfValue memoryChannel r.2 r.1.ram.prior, TypedInteraction.pushedIfValue memoryChannel r.2 r.1.ram.pushed]
-  have messages : typedTableInteractionsWith (HintReadTransfers.wordTable last entries data height) memoryChannel = inputs.flatMap pair := by
-    apply List.map_injective_iff.mpr TypedInteraction.raw_injective
-    rw [typedTableInteractionsWith_raw, HintReadTransfers.wordTable_memory, List.map_flatMap]
-    rfl
-  rw [messages, producedMessages_flatMap]
-  have enabled (row : HintReadWordChip.RowInput F) (inRows : row ∈ HintReadTransfers.selected last entries) :
-      producedMessages (pair row) = [row.1.ram.pushed] := by
+/-- Timestamp and value of the predecessor consumed by the same access. -/
+def prior (access : MemoryHistoryAccess) := (access.previous, access.pulled)
+
+private theorem posts_shift (first : MemoryHistoryAccess) (rest : List MemoryHistoryAccess)
+    (chain : (first :: rest).IsChain MemoryHistoryAccess.Continues) :
+    prior first :: ((first :: rest).map post) =
+      (first :: rest).map prior ++ [post ((first :: rest).getLast (by simp))] := by
+  induction rest generalizing first with
+  | nil => rfl
+  | cons next rest ih =>
+    obtain ⟨link, links⟩ := List.isChain_cons_cons.mp chain
+    have joins : post first = prior next := Prod.ext link.2.1.symm link.2.2.symm
+    apply congrArg (prior first :: ·)
+    change post first :: _ = _
+    rw [joins]
+    exact ih next links
+
+/-- For genuine handoff chains, equal predecessor occurrences and the same endpoints
+determine every post. This includes instructions whose output word is computed by the chip. -/
+theorem posts_of_priors {left right : MemoryLocationHistory}
+    (physical : left.IsRecordChain) (compiled : right.IsRecordChain)
+    (initial : prior left.first = prior right.first) (final : post left.last = post right.last)
+    (same : (left.accesses.map prior).Perm (right.accesses.map prior)) :
+    (left.accesses.map post).Perm (right.accesses.map post) := by
+  have shifts (h : MemoryLocationHistory) (chain : h.IsRecordChain) :
+      prior h.first :: h.accesses.map post = h.accesses.map prior ++ [post h.last] := by
+    cases eq : h.accesses with
+    | nil => exact (h.nonempty eq).elim
+    | cons a rest =>
+      simpa [MemoryLocationHistory.first, MemoryLocationHistory.last, eq] using
+        posts_shift a rest (eq ▸ chain.adjacent)
+  apply List.Perm.cons_inv (a := prior left.first)
+  conv_rhs => rw [initial]
+  rw [shifts left physical, shifts right compiled, final]
+  exact same.append_right _
+
+private def hintPair (r : HintReadWordChip.RowInput F) : List (TypedInteraction (memoryChannel (p := SP1Prime))) :=
+  [TypedInteraction.pulledIfValue memoryChannel r.2 r.1.ram.prior,
+   TypedInteraction.pushedIfValue memoryChannel r.2 r.1.ram.pushed]
+
+private theorem hintMessages (last : Bool) (entries : List (Bool × HintReadWordChip.RowInput F))
+    (data : ProverData F) (height) :
+    typedTableInteractionsWith (HintReadTransfers.wordTable last entries data height) memoryChannel =
+      (HintReadTransfers.physicalInputs last entries).flatMap hintPair := by
+  apply List.map_injective_iff.mpr TypedInteraction.raw_injective
+  rw [typedTableInteractionsWith_raw, HintReadTransfers.wordTable_memory, List.map_flatMap]
+  rfl
+
+private theorem hintSide (last : Bool) (entries : List (Bool × HintReadWordChip.RowInput F))
+    (active : ∀ e ∈ entries, e.2.2 = 1) (select : List (TypedInteraction (memoryChannel (p := SP1Prime))) → List (MemoryMsg F))
+    (value : HintReadWordChip.RowInput F → MemoryMsg F)
+    (enabled : ∀ row : HintReadWordChip.RowInput F, row.2 = 1 → select (hintPair row) = [value row])
+    (inactive : select (hintPair 0) = []) :
+    (HintReadTransfers.physicalInputs last entries).flatMap (fun row => select (hintPair row)) =
+      (HintReadTransfers.selected last entries).map value := by
+  have live (row : HintReadWordChip.RowInput F) (inRows : row ∈ HintReadTransfers.selected last entries) :
+      select (hintPair row) = [value row] := by
     obtain ⟨entry, inside, rfl⟩ := List.mem_map.mp inRows
-    have real := active entry (List.mem_filter.mp inside).1
-    simp [pair, producedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
-      Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.mult, TypedInteraction.message, ProvableType.fromElements_toElements, real]
-  have inactive : producedMessages (pair 0) = [] := by
-    simp [pair, producedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
-      Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.mult]
-  simp only [inputs, HintReadTransfers.physicalInputs, List.flatMap_append]
-  rw [List.flatMap_congr enabled, List.flatMap_replicate, inactive]
+    exact enabled entry.2 (active entry (List.mem_filter.mp inside).1)
+  simp only [HintReadTransfers.physicalInputs, List.flatMap_append]
+  rw [List.flatMap_congr live, List.flatMap_replicate, inactive]
   simp
   exact List.map_eq_flatMap.symm
+
+/-- Both signed sides of the physical HINT_READ Memory ledger, including the removal of
+exactly the inactive padding. Their order is the compiler's order within this variant. -/
+theorem hint_table_memory (last : Bool) (entries : List (Bool × HintReadWordChip.RowInput F))
+    (data : ProverData F) (height) (active : ∀ e ∈ entries, e.2.2 = 1) :
+    let messages := typedTableInteractionsWith (HintReadTransfers.wordTable last entries data height) memoryChannel
+    let rows := HintReadTransfers.selected last entries
+    consumedMessages messages = rows.map (fun r => r.1.ram.prior) ∧
+      producedMessages messages = rows.map (fun r => r.1.ram.pushed) := by
+  dsimp only
+  rw [hintMessages, consumedMessages_flatMap, producedMessages_flatMap]
+  constructor <;> apply hintSide last entries active <;>
+    simp +contextual [hintPair, consumedMessages, producedMessages, TypedInteraction.pulledIfValue,
+      TypedInteraction.pushedIfValue, Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.mult,
+      TypedInteraction.message, ProvableType.fromElements_toElements]
 
 private theorem variants (entries : List (Bool × HintReadWordChip.RowInput F)) :
     ((HintReadTransfers.selected false entries) ++ (HintReadTransfers.selected true entries)).Perm (entries.map Prod.snd) := by
@@ -90,18 +142,50 @@ private theorem variants (entries : List (Bool × HintReadWordChip.RowInput F)) 
         simpa [HintReadTransfers.selected] using (List.perm_middle (a := row) (l₁ := HintReadTransfers.selected false tail)
           (l₂ := HintReadTransfers.selected true tail)).trans (ih.cons row)
 
-/-- The two generated HINT_READ tables jointly account for every semantic host word
-post once across the full mixed path, independently of their two physical heights. -/
-theorem hint_tables_posts {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+/-- The two generated word variants jointly account for every HINT_READ transfer on
+both sides of the Memory ledger, independently of their physical heights. -/
+theorem hint_tables_memory {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
     (data : ProverData F) (height : ∀ last, WitnessGeneration.demandHeight (HintReadTransfers.selected last (HintReadTransfers.history image source events)).length ≤ UInt64.size) :
     let h := HintReadTransfers.history image source events
-    let physical (last : Bool) := producedMessages (typedTableInteractionsWith (HintReadTransfers.wordTable last h data (height last)) memoryChannel)
-    (physical false ++ physical true).Perm (h.map (fun e => e.2.1.ram.pushed)) := by
-  intro h physical
-  dsimp only [physical]
-  rw [hint_table_posts _ _ _ _ (HintReadTransfers.history_active run), hint_table_posts _ _ _ _ (HintReadTransfers.history_active run)]
-  simpa only [List.map_append, List.map_map, Function.comp_def] using (variants h).map (fun r => r.1.ram.pushed)
+    let messages (last : Bool) := typedTableInteractionsWith (HintReadTransfers.wordTable last h data (height last)) memoryChannel
+    (consumedMessages (messages false) ++ consumedMessages (messages true)).Perm (h.map (fun e => e.2.1.ram.prior)) ∧
+      (producedMessages (messages false) ++ producedMessages (messages true)).Perm (h.map (fun e => e.2.1.ram.pushed)) := by
+  intro h messages
+  have rows (last : Bool) := hint_table_memory last h data (height last) (HintReadTransfers.history_active run)
+  dsimp only [messages]
+  rw [(rows false).1, (rows true).1, (rows false).2, (rows true).2]
+  exact ⟨by simpa only [List.map_append, List.map_map, Function.comp_def] using (variants h).map (fun r => r.1.ram.prior),
+    by simpa only [List.map_append, List.map_map, Function.comp_def] using (variants h).map (fun r => r.1.ram.pushed)⟩
+
+/-- The genuine CPU touches without the distinct register refresh table. -/
+def instruction : MixedCompiledRow → List MemoryHistoryAccess
+  | .ordinary row => row.stamped.map (MemoryHistoryAccess.ofStamped row.routed.clock)
+  | .syscall frontier base call => (scheduleAccessPlan frontier base (syscallRegisterPlan call)).stampedTouches.map
+      (MemoryHistoryAccess.ofStamped base)
+
+private theorem schedule_partition (base : ℕ) (s : AccessSchedule) :
+    (MemoryHistoryAccess.ofAccessSchedule base s).Perm
+      (s.memoryBumps.map MemoryHistoryAccess.ofMemoryBump ++ s.stampedTouches.map (MemoryHistoryAccess.ofStamped base)) := by
+  have split := (List.flatMap_append_perm s.accesses
+    (fun a => a.memoryBump?.toList.map MemoryHistoryAccess.ofMemoryBump)
+    (fun a => [MemoryHistoryAccess.ofStamped base a.stamped])).symm
+  simp only [AccessSchedule.stampedTouches, AccessSchedule.memoryBumps, List.map_map,
+    List.filterMap_eq_flatMap_toList, List.map_flatMap]
+  exact split.trans (by rw [← List.map_eq_flatMap]; rfl)
+
+/-- All CPU schedules partition into the exact separately generated register refresh list
+and the chronological instruction touches. Every aliased register occurrence survives. -/
+theorem cpu_partition (rows : List MixedCompiledRow) :
+    (rows.flatMap cpu).Perm
+      ((MixedBumpInput.memoryRows (rows.map MixedCompiledRow.bumpInput)).map MemoryHistoryAccess.ofMemoryBump ++
+        rows.flatMap instruction) := by
+  let bumps (row : MixedCompiledRow) := row.bumpInput.refreshes.map MemoryHistoryAccess.ofMemoryBump
+  have row (r : MixedCompiledRow) : (cpu r).Perm (bumps r ++ instruction r) := by
+    cases r <;> apply schedule_partition
+  exact (List.Perm.flatMap_left rows (fun r _ => row r)).trans (by
+    simpa only [MixedBumpInput.memoryRows, List.flatMap_map, List.map_flatMap, Function.comp_def, bumps] using
+      (List.flatMap_append_perm rows bumps instruction).symm)
 
 /-- Splitting CPU and HINT_READ occurrences out of tape order preserves their
 multiplicities and per-event schedules, including all scheduled register refreshes. -/

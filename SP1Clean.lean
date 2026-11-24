@@ -172,6 +172,7 @@ import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.MixedCompiledRows
 import SP1Clean.Proofs.Completeness.MixedMemoryHistory
 import SP1Clean.Proofs.Completeness.MixedMemoryPosts
+import SP1Clean.Proofs.Completeness.MixedMemorySyscall
 import SP1Clean.Proofs.Completeness.MixedSyscallInstruction
 import SP1Clean.Proofs.Completeness.MixedSyscallCoordinates
 import SP1Clean.Proofs.Completeness.MixedSyscallArms
