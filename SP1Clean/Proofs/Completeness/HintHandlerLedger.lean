@@ -106,11 +106,11 @@ private theorem header_messages (rows : List Row) :
   | cons first rest ih =>
     cases first with
     | read r =>
-      simpa [readRows, lengthRows, Row.nodes, Row.words] using And.intro (ih.1.cons r.node) (congrArg (List.cons r.endStep.word) ih.2)
+      simpa [readRows, List.filterMap_cons, Row.read?, lengthRows, Row.nodes, Row.words] using And.intro (ih.1.cons r.node) (congrArg (List.cons r.endStep.word) ih.2)
     | length empty r =>
       cases empty
-      · simpa [readRows, lengthRows, Row.nodes, Row.words] using And.intro (List.perm_middle.trans (ih.1.cons r.node)) ih.2
-      · simpa [readRows, lengthRows, Row.nodes, Row.words] using ih
+      · simpa [readRows, List.filterMap_cons, Row.read?, lengthRows, Row.nodes, Row.words] using And.intro (List.perm_middle.trans (ih.1.cons r.node)) ih.2
+      · simpa [readRows, List.filterMap_cons, Row.read?, lengthRows, Row.nodes, Row.words] using ih
 
 private theorem transfer_messages (rows : List (Bool × HintReadWordChip.RowInput F)) :
     ((HintReadTransfers.selected false rows).map (fun r => (r.1.step false).word) ++

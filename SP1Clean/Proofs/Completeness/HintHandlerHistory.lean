@@ -1,3 +1,4 @@
+import SP1Clean.Proofs.Completeness.HintReadLedger
 import SP1Clean.Proofs.Completeness.HintQueueReaders
 import SP1Clean.Proofs.Completeness.WriteAllocationStore
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Guarded
@@ -38,6 +39,15 @@ def Row.words : Row → List (WordRecord F)
   | .length _ _ => []
   | .read input => [input.endStep.word]
 
+/-- The actual HINT_READ input, absent on either length route. -/
+def Row.read? : Row → Option (HostHintReadChip.Inputs F)
+  | .read r => some r
+  | .length _ _ => none
+
+/-- The header publishes the first cursor and consumes the cursor after the final padded word. -/
+def headerCursors (r : HostHintReadChip.Inputs F) : List (Interaction F) :=
+  [HintReadWordChip.stateChannel.pushedValue r.first, HintReadWordChip.stateChannel.pulledValue r.final]
+
 /-- Route a successful call from its original mixed execution position. -/
 noncomputable def at? (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent)
     (cut : Nat) : Option Row := do
@@ -61,7 +71,7 @@ noncomputable def history (image : ProgramImage) (source : ExecutionSnapshot) (e
 def transferWord (row : Bool × HintReadWordChip.RowInput F) : WordRecord F := (row.2.1.step row.1).word
 
 private theorem head_node {store : Store} {ptr : Nat} {bytes : Bytes} {rest : List Bytes}
-    (represented : Represents store ptr (bytes :: rest)) : ∃ node, node? store ptr = some node := by
+    (represented : Represents store ptr (bytes :: rest)) : ∃ tail, node? store ptr = some ⟨bytes, tail⟩ := by
   cases represented with | cons found _ _ => exact ⟨_, found⟩
 
 private theorem demand_eq {q : HintQueueReaders.Demand} {nodes words}
@@ -80,12 +90,14 @@ theorem at_complete {image : ProgramImage} {source target : ExecutionSnapshot} {
     let transfers := (HintReadTransfers.rowsAt? image source events cut).getD []
     (∀ row ∈ selected.toList, row.Honest) ∧
       HintQueueReaders.at? image source events cut =
-        some ⟨selected.toList.flatMap Row.nodes, selected.toList.flatMap Row.words ++ transfers.map transferWord⟩ := by
+        some ⟨selected.toList.flatMap Row.nodes, selected.toList.flatMap Row.words ++ transfers.map transferWord⟩ ∧
+      HintReadTransfers.endpoints transfers = ((selected.bind Row.read?).toList.flatMap headerCursors) ∧
+      (selected.bind Row.read?).isSome = (HintReadDemand.length? event).isSome := by
   dsimp only
   obtain ⟨reached, cursor, _, path, stored, rep, _, headBound, storeBound, _⟩ := admissibleExecution_hintInventory run cut
   cases event with
   | ordinary =>
-    simp [at?, HintQueueReaders.at?, present, stored, HintQueueReaders.atCursor, HintReadTransfers.rowsAt?]
+    simp [at?, HintQueueReaders.at?, present, stored, HintQueueReaders.atCursor, HintReadTransfers.rowsAt?, HintReadTransfers.endpoints, HintReadDemand.length?]
   | syscall call =>
     obtain ⟨current, frontier, next, trajectory, compiled, step, _, _, phase, fits, _⟩ :=
       admissibleExecution_syscall_from_prefix run present
@@ -110,18 +122,22 @@ theorem at_complete {image : ProgramImage} {source target : ExecutionSnapshot} {
           (policy SP1Prime image) (.ofSail reached.sail) executed kind rep storeBound (by rfl) (by rfl) small ordered
         have effect := ((HostState.run_eq_some_iff ..).mp executed).2.2.2.2.2
         rw [kind] at effect
-        obtain ⟨bytes, rest, head, _⟩ := (HostState.execute_hintRead_iff ..).mp effect
+        obtain ⟨bytes, rest, head, length, aligned, permitted, _⟩ := (HostState.execute_hintRead_iff ..).mp effect
         rw [head] at rep
-        obtain ⟨node, found⟩ : ∃ n, node? cursor.1 cursor.2 = some n := head_node rep
+        obtain ⟨tail, found⟩ := head_node rep
         obtain ⟨nodes, words⟩ := HintQueueReaders.read_demand cursor call read prev exec found frontier reached.sail
         simp only [ite_eq_left read, Option.toList_some, List.mem_cons, List.not_mem_nil, or_false,
           List.flatMap_cons, List.flatMap_nil, List.append_nil, Row.nodes, Row.words, List.cons_append, List.nil_append]
-        refine ⟨fun _ eq => eq ▸ valid.1, ?_⟩
-        apply congrArg some
-        refine demand_eq nodes ?_
-        rw [show transferWord = (fun e => (e.2.1.step e.1).word) from rfl]
-        simpa only [HintReadTransfers.rowsAt?, present, read, ↓reduceIte, compiled, stored, found,
-            Option.bind_eq_bind, Option.bind_some, pure, Option.getD_some, prev] using words
+        refine ⟨fun _ eq => eq ▸ valid.1, ?_, ?_, by simp [Row.read?, HintReadDemand.length?, read]⟩
+        · apply congrArg some
+          refine demand_eq nodes ?_
+          rw [show transferWord = (fun e => (e.2.1.step e.1).word) from rfl]
+          simpa only [HintReadTransfers.rowsAt?, present, read, ↓reduceIte, compiled, stored, found,
+              Option.bind_eq_bind, Option.bind_some, pure, Option.getD_some, prev] using words
+        · have address : call.arg1 = exec.arg1 := by rw [eventEq]; rfl
+          have span := HintReadSpan.domain_of_permitted bytes _ exec.arg1.toNat (by rfl) (by rfl) aligned permitted
+          simpa [HintReadTransfers.rowsAt?, present, read, compiled, stored, found, address, Row.read?, headerCursors,
+            prev] using HintReadTransfers.endpoints_eq_handler cursor.1 cursor.2 prev call.clock exec bytes length span frontier reached.sail
       · by_cases len : call.rawCode = SyscallKind.hintLength.code
         · have kind : exec.kind = .hintLength := SyscallKind.code_injective (by simpa only [eventEq, HostExecution.toEvent] using len)
           have valid := HostHintLengthChip.populate_spec_of_run (p := SP1Prime) cursor.1 cursor.2 prev call.clock
@@ -129,14 +145,15 @@ theorem at_complete {image : ProgramImage} {source target : ExecutionSnapshot} {
           obtain ⟨nodes, words⟩ := HintQueueReaders.length_demand cursor call len prev exec rep
           simp only [ite_eq_right read, ite_eq_left len, Option.toList_some, List.mem_cons, List.not_mem_nil, or_false,
             List.flatMap_cons, List.flatMap_nil, List.append_nil, Row.words, List.nil_append]
-          refine ⟨fun _ eq => eq ▸ valid, ?_⟩
-          apply congrArg some
-          apply demand_eq
-          · rw [nodes]
-            by_cases z : cursor.2 = 0 <;> simp [z, Row.nodes, prev]
-          · simpa only [HintReadTransfers.rowsAt?, present, read, ↓reduceIte, Option.bind_eq_bind,
-              Option.bind_some, pure, Option.getD_some, List.map_nil] using words
-        · simp [read, len, HintQueueReaders.atCursor, HintReadTransfers.rowsAt?, present]
+          refine ⟨fun _ eq => eq ▸ valid, ?_, ?_, by simp [Row.read?, HintReadDemand.length?, read]⟩
+          · apply congrArg some
+            apply demand_eq
+            · rw [nodes]
+              by_cases z : cursor.2 = 0 <;> simp [z, Row.nodes, prev]
+            · simpa only [HintReadTransfers.rowsAt?, present, read, ↓reduceIte, Option.bind_eq_bind,
+                Option.bind_some, pure, Option.getD_some, List.map_nil] using words
+          · simp [HintReadTransfers.rowsAt?, present, read, HintReadTransfers.endpoints, Row.read?]
+        · simp [read, len, HintQueueReaders.atCursor, HintReadTransfers.rowsAt?, present, HintReadTransfers.endpoints, HintReadDemand.length?]
 
 /-- All generated headers meet their actual active circuit assumptions. -/
 theorem history_honest {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
@@ -164,7 +181,7 @@ theorem history_reads {image : ProgramImage} {source target : ExecutionSnapshot}
   have demand : HintQueueReaders.history image source events = (List.finRange events.length).map queries := by
     apply List.filterMap_eq_map_iff_forall_eq_some.mpr
     intro i _
-    exact (at_complete run (List.getElem?_eq_getElem i.isLt)).2
+    exact (at_complete run (List.getElem?_eq_getElem i.isLt)).2.1
   rw [demand]
   simp only [history, List.filterMap_eq_flatMap_toList, HintReadTransfers.history, List.flatMap_assoc,
     List.map_flatMap, List.flatMap_map]

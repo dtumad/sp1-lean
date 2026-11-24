@@ -16,9 +16,7 @@ open Circuit Air.Flat Semantics HintQueue Machine FormalModel.Shard Soundness Ho
 private abbrev F := ZMod SP1Prime
 
 /-- Original HINT_READ headers in tape order. -/
-def readRows (rows : List Row) : List (HostHintReadChip.Inputs F) := rows.filterMap fun
-  | .read r => some r
-  | .length _ _ => none
+def readRows (rows : List Row) : List (HostHintReadChip.Inputs F) := rows.filterMap Row.read?
 
 /-- Original HINT_LEN headers at the registered zero-head or nonzero-head table. -/
 def lengthRows (empty : Bool) (rows : List Row) : List (HostHintLengthChip.Inputs F) := rows.filterMap fun
