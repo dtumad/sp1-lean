@@ -14,6 +14,7 @@ open Circuit Air.Flat
 
 variable {p : ℕ} [Fact p.Prime]
 
+/-- Consume all eight lanes and publish those selected by the packet interval. -/
 def laneMain (r : Var LaneRow (ZMod p)) : Circuit (ZMod p) Unit := do
   octetsChannel.pull r.octets
   forEach (Vector.ofFn fun i : Fin 8 => i) fun i => do

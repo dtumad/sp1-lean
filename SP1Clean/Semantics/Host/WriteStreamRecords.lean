@@ -24,6 +24,7 @@ inductive StreamKey where
   | stdout | stderr | publicOutput | request (reply : Nat) | returned (reply hint : Nat)
 deriving DecidableEq, Repr
 
+/-- Resolve a stream identifier against the verifier-owned endpoint data. -/
 def StreamKey.contents (streams : WriteStreams) : StreamKey → Option Bytes
   | .stdout => some streams.stdout
   | .stderr => some streams.stderr
@@ -31,6 +32,7 @@ def StreamKey.contents (streams : WriteStreams) : StreamKey → Option Bytes
   | .request r => (streams.hooks[r]?).map (·.request.input)
   | .returned r h => (streams.hooks[r]?).bind (·.hints[h]?)
 
+/-- A byte, length, descriptor or reply count in the verifier-owned transcript. -/
 inductive Query where
   | length (key : StreamKey)
   | byte (key : StreamKey) (index : Nat)
@@ -45,6 +47,7 @@ def Query.lookup (streams : WriteStreams) : Query → Option Nat
   | .descriptor r => streams.hooks[r]? |>.map (·.request.descriptor.toNat)
   | .returnCount r => streams.hooks[r]? |>.map (·.hints.length)
 
+/-- Enumerate the length and every ordered byte position of one stream. -/
 def byteQueries (key : StreamKey) (bytes : Bytes) : List Query :=
   .length key :: (List.range bytes.length).map (.byte key)
 
@@ -107,11 +110,17 @@ theorem Query.enumerated {streams : WriteStreams} {q : Query} {v : Nat} (found :
 streams, 3 for hook input and 4 for a returned hint. Attributes are length, byte, descriptor
 or returned-hint count (0 through 3). -/
 structure Record (F : Type) where
+  /-- Tag identifying the output, request or returned-hint stream. -/
   stream : F
+  /-- Record tag for a length, byte, hook descriptor or return count. -/
   kind : F
+  /-- Ordinal of the consumed hook reply, zero for ordinary output streams. -/
   reply : fields 3 F
+  /-- Ordinal within a hook’s returned hints when the stream identifies one. -/
   hint : fields 3 F
+  /-- Byte position within the stream, zero on metadata records. -/
   offset : fields 3 F
+  /-- Exact byte or metadata value carried in three limbs. -/
   value : fields 3 F
 deriving ProvableStruct, DecidableEq
 provable_struct_eval_lemmas Record
@@ -124,6 +133,7 @@ def StreamKey.coordinates : StreamKey → Nat × Nat × Nat
   | .request r => (3, r, 0)
   | .returned r h => (4, r, h)
 
+/-- Assign each query its stream, record tag and position. -/
 def Query.coordinates : Query → StreamKey × Nat × Nat
   | .length key => (key, 0, 0)
   | .byte key i => (key, 1, i)
@@ -137,6 +147,7 @@ def Query.Fits (q : Query) (v : Nat) : Prop :=
 
 instance (q : Query) (v : Nat) : Decidable (q.Fits v) := inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
 
+/-- Encode a query and its resolved value in the fixed table columns. -/
 def Query.encode {p : Nat} (q : Query) (v : Nat) : Record (ZMod p) :=
   let (key, attr, pos) := q.coordinates
   let (tag, r, h) := key.coordinates
@@ -178,6 +189,7 @@ theorem Query.decode_encode {p : Nat} [Fact p.Prime] [Fact (2 ^ 17 < p)] (q : Qu
 def Record.Binds {p : Nat} (row : Record (ZMod p)) (streams : WriteStreams) : Prop :=
   ∃ q v, q ∈ queries streams ∧ q.lookup streams = some v ∧ q.Fits v ∧ row = q.encode v
 
+/-- Look up one verifier-owned query and encode its value when all coordinates fit. -/
 def fixedRow? {p : Nat} (streams : WriteStreams) (q : Query) : Option (Record (ZMod p)) := do
   let v ← q.lookup streams
   if q.Fits v then some (q.encode v) else none

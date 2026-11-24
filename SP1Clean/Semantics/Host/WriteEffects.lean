@@ -17,9 +17,13 @@ namespace SP1Clean.Semantics
 
 /-- Ordered local changes to the append-only streams and the incoming hook reply queue. -/
 structure WriteStreams where
+  /-- Bytes appended to standard output during the segment. -/
   stdout : Bytes := []
+  /-- Bytes appended to standard error during the segment. -/
   stderr : Bytes := []
+  /-- Bytes appended to the guest public-values stream. -/
   publicOutput : Bytes := []
+  /-- Consumed supplied replies in request order, including the returned hints. -/
   hooks : List HookReply := []
 deriving DecidableEq, Repr, Inhabited
 

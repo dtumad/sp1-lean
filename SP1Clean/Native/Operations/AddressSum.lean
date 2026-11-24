@@ -11,18 +11,24 @@ whose previous values come from a private channel.
 namespace SP1Clean.AddressSum
 open Circuit
 
+/-- Two unsigned address operands and their canonical nonwrapping sum. -/
 structure Inputs (F : Type) where
+  /-- First three-limb address operand. -/
   left : fields 3 F
+  /-- Second three-limb address operand. -/
   right : fields 3 F
+  /-- Canonical three-limb representation of the sum. -/
   result : fields 3 F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 
+/-- Both operands and the result represent addresses whose natural values add exactly. -/
 def Spec (x : Inputs (ZMod p)) : Prop := Address.Bounded x.left ∧ Address.Bounded x.right ∧
   Address.Bounded x.result ∧ Address.toNat x.result = Address.toNat x.left + Address.toNat x.right
 
+/-- Range-check the operands and constrain the result with the SP1 address adder. -/
 def main (x : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion WordRangeCheck.circuit (Address.asWord x.left)
   assertion WordRangeCheck.circuit (Address.asWord x.right)
@@ -34,6 +40,7 @@ omit [Fact (2^17 < p)] in
 private theorem eval_asWord (env : Environment (ZMod p)) (a : fields 3 (Expression (ZMod p))) :
     eval env (Address.asWord a) = Address.asWord (eval env a) := by simp only [Address.asWord, circuit_norm]
 
+/-- Bundled assertion for exact addition in the 48-bit address domain. -/
 def circuit : FormalAssertion (ZMod p) Inputs where
   main
   elaborated

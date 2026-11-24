@@ -18,12 +18,14 @@ variable {p : ℕ} [Fact p.Prime]
 def boundaryOK (source target : HostState) : Bool :=
   WriteStreams.check source target && inventoryOK (WriteStreams.fromEndpoints source target)
 
+/-- The ordered stream deltas agree with both endpoints and every fixed record fits its encoding. -/
 def boundarySpec (source target : HostState) : Prop :=
   (WriteStreams.fromEndpoints source target).Binds source target ∧ inventoryOK (WriteStreams.fromEndpoints source target) = true
 
 theorem boundaryOK_iff (source target : HostState) : boundaryOK source target = true ↔ boundarySpec source target := by
   simp [boundaryOK, boundarySpec, WriteStreams.check_iff]
 
+/-- Enforce the verifier-owned comparison of the complete fixed stream inventory. -/
 def boundaryMain (source target : HostState) (_ : Var SP1PublicIO (ZMod p)) : Circuit (ZMod p) Unit :=
   assertZero (.const (if boundaryOK source target then 0 else 1))
 
