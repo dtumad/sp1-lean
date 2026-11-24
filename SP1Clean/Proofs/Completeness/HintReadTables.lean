@@ -165,7 +165,8 @@ theorem wordTable_cursors (last : Bool) (entries : List Entry) (data : ProverDat
   rw [HintReadCoverage.view_activity, Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at eq
   exact eq
 
-private theorem row_activity (last : Bool) (env : Environment F) :
+/-- Decoding the guarded word input recovers its actual physical activity cell. -/
+theorem row_activity (last : Bool) (env : Environment F) :
     HintReadCoverage.rowActivity (last, env) = (valueFromOffset RowInput 0 env).2 := by
   rw [← eval_varFromOffset_valueFromOffset RowInput 0 env]
   simpa only [HintReadCoverage.rowActivity, varFromOffset_pair, Nat.zero_add] using
