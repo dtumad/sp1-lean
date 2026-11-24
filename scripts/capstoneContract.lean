@@ -11,6 +11,8 @@ import SP1Clean.Proofs.Completeness.WriteAllocationWordTables
 import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
 import SP1Clean.Export.WriteInstalledAllocations
 import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
+import SP1Clean.Export.WriteJointObservation
+import SP1Clean.Export.WriteAllocationStoreUnique
 import SP1Clean.Export.HintSnapshotCapacity
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteObservationReads
@@ -229,6 +231,23 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.outgoing_queue_read_origins,
   ``SP1Clean.Export.WriteObservationAssembly.outgoing_queue_of_allocations,
   ``SP1Clean.WriteEffects.Witness.native_block_tables,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_allocation,
+  ``SP1Clean.Export.InstalledAssembly.fixedProviderPreset_write_blocks_fit,
+  ``SP1Clean.WriteEffects.Witness.native_block_fit_iff,
+  ``SP1Clean.WriteEffects.Witness.native_six_tables,
+  ``SP1Clean.WriteEffects.Witness.native_collector_effect_tables,
+  ``SP1Clean.TraceGen.MixedProgramFetches.funded,
+  ``SP1Clean.Export.WriteMixedFixedResources.funded,
+  ``SP1Clean.Export.WriteMixedFixedResources.remaining_count,
+  ``SP1Clean.Export.WriteMixedFixedResources.install_valid,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_funded_write_allocation,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_effect_joins,
+  ``SP1Clean.Export.WriteObservationAssembly.compiled_observation_allocation,
+  ``SP1Clean.Export.WriteObservationAssembly.native_allocation_walks,
+  ``SP1Clean.Export.WriteObservationAssembly.native_ordered_queue,
+  ``SP1Clean.Export.WriteObservationAssembly.native_allocation_frontier,
+  ``SP1Clean.Export.WriteObservationAssembly.native_allocation_word_walks,
+  ``SP1Clean.Export.WriteObservationAssembly.native_persistent_queue_unique,
   ``SP1Clean.Export.WriteObservationAssembly.withCursors_ledger,
   ``SP1Clean.Export.WriteObservationAssembly.effect_lookupFree,
   ``SP1Clean.WriteEffects.groups_of_admissibleExecution,
