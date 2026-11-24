@@ -44,6 +44,7 @@ import SP1Clean.Export.WriteFundedInstallation
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteInstalledMetadata
 import SP1Clean.Export.WriteJointObservation
+import SP1Clean.Export.NativeShardBoundary
 import SP1Clean.Export.WriteObserverSlotLedger
 import SP1Clean.Proofs.Completeness.WriteCollectedEffects
 import SP1Clean.Proofs.Completeness.WriteEffectAssembly
