@@ -76,28 +76,115 @@ private theorem hint_location {cell : RamCell} {input : HintReadWordChip.RowInpu
   exact frame.2.1.symm.trans (by simpa only [MemLoc.busAddress, MemoryBoundary.address, Word.toNat, circuit_norm,
     ZMod.val_zero, zero_mul, add_zero] using actual)
 
+private theorem issued_hint {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {cut : ℕ} {call : CoreSyscallEvent} (present : events[cut]? = some (.syscall call)) (read : call.rawCode = SyscallKind.hintRead.code) :
+    ∃ request : HintReadTransfers.Request, ∃ frontier sail,
+      HintReadTransfers.rowsAt? image source events cut = some (request.rows frontier sail) ∧
+      request.address = call.arg1.toNat ∧ request.bytes.length = call.arg2.toNat ∧ HintReadSpan.Domain request.address request.bytes.length := by
+  obtain ⟨current, _, frontier, cursor, _, bytes, _, _, reached, _, stored, _, node, _, _, _, length, _, span, _⟩ :=
+    HintReadTransfers.of_admissibleExecution run present read
+  let request : HintReadTransfers.Request := ⟨call.clock, cursor.2, call.arg1.toNat, bytes⟩
+  exact ⟨request, frontier, current.sail, by simp [HintReadTransfers.rowsAt?, present, read, reached, stored, node, request], rfl, length, span⟩
+
 private theorem hint_mem {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
     {rows : List MixedCompiledRow} {cut : ℕ} {call : CoreSyscallEvent} (present : events[cut]? = some (.syscall call))
     (inside : cut < rows.length) (read : call.rawCode = SyscallKind.hintRead.code) {cell : RamCell}
     (lower : call.arg1.toNat / 8 ≤ cell.toNat) (upper : cell.toNat < call.arg1.toNat / 8 + (call.arg2.toNat / 8 + 1)) :
     MemLoc.ram cell ∈ touchedMemoryLocations (stream image source events rows) := by
-  obtain ⟨current, _, frontier, cursor, _, bytes, _, _, reached, _, stored, _, node, _, _, _, length, _, span, _⟩ :=
-    HintReadTransfers.of_admissibleExecution run present read
-  let request : HintReadTransfers.Request := ⟨call.clock, cursor.2, call.arg1.toNat, bytes⟩
-  have found : HintReadTransfers.rowsAt? image source events cut = some (request.rows frontier current.sail) := by
-    simp [HintReadTransfers.rowsAt?, present, read, reached, stored, node, request]
+  obtain ⟨request, frontier, sail, found, addressEq, length, span⟩ := issued_hint run present read
   let j := cell.toNat - call.arg1.toNat / 8
-  have pos : j < HintQueue.wordCount bytes := by unfold j HintQueue.wordCount; omega
+  have pos : j < HintQueue.wordCount request.bytes := by unfold j HintQueue.wordCount; omega
   have aligned := span.2.1
+  rw [addressEq] at aligned
   have address : call.arg1.toNat + j * 8 = cell.toNat * 8 := by unfold j; omega
-  have output : (cell.toNat * 8, HintQueue.wordValue bytes j) ∈ HintQueue.wordWrites call.arg1.toNat bytes :=
-    List.mem_map.mpr ⟨j, List.mem_range.mpr pos, Prod.ext address rfl⟩
-  rw [← request.writes frontier current.sail span] at output
+  have output : (cell.toNat * 8, HintQueue.wordValue request.bytes j) ∈ HintQueue.wordWrites request.address request.bytes :=
+    List.mem_map.mpr ⟨j, List.mem_range.mpr pos, Prod.ext (addressEq ▸ address) rfl⟩
+  rw [← request.writes frontier sail span] at output
   obtain ⟨entry, member, key⟩ := List.mem_map.mp output
   have auth := hint_location (Prod.mk.inj key).1 (by have := span.1; omega)
     (by have := span.2.2; unfold HintQueue.wordCount at pos; omega)
   exact mem_touchedMemoryLocations.mpr ⟨_, mem_hint inside found member, auth⟩
+
+private theorem canonical_schedule {base : ℕ} {schedule : AccessSchedule}
+    (honest : ∀ touch ∈ schedule.stampedTouches, touch.touch.loc.CanonicalAddress) :
+    MemoryAddressesCanonical (MemoryHistoryAccess.ofAccessSchedule base schedule) := by
+  intro record present
+  obtain ⟨access, occurs, found⟩ := List.mem_flatMap.mp present
+  rcases List.mem_append.mp found with bump | ordinary
+  · obtain ⟨event, _, rfl⟩ := List.mem_map.mp bump
+    trivial
+  · cases List.mem_singleton.mp ordinary
+    exact honest access.stamped (List.mem_map_of_mem occurs)
+
+private theorem canonical_hint {request : HintReadTransfers.Request} {frontier : AccessFrontier} {sail : SailState}
+    (span : HintReadSpan.Domain request.address request.bytes.length)
+    {entry : Bool × HintReadWordChip.RowInput F} (present : entry ∈ request.rows frontier sail) : (hint entry.2).loc.CanonicalAddress := by
+  have observed := List.mem_map_of_mem (f := fun pair : Bool × HintReadWordChip.RowInput F =>
+    (Address.toNat pair.2.1.address, Word.toBitVec64 pair.2.1.ram.new_value)) present
+  rw [request.writes frontier sail span] at observed
+  obtain ⟨index, member, equal⟩ := List.mem_map.mp observed
+  have key := (Prod.mk.inj equal).1.symm
+  have bounds := span.2.2
+  have aligned := span.2.1
+  have lo := span.1
+  have pos : index < request.bytes.length / 8 + 1 := List.mem_range.mp member
+  let cell : RamCell := BitVec.ofNat 61 ((request.address + index * 8) / 8)
+  have address : cell.toNat * 8 = request.address + index * 8 := by
+    simp only [cell, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : (request.address + index * 8) / 8 < 2 ^ 61)]
+    omega
+  have loc := hint_location (input := entry.2) (key.trans address.symm) (by omega) (by omega)
+  rw [loc]
+  change 32 ≤ cell.toNat * 8 ∧ cell.toNat * 8 < 2 ^ 48
+  omega
+
+/-- Every exposed original transfer has a canonical Memory address in the compiled mixed stream.
+The enabled ordinary instruction's own guest-window bound covers RAM. The HINT_READ queue and
+padded word domain authenticate every host word address. -/
+theorem canonical {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    {rows : List MixedCompiledRow}
+    (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows) :
+    MemoryAddressesCanonical (stream image source events rows) := by
+  obtain ⟨actual, same, size⟩ := admissibleExecution_routeMixedRows run
+  have length : rows.length = events.length := Option.some.inj (routed.symm.trans same) ▸ size
+  intro access member
+  obtain ⟨i, _, record⟩ := List.mem_flatMap.mp member
+  have inside : i.val < events.length := i.isLt.trans_eq length
+  have present := List.getElem?_eq_getElem inside
+  generalize eventEq : events[i.val] = event at present
+  obtain ⟨before, incoming, next, prefixAt, _, route⟩ := routeMixedRows?_at routed present
+  change mixedAccessPrefix (policy SP1Prime image) image.program source.realize events i.val = some (before, incoming) at prefixAt
+  obtain ⟨current, frontier, atCut, atCut', _⟩ := admissibleExecution_mixedAccessPrefix run i.val
+  cases Option.some.inj (atCut'.symm.trans prefixAt)
+  cases event with
+  | ordinary =>
+    obtain ⟨view, row, projected, made, found⟩ := route
+    have atRow := (List.getElem?_eq_some_iff.mp found).2
+    rw [show HintReadTransfers.rowsAt? image source events i.val = some [] by simp [HintReadTransfers.rowsAt?, present]] at record
+    simp only [Fin.getElem_fin, atRow, Option.getD_some, List.map_nil, List.append_nil] at record
+    apply canonical_schedule (schedule := row.schedule) _ access record
+    intro touch occurs
+    apply ((run.2.1 _ _ _ present atCut).2 rfl).canonical_locations (run.1.frame_prefix atCut).1 projected (compileInstructionEvent?_accessPlan made)
+    rw [← compileInstructionEvent?_stamped_touches made]
+    exact List.mem_map_of_mem (List.mem_map_of_mem occurs)
+  | syscall call =>
+    have atRow := (List.getElem?_eq_some_iff.mp route).2
+    rcases List.mem_append.mp record with cpuAccess | word
+    · simp only [Fin.getElem_fin, atRow] at cpuAccess
+      apply canonical_schedule (schedule := scheduleAccessPlan incoming before.clock (syscallRegisterPlan call)) _ access cpuAccess
+      intro touch occurs
+      have planned := List.mem_map_of_mem (f := StampedTouch.touch) occurs
+      rw [scheduleAccessPlan_erase] at planned
+      simp only [syscallRegisterPlan, List.mem_cons, List.not_mem_nil, or_false] at planned
+      rcases planned with eq | eq | eq <;> rw [eq] <;> trivial
+    · obtain ⟨entry, listed, rfl⟩ := List.mem_map.mp word
+      by_cases read : call.rawCode = SyscallKind.hintRead.code
+      · obtain ⟨request, _, _, found, _, _, span⟩ := issued_hint run present read
+        rw [found, Option.getD_some] at listed
+        exact canonical_hint span listed
+      · simp [HintReadTransfers.rowsAt?, present, read] at listed
 
 /-- A boundary location absent from the genuine mixed transfer stream still has timestamp zero at
 every compiler cut. This includes all three ECALL registers, every padded HINT_READ word and every

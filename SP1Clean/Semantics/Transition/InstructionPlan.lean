@@ -397,6 +397,25 @@ theorem instructionAccessPlan?_isSome {decoded : instruction} {source target : S
     obtain ⟨newRam, newEq⟩ := Option.isSome_iff_exists.mp newPresent
     simp [instructionPlanByShape?, storePlan?, priorEq, oldEq, newEq]
 
+/-- A RAM location in the canonical plan belongs to a decoded load or store at its actual incoming base. -/
+theorem instructionAccessPlan_ram {source target : SailState} {plan : InstructionAccessPlan} {decoded : instruction}
+    (generated : instructionAccessPlan? decoded source target = some plan) {cell : RamCell}
+    (member : MemLoc.ram cell ∈ plan.map PlannedTouch.loc) :
+    match (generalizing := false) decoded with
+    | .LOAD (imm, rs1, _, _, _) | .STORE (imm, _, rs1, _) =>
+      ∃ base, source.get_reg? (regidxBits rs1) = some base ∧ cell = memoryRamCell base imm
+    | _ => False := by
+  have shape := byShape_of_extracted generated
+  clear generated
+  cases decoded <;> rename_i operands <;> cases operands <;>
+    simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?, loadPlan?, storePlan?,
+      Option.map_eq_some_iff, Option.bind_eq_bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at shape
+  all_goals
+    obtain ⟨cert, made, rfl⟩ := shape
+    repeat' obtain ⟨_, _, made⟩ := made
+  all_goals simp [ramAccess, registerReadback, registerDestination] at member
+  all_goals exact ⟨_, by assumption, member⟩
+
 /-- Every actual decoded register destination has a physical location in the canonical access plan. -/
 theorem instructionAccessPlan_destination {source target : SailState} {plan : InstructionAccessPlan} {decoded : instruction}
     {index : BitVec 5} (selected : instructionDestination? decoded = some index)
