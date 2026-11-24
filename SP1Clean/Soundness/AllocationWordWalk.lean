@@ -85,4 +85,84 @@ theorem decode_walk (c : Contents F) (rows : List (Row F))
   have zero : Address.toNat (start c).index = 0 := by change Address.toNat (0 : fields 3 F) = 0; decide
   exact ⟨valid,owner,by rwa [zero,Nat.zero_add] at idx,rem⟩
 
+private theorem final_short (length : Nat) : ¬ 8 ≤ length - (8 * (length / 8)) := by omega
+
+/-- Every word position occurs at its physical index and pointer. The final position has a
+unit last marker, including when it is the empty word of an aligned or empty buffer. -/
+theorem walk_inventory (c : Contents F) (rows : List (Row F))
+    (walk : Walk.IsWalk wordEdge (some (start c)) none rows) (checked : ∀ r ∈ rows, r.Valid) :
+    (∀ i : Fin rows.length, let r := rows[i.val]
+      r.word.pointer = c.pointer ∧ Address.toNat r.word.index = i.val) ∧
+    ∃ last ∈ rows, last.word.pointer = c.pointer ∧ Address.toNat last.word.index + 1 = rows.length ∧
+      last.word.isLast = 1 := by
+  obtain ⟨size,pos⟩ := at_cursor walk checked
+  change rows.length = Address.toNat c.length / 8 + 1 at size
+  have zero : Address.toNat (start c).index = 0 := by change Address.toNat (0 : fields 3 F) = 0; decide
+  have indices (i : Fin rows.length) : let r := rows[i.val]
+      r.word.pointer = c.pointer ∧ Address.toNat r.word.index = i.val := by
+    obtain ⟨_,owner,index,_⟩ := pos i
+    exact ⟨congrArg Contents.pointer owner,by rwa [zero,Nat.zero_add] at index⟩
+  refine ⟨indices,?_⟩
+  let i : Fin rows.length := ⟨Address.toNat c.length / 8,by rw [size]; exact Nat.lt_succ_self _⟩
+  let last := rows[i.val]
+  obtain ⟨stored,index⟩ := indices i
+  obtain ⟨valid,_,_,remaining⟩ := pos i
+  change Address.toNat last.prior.remaining = Address.toNat c.length - (8 * (Address.toNat c.length / 8)) at remaining
+  have short : ¬8 ≤ Address.toNat last.prior.remaining := by rw [remaining]; exact final_short _
+  have stopped := mt valid.bounds.2.2.1.mp short
+  have flag : last.payload.more = 0 := ((valid.2.1 (7 : Fin 8)).2.1).resolve_right stopped
+  refine ⟨last,List.getElem_mem i.isLt,stored,(congrArg (· + 1) index).trans size.symm,?_⟩
+  change 1-last.payload.more = 1
+  rw [flag,sub_zero]
+
+private theorem length_eq {x y : Nat} (left : x < 2^51) (right : y < 2^51)
+    (same : BitVec.ofNat 64 x = BitVec.ofNat 64 y) : x = y := by
+  have eq := congrArg BitVec.toNat same
+  simpa only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt (show x < 2^64 by omega),
+    Nat.mod_eq_of_lt (show y < 2^64 by omega)] using eq
+
+private theorem node_eq {a b : Node} (bytes : a.bytes = b.bytes) (tail : a.tail = b.tail) : a = b := by
+  cases a; cases b
+  exact congrArg₂ Node.mk bytes tail
+
+private theorem words_eq {rows : List (Row F)} {pointer : fields 3 F} {a b : Store} {na nb : Node}
+    (atA : node? a (Address.toNat pointer) = some na) (atB : node? b (Address.toNat pointer) = some nb)
+    (len : na.bytes.length = nb.bytes.length) (count : rows.length = wordCount na.bytes)
+    (positions : ∀ i : Fin rows.length, let r := rows[i.val]
+      r.word.pointer = pointer ∧ Address.toNat r.word.index = i.val)
+    (words : ∀ r ∈ rows, r.word.Binds a ∧ r.word.Binds b) : na.bytes = nb.bytes := by
+  apply bytes_eq_of_words len
+  intro index bound
+  have inRows : index < rows.length := by rwa [count]
+  let r := rows[index]
+  obtain ⟨ptr,idx⟩ := positions ⟨index,inRows⟩
+  obtain ⟨ba,bb⟩ := words r (List.getElem_mem inRows)
+  have hereA : node? a (Address.toNat r.word.pointer) = some na := by rw [ptr]; exact atA
+  have hereB : node? b (Address.toNat r.word.pointer) = some nb := by rw [ptr]; exact atB
+  have equal := (ba.value hereA).2.symm.trans (bb.value hereB).2
+  change Address.toNat r.word.index = index at idx
+  exact (congrArg (wordValue na.bytes) idx.symm).trans (equal.trans (congrArg (wordValue nb.bytes) idx))
+
+/-- Any two stores authenticating one metadata row and its entire physical word walk agree
+on the actual node. The terminal word bounds the true lengths before four-limb comparison. -/
+theorem walk_determines_node (c : Contents F) (metadata : NodeRecord F) (linked : c.pointer = metadata.pointer)
+    {rows : List (Row F)} (walk : Walk.IsWalk wordEdge (some (start c)) none rows)
+    (checked : ∀ r ∈ rows, r.Valid) {a b : Store} (ma : metadata.Binds a) (mb : metadata.Binds b)
+    (words : ∀ r ∈ rows, r.word.Binds a ∧ r.word.Binds b) :
+    node? a (Address.toNat metadata.pointer) = node? b (Address.toNat metadata.pointer) := by
+  obtain ⟨positions,last,member,pointer,number,ended⟩ := walk_inventory c rows walk checked
+  obtain ⟨na,atA,tailA,lengthA⟩ := ma
+  obtain ⟨nb,atB,tailB,lengthB⟩ := mb
+  have terminalA : node? a (Address.toNat last.word.pointer) = some na := by rw [pointer,linked]; exact atA
+  have terminalB : node? b (Address.toNat last.word.pointer) = some nb := by rw [pointer,linked]; exact atB
+  obtain ⟨finalA,finalB⟩ := words last member
+  have lastOK := (checked last member).word_valid
+  have boundedA := finalA.length_bound_of_last lastOK terminalA ended
+  have boundedB := finalB.length_bound_of_last lastOK terminalB ended
+  have len := length_eq boundedA boundedB (lengthA.symm.trans lengthB)
+  have count := number.symm.trans ((finalA.isLast_iff terminalA).mp ended)
+  rw [linked] at positions
+  have contents := words_eq atA atB len count positions words
+  exact atA.trans ((congrArg some (node_eq contents (tailA.symm.trans tailB))).trans atB.symm)
+
 end SP1Clean.WriteAllocation.Words
