@@ -55,7 +55,7 @@ private theorem snapshotKey {record : MemoryMsg (ZMod p)} {snapshot : MemorySnap
   ⟨spec, spec.canonical.2.2.trans (Nat.add_right_cancel indexed).symm⟩
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem eval_gate {Payload : TypeMap} [ProvableType Payload] (env : Environment (ZMod p)) :
+theorem eval_gate {Payload : TypeMap} [ProvableType Payload] (env : Environment (ZMod p)) :
     env (varFromOffset (OrderedMemoryProvider.RowInput Payload) 0).2 =
       (valueFromOffset (OrderedMemoryProvider.RowInput Payload) 0 env).2 := by
   rw [← eval_varFromOffset_valueFromOffset, eval_pair (α := OrderedMemoryProvider.Inputs Payload) (β := field)]
@@ -66,7 +66,8 @@ def sourceRecord (snapshot : MemorySnapshot) (ram : Bool) (env : Environment (ZM
   if ram then (SnapshotMemoryEnsemble.ramView snapshot).component.rowOutput env
   else (SnapshotMemoryEnsemble.registerView snapshot).component.rowOutput env
 
-private theorem source_ledger (snapshot : MemorySnapshot) (ram : Bool) (env : Environment (ZMod p)) :
+/-- The actual Memory publication of either snapshot component, including disabled rows. -/
+theorem source_ledger (snapshot : MemorySnapshot) (ram : Bool) (env : Environment (ZMod p)) :
     let c := source snapshot ram
     let id := if ram then SnapshotMemoryEnsemble.TableId.ram else .registers
     c.operations.interactionValuesWith memoryChannel.toRaw env =
@@ -75,19 +76,28 @@ private theorem source_ledger (snapshot : MemorySnapshot) (ram : Bool) (env : En
   case false => exact SnapshotMemoryEnsemble.recordFor_interactions snapshot .registers env
   case true => exact SnapshotMemoryEnsemble.recordFor_interactions snapshot .ram env
 
-private theorem source_live (snapshot : MemorySnapshot) (ram : Bool) (env : Environment (ZMod p))
-    (enabled : if ram then env (varFromOffset (OrderedMemoryProvider.RowInput Word) 0).2 = 1
-      else env (varFromOffset (OrderedMemoryProvider.RowInput RegisterSnapshotRow) 0).2 = 1) :
+/-- All source rows retain their guarded Memory occurrence at the decoded field weight. -/
+theorem source_with_weight (snapshot : MemorySnapshot) (ram : Bool) (env : Environment (ZMod p)) (weight : ZMod p)
+    (enabled : if ram then env (varFromOffset (OrderedMemoryProvider.RowInput Word) 0).2 = weight
+      else env (varFromOffset (OrderedMemoryProvider.RowInput RegisterSnapshotRow) 0).2 = weight) :
     (source snapshot ram).operations.interactionValuesWith memoryChannel.toRaw env =
-      [memoryChannel.pushedValue (sourceRecord snapshot ram env)] := by
+      [memoryChannel.pushedIfValue weight (sourceRecord snapshot ram env)] := by
   have ledger := source_ledger snapshot ram env
   dsimp only at ledger
   have active : Expression.eval env (SnapshotMemoryEnsemble.viewFor snapshot
-      (if ram then .ram else .registers)).activity = 1 := by
+      (if ram then .ram else .registers)).activity = weight := by
     cases ram <;> simpa only [Bool.false_eq_true, ↓reduceIte, SnapshotMemoryEnsemble.viewFor,
       SnapshotMemoryEnsemble.registerView, SnapshotMemoryEnsemble.ramView, OrderedMemoryEnsemble.providerView] using enabled
   rw [active] at ledger
   exact ledger
+
+/-- The actual positive Memory interaction of either original snapshot component. -/
+theorem source_live (snapshot : MemorySnapshot) (ram : Bool) (env : Environment (ZMod p))
+    (enabled : if ram then env (varFromOffset (OrderedMemoryProvider.RowInput Word) 0).2 = 1
+      else env (varFromOffset (OrderedMemoryProvider.RowInput RegisterSnapshotRow) 0).2 = 1) :
+    (source snapshot ram).operations.interactionValuesWith memoryChannel.toRaw env =
+      [memoryChannel.pushedValue (sourceRecord snapshot ram env)] :=
+  source_with_weight snapshot ram env 1 enabled
 
 /-- Select the real source circuit's active ordered input for an extra probe key. -/
 def sourceInput? (snapshot : MemorySnapshot) (ram : Bool) (previous key : ℕ) :

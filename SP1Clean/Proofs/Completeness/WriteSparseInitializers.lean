@@ -44,7 +44,7 @@ def initialInput (snapshot : MemorySnapshot) (ram : Bool) (previous : ℕ) (r : 
   | false => (OrderedMemoryProvider.populate (SnapshotRegisterProvider.populate (p := p) snapshot (BitVec.ofNat 5 r.key)) previous r.key).1
   | true => (OrderedMemoryProvider.populate (Target.bitVecToWord (BitVec.ofNat 64 r.key)) previous r.key).1
 
-private theorem initialInput_valid (snapshot : MemorySnapshot) (ram : Bool) (previous : ℕ) (r : Terminal (ZMod p))
+theorem initialInput_valid (snapshot : MemorySnapshot) (ram : Bool) (previous : ℕ) (r : Terminal (ZMod p))
     (valid : r.Valid) (tag : r.ram = ram) (ordered : previous < r.key + 1)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     match ram with
