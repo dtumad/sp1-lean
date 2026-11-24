@@ -68,6 +68,16 @@ theorem word_ledger (r : Var Row (ZMod p)) (n : Nat) :
   simp only [wordMain,circuit_norm,payload,sum,List.nil_append,List.ofFn_succ]
   simp only [FormalAssertion.toSubcircuit_interactions,Gadgets.Equality.circuit,Gadgets.Equality.main,Operations.interactions,circuit_norm,List.nil_append]
 
+/-- The direct block multiplicity in the actual raw ledger is the checked product of the
+source selector, live first lane and read count. It vanishes for every hook or padding word. -/
+theorem word_supply (r : Var Row (ZMod p)) (n : Nat) (env : Environment (ZMod p))
+    (checked : ((wordMain r).operations n).ConstraintsHold env) :
+    (var ⟨n⟩ : Expression (ZMod p)).eval env = (r.directGate * r.blockReads).eval env := by
+  have first : ((wordMain r).operations n).constraints[0]? = some (var ⟨n⟩ - r.directGate * r.blockReads) := by
+    simp only [wordMain,circuit_norm,FormalAssertion.toSubcircuit_toFlat,Gadgets.Equality.circuit,Gadgets.Equality.main,Operations.constraints,FlatOperation.constraints,List.ofFn_succ,Vector.getElem_zip,List.getElem?_cons_zero,List.cons_append,List.nil_append]
+  have same := checked.1 _ (List.mem_of_getElem? first)
+  exact sub_eq_zero.mp ((eval_sub ..).symm.trans same)
+
 private theorem payload_lookups (r : Var Payload (ZMod p)) (m : Nat) : ((payloadMain r).operations m).lookups = [] := by
   simp [payloadMain,Gadgets.ToBits.rangeCheck,Gadgets.toBits,Gadgets.ToBits.main,Gadgets.Equality.main,Operations.lookups,circuit_norm,List.ofFn_succ]
 
@@ -106,5 +116,27 @@ def wordComponent : Component (ZMod p) where
     (fun c => [WriteBuffer.hintKey c.contents.pointer,WriteBuffer.hintKey c.index]) (fun r => r.1.prior) (fun r => r.2)
   Assumptions := (Guarded.circuit wordCircuit inferInstance).Assumptions
   circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h
+
+omit [Fact (2^17 < p)] in
+/-- A padded seed retains both sites in physical order. -/
+theorem seed_channels :
+    (seedComponent (p := p)).operations.interactions.map (·.channel) = [contentsChannel.toRaw,cursorChannel.toRaw] := by
+  rw [Component.interactions_eq]
+  simp only [Component.rowOperations,seedComponent,Guarded.circuit]
+  rw [Guarded.main_interactions]
+  change (((seedMain _).operations _).interactions.map _).map _ = _
+  rw [seed_ledger]
+  rfl
+
+/-- Physical channel inventory of a guarded word row. Both block occurrences survive padding. -/
+theorem word_channels :
+    (wordComponent (p := p)).operations.interactions.map (·.channel) =
+      [cursorChannel.toRaw,blockChannel.toRaw,blockChannel.toRaw,HostHintQueue.wordChannel.toRaw,cursorChannel.toRaw] := by
+  rw [Component.interactions_eq]
+  simp only [Component.rowOperations,wordComponent,Guarded.circuit]
+  rw [Guarded.main_interactions]
+  change (((wordMain _).operations _).interactions.map _).map _ = _
+  rw [word_ledger]
+  rfl
 
 end SP1Clean.WriteAllocation.Words
