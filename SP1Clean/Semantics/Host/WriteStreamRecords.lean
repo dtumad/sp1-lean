@@ -189,18 +189,6 @@ theorem Query.decode_encode {p : Nat} [Fact p.Prime] [Fact (2 ^ 17 < p)] (q : Qu
 def Record.Binds {p : Nat} (row : Record (ZMod p)) (streams : WriteStreams) : Prop :=
   ∃ q v, q ∈ queries streams ∧ q.lookup streams = some v ∧ q.Fits v ∧ row = q.encode v
 
-/-- Look up one verifier-owned query and encode its value when all coordinates fit. -/
-def fixedRow? {p : Nat} (streams : WriteStreams) (q : Query) : Option (Record (ZMod p)) := do
-  let v ← q.lookup streams
-  if q.Fits v then some (q.encode v) else none
-
-private theorem fixedRow_iff {p : Nat} (streams : WriteStreams) (q : Query) (row : Record (ZMod p)) :
-    fixedRow? streams q = some row ↔ ∃ v, q.lookup streams = some v ∧ q.Fits v ∧ row = q.encode v := by
-  unfold fixedRow?
-  cases found : q.lookup streams with
-  | none => simp
-  | some v => by_cases fits : q.Fits v <;> simp [fits, eq_comm]
-
 /-- Verifier-side representability of the entire fixed inventory. A single missing lookup,
 oversized scalar, or overflowing position invalidates the endpoint pair. -/
 def inventoryOK (streams : WriteStreams) : Bool :=
@@ -215,45 +203,12 @@ theorem inventoryOK_iff (streams : WriteStreams) :
     cases found : q.lookup streams <;> simp
   simp only [inventoryOK, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, entry]
 
-/-- Overlarge physical endpoint inventory fails closed as a whole. -/
-def fixedRows {p : Nat} (streams : WriteStreams) : List (Record (ZMod p)) :=
-  if inventoryOK streams then (queries streams).filterMap (fixedRow? streams) else []
-
-theorem fixedRows_iff {p : Nat} (streams : WriteStreams) (row : Record (ZMod p)) :
-    row ∈ fixedRows streams ↔ inventoryOK streams = true ∧ row.Binds streams := by
-  unfold fixedRows Record.Binds
-  by_cases bound : inventoryOK streams = true
-  · simp only [bound, ite_true, true_and, List.mem_filterMap, fixedRow_iff]
-    constructor
-    · rintro ⟨q, member, v, found, fits, same⟩
-      exact ⟨q, v, member, found, fits, same⟩
-    · rintro ⟨q, v, member, found, fits, same⟩
-      exact ⟨q, member, v, found, fits, same⟩
-  · simp [Bool.eq_false_iff.mpr bound]
-
-theorem fixedRows_length {p : Nat} (streams : WriteStreams) : (fixedRows (p := p) streams).length < 2 ^ 48 := by
-  unfold fixedRows
-  split
-  · exact (List.length_filterMap_le ..).trans_lt ((inventoryOK_iff _).mp (by assumption)).1
-  · norm_num
-
-/-- All enumerated occurrences survive physical encoding on a checked endpoint pair. -/
-theorem fixedRows_length_eq {p : Nat} {streams : WriteStreams} (checked : inventoryOK streams = true) :
-    (fixedRows (p := p) streams).length = (queries streams).length := by
-  simp only [fixedRows, checked, ite_true]
-  apply Nat.le_antisymm (List.length_filterMap_le ..)
-  by_contra! smaller
-  obtain ⟨q, member, absent⟩ := List.length_filterMap_lt_length_iff_exists.mp smaller
-  obtain ⟨v, found, fits⟩ := ((inventoryOK_iff _).mp checked).2 q member
-  simp [fixedRow?, found, fits] at absent
-
-/-- Every representable actual lookup is physically available when the fixed inventory fits. -/
-theorem Query.present {p : Nat} {streams : WriteStreams} {q : Query} {v : Nat}
-    (found : q.lookup streams = some v) (checked : inventoryOK streams = true) :
-    q.encode (p := p) v ∈ fixedRows streams := by
-  obtain ⟨actual, eq, fits⟩ := ((inventoryOK_iff _).mp checked).2 q (q.enumerated found)
-  obtain rfl := Option.some.inj (found.symm.trans eq)
-  exact (fixedRows_iff ..).mpr ⟨checked, q, v, q.enumerated found, found, fits, rfl⟩
+/-- A successful lookup at a checked native boundary fits every identifying coordinate. -/
+theorem Query.fits_of_inventory {s : WriteStreams} {q : Query} {v : Nat} (checked : inventoryOK s = true)
+    (found : q.lookup s = some v) : q.Fits v := by
+  obtain ⟨value,atQuery,small⟩ := ((inventoryOK_iff s).mp checked).2 _ (q.enumerated found)
+  obtain rfl := Option.some.inj (atQuery.symm.trans found)
+  exact small
 
 /-- Every returned word-sized scalar has its exact natural meaning. -/
 theorem Record.Binds.readout {p : Nat} [Fact p.Prime] [Fact (2 ^ 17 < p)] {row : Record (ZMod p)}
