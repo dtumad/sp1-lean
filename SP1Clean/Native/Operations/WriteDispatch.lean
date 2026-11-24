@@ -15,9 +15,11 @@ open Circuit
 
 variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 
+/-- Hook metadata lookup keyed by the ordinal of the reply consumed by this call. -/
 def Dispatch.metadata {F : Type} [OfNat F 3] [Zero F] (r : Dispatch F) (kind : F) (value : fields 3 F) : Record F :=
   ⟨3, kind, r.previous.replies, #v[0,0,0], #v[0,0,0], value⟩
 
+/-- Consume the classified packet and advance its ordered stream and placement cursors. -/
 def dispatchMain (r : Var Dispatch (ZMod p)) : Circuit (ZMod p) Unit := do
   requestChannel.pull r.request
   cursorChannel.pull r.previous
@@ -62,6 +64,7 @@ private theorem flags_bool (r : ZMod p) :
   simp only [List.mem_cons, List.mem_nil_iff, or_false, Prod.mk.injEq] at cases
   rcases cases with h | h | h | h | h | h <;> simp [h.1, DispatchFlags.hook, IsBool]
 
+/-- Formal circuit for dispatching one WRITE and accounting for its output positions. -/
 def dispatchCircuit : GeneralFormalCircuit (ZMod p) Dispatch unit where
   name := "sp1.native.write_chronological_dispatch"
   main := dispatchMain

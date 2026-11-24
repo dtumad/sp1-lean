@@ -51,22 +51,31 @@ theorem buffers_iff (s : WriteStreams) (key : StreamKey) (bytes : Bytes) :
 
 /-- Positional fixed payload, shared by outputs, hook requests and returned hints. -/
 structure StreamBlock (F : Type) where
+  /-- Tag identifying the output stream, hook request or returned hints. -/
   stream : F
+  /-- Hook reply ordinal, or zero for an ordinary output. -/
   reply : fields 3 F
+  /-- Returned-hint ordinal within a reply, or zero for the other streams. -/
   hint : fields 3 F
+  /-- Zero-based block index within the identified byte string. -/
   index : fields 3 F
+  /-- Number of occupied lanes, including a partial last block. -/
   used : F
+  /-- Eight consecutive bytes with zero padding beyond the occupied lanes. -/
   bytes : fields 8 F
 deriving ProvableStruct, DecidableEq
 provable_struct_eval_lemmas StreamBlock
 
+/-- Number of eight-byte blocks needed to hold the actual bytes. -/
 def blockCount (bytes : Bytes) : Nat := (bytes.length + 7) / 8
 
+/-- Encode one block with its owner, index, occupied length and padded byte lanes. -/
 def encodeBlock {p : Nat} (key : StreamKey) (bytes : Bytes) (index : Nat) : StreamBlock (ZMod p) :=
   let (tag,r,h) := key.coordinates
   ⟨tag, Address.ofNat r, Address.ofNat h, Address.ofNat index, (min 8 (bytes.length - 8 * index) : Nat),
     (HintQueue.wordBytes bytes index).map (fun b => (b.toNat : ZMod p))⟩
 
+/-- All aligned blocks of the endpoint outputs, hook inputs and returned buffers. -/
 def dataBlocks {p : Nat} (s : WriteStreams) : List (StreamBlock (ZMod p)) :=
   (buffers s).flatMap fun (key,bytes) => (List.range (blockCount bytes)).map (encodeBlock key bytes)
 

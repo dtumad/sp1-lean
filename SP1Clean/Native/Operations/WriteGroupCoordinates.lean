@@ -14,6 +14,7 @@ open Circuit
 
 variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 
+/-- Check the guest predecessor, destination block division and successor positions. -/
 def groupCoordinatesMain (r : Var Group (ZMod p)) : Circuit (ZMod p) Unit := do
   r.previous.clock === r.octets.clock
   let out ← AddressDiv8.circuit r.division
@@ -25,6 +26,7 @@ def groupCoordinatesMain (r : Var Group (ZMod p)) : Circuit (ZMod p) Unit := do
 
 instance groupCoordinatesElaborated : ElaboratedCircuit (ZMod p) Group unit groupCoordinatesMain := by elaborate_circuit
 
+/-- Clock and address relations tying this guest word to its destination interval. -/
 def Group.Coordinates (r : Group (ZMod p)) : Prop :=
   r.previous.clock = r.octets.clock ∧ Address.Bounded r.firstBlock ∧
   Address.toNat r.firstBlock = Address.toNat r.previous.position / 8 ∧ r.plan.offset.val = Address.toNat r.previous.position % 8 ∧
@@ -32,6 +34,7 @@ def Group.Coordinates (r : Group (ZMod p)) : Prop :=
   AddressSum.Spec ⟨r.previous.position, #v[r.plan.size,0,0], r.nextPosition⟩ ∧
   AddressSum.Spec ⟨r.firstBlock, #v[1,0,0], r.nextBlock⟩
 
+/-- Coordinate relations together with the division witness needed to populate the row. -/
 def Group.HonestCoordinates (r : Group (ZMod p)) : Prop := r.Coordinates ∧ r.division = AddressDiv8.populate (Address.asWord r.previous.position)
 
 omit [Fact (2^17 < p)] in
@@ -65,6 +68,7 @@ private theorem eval_division (env : Environment (ZMod p)) (r : Var Group (ZMod 
   cases r
   simp only [Group.division,Address.asWord,circuit_norm]
 
+/-- Formal circuit certifying the nonwrapping guest and destination coordinates. -/
 def groupCoordinatesCircuit : GeneralFormalCircuit (ZMod p) Group unit where
   main := groupCoordinatesMain
   elaborated := groupCoordinatesElaborated

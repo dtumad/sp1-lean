@@ -102,7 +102,7 @@ theorem admissible_fixed_heights {image : ProgramImage} {source target : Executi
   have tl : target.realize.host = target.host := rfl
   rw [sl] at lo
   rw [tl] at hi
-  have field : SP1Prime = 2130706433 := rfl
+  have blockBudget : 2 * (SP1Prime - 1) + 18 ≤ 8 * 2^29 := by decide
   have cost : streamCost s ≤ source.host.payloadCost + target.host.payloadCost := streamCost_endpoints ..
   have data := dataBlocks_paid (p := SP1Prime) s
   have metadataBound := metadataRows_paid (p := SP1Prime) s

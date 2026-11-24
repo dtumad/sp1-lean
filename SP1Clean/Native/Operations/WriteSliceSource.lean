@@ -12,6 +12,7 @@ open Circuit Air.Flat
 
 variable {p : Nat} [Fact p.Prime]
 
+/-- Fixed inventory of every legal guest interval and destination offset. -/
 def planTable : StaticTable (ZMod p) SlicePlan := .ofRows "sp1.native.write_slice_plan" slicePlans
 
 omit [Fact p.Prime] in
@@ -24,6 +25,7 @@ private theorem plan_height : (planTable (p := p)).height < UInt64.size := by
   norm_num [UInt64.size] at *
   omega
 
+/-- Preallocated provider of lane masks for grouped word placement. -/
 def planComponent : Component (ZMod p) :=
   planTable.payloadComponent sliceChannel (by intros; trivial) plan_height
 

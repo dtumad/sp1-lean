@@ -19,9 +19,12 @@ variable {p : Nat} [Fact p.Prime] [Fact (2^17 < p)]
 omit [Fact p.Prime] in
 private theorem fourFits : 2^4 < p := by have h : 2^17 < p := Fact.out; omega
 
+/-- Enable the first destination block for a nonempty, retained interval. -/
 def Group.leftGate {F : Type} [One F] [Sub F] [Mul F] (r : Group F) : F := (1-r.ignored)*r.plan.nonempty
+/-- Enable the second destination block when retained bytes cross the block boundary. -/
 def Group.rightGate {F : Type} [One F] [Sub F] [Mul F] (r : Group F) : F := (1-r.ignored)*r.plan.second
 
+/-- Check the byte placement and exchange the selected blocks and cursor messages. -/
 def groupMain (r : Var Group (ZMod p)) : Circuit (ZMod p) Unit := do
   let _ ← groupCoordinatesCircuit r
   assertion groupBytesCircuit r
@@ -44,11 +47,13 @@ def groupMain (r : Var Group (ZMod p)) : Circuit (ZMod p) Unit := do
 
 instance groupElaborated : ElaboratedCircuit (ZMod p) Group unit groupMain := by elaborate_circuit
 
+/-- Both selected destination intervals fall within the occupied parts of their blocks. -/
 def Group.Extents (r : Group (ZMod p)) : Prop :=
   r.leftSize.val < 16 ∧ r.rightSize.val < 16 ∧ r.plan.firstExtent.val < 16 ∧ r.plan.secondExtent.val < 16 ∧
     (r.leftGate = 1 → r.plan.firstExtent.val ≤ r.leftSize.val) ∧
     (r.rightGate = 1 → r.plan.secondExtent.val ≤ r.rightSize.val)
 
+/-- The group respects its coordinates, destination bytes, route and occupied extents. -/
 def Group.Valid (r : Group (ZMod p)) : Prop :=
   r.Coordinates ∧ r.BytesMatch ∧ r.ignored = (if r.previous.sink = 0 then 1 else 0) ∧
     IsBool r.plan.nonempty ∧ IsBool r.plan.second ∧ r.Extents
@@ -89,6 +94,7 @@ private theorem group_sound (r : Group (ZMod p)) (coordinates : r.Coordinates) (
   exact ⟨⟨coordinates,content,ignore,active,crossing,left,right,first,last,(extent_iff _ _ _ la first left).mp a,
     (extent_iff _ _ _ rb last right).mp b⟩,la,rb⟩
 
+/-- Formal circuit for placing one observed guest word into its destination stream. -/
 def groupCircuit : GeneralFormalCircuit (ZMod p) Group unit where
   name := "sp1.native.write_word_placement"
   main := groupMain

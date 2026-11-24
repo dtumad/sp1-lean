@@ -16,21 +16,26 @@ open scoped Classical
 
 variable {p : Nat} [Fact p.Prime]
 
+/-- Carries the terminal stream cursor checked against the public target. -/
 def closeChannel : Channel (ZMod p) StreamCursor where
   name := "sp1.native.write_stream_end"
   Guarantees _ _ := True
 
+/-- Start the four shard-local counters at zero at the incoming shard clock. -/
 def initialCursor (clock : Nat) : StreamCursor (ZMod p) :=
   ⟨Address.ofNat clock, Address.ofNat 0, Address.ofNat 0, Address.ofNat 0, Address.ofNat 0⟩
 
+/-- Expected final clock and four counter values derived from the public stream deltas. -/
 def finalCursor (clock : Nat) (s : WriteStreams) : StreamCursor (ZMod p) :=
   ⟨Address.ofNat clock, Address.ofNat s.stdout.length, Address.ofNat s.stderr.length,
     Address.ofNat s.publicOutput.length, Address.ofNat s.hooks.length⟩
 
+/-- Open the chronological cursor and consume its terminal ticket. -/
 def cursorBoundaryMain (initial outgoing : StreamCursor (ZMod p)) (_ : Var unit (ZMod p)) : Circuit (ZMod p) Unit := do
   cursorChannel.push (const initial)
   closeChannel.pull (const outgoing)
 
+/-- Verifier circuit publishing the incoming and outgoing stream positions. -/
 def cursorBoundaryCircuit (initial outgoing : StreamCursor (ZMod p)) : GeneralFormalCircuit (ZMod p) unit unit where
   main := cursorBoundaryMain initial outgoing
   Spec _ _ _ := True
@@ -70,19 +75,26 @@ def cursorEndpoint (source target : ExecutionSnapshot) : ClosedVerifier (ZMod p)
     intro n env ch
     exact (cursorBoundary_values _ _ n env ch).trans (cursorBoundary_values _ _ 0 _ ch).symm
 
+/-- Private last cursor clock and fixed ticket cells for the single terminal row. -/
 structure CloseInput (F : Type) where
+  /-- Fixed unit ticket requiring the terminal row to run. -/
   ticket : F
+  /-- Publication multiplicity constrained to equal the unit ticket. -/
   count : F
+  /-- Clock carried by the last internal stream cursor. -/
   prior : fields 3 F
+  /-- Nonnegative difference from the last cursor clock to the public target clock. -/
   gap : fields 3 F
 deriving ProvableStruct
 provable_struct_eval_lemmas CloseInput
 
 variable [Fact (2^17 < p)]
 
+/-- Recover the last internal cursor using the certified final counter values. -/
 def CloseInput.source {F : Type} (r : CloseInput F) (outgoing : StreamCursor F) : StreamCursor F :=
   {outgoing with clock := r.prior}
 
+/-- Compare the private last clock to the target clock and publish the terminal ticket. -/
 def closeMain (outgoing : StreamCursor (ZMod p)) (r : Var CloseInput (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero (r.ticket - 1)
   assertZero (r.count - r.ticket)
@@ -90,6 +102,7 @@ def closeMain (outgoing : StreamCursor (ZMod p)) (r : Var CloseInput (ZMod p)) :
   cursorChannel.pull (r.source (const outgoing))
   closeChannel.pushIf r.count (const outgoing)
 
+/-- Formal circuit certifying the terminal clock and counters. -/
 def closeCircuit (outgoing : StreamCursor (ZMod p)) : GeneralFormalCircuit (ZMod p) CloseInput unit where
   name := "sp1.native.write_output_terminal"
   main := closeMain outgoing
