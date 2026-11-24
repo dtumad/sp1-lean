@@ -1,6 +1,6 @@
 import SP1Clean.Export.WriteMixedHostRegistry
 import SP1Clean.Export.WriteMixedSourceRecords
-import SP1Clean.Proofs.Completeness.MixedCommitTables
+import SP1Clean.Proofs.Completeness.MixedCommitLedger
 import SP1Clean.Proofs.Completeness.ExecutionObservationEndpoint
 
 /-! # Installing the commitment and ordinary observation witnesses in the original supervisor
@@ -96,5 +96,16 @@ theorem valid (id : Index) : (table run data id).Constraints ∧ (table run data
       exact CommitBanks.laneTable_valid d slot _ data
         (CommitBanks.lane_fits run d (bankFacts run d).2.1 slot) (bankFacts run d).1
   | observation i => exact ordinary_valid run data _ (List.getElem_mem i.isLt)
+
+/-- Both mutable bank channels close against the full incoming and outgoing host snapshots
+on the actual physical commitment tables. -/
+theorem bank_state_balanced (d : Bool) :
+    LogUpBalanced ([(HostCommitChip.stateChannel d).pushedValue (HostCommitBoundary.start (HostCommitEnsemble.sourceValues d source.host)),
+      (HostCommitChip.stateChannel d).pulledValue (HostCommitBoundary.final (HostCommitEnsemble.sourceValues d target.host))] ++
+      HostCommitBank.indices.flatMap (fun i => (table run data (.bank d i)).interactionsWith (HostCommitChip.stateChannel d).toRaw)) := by
+  obtain ⟨rs, emitted, _, _, _, chain⟩ := CommitBanks.of_execution run d
+  obtain rfl := Option.some.inj ((bankRows_eq run d).symm.trans emitted)
+  exact CommitBanks.state_balanced d (bankRows run d) _ (lastState d events target) data
+    (CommitBanks.lane_fits run d (bankFacts run d).2.1) chain
 
 end SP1Clean.Export.WriteMixedHostTables

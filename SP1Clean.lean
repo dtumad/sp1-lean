@@ -69,6 +69,7 @@ import SP1Clean.Export.WriteMixedSupplyBounds
 import SP1Clean.Proofs.Completeness.MixedCommitCalls
 import SP1Clean.Proofs.Completeness.MixedCommitHistory
 import SP1Clean.Proofs.Completeness.MixedCommitTables
+import SP1Clean.Proofs.Completeness.MixedCommitLedger
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
