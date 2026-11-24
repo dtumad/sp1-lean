@@ -139,6 +139,8 @@ import SP1Clean.Export.WriteMixedHostRegistry
 import SP1Clean.Export.WriteMixedHostTables
 import SP1Clean.Export.WriteMixedHostAssembly
 import SP1Clean.Export.WriteMixedFixedResources
+import SP1Clean.Export.WriteOriginalInstallation
+import SP1Clean.Export.WriteMixedControlTables
 import SP1Clean.Export.WriteMixedHostData
 import SP1Clean.Export.WriteMixedBankBalances
 import SP1Clean.Export.WriteMixedSourceRecords
@@ -319,6 +321,7 @@ import SP1Clean.Proofs.Completeness.OrdinaryBucketCapacity
 import SP1Clean.Proofs.Completeness.MixedInstructionBuckets
 import SP1Clean.Proofs.Completeness.MixedStateSchedule
 import SP1Clean.Proofs.Completeness.MixedBumpInventory
+import SP1Clean.Proofs.Completeness.MixedHaltPadding
 import SP1Clean.Soundness.WriteBufferCoverage
 import SP1Clean.Soundness.WriteObservationHistory
 import SP1Clean.Soundness.WriteVersionIntervals

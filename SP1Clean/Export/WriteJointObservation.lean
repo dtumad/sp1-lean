@@ -1,6 +1,6 @@
 import SP1Clean.Export.WriteFundedInstallation
 import SP1Clean.Export.WriteObservationReadBuild
-import SP1Clean.Export.WriteMixedFixedResources
+import SP1Clean.Export.WriteMixedControlTables
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteEndpointJoins
 import SP1Clean.Export.WritePermissionCapacity
@@ -13,7 +13,8 @@ import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
 The chronological execution supplies the immutable reader counts, the final private
 queue state, the outgoing walk and its seal, and every alignment plan requested by a
 guest group. The fixed stream metadata table counts the actual hook dispatches and allocation
-steps. This constructs all nineteen observer tables. Thirty original supervisor tables and the
+steps. The original state bump and checkpoint padding are generated from the same execution.
+This constructs all nineteen observer tables. Twenty-eight original supervisor tables and the
 remaining shared-channel checks are still required for whole-assembly completeness.
 -/
 
@@ -86,15 +87,19 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
         ∃ cap : EffectFits events entries (.fromEndpoints ctx.source.host ctx.target.host), cap.Realized data ∧
         ∃ plan : Table F, plan.component = WriteEffects.planComponent ∧ plan.Constraints ∧ plan.Guarantees ∧ plan.length = 512 ∧
           (∀ t ∈ hints, t.Constraints ∧ t.Guarantees) ∧ close.Constraints ∧ close.Guarantees ∧
-        ∀ (header : SP1PublicIO F) (remaining : WriteMixedFixedResources.Remaining ctx.image ctx.source ctx.target final),
+        ∀ (header : SP1PublicIO F) (remaining : WriteMixedControlTables.Remaining ctx.image ctx.source ctx.target final),
+          let fixed := WriteMixedControlTables.install release routed data remaining
           let plans := [plan,close]
-          let w := WriteMixedSourceTables.ofExecution release routed final data hint header (WriteMixedHostTables.install release.1 data (WriteMixedFixedResources.install release routed data hint packets remaining)) packets
+          let w := WriteMixedSourceTables.ofExecution release routed final data hint header (WriteMixedHostTables.install release.1 data (WriteMixedFixedResources.install release routed data hint packets fixed)) packets
           let suffix := front ++ fundedSuffix s data (effectMiddle cap data metadata) hints plans
           ∃ reg : suffix.map Table.component = tables ctx.source ctx.target,
             let pre := build w suffix reg
             let full := withPublicChecks pre
             (∀ t ∈ (full.tables.drop (installSources w).tables.length).take front.length, t.Constraints ∧ t.Guarantees) ∧
             (∀ id, WriteMixedHostTables.InstalledAt pre id (WriteMixedHostTables.table release.1 data id)) ∧
+            (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
+            (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap ExecutionEvent.haltReceipt? =
+              [(SP1StateBoundary.haltCode ctx.source ctx.target).getD 0] ∧
             (∀ d, LogUpBalanced (full.interactionsWith (HostCommitChip.stateChannel d).toRaw)) ∧
             CheckedLedger (full.interactionsWith WritePermissionProvider.channel.toRaw) (WriteMixedPermissionLedger.occurrences events rows) ∧
             (∀ ch ∈ readProtocols, LogUpBalanced (full.interactionsWith ch)) ∧
@@ -140,7 +145,7 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   have md := Metadata.checked release.1 readers collected s cap data
   refine ⟨rows,routed,_,observed,front,physical,entries,collected,md.constraints,md.guarantees,md.height,s,paid,funding,cap,realized,
     plan,planReg,planGood,planGuar,planSize,hintGood,closeGood,closeGuar,?_⟩
-  intro header remaining plans w suffix
+  intro header remaining fixed plans w suffix
   have hh : hints.map Table.component = ((tables ctx.source ctx.target).drop 10).take 2 := rfl
   have hplans : plans.map Table.component = ((tables ctx.source ctx.target).drop 13).take 2 := by
     simp only [plans,List.map_cons,List.map_nil,planReg]; rfl
@@ -158,14 +163,15 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     rw [List.map_append,pfront,ptail,List.take_append_drop]
   refine ⟨reg,?_⟩
   intro pre full
-  obtain ⟨frontValid,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets remaining) tail ptail
+  obtain ⟨frontValid,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets fixed) tail ptail
   have endpoints := installed_endpoint_ledgers w suffix reg (s.groups data) plan _ _ rfl rfl rfl rfl
-  refine ⟨frontValid,banks,?_,?_,?_,?_,?_,?_,?_,?_⟩
+  refine ⟨frontValid,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
+    MixedHaltPadding.receipt release.1.1.2,?_,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)
     rw [public_bank pre d _ (banks (.bank d none))]
     exact bankPaid d
-  · exact WriteMixedPermissionLedger.public_checked release routed data hint (inputs entries).packets header remaining suffix reg run.1 preset
+  · exact WriteMixedPermissionLedger.public_checked release routed data hint (inputs entries).packets header fixed suffix reg run.1 preset
   · intro ch member
     change LogUpBalanced ((withPublicChecks pre).interactionsWith ch)
     rw [public_read pre ch member]
