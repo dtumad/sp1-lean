@@ -1,5 +1,6 @@
 import SP1Clean.Export.InstalledImmutableLedger
 import SP1Clean.Export.WriteObserverRows
+import SP1Clean.Export.WriteObserverByteReaders
 import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteControlLedgers
 import SP1Clean.Export.WriteInstalledEffectJoins
@@ -99,6 +100,7 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
             let full := withPublicChecks pre
             (∀ t ∈ suffix, t.Constraints ∧ t.Guarantees) ∧
             (∀ t ∈ full.tables.drop (installSources w).tables.length, t.Constraints ∧ t.Guarantees) ∧
+            WriteByteConsumers.Reads (suffix.flatMap (·.interactionsWith Channels.byteChannel.toRaw)) ∧
             (∀ id, WriteMixedHostTables.InstalledAt pre id (WriteMixedHostTables.table release.1 data id)) ∧
             (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
             (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
@@ -190,7 +192,8 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   obtain ⟨nodeLedger,wordLedger,cursorLedger⟩ := installed_immutable_ledgers release routed data hint (inputs entries).packets header remaining
     suffix reg s rfl rfl rfl
   obtain ⟨_,nodePaid,wordPaid⟩ := InstalledAssembly.native_immutable_queue release.1 data collected s paid.toChecked
-  refine ⟨suffixGood,installed_observer_rows w suffix reg suffixGood,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
+  refine ⟨suffixGood,installed_observer_rows w suffix reg suffixGood,generated_byte_readers suffix reg suffixGood,
+    banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
     MixedHaltPadding.receipt release.1.1.2,
     installed_control_ledgers release routed data hint _ header remaining suffix reg run.1 preset,
     ?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩

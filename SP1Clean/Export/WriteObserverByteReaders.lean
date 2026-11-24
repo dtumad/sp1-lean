@@ -1,4 +1,5 @@
 import SP1Clean.Export.WriteObservationByte
+import SP1Clean.Export.WriteByteConsumers
 import ToClean.Air.Footprint
 
 /-! # Physical Byte reads in the nineteen native observation tables -/
@@ -64,6 +65,19 @@ theorem observer_byte_direction {source target : ExecutionSnapshot} (c : Compone
   have pulls := ((Bool.and_eq_true ..).mp checked).1
   simpa only [onByte, Channel.toRaw_name, bne_self_eq_false, Bool.false_or, beq_iff_eq] using
     List.all_eq_true.mp pulls i raw
+
+/-- The actual generated observer suffix supplies every typed Byte request, including
+arbitrary data on disabled rows. Only active sites need a released provider key. -/
+theorem generated_byte_readers {source target : ExecutionSnapshot} (suffix : List (Table F))
+    (registered : suffix.map Table.component = tables source target)
+    (checked : ∀ t ∈ suffix, t.Constraints ∧ t.Guarantees) :
+    WriteByteConsumers.Reads (suffix.flatMap (·.interactionsWith byteChannel.toRaw)) := by
+  intro i member
+  obtain ⟨t, own, emitted⟩ := List.mem_flatMap.mp member
+  have installed : t.component ∈ tables source target := registered ▸ List.mem_map_of_mem own
+  obtain ⟨constraints, guarantees⟩ := checked t own
+  apply WriteByteConsumers.of_table t _ guarantees (observer_byte_direction t.component installed) i emitted
+  exact fun row present => observer_byte_requirements source target t.component installed _ (constraints row present)
 
 /-- Widths in physical observer order. Each width is charged on every padded row. -/
 def observerByteWidths : List Nat := [0,0,0,10,3,0,4,0,4,0,0,0,0,0,0,0,3,0,0]
