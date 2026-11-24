@@ -19,7 +19,7 @@ import SP1Clean.Export.WriteBoundaryDemand
 import SP1Clean.Export.WritePhysicalRouting
 import SP1Clean.Proofs.Completeness.WriteDestination
 import SP1Clean.Proofs.Completeness.MixedMemoryPosts
-import SP1Clean.Proofs.Completeness.WriteDispatchReplay
+import SP1Clean.Proofs.Completeness.WriteDispatchTable
 import SP1Clean.Proofs.Completeness.MixedMemorySyscall
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot

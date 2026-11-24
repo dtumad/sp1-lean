@@ -94,16 +94,20 @@ theorem hint_word_bytes (w : EnsembleWitness (preprocessing image source target 
     (raw (supervisor w) (.host (.word last))).ChannelGuarantees byteChannel.toRaw :=
   supervisor_byte w checked funded _ ((originalSlot image source target final _).table_mem (supervisor w))
 
-/-- At the installed public checker, raw LogUp acceptance authenticates every byte of
-both original hint-word tables using the complete native Byte ledger. -/
-theorem assembled_hint_word_bytes (w : EnsembleWitness (assembly image source target final))
-    (checked : w.Constraints) (fit : w.InteractionsFit .logUp) (balanced : w.Balanced .logUp) (last : Bool) :
-    (raw (supervisor (observed w)) (.host (.word last))).ChannelGuarantees byteChannel.toRaw := by
+/-- The public cursor and endpoint verifiers preserve balance of the installed Byte ledger. -/
+theorem observed_byte_balance (w : EnsembleWitness (assembly image source target final))
+    (fit : w.InteractionsFit .logUp) (balanced : w.Balanced .logUp) : (observed w).BalancedChannel byteChannel.toRaw := by
   let seen := preprocessing image source target final
   let span : TableSlot seen.tables WriteBuffer.spanComponent := slot image source target final 3
   have registered : byteChannel.toRaw ∈ seen.channels := seen.tables_channels _ (span.component_eq ▸ List.getElem_mem span.index.isLt)
     (show byteChannel.toRaw ∈ WriteBuffer.spanComponent.circuit.channels from List.mem_cons_self)
-  exact hint_word_bytes (observed w) ((observed_constraints w).mp checked)
-    (observed_balance w fit balanced _ registered (of_decide_eq_true rfl)) last
+  exact observed_balance w fit balanced _ registered (of_decide_eq_true rfl)
+
+/-- At the installed public checker, raw LogUp acceptance authenticates every byte of
+both original hint-word tables using the complete native Byte ledger. -/
+theorem assembled_hint_word_bytes (w : EnsembleWitness (assembly image source target final))
+    (checked : w.Constraints) (fit : w.InteractionsFit .logUp) (balanced : w.Balanced .logUp) (last : Bool) :
+    (raw (supervisor (observed w)) (.host (.word last))).ChannelGuarantees byteChannel.toRaw :=
+  hint_word_bytes (observed w) ((observed_constraints w).mp checked) (observed_byte_balance w fit balanced) last
 
 end SP1Clean.Export.WriteObservationAssembly

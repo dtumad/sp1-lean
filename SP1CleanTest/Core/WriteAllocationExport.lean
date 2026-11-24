@@ -87,9 +87,9 @@ private def prepare : Except String PrivateInput := do
 
 private def ensemble (privateInput : PrivateInput) : Ensemble Fp HostHintQueue.State where
   tables := components
-  unique_names := by native_decide
+  unique_names := by decide
   channels := registry
-  unique_channel_names := by native_decide
+  unique_channel_names := by decide
   verifier := verifier
   tables_channels := by
     intro t mem
