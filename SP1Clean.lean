@@ -16,6 +16,8 @@ import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteObservationHandoff
 import SP1Clean.Export.WriteStreamCapacity
 import SP1Clean.Proofs.Completeness.HintQueueSnapshot
+import SP1Clean.Proofs.Completeness.HintSnapshotTables
+import SP1Clean.Proofs.Completeness.HintSnapshotLedger
 import SP1Clean.Export.WriteSourceInstallation
 import SP1Clean.Export.WriteSourceProjection
 import SP1Clean.Export.WriteSourceLedger

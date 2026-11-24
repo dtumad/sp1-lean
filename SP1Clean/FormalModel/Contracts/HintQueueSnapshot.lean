@@ -56,6 +56,9 @@ structure Shape (F : Type) where
 deriving ProvableStruct, DecidableEq
 provable_struct_eval_lemmas Shape
 
+/-- An inactive row has no cursor, node or word occurrence with positive multiplicity. -/
+def Shape.padding {p : ℕ} : Shape (ZMod p) := ⟨0, 0, 0, 0, 0, 0, 0, 0⟩
+
 /-- Private node identities checked against immutable metadata and words. -/
 structure Links (F : Type) where
   /-- Node pointer for the buffer that contains this word. -/
@@ -104,22 +107,30 @@ def shape {p : ℕ} [Fact p.Prime] (serial i length : ℕ) (word : BitVec 64) : 
     Address.ofNat serial, Address.ofNat (serial+1), Address.ofNat i, bitVecToWord (BitVec.ofNat 64 length),
     bitVecToWord word⟩
 
-/-- Enumerate the public target once in queue order. For an unrepresentable target, the
-physical component rejects through its mandatory verifier-fixed row. -/
+/-- Fixed words of one buffer, beginning at its first global ordinal. -/
+def bufferShapes {p : ℕ} [Fact p.Prime] (start : ℕ) (bytes : Bytes) : List (Shape (ZMod p)) :=
+  let data := bytes.toArray
+  (List.range (data.size / 8 + 1)).map fun i => shape (start + i) i data.size (arrayWord data i)
+
+/-- Concatenate fixed buffer shapes in host queue order. -/
+def shapesFrom {p : ℕ} [Fact p.Prime] (start : ℕ) : List Bytes → List (Shape (ZMod p))
+  | [] => []
+  | bytes :: rest => bufferShapes start bytes ++ shapesFrom (start + wordCount bytes) rest
+
+theorem shapesFrom_length {p : ℕ} [Fact p.Prime] (start : ℕ) (hints : List Bytes) :
+    (shapesFrom (p := p) start hints).length = wordRows hints := by
+  induction hints generalizing start with
+  | nil => rfl
+  | cons bytes rest ih => simp [shapesFrom, bufferShapes, ih, wordRows, wordCount]
+
+/-- Enumerate the public target once in queue order. An unrepresentable target is rejected
+by the mandatory fixed row of the physical component. -/
 def schedule {p : ℕ} [Fact p.Prime] (hints : List Bytes) : List (Shape (ZMod p)) :=
-  if fits hints then
-    (hints.flatMap fun bytes =>
-      let data := bytes.toArray
-      (List.range (data.size / 8 + 1)).map fun i => (i, data.size, arrayWord data i)).mapIdx
-        fun serial (i, len, value) => shape serial i len value
-  else []
+  if fits hints then shapesFrom 0 hints else []
 
 theorem schedule_length {p : ℕ} [Fact p.Prime] (hints : List Bytes) :
     (schedule (p := p) hints).length = if fits hints then wordRows hints else 0 := by
   simp only [schedule]
-  split
-  · simp only [List.length_mapIdx, List.length_flatMap, List.length_map, List.length_range, List.size_toArray, wordRows]
-    rfl
-  · rfl
+  split <;> simp [shapesFrom_length]
 
 end SP1Clean.HostHintSnapshot

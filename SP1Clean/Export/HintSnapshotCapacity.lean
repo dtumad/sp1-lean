@@ -1,5 +1,5 @@
 import SP1Clean.Export.InstalledFixedPreset
-import SP1Clean.Native.Operations.HintQueueSnapshot
+import SP1Clean.Proofs.Completeness.HintSnapshotLedger
 
 /-! # Physical capacity of the complete outgoing hint walk
 
@@ -35,6 +35,26 @@ theorem admissible_hint_snapshot_fits {image : ProgramImage} {source target : Ex
   simp only [fits, decide_eq_true_eq]
   unfold SP1Prime at capacity
   omega
+
+/-- An arbitrary mixed execution supplies the complete physical outgoing reader and singleton
+seal. The seal accepts the private queue access clock from the state ledger; its head and
+historical allocation frontier come from replay, including after intervening pops. -/
+theorem admissible_hint_snapshot_tables {image : ProgramImage} {source target : ExecutionSnapshot}
+    {events : List ExecutionEvent}
+    (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
+    (data : ProverData (ZMod SP1Prime)) :
+    ∃ cursor, storeAfter? (policy SP1Prime image) image.program source.realize events (ofList source.host.io.hints) = some cursor ∧
+      let reader := HostHintSnapshot.tableFor cursor.1 cursor.2 target.host.io.hints (admissible_hint_snapshot_fits run) data
+      reader.Constraints ∧ reader.Guarantees ∧
+      ∀ clock : BitVec 48,
+        let terminal := Seal.tableFor target.host.io.hints (HostHintQueue.State.encode clock.toNat cursor.2 cursor.1.size) data
+        terminal.Constraints ∧ terminal.Guarantees ∧
+          LogUpBalanced (reader.interactionsWith HostHintSnapshot.channel.toRaw ++ terminal.interactionsWith HostHintSnapshot.channel.toRaw) := by
+  obtain ⟨cursor, tails, replay, _, read⟩ := TraceGen.admissibleExecution_hintSnapshot run
+  have valid := HostHintSnapshot.tableFor_valid read (admissible_hint_snapshot_fits run) data
+  refine ⟨cursor, replay, valid.1, valid.2, fun clock => ?_⟩
+  have sealValid := Seal.tableFor_valid target.host.io.hints (HostHintQueue.State.encode (p := SP1Prime) clock.toNat cursor.2 cursor.1.size) data
+  exact ⟨sealValid.1, sealValid.2, tableFor_closed read _ data clock⟩
 
 /-- The installed shard preset pays for every physical row of the new outgoing queue reader. -/
 theorem fixedProviderPreset_hint_snapshot_height (ctx : Context) {events : List ExecutionEvent}

@@ -54,15 +54,19 @@ def circuit (hints : List Bytes) : GeneralFormalCircuit (ZMod p) Inputs unit whe
     simp [ticket, count]
 
 /-- Clean materializes one fixed ticket. Its hint contains only the eight private state limbs. -/
+def generation : WitnessGeneration.PreallocatedMode (ZMod p) Inputs where
+  channel := stateChannel
+  trigger := .pull
+  height := 1
+  input _ := WitnessGeneration.fixedPrefix (Row := field) (pure 1)
+    (WitnessGeneration.privateWithMultiplicity (Private := State)
+      (Vector.ofFn (fun i => .hintGet name (size State) 0 i)))
+  rowOf _ := 0
+
+/-- Physical singleton exchanging the outgoing private cursor for the next canonical boundary. -/
 def component (hints : List Bytes) : Component (ZMod p) where
   circuit := circuit hints
-  generation := .preallocated {
-    channel := stateChannel
-    trigger := .pull
-    height := 1
-    input _ := pure (.fixed 1, fromElements (Vector.ofFn (fun i =>
-      WitnessGeneration.Cell.witness (.hintGet name (size State) 0 i))), .multiplicity)
-    rowOf _ := 0 }
+  generation := .preallocated generation
 
 /-- Physical endpoint substitution has two occurrences on each of the state and word-walk channels. -/
 theorem ledger (hints : List Bytes) (r : Var Inputs (ZMod p)) (offset : ℕ) :

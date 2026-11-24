@@ -1,4 +1,4 @@
-import SP1Clean.Native.Operations.HintQueueSeal
+import SP1Clean.Proofs.Completeness.HintSnapshotTables
 import SP1Clean.Proofs.Operations.HintQueueSnapshot
 import SP1Clean.Math.SP1Field
 import ToClean.Air.EnsembleCheck
@@ -32,6 +32,10 @@ private def link (head tail : ℕ) : Links F := ⟨Address.ofNat head, Address.o
 
 private def inputs : List (Inputs F) :=
   (schedule target).zipWith (fun s ptr => (s, ptr, 1)) [link 4 2, link 4 2, link 2 1, link 1 0]
+
+/-- Follow node 4 in the actual store and reproduce the independent four-row fixture. -/
+example : (inputsFor (p := SP1Prime) store 4 target).map (toElements (M := Inputs)) =
+    inputs.map (toElements (M := Inputs)) := by native_decide
 
 private def check (rows : List (Inputs F)) (terminal : HostHintQueue.State F) : Bool := Id.run do
   let reader := component (p := SP1Prime) target

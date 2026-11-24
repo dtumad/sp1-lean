@@ -63,6 +63,28 @@ theorem PreallocatedMode.fixedAt_of_typed_prefix
     have privateCell := privateCells _ (List.getElem_mem left)
     cases eq : (toElements suffix).toList[j] <;> simp [eq, Cell.isFixed, Cell.FixedMatches] at *
 
+/-- Supply row-local private expressions before a generator-owned multiplicity. -/
+def privateWithMultiplicity {Private : TypeMap} [ProvableType Private]
+    (cells : Vector (Witgen.FExpr F) (size Private)) : ProvablePair Private field (Cell F) :=
+  (fromElements (cells.map .witness), .multiplicity)
+
+omit [FiniteField F] in
+/-- Private expressions and the generator-owned count impose no fixed value on the suffix. -/
+theorem privateWithMultiplicity_unfixed {Private : TypeMap} [ProvableType Private]
+    (cells : Vector (Witgen.FExpr F) (size Private)) :
+    ∀ c ∈ (toElements (M := ProvablePair Private field) (privateWithMultiplicity cells)).toList, c.isFixed = false := by
+  intro c member
+  change c ∈ (Vector.append (toElements (M := Private) (fromElements (cells.map Cell.witness)))
+    (#v[Cell.multiplicity] : Vector (Cell F) 1)).toList at member
+  rw [ProvableType.toElements_fromElements] at member
+  have cat : ((cells.map Cell.witness).append (#v[Cell.multiplicity] : Vector (Cell F) 1)).toList =
+      (cells.map Cell.witness).toList ++ [.multiplicity] := Vector.toList_append ..
+  rw [cat, Vector.toList_map] at member
+  rcases List.mem_append.mp member with ptr | count
+  · obtain ⟨_, _, rfl⟩ := List.mem_map.mp ptr
+    rfl
+  · exact List.mem_singleton.mp count ▸ rfl
+
 /-- A typed fixed payload paired with the generator-owned multiplicity cell. -/
 def fixedWithMultiplicity (row : Witgen.M F (Row (Witgen.FExpr F))) :
     Witgen.M F (ProvablePair Row field (Cell F)) := fixedPrefix row (.multiplicity : Cell F)

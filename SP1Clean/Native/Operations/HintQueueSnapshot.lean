@@ -72,7 +72,8 @@ def circuit (hints : List Bytes) : GeneralFormalCircuit (ZMod p) Inputs unit whe
 def inventory (hints : List Bytes) : StaticTable (ZMod p) Shape :=
   StaticTable.ofRows tableName (schedule hints)
 
-private theorem height_bound (hints : List Bytes) : (inventory (p := p) hints).height < UInt64.size := by
+/-- The complete padded table fits the index type of the native row generator. -/
+theorem height_bound (hints : List Bytes) : (inventory (p := p) hints).height < UInt64.size := by
   have rows : (inventory (p := p) hints).length < 2 ^ 48 := by
     change (schedule (p := p) hints).length < _
     rw [schedule_length]
@@ -86,7 +87,7 @@ private theorem height_bound (hints : List Bytes) : (inventory (p := p) hints).h
 /-- Fixed shapes are addressed by their physical row number. Padding reads the zero shape. -/
 def fixedShapes (hints : List Bytes) : Vector (Shape (ZMod p)) (inventory (p := p) hints).height :=
   let rows := (schedule (p := p) hints).toArray
-  Vector.ofFn fun i => (rows[i.val]?).getD 0
+  Vector.ofFn fun i => (rows[i.val]?).getD Shape.padding
 
 /-- Each prover hint has six cells, the actual node and tail at that public ordinal. -/
 def generation (hints : List Bytes) : WitnessGeneration.PreallocatedMode (ZMod p) Inputs where
@@ -94,9 +95,9 @@ def generation (hints : List Bytes) : WitnessGeneration.PreallocatedMode (ZMod p
   trigger := .push
   height := UInt64.ofNatLT _ (height_bound (p := p) hints)
   input i :=
-    let pointers : Vector (WitnessGeneration.Cell (ZMod p)) 6 := Vector.ofFn (fun j : Fin 6 => WitnessGeneration.Cell.witness (.hintGet tableName 6 i j))
     WitnessGeneration.fixedPrefix (Witgen.literalRow (fixedShapes (p := p) hints) i)
-      (fromElements pointers, .multiplicity)
+      (WitnessGeneration.privateWithMultiplicity (Private := Links)
+        (Vector.ofFn (fun j => .hintGet tableName (size Links) i j)))
   rowOf cursor := cursor.ordinal[0].val + cursor.ordinal[1].val * 65536 + cursor.ordinal[2].val * 4294967296
 
 /-- A row of the physical table contains exactly its verifier-scheduled shape, irrespective of
@@ -106,6 +107,16 @@ theorem fixed_at (hints : List Bytes) (i : Fin (inventory (p := p) hints).height
     row.1 = (fixedShapes hints)[i.val] := by
   exact (fixed.typed_prefix (row := Witgen.literalRow (fixedShapes hints) .idx) rfl).trans
     (Witgen.literalRow_evalRow _ (height_bound hints) i)
+
+open WitnessGeneration in
+/-- Every actual link and count can populate the private suffix of its verifier-fixed row. -/
+theorem fixed_of_shape (hints : List Bytes) (i : Fin (inventory (p := p) hints).height) (links : Links (ZMod p))
+    (count : ZMod p) :
+    (generation hints).FixedAt (UInt64.ofNat i.val) ((fixedShapes hints)[i], links, count) := by
+  rw [← Witgen.literalRow_evalRow (fixedShapes (p := p) hints) (height_bound hints) i]
+  apply PreallocatedMode.fixedAt_of_typed_prefix (mode := generation hints)
+    (row := Witgen.literalRow (fixedShapes hints) .idx) (links, count) rfl
+  exact privateWithMultiplicity_unfixed _
 
 /-- Preallocated table that reads the complete outgoing queue. -/
 def component (hints : List Bytes) : Component (ZMod p) where
