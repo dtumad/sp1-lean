@@ -26,12 +26,16 @@ def hint (input : HintReadWordChip.RowInput F) : MemoryHistoryAccess :=
   let ram := input.1.ram
   MemoryHistoryAccess.ofTouch ((ram.prior, clkNat ram.clk_high ram.clockLow), ram.pushed)
 
+/-- All original Memory transfers compiled at a single event, in their published event order. -/
+noncomputable def batch (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent)
+    (rows : List MixedCompiledRow) (index : Fin rows.length) : List MemoryHistoryAccess :=
+  cpu rows[index] ++ ((HintReadTransfers.rowsAt? image source events index.val).getD []).map fun entry => hint entry.2
+
 /-- The boundary compiler's chronological input. Both installed word variants are read from their
 joint event order, before bucketing and padding. -/
 noncomputable def stream (image : ProgramImage) (source : ExecutionSnapshot) (events : List ExecutionEvent)
     (rows : List MixedCompiledRow) : List MemoryHistoryAccess :=
-  (List.finRange rows.length).flatMap fun index => cpu rows[index] ++
-    ((HintReadTransfers.rowsAt? image source events index.val).getD []).map (fun entry => hint entry.2)
+  (List.finRange rows.length).flatMap (batch image source events rows)
 
 private theorem mem_cpu {image : ProgramImage} {source : ExecutionSnapshot} {events : List ExecutionEvent}
     {rows : List MixedCompiledRow} {cut : ℕ} {row : MixedCompiledRow} (found : rows[cut]? = some row)
@@ -153,6 +157,7 @@ theorem canonical {image : ProgramImage} {source target : ExecutionSnapshot} {ev
   have length : rows.length = events.length := Option.some.inj (routed.symm.trans same) ▸ size
   intro access member
   obtain ⟨i, _, record⟩ := List.mem_flatMap.mp member
+  unfold batch at record
   have inside : i.val < events.length := i.isLt.trans_eq length
   have present := List.getElem?_eq_getElem inside
   generalize eventEq : events[i.val] = event at present

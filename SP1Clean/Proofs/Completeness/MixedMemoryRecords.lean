@@ -1,4 +1,5 @@
-import SP1Clean.Proofs.Completeness.MixedMemoryValues
+import SP1Clean.Proofs.Completeness.MixedMemoryHistory
+import SP1Clean.Proofs.Completeness.UntouchedMemory
 import SP1Clean.Proofs.Completeness.MemoryRecordExecution
 
 /-! # Handoffs on the full generated mixed Memory tape
@@ -13,6 +14,70 @@ namespace SP1Clean.TraceGen.MixedMemoryHistory
 open Semantics Machine FormalModel.Shard Soundness.Target MemoryHistoryAccess
 
 private abbrev F := ZMod SP1Prime
+
+/-- Complete intermediate location image after ECALL register retirement and before its host RAM transfers. -/
+def afterRegisters (source target : SailState) : LocationValues
+  | .reg r => target.get_reg? r
+  | .ram cell => locContent source (.ram cell)
+
+/-- The ECALL operand roles consume their input registers and publish their authentic result register. -/
+theorem syscall_register_values {p : HostPolicy} {program : GuestProgram} {source target : ExecutionState}
+    {call : CoreSyscallEvent} (step : ExecutionStep p program source (.syscall call) target) :
+    (syscallRegisterPlan call).RunsFrom (locContent source.sail) (afterRegisters source.sail target.sail) := by
+  obtain ⟨⟨_, code, arg1, arg2, _, result⟩, frame, _⟩ := step.syscall_sail_frame
+  have c : locContent source.sail (.reg 11) = some call.arg2 := arg2
+  have b : locContent source.sail (.reg 10) = some call.arg1 := arg1
+  have a : locContent source.sail (.reg 5) = some call.rawCode := code
+  simp only [syscallRegisterPlan, InstructionAccessPlan.runsFrom_cons_iff]
+  refine ⟨c, ?_⟩
+  rw [Function.update_eq_self_iff.mpr c.symm]
+  refine ⟨b, ?_⟩
+  rw [Function.update_eq_self_iff.mpr b.symm]
+  refine ⟨a, InstructionAccessPlan.runsFrom_nil_iff.mpr ?_⟩
+  funext loc
+  cases loc with
+  | reg i =>
+    by_cases same : i = 5
+    · subst i; rw [Function.update_self]; exact result
+    · simpa only [afterRegisters, Function.update_of_ne (show MemLoc.reg i ≠ .reg 5 by simpa), locContent] using frame i same
+  | ram => rfl
+
+/-- The physical handler word consumes and posts the actual Sail word and frontier timestamp at its canonical destination cell. -/
+theorem hint_word_endpoints {request : HintReadTransfers.Request} {index : ℕ} {frontier after : AccessFrontier}
+    {source target : SailState} {store : HintQueue.Store} {entry : Bool × HintReadWordChip.RowInput F}
+    (span : HintReadSpan.Domain request.address request.bytes.length) (pos : index < HintQueue.wordCount request.bytes)
+    (atWord : request.WordAt index frontier after source target store)
+    (found : (request.rows frontier source)[index]? = some entry) :
+    let r := hint entry.2
+    r.loc = .ram (request.cell index) ∧ r.loc.busAddress = request.destination index ∧
+      r.previous = frontier r.loc ∧ r.current = after r.loc ∧
+      locContent source r.loc = some r.pulled ∧ locContent target r.loc = some r.pushed ∧ r.current = request.clock + 1 := by
+  obtain ⟨actual, _, _, prior, posted, priorTime, time, finish, _⟩ := atWord
+  cases Option.some.inj (actual.symm.trans found)
+  let dest := request.destination index
+  have low : 2 ^ 16 ≤ dest := by
+    have := span.1; dsimp [dest, HintReadTransfers.Request.destination]; omega
+  have high : dest < 2 ^ 48 := by
+    have := span.2.2; unfold HintQueue.wordCount at pos; dsimp [dest, HintReadTransfers.Request.destination]; omega
+  have align : dest % 8 = 0 := by
+    have := span.2.1; dsimp [dest, HintReadTransfers.Request.destination]; omega
+  let cell := request.cell index
+  have key : cell.toNat * 8 = dest := by
+    change (BitVec.ofNat 61 ((BitVec.ofNat 64 dest).toNat / 8)).toNat * 8 = dest
+    rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : dest < 2 ^ 64),
+      Nat.mod_eq_of_lt (by omega : dest / 8 < 2 ^ 61)]
+    omega
+  have addr : cell.baseAddr = BitVec.ofNat 64 dest := by
+    apply BitVec.eq_of_toNat_eq
+    rw [Soundness.RamCell.baseAddr_toNat, key, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have located := hint_location (input := request.wordRow index (frontier (.ram (request.cell index))) ((ramWord64? source (BitVec.ofNat 64 dest)).getD 0)) (cell := cell)
+    ((Address.toNat_ofNat (p := SP1Prime) dest high).trans key.symm) (by omega) (by omega)
+  refine ⟨located, ?_, ?_, ?_, ?_, ?_, time⟩
+  · rw [located]; exact key
+  · rw [located]; exact priorTime
+  · rw [located]; exact time.trans finish.symm
+  · rw [located]; change ramWord64? source cell.baseAddr = _; rwa [addr]
+  · rw [located]; change ramWord64? target cell.baseAddr = _; rwa [addr]
 
 private theorem register_frontier_ram (f : AccessFrontier) (base : ℕ) (call : CoreSyscallEvent) (cell : RamCell) :
     advancePlan f base (syscallRegisterPlan call) (.ram cell) = f (.ram cell) := by
@@ -120,7 +185,8 @@ theorem batch_records {image : ProgramImage} {source target : ExecutionSnapshot}
     (atCut : mixedAccessPrefix (policy SP1Prime image) image.program source.realize events i.val = some (before, incoming))
     (nextCut : mixedAccessPrefix (policy SP1Prime image) image.program source.realize events (i.val + 1) = some (next, outgoing)) :
     Transfers incoming outgoing (locContent before.sail) (locContent next.sail) (batch image source events rows i) ∧
-      ∀ r ∈ batch image source events rows i, r.previous < r.current := by
+      (∀ r ∈ batch image source events rows i, r.previous < r.current) ∧
+      ∀ r ∈ batch image source events rows i, before.clock < r.current ∧ r.current ≤ next.clock := by
   obtain ⟨actual, same, size⟩ := admissibleExecution_routeMixedRows run
   have length : rows.length = events.length := Option.some.inj (routed.symm.trans same) ▸ size
   have present := List.getElem?_eq_getElem (i.isLt.trans_eq length)
@@ -146,25 +212,37 @@ theorem batch_records {image : ProgramImage} {source target : ExecutionSnapshot}
     simp only [batch, Fin.getElem_fin, (List.getElem?_eq_some_iff.mp found).2, noWords, Option.getD_some, List.map_nil, List.append_nil, cpu,
       (compileInstructionEvent?_coordinates made).1]
     have frame := run.1.frame_prefix path
-    refine ⟨?_, strict_schedule (facts bounded).1 (facts bounded).2.1⟩
-    rw [compileInstructionEvent?_schedule made, compileInstructionEvent?_nextFrontier made]
-    exact transfers_of_schedule (ordinary_plan_values step frame.1 frame.2.1 ((run.2.1 _ _ _ present path).2 rfl)
-      projected (compileInstructionEvent?_accessPlan_generated projected made)) _ _
+    refine ⟨?_, strict_schedule (facts bounded).1 (facts bounded).2.1, ?_⟩
+    · rw [compileInstructionEvent?_schedule made, compileInstructionEvent?_nextFrontier made]
+      exact transfers_of_schedule (ordinary_plan_values step frame.1 frame.2.1 ((run.2.1 _ _ _ present path).2 rfl)
+        projected (compileInstructionEvent?_accessPlan_generated projected made)) _ _
+    · rw [compileInstructionEvent?_schedule made]
+      intro a mem
+      obtain ⟨lo, hi⟩ := current_in_window _ _ _ mem
+      exact ⟨lo, hi.trans (by rw [step.clock]; change _ ≤ before.clock + 8; omega)⟩
   | syscall call =>
     obtain ⟨s, f, n, _, cut, step, advanced, _, _, _, _, strict, bumps⟩ := admissibleExecution_syscall_from_prefix run present
     cases Option.some.inj (atCut.symm.trans cut)
     cases Option.some.inj (advanced.symm.trans nextCut)
     obtain ⟨words, clocks⟩ := syscall_word_transfers run present step atCut advanced
     simp only [batch, Fin.getElem_fin, (List.getElem?_eq_some_iff.mp emitted).2, cpu]
-    refine ⟨(transfers_of_schedule (syscall_register_values step) _ _).append words, ?_⟩
-    intro r mem
-    rcases List.mem_append.mp mem with reg | hint
-    · exact strict_schedule strict bumps r reg
-    · obtain ⟨priorTime, postedTime⟩ := clocks r hint
-      rw [priorTime, postedTime]
-      exact bounded r.loc
+    refine ⟨(transfers_of_schedule (syscall_register_values step) _ _).append words, ?_, ?_⟩
+    · intro r mem
+      rcases List.mem_append.mp mem with reg | hint
+      · exact strict_schedule strict bumps r reg
+      · obtain ⟨priorTime, postedTime⟩ := clocks r hint
+        rw [priorTime, postedTime]
+        exact bounded r.loc
+    · intro r mem
+      have endClock := step.clock
+      change _ = before.clock + 264 at endClock
+      rcases List.mem_append.mp mem with reg | hint
+      · obtain ⟨lo, hi⟩ := current_in_window _ _ _ reg
+        exact ⟨lo, by omega⟩
+      · rw [(clocks r hint).2]; omega
 
-private theorem prefix_records {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+/-- The compiled records through a CPU cut hand off its entire clock and word frontier. -/
+theorem prefix_records {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events)
     {rows : List MixedCompiledRow}
     (routed : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows)
@@ -180,7 +258,7 @@ private theorem prefix_records {image : ProgramImage} {source target : Execution
     · let i : Fin rows.length := ⟨cut, inRows⟩
       obtain ⟨before, incoming, _, prior, _⟩ := admissibleExecution_mixedAccessPrefix run cut
       obtain ⟨first, strict⟩ := ih prior
-      obtain ⟨later, advances⟩ := batch_records run routed i prior reached
+      obtain ⟨later, advances, _⟩ := batch_records run routed i prior reached
       dsimp only
       rw [List.take_succ_eq_append_getElem (by simpa only [List.length_finRange] using inRows),
         List.flatMap_append, List.flatMap_singleton]
