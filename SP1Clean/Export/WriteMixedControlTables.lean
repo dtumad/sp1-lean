@@ -2,6 +2,7 @@ import SP1Clean.Export.WriteMixedFixedResources
 import SP1Clean.Export.WriteOriginalInstallation
 import SP1Clean.Proofs.Completeness.MixedHaltPadding
 import SP1Clean.Proofs.Completeness.HintHandlerTables
+import SP1Clean.Proofs.Completeness.HostControlTables
 
 /-! # Constructing original control and HINT receiver tables from one mixed execution -/
 
@@ -9,10 +10,12 @@ namespace SP1Clean.Export.WriteMixedControlTables
 open Circuit Air.Flat Semantics Soundness Machine TraceGen FormalModel.Shard WriteSourceRegistry
 private abbrev F := ZMod SP1Prime
 
-/-- The original clock normalization, checkpoint exit, and immutable queue receivers. -/
+/-- The original clock normalization, checkpoint Exit, HALT, ENTER/VERIFY and immutable queue receivers. -/
 inductive Index
   | stateBump
   | haltPadding
+  | halt
+  | noop
   | hintRead
   | hintLength (empty : Bool)
   deriving DecidableEq
@@ -21,16 +24,20 @@ inductive Index
 def position : Index → Nat
   | .stateBump => 56
   | .haltPadding => 57
+  | .halt => 64
+  | .noop => 65
   | .hintRead => 63
   | .hintLength empty => if empty then 83 else 82
 
 /-- Recognize the physical control-table slots. -/
-def indexAt (i : Nat) : Option Index := [.stateBump,.haltPadding,.hintRead,.hintLength false,.hintLength true].find? (fun k => position k == i)
+def indexAt (i : Nat) : Option Index := [.stateBump,.haltPadding,.halt,.noop,.hintRead,.hintLength false,.hintLength true].find? (fun k => position k == i)
 
 /-- Actual components registered in the released-instruction supervisor. -/
 def component : Index → Component F
   | .stateBump => providerTableFor .stateBump
   | .haltPadding => HaltPaddingChip.component
+  | .halt => HostCallReceivers.halt.component
+  | .noop => HostNoopChip.component true
   | .hintRead => HostHintReadChip.component
   | .hintLength empty => HostHintLengthChip.component empty
 
@@ -38,7 +45,7 @@ variable (image : ProgramImage) (source target : ExecutionSnapshot) (finish : Ho
 
 /-- Every generated control table occupies its registered supervisor position. -/
 theorem registered_at (k : Index) : (base image source target finish).tables[position k]? = some (component k) := by
-  rcases k with _ | _ | _ | (_ | _)
+  rcases k with _ | _ | _ | _ | _ | (_ | _)
   · exact stateBump_at image source target finish
   · exact halt_at image source target finish
   all_goals
@@ -54,10 +61,16 @@ def Remaining := (i : Fin (components image source target finish).length) →
   sourceAt (6 + i.val) = none → WriteMixedHostTables.indexAt (6 + i.val) = none → WriteMixedFixedResources.indexAt (6 + i.val) = none →
   indexAt (6 + i.val) = none → { t : Table F // t.component = (components image source target finish)[i] }
 
-/-- Exactly 23 lookup providers and two other host receivers remain. -/
-theorem remaining_count : ((List.range' 6 (components image source target finish).length).filter (fun i =>
-    (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (WriteMixedFixedResources.indexAt i).isNone && (indexAt i).isNone)).length = 25 := by
+/-- The remaining table indices are exactly the Byte and range providers at positions 32–54. -/
+theorem remaining_positions : ((List.range' 6 (components image source target finish).length).filter (fun i =>
+    (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (WriteMixedFixedResources.indexAt i).isNone && (indexAt i).isNone)) =
+    List.range' 32 23 := by
   rw [List.length_drop,base_length]; decide
+
+/-- Only the twenty-three Byte and range providers remain. -/
+theorem remaining_count : ((List.range' 6 (components image source target finish).length).filter (fun i =>
+    (sourceAt i).isNone && (WriteMixedHostTables.indexAt i).isNone && (WriteMixedFixedResources.indexAt i).isNone && (indexAt i).isNone)).length = 23 := by
+  rw [remaining_positions, List.length_range']
 
 variable {image source target finish} {events : List ExecutionEvent}
     (run : ReleaseAdmissibleExecution (.native SP1Prime) SP1Prime image source target events)
@@ -66,11 +79,13 @@ variable {image source target finish} {events : List ExecutionEvent}
     (data : ProverData F)
 
 /-- The state companion of the original mixed register refresh and the endpoint-selected
-legacy Exit table, together with the actual queue reads and both HINT_LEN cases. -/
+legacy Exit table, together with HALT, the two no-effect calls and the three queue receivers. -/
 noncomputable def table : Index → Table F
   | .stateBump => (InstalledAssembly.bumpTables (MixedBumpInput.memoryRows (rows.map MixedCompiledRow.bumpInput))
       (MixedBumpInput.stateRows (rows.map MixedCompiledRow.bumpInput)) data (WriteMixedSourceTables.heights run routed).memory (WriteMixedSourceTables.heights run routed).state).2
   | .haltPadding => MixedHaltPadding.table source target data
+  | .halt => ControlHandlers.haltTable run.1 data
+  | .noop => ControlHandlers.noopTable run.1 data
   | .hintRead => HintHandlers.readTable run.1 data
   | .hintLength empty => HintHandlers.lengthTable run.1 empty data
 
@@ -86,6 +101,10 @@ theorem table_valid (k : Index) : (table run routed data k).Constraints ∧ (tab
     exact InstalledAssembly.bumpTables_stateValid _ _ data _ _ valid
   · have checked := MixedHaltPadding.checked source target data
     exact ⟨checked.1,checked.2.1⟩
+  · have checked := ControlHandlers.tables_checked run.1 data
+    exact ⟨checked.1,checked.2.1⟩
+  · have checked := ControlHandlers.tables_checked run.1 data
+    exact ⟨checked.2.2.1,checked.2.2.2.1⟩
   · have checked := HintHandlers.tables_checked run.1 data
     exact ⟨checked.1,checked.2.1⟩
   case hintLength empty => exact (HintHandlers.tables_checked run.1 data).2.2.1 empty
@@ -96,7 +115,7 @@ theorem heights : (table run routed data .stateBump).length = WitnessGeneration.
     (table run routed data .haltPadding).length = (if (SP1StateBoundary.haltCode source target).isNone then 1 else 0) :=
   ⟨InstalledAssembly.bumpTables_stateLength _ _ data _ _,(MixedHaltPadding.checked source target data).2.2⟩
 
-/-- Install the five generated control tables and delegate only the remaining physical positions. -/
+/-- Install the seven generated control tables and delegate only the remaining physical positions. -/
 noncomputable def install (remaining : Remaining image source target finish) : WriteMixedFixedResources.Remaining image source target finish :=
   fun i absent host fixed => match found : indexAt (6 + i.val) with
     | none => remaining i absent host fixed found
@@ -119,7 +138,7 @@ theorem install_valid (remaining : Remaining image source target finish)
 variable (hint : ProverHint F) (packets : List WriteObservations.Packet) (header : SP1PublicIO F)
     (remaining : Remaining image source target finish)
 
-/-- The real supervisor has exactly the generated normalization and padding row arrays. -/
+/-- The real supervisor has exactly the generated control and hint row arrays. -/
 theorem original_arrays (k : Index) :
     let fixed := install run routed data remaining
     let host := WriteMixedFixedResources.install run routed data hint packets fixed
@@ -128,7 +147,7 @@ theorem original_arrays (k : Index) :
   intro fixed host w
   have location : 6 ≤ position k ∧ sourceAt (position k) = none ∧ WriteMixedHostTables.indexAt (position k) = none ∧
       WriteMixedFixedResources.indexAt (position k) = none ∧ indexAt (position k) = some k := by
-    rcases k with _ | _ | _ | (_ | _)
+    rcases k with _ | _ | _ | _ | _ | (_ | _)
     all_goals decide
   have size := (List.getElem?_eq_some_iff.mp (registered_at image source target finish k)).1
   let i : Fin ((base image source target finish).tables.drop 6).length := ⟨position k - 6,by rw [List.length_drop]; omega⟩
@@ -160,7 +179,7 @@ def InstalledAt (full : EnsembleWitness (WriteObservationAssembly.preprocessing 
 private theorem transfer (k : Index) (i : Interaction F) (member : i.channel ∈ (component k).circuit.channels)
     {old fresh : ProverData F} (accepted : i.Guarantees old) : i.Guarantees fresh := by
   have every : ∀ ch ∈ (component k).circuit.channels, ∀ (item : Interaction F), item.channel = ch → item.Guarantees old → item.Guarantees fresh := by
-    rcases k with _ | _ | _ | (_ | _)
+    rcases k with _ | _ | _ | _ | _ | (_ | _)
     all_goals repeat' refine List.forall_mem_cons.mpr ⟨?_,?_⟩
     all_goals first
       | exact fun _ mem => False.elim (List.not_mem_nil mem)
@@ -179,7 +198,7 @@ theorem installed_at (suffix : List (Table F)) (registered : suffix.map Table.co
   have reg : original.component = component k := table_component run routed data k
   have atSlot := (registered_at image source target finish k).trans (congrArg some reg.symm)
   have outside : sourceAt (position k) = none := by
-    rcases k with _ | _ | _ | (_ | _)
+    rcases k with _ | _ | _ | _ | _ | (_ | _)
     all_goals decide
   obtain ⟨actual,located,comp,cells,shared⟩ := WriteObservationAssembly.build_original_cells w suffix registered atSlot outside
     (original_arrays run routed data hint packets header remaining k)
