@@ -59,6 +59,7 @@ import SP1Clean.Export.WriteGeneratedHostSources
 import SP1Clean.Export.WriteGeneratedRamSources
 import SP1Clean.Export.WriteGeneratedRegisterSources
 import SP1Clean.Export.WriteGeneratedSelection
+import SP1Clean.Export.WriteMixedReadFunding
 import SP1Clean.Export.WriteMixedSourceAssembly
 import SP1Clean.Export.WriteMixedSourceTables
 import SP1Clean.Export.WriteWordOwner
@@ -80,6 +81,7 @@ import SP1Clean.Proofs.Completeness.WritePacketTables
 import SP1Clean.Proofs.Completeness.WritePacketAssembly
 import SP1Clean.Export.WriteProbeCapacity
 import SP1Clean.Proofs.Completeness.WriteSparseBoundaries
+import SP1Clean.Proofs.Completeness.WriteFinalSourceBounds
 import SP1Clean.Proofs.Completeness.WriteSparseFinalizers
 import SP1Clean.Proofs.Completeness.WriteSparseInitializers
 import SP1Clean.Proofs.Completeness.WriteSparseMemory
