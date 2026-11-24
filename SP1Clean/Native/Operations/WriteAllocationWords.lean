@@ -46,6 +46,36 @@ def Row.Valid (r : Row (ZMod p)) : Prop :=
   AddressSum.Spec ⟨r.left,#v[r.payload.used,0,0],r.prior.remaining⟩ ∧
   (r.payload.last=1 → r.left = #v[0,0,0])
 
+/-- Arbitrary locally accepted words consume exactly eight remaining bytes or the entire
+short suffix. The mandatory empty position of an aligned buffer therefore ends the walk. -/
+theorem Row.Valid.bounds {r : Row (ZMod p)} (valid : r.Valid) :
+    let remaining := Address.toNat r.prior.remaining
+    r.payload.used.val = min 8 remaining ∧ Address.toNat r.left = remaining - 8 ∧
+      (r.payload.more = 1 ↔ 8 ≤ remaining) ∧
+      ∀ i : Fin 8, r.payload.mask[i] = if i.val < min 8 remaining then 1 else 0 := by
+  obtain ⟨_,payload,_,_,sum,stop⟩ := valid
+  obtain ⟨n,bound,mask,used,full⟩ := payload.prefix
+  have hp : 2^17 < p := Fact.out
+  have lanes : r.payload.used.val = n := by rw [used,ZMod.val_natCast_of_lt (by omega)]
+  have count := sum.2.2.2
+  change Address.toNat r.prior.remaining = Address.toNat r.left + Address.toNat #v[r.payload.used,0,0] at count
+  have amount : Address.toNat #v[r.payload.used,(0 : ZMod p),0] = n := by simp [Address.toNat,circuit_norm,lanes]
+  rw [amount] at count
+  have ended : n ≠ 8 → Address.toNat r.left = 0 := by
+    intro short
+    have zero : r.payload.more = 0 := ((payload 7).2.1).resolve_right (fun yes => short (full.mp yes))
+    rw [stop (by simp [Payload.last,zero])]
+    simp [Address.toNat,circuit_norm]
+  have take : n = min 8 (Address.toNat r.prior.remaining) := by
+    by_cases last : n = 8
+    · omega
+    · have := ended last
+      omega
+  dsimp only
+  refine ⟨lanes.trans take,by omega,full.trans (by omega),?_⟩
+  intro i
+  simpa only [← take] using mask i
+
 /-- Arithmetic and the complete five-site private word ledger. -/
 def wordMain (r : Var Row (ZMod p)) : Circuit (ZMod p) Unit := do
   let supply <== r.directGate * r.blockReads

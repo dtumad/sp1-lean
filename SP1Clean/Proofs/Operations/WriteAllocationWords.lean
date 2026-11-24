@@ -109,6 +109,22 @@ instance wordSupported : Guarded.Supported (wordCircuit (p := p)) :=
         rfl
       · exact False.elim (outside (by simp [wordCircuit,wordElaborated,circuit_norm])))
 
+/-- Every active flat row enforces the word and allocation progress constraints. Both
+incoming private protocols carry structural receipts, so no external provider premise is needed. -/
+theorem guarded_word_valid (r : Var (ProvablePair Row field) (ZMod p)) (n : Nat) (env : Environment (ZMod p))
+    (checked : (((Guarded.circuit wordCircuit inferInstance).main r).operations n).ConstraintsHold env) :
+    IsBool (eval env r).2 ∧ ((eval env r).2 = 1 → (eval env r).1.Valid) := by
+  let g := Guarded.circuit (wordCircuit (p := p)) inferInstance
+  apply (g.original_full_soundness n env r (fun _ => trivial) checked ?_).1
+  rw [Operations.guarantees_iff _ _ _ (g.in_channels_or_guarantees_full r n env)]
+  intro ch member
+  have known : ch = cursorChannel.toRaw ∨ ch = blockChannel.toRaw := by
+    simpa [g,wordCircuit,wordElaborated,payloadCircuit,payloadElaborated,AddressSum.circuit,
+      AddressSum.elaborated,circuit_norm,or_left_comm,or_comm,or_assoc] using member
+  rcases known with rfl|rfl
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [cursorChannel,Channel.toRaw]) _ _
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [blockChannel,Channel.toRaw]) _ _
+
 /-- One physical demand row per pointer and padded index. -/
 def wordComponent : Component (ZMod p) where
   circuit := Guarded.circuit wordCircuit inferInstance

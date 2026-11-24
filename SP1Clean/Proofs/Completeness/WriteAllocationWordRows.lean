@@ -28,11 +28,6 @@ def populate (contents : Contents (ZMod p)) (bytes : Bytes) (i : Nat) (blockRead
     Address.ofNat (bytes.length-8*(i+1)),Payload.populate bytes i,blockReads,wordReads⟩
 
 omit [Fact (2^17 < p)] in
-private theorem lane_sum (n : Nat) (small : n ≤ 8) (lanes : fields 8 (ZMod p)) :
-    (Payload.mk lanes (Vector.ofFn fun i => if i.val < n then 1 else 0)).used = (n : ZMod p) := by
-  interval_cases n <;> norm_num [Payload.used]
-
-omit [Fact (2^17 < p)] in
 /-- The last flag is set on exactly the required final padded position. -/
 theorem populate_last (bytes : Bytes) {i : Nat} (inside : i < wordCount bytes) :
     (Payload.populate (p := p) bytes i).last = if i+1 = wordCount bytes then 1 else 0 := by
@@ -59,7 +54,7 @@ omit [Fact (2^17 < p)] in
 /-- Number of occupied lanes encoded in the row, including zero in a final padding word. -/
 theorem populate_used (bytes : Bytes) (i : Nat) :
     (Payload.populate (p := p) bytes i).used = (extent bytes i : ZMod p) :=
-  lane_sum _ (Nat.min_le_left ..) _
+  Payload.used_prefix _ (Nat.min_le_left ..) _
 
 /-- Every byte and prefix bit is derived from the actual buffer. -/
 theorem populate_payload_valid (bytes : Bytes) (i : Nat) : (Payload.populate (p := p) bytes i).Valid := by
