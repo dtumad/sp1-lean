@@ -94,6 +94,8 @@ import SP1Clean.Proofs.Completeness.FixedProgramReads
 import SP1Clean.Proofs.Completeness.MixedProgramFetches
 import SP1Clean.Proofs.Completeness.PermissionTables
 import SP1Clean.Proofs.Completeness.MixedPermissionDemand
+import SP1Clean.Proofs.Completeness.HintQueueReaders
+import SP1Clean.Proofs.Completeness.HintQueueFixedReaders
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming

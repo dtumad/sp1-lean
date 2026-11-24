@@ -26,7 +26,8 @@ def readers? (t : StaticTable F Row) : List (Interaction F) → Option (List (Fi
   | r :: rs => if r.mult = 0 then t.readers? rs
     else do let i ← t.readerIndex? r.msg; return i :: (← t.readers? rs)
 
-private theorem reader_eq (t : StaticTable F Row) (x : Entry Row F) (spec : t.Spec x.payload) (on : x.eligible = 1) :
+/-- A valid eligible tagged entry is recovered at its deterministic original preallocation index. -/
+theorem readerIndex?_complete (t : StaticTable F Row) (x : Entry Row F) (spec : t.Spec x.payload) (on : x.eligible = 1) :
     ∃ i, t.readerIndex? (toElements x).toArray = some i ∧ t.fixedEntry i.val = x := by
   obtain ⟨j, payload, tag⟩ := (t.spec_iff_fixedEntry x.payload).mp spec
   have same : t.fixedEntry j.val = x := by
@@ -74,7 +75,7 @@ private theorem readers_funded (t : StaticTable F Row) (rs : List (Interaction F
       rw [balanceOf_cons,balances]
       have idle : r.signedMult = 0 := by cases dir : r.direction <;> simp [Interaction.signedMult, dir, zero]
       simp [idle]
-    · obtain ⟨i, picked, eqn⟩ := t.reader_eq x spec on
+    · obtain ⟨i, picked, eqn⟩ := t.readerIndex?_complete x spec on
       refine ⟨i :: is, ?_, List.forall_mem_cons.mpr ⟨eqn ▸ on,valid⟩, ?_⟩
       · change (if (1 : F) = 0 then t.readers? rest else _) = _
         simp only [one_ne_zero, ↓reduceIte]

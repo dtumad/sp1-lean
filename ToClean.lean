@@ -25,6 +25,7 @@ public import ToClean.Air.MessageIndex
 public import ToClean.Air.StaticProvider
 public import ToClean.Air.StaticMembershipTable
 public import ToClean.Air.StaticMembershipReaders
+import ToClean.Air.StaticReadCounts
 public import ToClean.Circuit.WitnessCombinator
 public import Clean.Circuit.Theorems
 public import Clean.Circuit.Subcircuit
