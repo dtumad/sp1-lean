@@ -1,4 +1,5 @@
 import SP1Clean.Export.WriteMemoryReplay
+import SP1Clean.Proofs.Completeness.WriteCountedTables
 
 /-! # Clock bounds for the full original Memory ledger
 
@@ -9,7 +10,7 @@ Byte guarantees. This breaks the timestamp dependency before chronological repla
 
 namespace SP1Clean.Export.WriteSourceRegistry
 
-open Circuit Air.Flat Channels Semantics Soundness HostHintReadCPU NativeCore TimedGrounding
+open Circuit Air.Flat Channels Semantics Soundness HostHintReadCPU NativeCore TimedGrounding WriteProbe WriteProbe.AccessInventory
 
 private abbrev Fp := ZMod SP1Prime
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State Fp}
@@ -106,5 +107,65 @@ theorem consumed_clock_bounds (valid : image.Valid) (witness : EnsembleWitness (
     exact membership ch member
   exact consumed_of_balance valid core boundary.data _ physical ordering fetch fixed (word_access witness checked bytes) loc
     (execution_memory_balance witness checked packet installed packetChecked balanced cursor wordData bytes ordering memory loc)
+
+private theorem eventFacts_data (event : ExecutionRow SP1Prime) (left right : ProverData Fp)
+    (words : List (HintReadCoverage.Row (p := SP1Prime))) : eventFacts left words event = eventFacts right words event := by
+  unfold eventFacts wordsAt cpuClock
+  rw [event.facts_setData left right, event.edge_setData left right]
+
+private theorem bounded_of_sources (core : EnsembleWitness (LocalCore.ensemble (p := SP1Prime) image source))
+    (checked : core.Constraints) (ordering : LocalCore.OrderingChannels core)
+    (data : ProverData Fp) (words : List (HintReadCoverage.Row (p := SP1Prime)))
+    (bounded : ∀ loc, ∀ msg ∈ Multiset.filter (fun m => MemoryMsg.locOf m = loc) (↑(FinalMemoryEnsemble.records (LocalCore.finalWitness core)) : Multiset _) +
+      pullsAt ((LocalCore.executionRows core).map (eventFacts data words)) loc +
+      Multiset.filter (fun m => MemoryMsg.locOf m = loc) (↑((LocalCore.memoryRefreshes core).map Prod.fst) : Multiset _), MemoryClockBounds msg)
+    (record : Readback Fp)
+    (source : (∃ event ∈ LocalCore.executionRows core, ∃ prior time, (prior, time) ∈ (eventFacts core.data words event).memPulls ∧
+        record = AccessSupply.atClock (cpuClock core.data event) prior) ∨
+      (∃ prior next, (prior, next) ∈ LocalCore.memoryRefreshes core ∧ record = AccessSupply.atClock (next.clk_high, next.clk_low) prior) ∨
+      ∃ prior ∈ FinalMemoryEnsemble.records (LocalCore.finalWitness core), record = finalReadback prior) : Counted.Bounded record := by
+  rcases source with ⟨event, active, prior, time, pulled, rfl⟩ | ⟨prior, next, present, rfl⟩ | ⟨prior, present, rfl⟩
+  · rw [eventFacts_data event core.data data words] at pulled
+    have priorBound := bounded (MemoryMsg.locOf prior) prior (Multiset.mem_add.mpr (Or.inl (Multiset.mem_add.mpr (Or.inr
+      (mem_pullsAt.mpr ⟨⟨_, List.mem_map_of_mem (f := eventFacts data words) active, (prior, time), pulled, rfl⟩, rfl⟩)))))
+    have high := (LocalCore.executionRows_good_of_orderingChannels core checked ordering active).1.1
+    have low := (LocalCore.executionRows_clock_of_orderingChannels core checked ordering active).2.2.2
+    exact ⟨priorBound.2, priorBound.1, high, low⟩
+  · have priorBound := bounded (MemoryMsg.locOf prior) prior (Multiset.mem_add.mpr (Or.inr
+      (Multiset.mem_filter.mpr ⟨Multiset.mem_coe.mpr (List.mem_map_of_mem (f := Prod.fst) present), rfl⟩)))
+    have nextBound := LocalCore.memoryRefreshes_push_bounds_of_byte core checked ordering.byte (prior, next) present
+    exact ⟨priorBound.2, priorBound.1, nextBound.2, nextBound.1⟩
+  · have priorBound := bounded (MemoryMsg.locOf prior) prior (Multiset.mem_add.mpr (Or.inl (Multiset.mem_add.mpr (Or.inl
+      (Multiset.mem_filter.mpr ⟨Multiset.mem_coe.mpr present, rfl⟩)))))
+    have ceiling : (16777215 : Fp).val < 2 ^ 24 := by decide
+    exact ⟨priorBound.2, priorBound.1, ceiling, ceiling⟩
+
+/-- Every live predecessor on all 31 physical publishers has both original clock limbs
+in range. This supplies the counted-table compiler's range condition for the entire tape. -/
+theorem live_records_bounded (valid : image.Valid) (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (checked : witness.Constraints) (packet : Table Fp) (installed : packet.component = WritePacket.component)
+    (packetChecked : packet.Constraints) (balanced : BalancedInteractions
+      (witness.interactionsWith HostCallChip.channel.toRaw ++ packet.interactionsWith HostCallChip.channel.toRaw))
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (wordData : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees HostHintQueue.wordChannel.toRaw)
+    (bytes : ∀ last, (raw witness (.host (.word last))).ChannelGuarantees byteChannel.toRaw)
+    (ordering : LocalCore.OrderingChannels (HostFinalMemory.coreWitness (HostObserved.baseWitness witness)))
+    (memory : witness.BalancedChannel memoryChannel.toRaw) (program : witness.BalancedChannel programChannel.toRaw)
+    (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot, witness.BalancedChannel channel)
+    : ∀ record ∈ Counted.live (records (raw witness)), Counted.Bounded record := by
+  let core := HostFinalMemory.coreWitness (HostObserved.baseWitness witness)
+  let boundary := HostFinalMemory.baseWitness (HostObserved.baseWitness witness)
+  let words := TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (HostHintReadLocal.wordTables (hostWitness witness))
+  have physical : core.Constraints := by exact HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.projected_constraints _
+    (HostFinalMemory.baseWitness_constraints _ (HostObserved.baseWitness_constraints witness checked)))
+  have bounded := consumed_clock_bounds valid witness checked packet installed packetChecked balanced cursor wordData bytes ordering memory program membership
+  intro record present
+  obtain ⟨⟨gate, record⟩, active, rfl⟩ := List.mem_map.mp present
+  obtain ⟨member, isOne⟩ := List.mem_filter.mp active
+  have gateOne : gate = 1 := of_decide_eq_true isOne
+  have positive : gate ≠ 0 := by rw [gateOne]; exact one_ne_zero
+  obtain ⟨id, origin⟩ := origin_of_record (raw witness) (raw_registered witness) member positive
+  exact bounded_of_sources core physical ordering boundary.data words bounded record
+    (source_attribution witness checked packet installed packetChecked balanced cursor wordData bytes id record origin)
 
 end SP1Clean.Export.WriteSourceRegistry

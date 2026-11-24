@@ -82,7 +82,7 @@ theorem PhysicalEventOrder.encoding (witness : EnsembleWitness (Installed image 
     simp only [ExecutionCarrier.events, List.getElem?_map] at atEvent
     obtain ⟨row, atRow, rfl⟩ := Option.map_eq_some_iff.mp atEvent
     have active := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
-    have phase := (LocalCore.executionRows_clock_of_orderingChannels core coreChecked channels active).2.2
+    have phase := (LocalCore.executionRows_clock_of_orderingChannels core coreChecked channels active).2.2.1
     rw [row.edge_setData core.data projected.data, ExecutionRow.edge_eq_facts] at phase
     have time := carrier.time_of_ordered_at atRow
     rw [(HostHintReadCPU.eventFacts_state_fetch _ _ _).1, carrier.timeline_events lowerChecked lowerFunded,
