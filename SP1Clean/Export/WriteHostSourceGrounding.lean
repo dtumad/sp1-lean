@@ -35,7 +35,8 @@ private theorem ecall_rows (witness : EnsembleWitness (HostObserved.ensemble ima
   simp only [List.getElem_map, List.getElem_drop, Nat.add_zero] at same
   exact same
 
-private theorem ecall_records (env : Environment Fp) :
+/-- The actual ECALL source cells publish one timestamped readback per original register pull. -/
+theorem ecall_records (env : Environment Fp) :
     let r := HostCallLedger.input env
     let state := SyscallInstrsChip.statePulledMessage r
     rowRecords (.host .ecall) env = (syscallRowFacts r).memPulls.map (fun x =>
@@ -112,7 +113,8 @@ private theorem word_origin (witness : EnsembleWitness (HostObserved.ensemble im
   · exact suffix_array_at 84 (by decide) bounds (by omega) (host_arrays witness)
   · exact suffix_array_at 85 (by decide) bounds (by omega) (host_arrays witness)
 
-private theorem word_records (last : Bool) (env : Environment Fp) :
+/-- Each physical word cell publishes the actual RAM predecessor at its original instruction clock. -/
+theorem word_records (last : Bool) (env : Environment Fp) :
     let ram := (HintReadCoverage.rowInput (last, env)).ram
     rowRecords (.host (.word last)) env =
       [(HintReadCoverage.rowActivity (last, env), AccessSupply.atClock (ram.clk_high, ram.clockLow) ram.prior)] := by

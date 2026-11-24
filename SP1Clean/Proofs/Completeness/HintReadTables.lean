@@ -87,6 +87,11 @@ private theorem history_complete {image : ProgramImage} {source target : Executi
     rw [success] at occurs
     exact correct entry occurs
 
+/-- Every HINT_READ word from the canonical mixed compiler is an active original row. -/
+theorem history_active {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (execution : AdmissibleExecution (ResourceLimits.native SP1Prime) SP1Prime image source target events) :
+    ∀ entry ∈ history image source events, entry.2.2 = 1 := fun e member => ((history_complete execution).2 e member).1
+
 /-- Inputs in a single physical variant, before applying demand padding. -/
 def selected (last : Bool) (entries : List Entry) : List (RowInput F) :=
   (entries.filter fun entry => entry.1 == last).map Prod.snd
@@ -160,7 +165,8 @@ theorem wordTable_cursors (last : Bool) (entries : List Entry) (data : ProverDat
   rw [HintReadCoverage.view_activity, Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at eq
   exact eq
 
-private theorem row_activity (last : Bool) (env : Environment F) :
+/-- Decoding the guarded word input recovers its actual physical activity cell. -/
+theorem row_activity (last : Bool) (env : Environment F) :
     HintReadCoverage.rowActivity (last, env) = (valueFromOffset RowInput 0 env).2 := by
   rw [← eval_varFromOffset_valueFromOffset RowInput 0 env]
   simpa only [HintReadCoverage.rowActivity, varFromOffset_pair, Nat.zero_add] using
