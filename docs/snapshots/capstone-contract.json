@@ -36646,6 +36646,27 @@
       "typeFingerprint": "2339743889"
     },
     {
+      "bodyFingerprint": "1275620102",
+      "local": true,
+      "module": "SP1Clean.Export.WriteRefreshTables",
+      "name": "SP1Clean.Export.InstalledAssembly.refreshEventReceipt",
+      "typeFingerprint": "724762717"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteRefreshTables",
+      "name": "SP1Clean.Export.InstalledAssembly.refreshEventReceipt._proof_1",
+      "typeFingerprint": "3924057321"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteRefreshTables",
+      "name": "SP1Clean.Export.InstalledAssembly.refreshEventReceipt._proof_2",
+      "typeFingerprint": "2271130875"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Export.InstalledExecutionResources",
@@ -36695,6 +36716,13 @@
       "typeFingerprint": "2204152289"
     },
     {
+      "bodyFingerprint": "923162278",
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.CompiledPredecessor",
+      "typeFingerprint": "2598538940"
+    },
+    {
       "bodyFingerprint": "1338152700",
       "local": true,
       "module": "SP1Clean.Export.WriteBoundaryBuild",
@@ -36740,6 +36768,13 @@
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.compiled_read_source",
+      "typeFingerprint": "3456916285"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
       "name": "SP1Clean.Export.WriteBoundaryBuild.compiled_sparse_read",
       "typeFingerprint": "2209224587"
     },
@@ -36754,8 +36789,190 @@
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Export.WriteBoundaryDemand",
-      "name": "SP1Clean.Export.WriteBoundaryBuild.sparse_suppliers_of_admissibleExecution",
-      "typeFingerprint": "2789174250"
+      "name": "SP1Clean.Export.WriteBoundaryBuild.readDemand_heldAt",
+      "typeFingerprint": "2286000717"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteBoundaryDemand",
+      "name": "SP1Clean.Export.WriteBoundaryBuild.sources_of_admissibleExecution",
+      "typeFingerprint": "4287977224"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights",
+      "typeFingerprint": "3554853640"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights.ecall",
+      "typeFingerprint": "2584251008"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights.hint",
+      "typeFingerprint": "1779569007"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights.memory",
+      "typeFingerprint": "668821253"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights.mk",
+      "typeFingerprint": "2562834738"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights.ordinary",
+      "typeFingerprint": "312542109"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Heights.state",
+      "typeFingerprint": "3644397568"
+    },
+    {
+      "bodyFingerprint": "111018136",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Remaining",
+      "typeFingerprint": "1488827676"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Remaining._proof_1",
+      "typeFingerprint": "705757790"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.Remaining._proof_2",
+      "typeFingerprint": "3585068242"
+    },
+    {
+      "bodyFingerprint": "3180581581",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.bucket",
+      "typeFingerprint": "1427590849"
+    },
+    {
+      "bodyFingerprint": "320163736",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.build",
+      "typeFingerprint": "3671991723"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.heights",
+      "typeFingerprint": "2143844056"
+    },
+    {
+      "bodyFingerprint": "1588281224",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedReadFunding",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.ofExecution",
+      "typeFingerprint": "3805794516"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedReadFunding",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.ofExecution._proof_1",
+      "typeFingerprint": "503880418"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedReadFunding",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.ofExecution_constraints",
+      "typeFingerprint": "1401076561"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedReadFunding",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.read_funded",
+      "typeFingerprint": "232981526"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedReadFunding",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.route_exists",
+      "typeFingerprint": "577101486"
+    },
+    {
+      "bodyFingerprint": "1950690474",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.suffix",
+      "typeFingerprint": "3013867651"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.suffix_registered",
+      "typeFingerprint": "3642571586"
+    },
+    {
+      "bodyFingerprint": "2918472863",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.table",
+      "typeFingerprint": "3429866873"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.table._proof_1",
+      "typeFingerprint": "4062556206"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.table._proof_2",
+      "typeFingerprint": "4180721665"
+    },
+    {
+      "bodyFingerprint": "1829030646",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.table.match_1",
+      "typeFingerprint": "1930683318"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "SP1Clean.Export.WriteMixedSourceTables.valid",
+      "typeFingerprint": "884934754"
     },
     {
       "bodyFingerprint": null,
@@ -36954,6 +37171,41 @@
       "typeFingerprint": "760151302"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "SP1Clean.Export.WriteSourceRegistry.GeneratedPredecessor",
+      "typeFingerprint": "426037562"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "SP1Clean.Export.WriteSourceRegistry.GeneratedPredecessor.ecall",
+      "typeFingerprint": "3658897537"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "SP1Clean.Export.WriteSourceRegistry.GeneratedPredecessor.hint",
+      "typeFingerprint": "230181309"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "SP1Clean.Export.WriteSourceRegistry.GeneratedPredecessor.ordinary",
+      "typeFingerprint": "3058741628"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "SP1Clean.Export.WriteSourceRegistry.GeneratedPredecessor.refresh",
+      "typeFingerprint": "1625345553"
+    },
+    {
       "bodyFingerprint": "2607940742",
       "local": true,
       "module": "SP1Clean.Export.WritePhysicalCuts",
@@ -36968,11 +37220,32 @@
       "typeFingerprint": "2601594806"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "SP1Clean.Export.WriteSourceRegistry.classify_predecessor",
+      "typeFingerprint": "3256891990"
+    },
+    {
+      "bodyFingerprint": "1452142011",
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedHostSources",
+      "name": "SP1Clean.Export.WriteSourceRegistry.compiledReadback",
+      "typeFingerprint": "1177249003"
+    },
+    {
       "bodyFingerprint": "966025049",
       "local": true,
       "module": "SP1Clean.Export.WriteSourceRegistry",
       "name": "SP1Clean.Export.WriteSourceRegistry.decorate",
       "typeFingerprint": "1734923705"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedRamSources",
+      "name": "SP1Clean.Export.WriteSourceRegistry.generated_ordinary",
+      "typeFingerprint": "3984696647"
     },
     {
       "bodyFingerprint": "4050002092",
@@ -103981,28 +104254,28 @@
     {
       "bodyFingerprint": null,
       "local": true,
-      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "module": "SP1Clean.FormalModel.TraceGen.MemoryRecord",
       "name": "SP1Clean.TraceGen.MemRecordEntry",
       "typeFingerprint": "3931117990"
     },
     {
       "bodyFingerprint": "4119730839",
       "local": true,
-      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "module": "SP1Clean.FormalModel.TraceGen.MemoryRecord",
       "name": "SP1Clean.TraceGen.MemRecordEntry.addr",
       "typeFingerprint": "3149550836"
     },
     {
       "bodyFingerprint": "2848587297",
       "local": true,
-      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "module": "SP1Clean.FormalModel.TraceGen.MemoryRecord",
       "name": "SP1Clean.TraceGen.MemRecordEntry.clk",
       "typeFingerprint": "3149550836"
     },
     {
       "bodyFingerprint": null,
       "local": true,
-      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "module": "SP1Clean.FormalModel.TraceGen.MemoryRecord",
       "name": "SP1Clean.TraceGen.MemRecordEntry.mk",
       "typeFingerprint": "2547871658"
     },
@@ -104016,7 +104289,7 @@
     {
       "bodyFingerprint": "427686223",
       "local": true,
-      "module": "SP1Clean.Proofs.Completeness.Providers",
+      "module": "SP1Clean.FormalModel.TraceGen.MemoryRecord",
       "name": "SP1Clean.TraceGen.MemRecordEntry.value",
       "typeFingerprint": "3149550836"
     },
@@ -104539,6 +104812,13 @@
       "typeFingerprint": "2889730446"
     },
     {
+      "bodyFingerprint": "3401808133",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MemoryHistory",
+      "name": "SP1Clean.TraceGen.MemoryRecordChronology",
+      "typeFingerprint": "4079733576"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedBumpInventory",
@@ -104686,6 +104966,20 @@
       "typeFingerprint": "625409651"
     },
     {
+      "bodyFingerprint": "2193665181",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.batch",
+      "typeFingerprint": "3024057941"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.batch._proof_2",
+      "typeFingerprint": "905178260"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
@@ -104705,6 +104999,13 @@
       "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
       "name": "SP1Clean.TraceGen.MixedMemoryHistory.cpu.match_1",
       "typeFingerprint": "625409651"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryValues",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.heldAt_cut",
+      "typeFingerprint": "3892224205"
     },
     {
       "bodyFingerprint": null,
@@ -104770,18 +105071,18 @@
       "typeFingerprint": "2092743971"
     },
     {
-      "bodyFingerprint": "2119101159",
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedMemoryRecords",
+      "name": "SP1Clean.TraceGen.MixedMemoryHistory.record_chronology",
+      "typeFingerprint": "3203687698"
+    },
+    {
+      "bodyFingerprint": "1449775195",
       "local": true,
       "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
       "name": "SP1Clean.TraceGen.MixedMemoryHistory.stream",
       "typeFingerprint": "4006721736"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Completeness.MixedMemoryHistory",
-      "name": "SP1Clean.TraceGen.MixedMemoryHistory.stream._proof_2",
-      "typeFingerprint": "905178260"
     },
     {
       "bodyFingerprint": null,
@@ -104796,6 +105097,55 @@
       "module": "SP1Clean.Proofs.Completeness.MixedMemorySyscall",
       "name": "SP1Clean.TraceGen.MixedMemoryHistory.syscall_pulls",
       "typeFingerprint": "3435506955"
+    },
+    {
+      "bodyFingerprint": "685196034",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.inputs",
+      "typeFingerprint": "3112405262"
+    },
+    {
+      "bodyFingerprint": "1897130059",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.padding",
+      "typeFingerprint": "3469235643"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.padding._proof_1",
+      "typeFingerprint": "1417138521"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.padding._proof_2",
+      "typeFingerprint": "3214143013"
+    },
+    {
+      "bodyFingerprint": "1572923627",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.table",
+      "typeFingerprint": "4254171963"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.table._proof_1",
+      "typeFingerprint": "1557355942"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "SP1Clean.TraceGen.MixedSyscallTable.table._proof_2",
+      "typeFingerprint": "1659157706"
     },
     {
       "bodyFingerprint": "2360640148",
@@ -117545,6 +117895,13 @@
       "typeFingerprint": "932591451"
     },
     {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "Subtype.mk",
+      "typeFingerprint": "3221104705"
+    },
+    {
       "bodyFingerprint": "2085504913",
       "local": false,
       "module": "Init.Prelude",
@@ -118695,8 +119052,92 @@
     {
       "bodyFingerprint": "4239447094",
       "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedHostSources",
+      "name": "_private.SP1Clean.Export.WriteGeneratedHostSources.0.SP1Clean.Export.WriteSourceRegistry.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedRamSources",
+      "name": "_private.SP1Clean.Export.WriteGeneratedRamSources.0.SP1Clean.Export.WriteSourceRegistry.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteGeneratedSelection",
+      "name": "_private.SP1Clean.Export.WriteGeneratedSelection.0.SP1Clean.Export.WriteSourceRegistry.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
       "module": "SP1Clean.Export.WriteHostSourceGrounding",
       "name": "_private.SP1Clean.Export.WriteHostSourceGrounding.0.SP1Clean.Export.WriteSourceRegistry.Fp",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedReadFunding",
+      "name": "_private.SP1Clean.Export.WriteMixedReadFunding.0.SP1Clean.Export.WriteMixedSourceTables.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "2684653794",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.components",
+      "typeFingerprint": "373257971"
+    },
+    {
+      "bodyFingerprint": "2242398094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.selectedAt",
+      "typeFingerprint": "1506748765"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.selectedAt._proof_1",
+      "typeFingerprint": "2613307381"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.selectedAt._proof_2",
+      "typeFingerprint": "320356051"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.selectedAt._proof_4",
+      "typeFingerprint": "2783590651"
+    },
+    {
+      "bodyFingerprint": "1396335107",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceAssembly",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceAssembly.0.SP1Clean.Export.WriteMixedSourceTables.selectedAt.match_1",
+      "typeFingerprint": "325685998"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Export.WriteMixedSourceTables",
+      "name": "_private.SP1Clean.Export.WriteMixedSourceTables.0.SP1Clean.Export.WriteMixedSourceTables.F",
       "typeFingerprint": "3931117990"
     },
     {
@@ -120196,6 +120637,27 @@
       "module": "SP1Clean.Proofs.Completeness.MixedSyscallRows",
       "name": "_private.SP1Clean.Proofs.Completeness.MixedSyscallRows.0.SP1Clean.TraceGen.certifiedAt_filter.match_1",
       "typeFingerprint": "2031499241"
+    },
+    {
+      "bodyFingerprint": "4239447094",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "_private.SP1Clean.Proofs.Completeness.MixedSyscallTable.0.SP1Clean.TraceGen.MixedSyscallTable.F",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "2559123747",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "_private.SP1Clean.Proofs.Completeness.MixedSyscallTable.0.SP1Clean.TraceGen.MixedSyscallTable.Input",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "937973881",
+      "local": true,
+      "module": "SP1Clean.Proofs.Completeness.MixedSyscallTable",
+      "name": "_private.SP1Clean.Proofs.Completeness.MixedSyscallTable.0.SP1Clean.TraceGen.MixedSyscallTable.component",
+      "typeFingerprint": "1000923367"
     },
     {
       "bodyFingerprint": "1462676315",
@@ -121852,7 +122314,18 @@
     "SP1Clean.Export.WriteSourceRegistry.routable_physical_cuts",
     "SP1Clean.Export.WriteBoundaryBuild.build_sparse_covers",
     "SP1Clean.Export.WriteBoundaryBuild.compiled_sparse_read",
-    "SP1Clean.Export.WriteBoundaryBuild.sparse_suppliers_of_admissibleExecution",
+    "SP1Clean.Export.WriteBoundaryBuild.sources_of_admissibleExecution",
+    "SP1Clean.TraceGen.MixedMemoryHistory.record_chronology",
+    "SP1Clean.TraceGen.MixedMemoryHistory.heldAt_cut",
+    "SP1Clean.Export.WriteBoundaryBuild.readDemand_heldAt",
+    "SP1Clean.Export.WriteBoundaryBuild.compiled_read_source",
+    "SP1Clean.Export.WriteSourceRegistry.generated_ordinary",
+    "SP1Clean.Export.WriteSourceRegistry.classify_predecessor",
+    "SP1Clean.Export.WriteMixedSourceTables.heights",
+    "SP1Clean.Export.WriteMixedSourceTables.valid",
+    "SP1Clean.Export.WriteMixedSourceTables.ofExecution_constraints",
+    "SP1Clean.Export.WriteMixedSourceTables.read_funded",
+    "SP1Clean.Export.WriteMixedSourceTables.route_exists",
     "SP1Clean.TraceGen.admissibleExecution_untouched",
     "SP1Clean.TraceGen.ordinary_plan_values",
     "SP1Clean.TraceGen.MixedMemoryHistory.canonical",

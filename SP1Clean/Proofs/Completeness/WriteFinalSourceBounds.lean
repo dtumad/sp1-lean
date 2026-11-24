@@ -33,8 +33,8 @@ namespace SP1Clean.WriteProbe.SparseBoundary
 open Circuit Air.Flat Semantics Soundness TraceGen Channels AccessInventory
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalSourceClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalSourceLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 private theorem final_bounded (m : MemoryMsg (ZMod p))
     (high : m.clk_high.val < 2 ^ 24) (low : m.clk_low.val < 2 ^ 24) : Counted.Bounded (finalReadback m) := by

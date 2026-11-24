@@ -13,6 +13,7 @@ import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WritePhysicalCuts
 import SP1Clean.Export.HintSnapshotWalk
 import SP1Clean.Export.WriteBoundaryDemand
+import SP1Clean.Export.WriteMixedReadFunding
 import SP1Clean.Export.WritePhysicalRouting
 import SP1Clean.Proofs.Completeness.WriteDestination
 import SP1Clean.Proofs.Completeness.MixedMemoryPosts
@@ -219,7 +220,18 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteSourceRegistry.routable_physical_cuts,
   ``SP1Clean.Export.WriteBoundaryBuild.build_sparse_covers,
   ``SP1Clean.Export.WriteBoundaryBuild.compiled_sparse_read,
-  ``SP1Clean.Export.WriteBoundaryBuild.sparse_suppliers_of_admissibleExecution,
+  ``SP1Clean.Export.WriteBoundaryBuild.sources_of_admissibleExecution,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.record_chronology,
+  ``SP1Clean.TraceGen.MixedMemoryHistory.heldAt_cut,
+  ``SP1Clean.Export.WriteBoundaryBuild.readDemand_heldAt,
+  ``SP1Clean.Export.WriteBoundaryBuild.compiled_read_source,
+  ``SP1Clean.Export.WriteSourceRegistry.generated_ordinary,
+  ``SP1Clean.Export.WriteSourceRegistry.classify_predecessor,
+  ``SP1Clean.Export.WriteMixedSourceTables.heights,
+  ``SP1Clean.Export.WriteMixedSourceTables.valid,
+  ``SP1Clean.Export.WriteMixedSourceTables.ofExecution_constraints,
+  ``SP1Clean.Export.WriteMixedSourceTables.read_funded,
+  ``SP1Clean.Export.WriteMixedSourceTables.route_exists,
   ``SP1Clean.TraceGen.admissibleExecution_untouched,
   ``SP1Clean.TraceGen.ordinary_plan_values,
   ``SP1Clean.TraceGen.MixedMemoryHistory.canonical,
