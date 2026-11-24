@@ -40,6 +40,15 @@ theorem offset_zero {F : Type} [AddZeroClass F] (address : fields 3 F) :
   have cases : index = 0 ∨ index = 1 ∨ index = 2 := by omega
   rcases cases with rfl | rfl | rfl <;> simp [offset]
 
+/-- An arithmetic offset within the low address limb is exactly the canonical packed sum. -/
+theorem offset_ofNat (address index : ℕ) (within : address % 2 ^ 16 + index < 2 ^ 16) :
+    offset (ofNat (p := p) address) (index : ZMod p) = ofNat (address + index) := by
+  have low : (address + index) % 2 ^ 16 = address % 2 ^ 16 + index := by omega
+  have mid : (address + index) / 2 ^ 16 = address / 2 ^ 16 := by omega
+  have top : (address + index) / 2 ^ 32 = address / 2 ^ 32 := by omega
+  norm_num only at low mid top
+  simp [ofNat, offset, low, mid, top]
+
 variable [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 theorem bounded_ofNat (address : ℕ) : Bounded (ofNat (p := p) address) := by
