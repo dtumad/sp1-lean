@@ -9,6 +9,7 @@ import SP1Clean.Export.InstalledOrdinaryPreset
 import SP1Clean.Export.InstalledObservationPreset
 import SP1Clean.Export.InstalledBumpPreset
 import SP1Clean.Export.InstalledBumpTables
+import SP1Clean.Export.WriteObservationAssembly
 import SP1Clean.Export.WriteSourceInstallation
 import SP1Clean.Proofs.Completeness.WriteAllocations
 import SP1Clean.Proofs.Completeness.WriteCountedData

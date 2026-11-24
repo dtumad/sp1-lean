@@ -70,6 +70,10 @@ private theorem initial_length : (initial image source target final).tables.leng
     HostFinalMemory.prefix_length, FinalMemoryChecks.checkTables, List.length_cons, List.length_nil]
   rfl
 
+/-- Number of components before the packet and endpoint extensions. -/
+theorem base_length : (base image source target final).tables.length = 98 := by
+  rw [base_tables, List.length_mapIdx, initial_length]
+
 private theorem original_ordinary (id : InstructionChipId) :
     (base image source target final).tables[position (.ordinary id)]? = some (original (.ordinary id)) := by
   have bound : InstructionChipId.all.idxOf id < 25 := List.idxOf_lt_length_iff.mpr (InstructionChipId.mem_all id)
