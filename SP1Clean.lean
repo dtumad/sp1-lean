@@ -61,6 +61,7 @@ import SP1Clean.Soundness.LocalCoreWordRanges
 import SP1Clean.Export.WriteMemoryRecordChain
 import SP1Clean.Export.WritePhysicalCuts
 import SP1Clean.Export.WritePhysicalCoverage
+import SP1Clean.Export.WritePhysicalKeys
 import SP1Clean.Soundness.WritePacketReceiver
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
 import SP1Clean.Proofs.Completeness.WritePacketInputs
