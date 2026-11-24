@@ -18,14 +18,8 @@ theorem handler_facts (w : EnsembleWitness (preprocessing image source target fi
     (r : HostQueueOrder.Row (p := SP1Prime)) (mem : r ∈ hintHandlerRows w) :
     HostQueueOrder.time (HostQueueOrder.edge r).1 < HostQueueOrder.time (HostQueueOrder.edge r).2 ∧
       (HostQueueOrder.edge r).2.allocated = (HostQueueOrder.edge r).1.allocated := by
-  let orig : EnsembleWitness (HostObserved.ensemble image source target final) := supervisor w
-  let host := hostWitness orig
-  have hc := HostHintQueueBoundary.projected_constraints _
-    (HostFinalMemory.baseWitness_constraints _ (HostObserved.baseWitness_constraints orig (supervisor_constraints w checked)))
-  have c := TransitionView.readIndexedRows_constraints HostQueueOrder.indices
-    (fun i => (HostQueueOrder.view (p := SP1Prime) i).component) (HostHintReadLocal.queueTables host)
-    (HostHintReadLocal.queueTables_aligned host) (fun t member => hc t (HostHintReadLocal.queueTables_mem host t member)) r mem
-  exact HostQueueOrder.checked_edge r.1 r.2 c
+  obtain ⟨physical, active⟩ := TransitionView.mem_readIndexedActiveRows.mp mem
+  exact HostQueueOrder.checked_edge r.1 r.2 (physicalHintHandler_constraints w checked r physical) active
 
 attribute [local irreducible] base withSources preprocessing
 

@@ -16,8 +16,40 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : Sta
 
 /-- HINT_READ and both HINT_LEN families, with the concrete registry identity and the
 canonical environment of each original physical row. -/
-def hintHandlerRows (w : EnsembleWitness (preprocessing image source target final)) : List (HostQueueOrder.Row (p := SP1Prime)) :=
+def physicalHintHandlerRows (w : EnsembleWitness (preprocessing image source target final)) : List (HostQueueOrder.Row (p := SP1Prime)) :=
   TransitionView.readIndexedRows HostQueueOrder.indices (HostHintReadLocal.queueTables (hostWitness (supervisor w)))
+
+/-- Queue operations contributed by enabled HINT handlers in their original physical order. -/
+def hintHandlerRows (w : EnsembleWitness (preprocessing image source target final)) : List (HostQueueOrder.Row (p := SP1Prime)) :=
+  HostQueueOrder.activeRows (HostHintReadLocal.queueTables (hostWitness (supervisor w)))
+
+/-- Local assertions hold at every physical HINT environment, including disabled padding. -/
+theorem physicalHintHandler_constraints (w : EnsembleWitness (preprocessing image source target final))
+    (checked : w.Constraints) (r : HostQueueOrder.Row (p := SP1Prime)) (member : r ∈ physicalHintHandlerRows w) :
+    (HostQueueOrder.view r.1).component.operations.ConstraintsHold r.2 := by
+  let orig : EnsembleWitness (HostObserved.ensemble image source target final) := supervisor w
+  let host := hostWitness orig
+  have hc := HostHintQueueBoundary.projected_constraints _
+    (HostFinalMemory.baseWitness_constraints _ (HostObserved.baseWitness_constraints orig (supervisor_constraints w checked)))
+  exact TransitionView.readIndexedRows_constraints HostQueueOrder.indices
+    (fun i => (HostQueueOrder.view (p := SP1Prime) i).component) (HostHintReadLocal.queueTables host)
+    (HostHintReadLocal.queueTables_aligned host) (fun t m => hc t (HostHintReadLocal.queueTables_mem host t m)) r member
+
+/-- Each physical HINT row reserves both signed queue sites, including at zero activity. -/
+def hintQueueValues (r : HostQueueOrder.Row (p := SP1Prime)) : List (Interaction F) :=
+  let gate := r.2 (HostQueueOrder.view r.1).activity
+  [stateChannel.pulledIfValue gate (HostQueueOrder.edge r).1,
+   stateChannel.pushedIfValue gate (HostQueueOrder.edge r).2]
+
+private theorem active_hint_values (w : EnsembleWitness (preprocessing image source target final))
+    (checked : w.Constraints) :
+    (((physicalHintHandlerRows w).flatMap hintQueueValues).filter fun i => decide (i.mult ≠ 0)) =
+      (hintHandlerRows w).flatMap (fun (r : HostQueueOrder.Row (p := SP1Prime)) =>
+        [stateChannel.pulledValue (HostQueueOrder.edge r).1, stateChannel.pushedValue (HostQueueOrder.edge r).2]) := by
+  apply stateChannel.gatedPairs_filter_nonzero (physicalHintHandlerRows w)
+    (fun r => r.2 (HostQueueOrder.view r.1).activity) HostQueueOrder.edge
+  intro r member
+  exact (HostQueueOrder.view r.1).activity_of_constraints r.2 (physicalHintHandler_constraints w checked r member)
 
 private abbrev original (w : EnsembleWitness (preprocessing image source target final)) :
     EnsembleWitness (HostObserved.ensemble image source target final) := supervisor w
@@ -26,8 +58,7 @@ attribute [local irreducible] withSources preprocessing
 
 private theorem supervisor_queue (w : EnsembleWitness (preprocessing image source target final)) :
     ((supervisor w).interactionsWith stateChannel.toRaw).Perm
-      ((hintHandlerRows w).flatMap (fun row => [stateChannel.pulledValue (HostQueueOrder.edge row).1,
-         stateChannel.pushedValue (HostQueueOrder.edge row).2]) ++
+      ((physicalHintHandlerRows w).flatMap hintQueueValues ++
        [stateChannel.pushedValue (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints),
         stateChannel.pulledValue final]) := by
   let orig := original w
@@ -59,8 +90,7 @@ families, singleton rebase and all guarded allocator state replacements occur ex
 theorem allocation_queue_ledger (w : EnsembleWitness (preprocessing image source target final)) :
     let ch := (stateChannel (p := SP1Prime)).toRaw
     (w.interactionsWith ch).Perm
-      (((hintHandlerRows w).flatMap (fun row => [stateChannel.pulledValue (HostQueueOrder.edge row).1,
-         stateChannel.pushedValue (HostQueueOrder.edge row).2]) ++
+      (((physicalHintHandlerRows w).flatMap hintQueueValues ++
        [stateChannel.pushedValue (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints),stateChannel.pulledValue final]) ++
        (((slot image source target final 11).table w).interactionsWith ch ++
         ((slot image source target final 15).table w).interactionsWith ch)) := by
@@ -148,30 +178,15 @@ theorem native_queue_endpoints (w : EnsembleWitness (native image source target)
     funext x
     exact congrArg (@decide _) (Subsingleton.elim _ _)
   let as_ := (enabledInputs os).map (fun r => (r.previous,r.outgoing))
-  have unitPairs (rows : List (State F × State F)) :
-      ((rows.flatMap (fun e => [stateChannel.pulledValue e.1,stateChannel.pushedValue e.2])).filter
-        (fun i => decide (i.mult ≠ 0))) = rows.flatMap (fun e => [stateChannel.pulledValue e.1,stateChannel.pushedValue e.2]) := by
-    apply List.filter_eq_self.mpr
-    intro i member
-    obtain ⟨r,_,mem⟩ := List.mem_flatMap.mp member
-    rcases List.mem_cons.mp mem with rfl | tail
-    · exact decide_eq_true (by exact one_ne_zero)
-    · obtain rfl := List.mem_singleton.mp tail
-      exact decide_eq_true (by exact one_ne_zero)
-  have handlers : (hintHandlerRows seen).flatMap (fun r => [stateChannel.pulledValue (HostQueueOrder.edge r).1,
-      stateChannel.pushedValue (HostQueueOrder.edge r).2]) =
-      hs.flatMap (fun e => [stateChannel.pulledValue e.1,stateChannel.pushedValue e.2]) := by
-    simp only [hs,List.flatMap_map]
-  rw [handlers] at paid
   have live := paid.filter_nonzero
   have calls := stateChannel.gatedPairs_filter_nonzero os Prod.snd (fun r => (r.1.previous,r.1.outgoing)) flags
   change ((os.flatMap queueValues).filter _) = _ at calls
-  change BalancedInteractions (((hs.flatMap (fun e => [stateChannel.pulledValue e.1,stateChannel.pushedValue e.2]) ++
+  change BalancedInteractions ((((physicalHintHandlerRows seen).flatMap hintQueueValues ++
       [stateChannel.pushedValue _,stateChannel.pulledValue closing]) ++
       ([stateChannel.pulledValue (finalQueue seen),stateChannel.pushedValue closing] ++ os.flatMap queueValues)).filter _) at live
-  simp only [List.filter_append,unitPairs,calls] at live
+  simp only [List.filter_append,active_hint_values seen checked',calls] at live
   have result := rebase_endpoints (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) closing (finalQueue seen) hs as_
-    (by simpa [as_,activeEq,active,List.flatMap_map,Channel.pushedValue,Channel.pulledValue] using live)
+    (by simpa [hs,as_,activeEq,active,List.flatMap_map,Channel.pushedValue,Channel.pulledValue] using live)
   simpa only [queueOperations,queueEdge,List.map_append,List.map_map,Function.comp_def,Sum.elim_inl,Sum.elim_inr,
     hs,as_,allocationInputs,os,o,seen,closing] using result
 
