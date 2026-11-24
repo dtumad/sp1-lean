@@ -61,6 +61,7 @@ import SP1Clean.Export.WriteMixedSourceAssembly
 import SP1Clean.Export.WriteMixedSourceRecords
 import SP1Clean.Export.WriteMixedSourceTables
 import SP1Clean.Export.WriteMixedSupplyCapacity
+import SP1Clean.Export.WriteMixedSupplyBounds
 import SP1Clean.Export.WriteWordOwner
 import SP1Clean.Export.WriteMemoryReplay
 import SP1Clean.Export.WriteMemoryReplayTiming
