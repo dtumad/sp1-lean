@@ -189,12 +189,7 @@ constraints establish its binarity; balance matches only active records while ke
 weighted physical ledger and occurrence bound. Target-change selection remains separate from
 row activity, so an unchanged live target still consumes its final receipt.
 
-The six-call and seven-call host inventories use the same physical position for no-effect
-receipts. In the seven-call profile every row accepts either ENTER with zero x5 or VERIFY
-with x5 equal to its full syscall code. Each row consumes one complete HostCall. Its physical
-height counts their combined occurrences. The released supervisor instruction table separately
-pads the full syscall-event stream. The registered host boundary proves code classification and
-dispatch for both profiles. The 100-slot production assembly uses the seven-call inventory. Raw acceptance authenticates VERIFY on the same chronological execution as the other six calls. Slot 65 uses 19 columns. Each active ENTER/VERIFY row consumes one HostCall, and the padding rows have zero multiplicity. [Physical inventory](../SP1Clean/Export/InstalledFixedInventory.lean)
+The six-call and seven-call host inventories share slot 65 for no-effect receipts. The production seven-call profile accepts ENTER with zero x5 and VERIFY with x5 equal to its full syscall code. Slot 65 has 19 columns. Its activity bit guards the full HostCall, code and return constraints, so three calls use four physical rows with three active pulls. Slot 64 needs at most one HALT row because a stopped state admits only an empty continuation. The released supervisor instruction table separately pads the entire syscall stream. Raw acceptance authenticates VERIFY in the same chronology as the other six calls. [Physical inventory](../SP1Clean/Export/InstalledFixedInventory.lean)
 
 Each Clean table stores its evaluation data and a proof that its physical row count fits the
 upstream `UInt64` index space. Ensemble construction makes every table's stored data agree with

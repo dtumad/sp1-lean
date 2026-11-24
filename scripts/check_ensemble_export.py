@@ -70,7 +70,7 @@ def artifact_names():
     files += [name + suffix
               for name in ["installed_ordinary", "installed_ordinary_prefix", "installed_ordinary_suffix",
                            "installed_ordinary_empty", "installed_hints_empty", "installed_hints_tail",
-                           "installed_hints_aligned", "installed_enter"]
+                           "installed_hints_aligned", "installed_enter", "installed_enter_once"]
               for suffix in [".rs", ".reference.json"]]
     return files + ["shared_assemblies.rs", "shared_assemblies.json"]
 
