@@ -51,6 +51,18 @@ private noncomputable def selectedAt (i : Fin (components image source target fi
 noncomputable def suffix : List (Table F) :=
   List.ofFn fun i => (selectedAt image source target finish rows words fit data hint remaining i).1
 
+/-- Any complementary generator retains the literal table it supplies at its own position. -/
+theorem suffix_remaining (i : Fin (components image source target finish).length)
+    (absent : sourceAt (6 + i.val) = none) :
+    (suffix image source target finish rows words fit data hint remaining)[i.val]? = some (remaining i absent).1 := by
+  rw [List.getElem?_eq_getElem (by simpa only [suffix, List.length_ofFn] using i.isLt)]
+  simp only [suffix, List.getElem_ofFn, selectedAt]
+  split
+  · rfl
+  · rename_i id found
+    have impossible : (none : Option Source) = some id := absent.symm.trans found
+    cases impossible
+
 /-- Every slot has exactly its original registered circuit and generation procedure. -/
 theorem suffix_registered : (suffix image source target finish rows words fit data hint remaining).map (·.component) =
     (base image source target finish).tables.drop 6 := by
@@ -102,6 +114,23 @@ noncomputable def build (stream : List MemoryHistoryAccess) (requested : List �
   WriteBoundaryBuild.build image source target finish stream requested canonical data hint header
     (suffix image source target finish rows words fit data hint remaining)
     (suffix_registered image source target finish rows words fit data hint remaining)
+
+/-- At a complementary generator's position, canonical data retains its entire physical array. -/
+theorem remaining_arrays (stream : List MemoryHistoryAccess) (requested : List ℕ) (canonical : MemoryAddressesCanonical stream)
+    (header : SP1PublicIO F) (i : Fin (components image source target finish).length)
+    (absent : sourceAt (6 + i.val) = none) :
+    let w := build image source target finish rows words fit data hint remaining stream requested canonical header
+    (w.tables.map Table.table)[6 + i.val]? = some (remaining i absent).1.table := by
+  intro w
+  let head := WriteBoundaryBuild.boundaryTables source.sail.memorySnapshot stream requested canonical data hint
+  let tail := suffix image source target finish rows words fit data hint remaining
+  have arrays : w.tables.map Table.table = (head ++ tail).map Table.table := by
+    dsimp only [w, build, WriteBoundaryBuild.build]
+    rw [EnsembleWitness.ofTables_tables, withDerivedData_map_table]
+  rw [arrays, List.getElem?_map, List.getElem?_append_right (show head.length ≤ 6 + i.val from Nat.le_add_right _ _),
+    show head.length = 6 from rfl, Nat.add_sub_cancel_left, show tail[i.val]? = _ from suffix_remaining
+      image source target finish rows words fit data hint remaining i absent]
+  rfl
 
 /-- Canonical global prover-data derivation preserves the generated row arrays at every registered
 ordinary, ECALL, HINT_READ and register refresh source. -/

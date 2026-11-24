@@ -1,5 +1,5 @@
 import SP1Clean.Export.WriteMixedSupplyBounds
-import SP1Clean.Export.WriteMixedHostAssembly
+import SP1Clean.Export.WriteMixedHostData
 import SP1Clean.Export.WriteInstalledReadBalances
 import SP1Clean.Proofs.Completeness.WritePacketAssembly
 
@@ -58,6 +58,7 @@ theorem counted_packet_tables {events : List ExecutionEvent}
             rw [List.map_append, show block.map (·.component) = (tables source target).take 5 from rfl,
               registered, List.take_append_drop])
           (∀ t ∈ (full.tables.drop (installSources w).tables.length).take block.length, t.Constraints ∧ t.Guarantees) ∧
+            (∀ id, WriteMixedHostTables.InstalledAt full id (WriteMixedHostTables.table run.1 data id)) ∧
             ∀ ch ∈ readProtocols, LogUpBalanced (full.interactionsWith ch) := by
   obtain ⟨rows, compiled, _⟩ := admissibleExecution_routeMixedRows run.1
   obtain ⟨packets, collected, hp, hs, hw, pc, pg, sc, sg, wc, wg, ph, sh, wh, headers, cursor, pays⟩ :=
@@ -103,6 +104,7 @@ theorem counted_packet_tables {events : List ExecutionEvent}
     have attached : LogUpBalanced ((installSources w).interactionsWith readbackChannel.toRaw ++ supply.interactionsWith readbackChannel.toRaw) :=
       fun msg => (balanceOf_perm (installed_readback_perm w supply)).trans (paid msg)
     exact ⟨compiled_read_constraints w block tail rfl valid registered,
+      WriteMixedHostTables.installed_at run compiled data hint header remaining packets (block ++ tail) _,
       compiled_read_balances w supply probe packet spans words rfl attached versions readBus headers cursor tail registered⟩
 
 end SP1Clean.Export.WriteObservationAssembly
