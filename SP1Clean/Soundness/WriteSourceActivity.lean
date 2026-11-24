@@ -45,11 +45,7 @@ private theorem host_binary (family : HostSources.Family) : NativeCore.MemoryBin
 
 private theorem final_binary (ram : Bool) (env : Environment (ZMod p)) (checked : (originalFinal ram).operations.ConstraintsHold env) :
     IsBool (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 := by
-  have activity : (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 =
-      env (FinalMemoryEnsemble.activity (p := p)) := by
-    rw [← eval_varFromOffset_valueFromOffset, eval_pair (α := OrderedMemoryProvider.Inputs MemoryMsg) (β := field)]
-    simp only [FinalMemoryEnsemble.activity, varFromOffset_pair, ProvableType.varFromOffset_field, ProvableType.eval_field, Nat.zero_add]
-  rw [activity]
+  rw [FinalMemoryEnsemble.input_activity]
   cases ram
   · have localChecks : FinalMemoryEnsemble.registerView.component.operations.ConstraintsHold env := by
       change (OrderedFinalProvider.registerCircuit.instantiate.operations 0).ConstraintsHold env

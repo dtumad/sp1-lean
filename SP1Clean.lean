@@ -30,6 +30,7 @@ import SP1Clean.Soundness.WriteSourcePulls
 import SP1Clean.Soundness.WriteSourceRows
 import SP1Clean.Export.WriteSourceRegistry
 import SP1Clean.Export.WriteSourceGrounding
+import SP1Clean.Export.WriteBoundarySourceGrounding
 import SP1Clean.Export.WriteHostSourceGrounding
 import SP1Clean.Proofs.Completeness.WritePacketHandoff
 import SP1Clean.Export.WriteProbeCapacity

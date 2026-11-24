@@ -26,6 +26,13 @@ open SP1Clean.OrderedFinalProvider
 def activity : Expression (ZMod p) :=
   .var ⟨size (OrderedMemoryProvider.Inputs MemoryMsg)⟩
 
+omit [Fact (2 ^ 17 < p)] in
+/-- The decoded finalizer gate is the physical activity cell in its transition view. -/
+theorem input_activity (env : Environment (ZMod p)) :
+    (valueFromOffset (OrderedMemoryProvider.RowInput MemoryMsg) 0 env).2 = env (activity (p := p)) := by
+  rw [← eval_varFromOffset_valueFromOffset, eval_pair (α := OrderedMemoryProvider.Inputs MemoryMsg) (β := field)]
+  simp only [activity, varFromOffset_pair, ProvableType.varFromOffset_field, ProvableType.eval_field, Nat.zero_add]
+
 def registerView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
   OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.FinalSpec
     FinalRegisterProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid) (by

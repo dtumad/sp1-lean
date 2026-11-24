@@ -47,7 +47,7 @@ theorem ordinary_origin (witness : EnsembleWitness (base image source target fin
   simp only [LocalCore.instructionTables, List.getElem_take, List.getElem_drop] at physical
   have count := witness.same_length.symm.trans (HostObserved.tables_length (image := image)
     (source := source) (target := target) (final := final))
-  rw [HostObserved.ordinary_core_rows witness ⟨j, bound⟩ _ (by change 7 + j < witness.tables.length; omega)] at physical
+  rw [HostObserved.core_rows_before_halt witness ⟨7 + j, by omega⟩ _ (by change 7 + j < witness.tables.length; omega)] at physical
   change row.physical ∈ (witness.tables[7 + InstructionChipId.all.idxOf id]'_).table
   simpa only [index] using physical
 
