@@ -1,5 +1,6 @@
 import SP1Clean.Export.WriteSourceGrounding
 import SP1Clean.Soundness.HostHintReadExecutionRows
+import SP1Clean.Soundness.HostHintReadTerminalProjection
 
 /-! # Host predecessor records at their actual incoming State cuts
 
@@ -137,5 +138,62 @@ theorem word_predecessor (witness : EnsembleWitness (HostObserved.ensemble image
   refine ⟨.host (.word last), sources_complete _, List.mem_flatMap.mpr ⟨cells, physical, ?_⟩⟩
   rw [word_records]
   exact List.mem_singleton.mpr (Prod.ext on.symm rfl)
+
+/-- Every predecessor of an actual CPU event is published at that event's incoming cut.
+This combines ordinary accesses, ECALL operands, and HINT_READ words selected by the full
+clock. The constrained legacy HALT table has no real rows. -/
+theorem event_predecessor (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (checked : witness.Constraints) {event : ExecutionRow SP1Prime}
+    (present : event ∈ LocalCore.executionRows (HostFinalMemory.coreWitness (HostObserved.baseWitness witness)))
+    (data : ProverData Fp) {prior : MemoryMsg Fp} {time : ℕ} :
+    let words := TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+      (HostHintReadLocal.wordTables (hostWitness witness))
+    (prior, time) ∈ (eventFacts data words event).memPulls →
+      (1, AccessSupply.atClock (cpuClock data event) prior) ∈ records (raw witness) := by
+  intro words pulled
+  rcases List.mem_append.mp pulled with initial | additional
+  · cases event with
+    | instruction row => exact (execution_ordinary_predecessor witness present data initial).2
+    | syscall row => exact syscall_predecessor witness present initial
+    | halt row =>
+      let memory := HostObserved.baseWitness witness
+      let boundary := HostFinalMemory.baseWitness memory
+      have noHalt := HostHintReadTerminal.legacy_rows_nil boundary
+        (HostFinalMemory.baseWitness_constraints memory (HostObserved.baseWitness_constraints witness checked))
+      have enabled : row ∈ activeSystemRows (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.projected boundary)) 2)
+          (haltRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected boundary)).data) (·.is_real) := by
+        change ExecutionRow.halt row ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected boundary)) at present
+        simpa [LocalCore.executionRows] using present
+      rw [noHalt] at enabled
+      exact False.elim (List.not_mem_nil enabled)
+  · obtain ⟨row, selected, same⟩ := List.mem_map.mp additional
+    obtain ⟨inWords, clock⟩ := List.mem_filter.mp selected
+    have record := word_predecessor witness inWords
+    have key : wordClock row = cpuClock data event := of_decide_eq_true clock
+    rw [key] at record
+    have message : (touch row).1.1 = prior := congrArg Prod.fst same
+    rwa [message] at record
+
+/-- The State ledger orders the entire CPU tape. At every index, the physical publishers
+contain every predecessor of the indexed event, stamped with its incoming clock. -/
+theorem ordered_predecessors (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (checked : witness.Constraints)
+    (ordering : LocalCore.OrderingChannels (HostFinalMemory.coreWitness (HostObserved.baseWitness witness))) :
+    let core := HostFinalMemory.coreWitness (HostObserved.baseWitness witness)
+    let words := TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+      (HostHintReadLocal.wordTables (hostWitness witness))
+    ∃ ordered : List (ExecutionRow SP1Prime), ordered.Perm (LocalCore.executionRows core) ∧
+      Walk.IsWalk (ExecutionRow.canonEdge core.data) (initialBoundaryStateMessage core.publicInput)
+        (finalBoundaryStateMessage core.publicInput) ordered ∧
+      ∀ (index : Fin ordered.length) (prior : MemoryMsg Fp) (time : ℕ),
+        (prior, time) ∈ (eventFacts core.data words ordered[index]).memPulls →
+          (1, AccessSupply.atClock (cpuClock core.data ordered[index]) prior) ∈ records (raw witness) := by
+  intro core words
+  have memory := HostObserved.baseWitness_constraints witness checked
+  have sourceBoundary := HostFinalMemory.baseWitness_constraints _ memory
+  have physical := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.projected_constraints _ sourceBoundary)
+  obtain ⟨ordered, perm, walk⟩ := LocalCore.executionRows_ordered_of_orderingChannels core physical ordering
+  refine ⟨ordered, perm, walk, fun index _ _ pulled => ?_⟩
+  exact event_predecessor witness checked (perm.mem_iff.mp (List.getElem_mem index.isLt)) core.data pulled
 
 end SP1Clean.Export.WriteSourceRegistry
