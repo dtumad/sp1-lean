@@ -23,14 +23,13 @@ def guardSlot (image : ProgramImage) (source target : ExecutionSnapshot) (finish
 
 attribute [local irreducible] base ofExecution compiledSource WriteMixedFixedResources.install WriteMixedHostTables.install
 
-/-- The guard and the complete STORE and HINT_READ families fund one another at their
-actual positions in the original supervisor, including every disabled row. -/
-theorem installed_clients :
+/-- At the canonical data of the original supervisor, the guard and every receiving source
+retain their precise generated permission ledgers, including disabled physical sites. -/
+theorem installed_ledgers :
     let host := WriteMixedFixedResources.install run routed data hint packets remaining
     let w := ofExecution run routed finish data hint header (WriteMixedHostTables.install run.1 data host) packets
-    LogUpBalanced (((guardSlot image source target finish).table w).interactionsWith channel.toRaw ++
-      stores.flatMap (fun id => (raw w (.ordinary id)).interactionsWith channel.toRaw) ++
-      (raw w (.host (.word false))).interactionsWith channel.toRaw ++ (raw w (.host (.word true))).interactionsWith channel.toRaw) := by
+    ((guardSlot image source target finish).table w).interactionsWith channel.toRaw = (MixedPermissionDemand.guardTable run.1 routed data).interactionsWith channel.toRaw ∧
+    ∀ id, (raw w id).interactionsWith channel.toRaw = (compiledSource run routed data hint packets id).interactionsWith channel.toRaw := by
   intro host w
   let slot := guardSlot image source target finish
   let prior := WriteMixedHostTables.install run.1 data host
@@ -44,7 +43,20 @@ theorem installed_clients :
   rw [List.getElem?_map,List.getElem?_eq_getElem inside,Option.map_some] at cell
   have guard := Table.interactionsWith_eq_of_rows (slot.table w) (MixedPermissionDemand.guardTable run.1 routed data) channel.toRaw
     (Option.some.inj cell) (congrArg (fun c : Component F => c.operations.interactionsWith channel.toRaw) (slot.table_component w))
-  change LogUpBalanced ((slot.table w).interactionsWith _ ++ _ ++ _ ++ _)
+  exact ⟨guard,eqSource⟩
+
+/-- The guard and the complete STORE and HINT_READ families fund one another at their
+actual positions in the original supervisor, including every disabled row. -/
+theorem installed_clients :
+    let host := WriteMixedFixedResources.install run routed data hint packets remaining
+    let w := ofExecution run routed finish data hint header (WriteMixedHostTables.install run.1 data host) packets
+    LogUpBalanced (((guardSlot image source target finish).table w).interactionsWith channel.toRaw ++
+      stores.flatMap (fun id => (raw w (.ordinary id)).interactionsWith channel.toRaw) ++
+      (raw w (.host (.word false))).interactionsWith channel.toRaw ++ (raw w (.host (.word true))).interactionsWith channel.toRaw) := by
+  intro host w
+  obtain ⟨guard,eqSource⟩ := installed_ledgers run routed data hint packets header remaining
+  change ((guardSlot image source target finish).table w).interactionsWith channel.toRaw = _ at guard
+  change ∀ id, (raw w id).interactionsWith channel.toRaw = _ at eqSource
   simp only [guard,eqSource]
   exact generated run routed data hint packets
 

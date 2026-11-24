@@ -168,6 +168,7 @@ import SP1Clean.Proofs.Completeness.HintQueuePublishedHistory
 import SP1Clean.Proofs.Completeness.HintQueueFreshCoverage
 import SP1Clean.Proofs.Completeness.HintQueueAllocationLedgers
 import SP1Clean.Proofs.Completeness.HintQueueFundedAllocations
+import SP1Clean.Export.WritePermissionCapacity
 import SP1Clean.Export.WritePublicPermissions
 import SP1Clean.Export.WriteSupervisorPermissions
 import SP1Clean.Export.WritePermissionSupport

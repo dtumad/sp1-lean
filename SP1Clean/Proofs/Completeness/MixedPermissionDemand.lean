@@ -133,22 +133,27 @@ theorem writable (a : ℕ) (used : a ∈ bytes events rows) : a < 2 ^ 48 ∧ ima
       obtain ⟨_,_,_,step⟩ := run.1.2.step_at atEvent
       exact host_writable step byte
 
+/-- Every requested guard byte is charged to a real ordinary instruction or to the padded
+native write-byte cost of HINT_READ. -/
+theorem byte_count {limits : ResourceLimits} (execution : AdmissibleExecution limits SP1Prime image source target events)
+    (routedRows : routeMixedRows? (policy SP1Prime image) image.program AccessFrontier.initial source.realize events = some rows) :
+    (bytes events rows).length ≤ 8 * limits.events + limits.writeBytes := by
+  obtain ⟨rs,same,len⟩ := admissibleExecution_routeMixedRows (limits := limits) execution
+  cases Option.some.inj (same.symm.trans routedRows)
+  have ordinary := stores_length rows
+  have active := execution.work.1
+  have host := execution.2.2.1 .writeBytes
+  change executionResources _ _ _ events .writeBytes ≤ limits.writeBytes at host
+  rw [HintReadDemand.writeBytes execution.1.2,← hints_length] at host
+  change (rows.flatMap store ++ events.flatMap hint).length ≤ _
+  rw [List.length_append]
+  omega
+
 include run routed in
 /-- The independently rounded permission table fits Clean's physical row index. -/
 theorem fit : demandHeight (bytes events rows).length ≤ UInt64.size := by
-  obtain ⟨rs,same,len⟩ := admissibleExecution_routeMixedRows run
-  cases Option.some.inj (same.symm.trans routed)
-  have ordinary := stores_length rows
-  have count := run.work.1
-  change events.length ≤ 2 ^ 21 at count
-  have host := run.2.2.1 .writeBytes
-  change executionResources _ _ _ events .writeBytes ≤ SP1Prime - 1 at host
-  rw [HintReadDemand.writeBytes run.1.2, ← hints_length] at host
   apply demandHeight_le_pow (exponent := 64)
-  change (rows.flatMap store ++ events.flatMap hint).length ≤ 2 ^ 64
-  rw [List.length_append]
-  change (events.flatMap hint).length ≤ 2130706433 - 1 at host
-  omega
+  exact (byte_count run routed).trans (by decide)
 
 variable (data : ProverData (ZMod SP1Prime))
 
