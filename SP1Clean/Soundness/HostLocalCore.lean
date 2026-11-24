@@ -621,6 +621,11 @@ theorem hostCallTable_component : (hostCallTable witness).component = HostCallLe
 
 theorem hostCallTable_mem : hostCallTable witness ∈ witness.tables := List.getElem_mem _
 
+/-- The ECALL projection keeps precisely the original instruction column prefix. -/
+theorem hostCallTable_originalRows :
+    (LocalCore.systemTable (localWitness witness) 3).table =
+      (hostCallTable witness).table.map (·.extract 0 (HostCallProjection.original (p := p)).width) := rfl
+
 /-- The active instruction inventory is decoded from the same actual rows, including padding. -/
 theorem hostCallTable_projection :
     ((HostCallLedger.activeRows (hostCallTable witness) witness.data).map HostCallLedger.input) =
@@ -628,7 +633,7 @@ theorem hostCallTable_projection :
         (syscallInstrsRow (localWitness witness).data) (·.is_real) := by
   have rows : (LocalCore.systemTable (localWitness witness) 3).table =
       (hostCallTable witness).table.map (·.extract 0 (HostCallProjection.original (p := p)).width) := by
-    rfl
+    exact hostCallTable_originalRows witness
   simp only [HostCallLedger.activeRows, activeSystemRows, rows,
     List.map_map, List.filter_map, Function.comp_def]
   have decode (row : Array (ZMod p)) :

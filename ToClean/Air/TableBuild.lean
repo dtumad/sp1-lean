@@ -374,6 +374,15 @@ variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hi
 
 @[simp] lemma build_length : (build c inputs data hint bounded fixed consistent).length = inputs.length := List.length_map ..
 
+/-- Reading the input prefix of every generated array recovers the exact original inputs
+at arbitrary evaluation data, including inputs generated for padding. -/
+theorem build_inputs (evaluation : ProverData F) :
+    (build c inputs data hint bounded fixed consistent).table.map (fun cells => c.rowInput (Environment.fromArray cells evaluation)) = inputs := by
+  rw [build_table, List.map_map]
+  calc
+    _ = inputs.map id := List.map_congr_left fun input _ => c.rowInput_buildRow input data evaluation hint
+    _ = inputs := List.map_id ..
+
 /-- Generation records the environment used by the row witnesses. -/
 @[simp] theorem build_data : (build c inputs data hint bounded fixed consistent).data = data := rfl
 

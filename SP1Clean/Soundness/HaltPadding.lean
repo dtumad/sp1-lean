@@ -70,6 +70,17 @@ def project : EnsembleWitness ens :=
 
 @[simp] theorem project_publicInput : (project witness).publicInput = witness.publicInput := rfl
 
+/-- Erasing the padding-only assertion preserves every physical array, including the
+reinterpreted HALT row at the designated slot. -/
+theorem project_rows : (project witness).tables.map Table.table = witness.tables.map Table.table := by
+  change (witness.tables.set slot.index.val _).map Table.table = _
+  rw [List.map_set]
+  have h : slot.index.val < (witness.tables.map Table.table).length := by simpa only [List.length_map] using bound witness
+  change (witness.tables.map Table.table).set slot.index.val (witness.tables[slot.index.val]'(bound witness)).table = _
+  have atCell : (witness.tables.map Table.table)[slot.index.val] = (witness.tables[slot.index.val]'(bound witness)).table := List.getElem_map Table.table
+  rw [← atCell]
+  exact List.set_getElem_self h
+
 theorem constraints (checked : witness.Constraints) : (project witness).Constraints := by
   rw [EnsembleWitness.Constraints]
   intro table member

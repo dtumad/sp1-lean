@@ -27,7 +27,8 @@ theorem host_arrays (witness : EnsembleWitness (HostObserved.ensemble image sour
   rw [hostWitness, HostHintQueueBoundary.projected_drop _ _ (by decide), List.map_drop,
     HostFinalMemory.baseWitness_rows, HostObserved.baseWitness_rows witness, List.map_drop]
 
-private theorem ecall_rows (witness : EnsembleWitness (HostObserved.ensemble image source target final)) :
+/-- The projected host dispatcher reads the exact original ECALL cells. -/
+theorem ecall_rows (witness : EnsembleWitness (HostObserved.ensemble image source target final)) :
     (HostLocalCore.hostCallTable (hostWitness witness)).table = (raw witness (.host .ecall)).table := by
   have h := host_arrays witness
   have same := List.getElem_of_eq h (i := 0) (by

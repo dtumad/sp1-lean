@@ -1,7 +1,7 @@
 import SP1Clean.Export.InstalledImmutableLedger
 import SP1Clean.Export.WriteFundedInstallation
 import SP1Clean.Export.WriteObservationReadBuild
-import SP1Clean.Export.WriteMixedControlTables
+import SP1Clean.Export.WriteMixedExitLedger
 import SP1Clean.Export.WriteInstalledEffectJoins
 import SP1Clean.Export.WriteEndpointJoins
 import SP1Clean.Export.WritePermissionCapacity
@@ -102,6 +102,8 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
             (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
             (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
               [(SP1StateBoundary.haltCode ctx.source ctx.target).getD 0] ∧
+            (header.exit_code = (((SP1StateBoundary.haltCode ctx.source ctx.target).getD 0).toNat : F) →
+              CheckedLedger (full.interactionsWith Channels.exitChannel.toRaw) (WriteMixedExitLedger.occurrences ctx.source ctx.target rows)) ∧
             (∀ d, LogUpBalanced (full.interactionsWith (HostCommitChip.stateChannel d).toRaw)) ∧
             CheckedLedger (full.interactionsWith HostHintQueue.nodeChannel.toRaw) (InstalledAssembly.immutableNodeSites release.1 data entries) ∧
             CheckedLedger (full.interactionsWith HostHintQueue.wordChannel.toRaw) (InstalledAssembly.immutableWordSites release.1 data entries) ∧
@@ -176,7 +178,9 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     suffix reg s rfl rfl rfl
   obtain ⟨_,nodePaid,wordPaid⟩ := InstalledAssembly.native_immutable_queue release.1 data collected s paid.toChecked
   refine ⟨frontValid,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
-    MixedHaltPadding.receipt release.1.1.2,?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩
+    MixedHaltPadding.receipt release.1.1.2,
+    (fun correct => WriteMixedExitLedger.checked release routed data hint _ header remaining suffix reg correct run.1 preset),
+    ?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩
   · intro d
     change LogUpBalanced ((withPublicChecks pre).interactionsWith _)
     rw [public_bank pre d _ (banks (.bank d none))]
