@@ -250,6 +250,15 @@ theorem main_program_interactions (image : ProgramImage)
   unfold implementation
   split <;> rfl
 
+/-- Empty ROMs require an inert multiplicity. Every count is admitted on the nonempty
+verifier-fixed inventory. -/
+theorem prover_assumptions_of_empty_count (image : ProgramImage) (input : Input (ZMod p))
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (empty : rows (p := p) image = [] → input.2 = 0) : (circuit image).ProverAssumptions input data hint := by
+  by_cases inert : rows (p := p) image = []
+  · simpa only [circuit, implementation, inert, ↓reduceIte] using empty inert
+  · simp only [circuit, implementation, inert, ↓reduceIte]
+
 /-- Physical table invariants discharge the circuit assumptions; callers supply no ROM validity
 condition on prover-owned rows. Canonical data consistency comes from the ensemble witness. -/
 theorem table_spec_and_requirements [Fact (2 ^ 17 < p)] (image : ProgramImage)

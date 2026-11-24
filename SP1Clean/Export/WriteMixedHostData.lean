@@ -97,7 +97,7 @@ def InstalledAt (full : EnsembleWitness (WriteObservationAssembly.preprocessing 
     ∀ ch, actual.interactionsWith ch = original.interactionsWith ch
 
 /-- Each of the 22 generated original tables is checked at its actual slot and canonical
-prover data in the 113-table observer. Every original signed occurrence has the same payload,
+prover data in the native observer. Every original signed occurrence has the same payload,
 multiplicity and order, independently of all other generators' validity. -/
 theorem installed_at (suffix : List (Table F)) (registeredSuffix : suffix.map Table.component = WriteObservationAssembly.tables source target)
     (id : Index) :

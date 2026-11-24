@@ -190,15 +190,30 @@ theorem projected_balancedChannel
     (HaltPadding.balancedChannel witness channel
       (balanced channel (List.mem_append_left _ registered) visible))
 
+/-- The original assertion channel that enforces the incoming queue length, bank endpoints
+and halt compatibility. Its ledger can be transported through a larger physical installation. -/
+def assertionChannel (_ : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
+    RawChannel (ZMod p) :=
+  (boundary source final bankFinal).channel (HostHintReadLocal.ensemble image source others resources channels names channelNames tableChannels)
+
+/-- This assertion channel is actually registered by the original boundary verifier. -/
+theorem assertionChannel_registered
+    (w : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
+    assertionChannel w ∈ (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels).channels := by
+  simp [assertionChannel,ensemble,HaltPadding.install,Ensemble.replaceComponent,ClosedVerifier.install]
+
+/-- The original boundary checks require only their dedicated assertion-channel balance. -/
+theorem checks_of_assertionChannel
+    (w : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
+    (paid : w.BalancedChannel (assertionChannel w)) : (boundary source final bankFinal).Checks w.data := by
+  have checked := ((boundary source final bankFinal).check_balanced_iff (underlying w)).mp (HaltPadding.balancedChannel w _ paid)
+  simpa only [underlying_data] using checked
+
 /-- Boundary assertions follow from their fresh check channel, not physical row constraints. -/
 theorem boundary_checks
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
     (balanced : Balanced witness) : (boundary source final bankFinal).Checks witness.data := by
-  have checked := ((boundary source final bankFinal).check_balanced_iff (underlying witness)).mp
-    (HaltPadding.balancedChannel witness _ (balanced _ (by simp [ensemble, HaltPadding.install,
-      Ensemble.replaceComponent, ClosedVerifier.install])
-      (verifier_visible _ _)))
-  simpa only [underlying_data] using checked
+  exact checks_of_assertionChannel witness (balanced _ (assertionChannel_registered witness) (verifier_visible _ _))
 
 theorem source_binding
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
@@ -421,6 +436,28 @@ theorem extraTables_eq
   rw [List.drop_drop, List.drop_drop]
   exact projected_drop witness 86 (by decide)
 
+/-- The original queue ledger has exactly the three handler families and the published
+boundary pair. This permutation remains available when an outer ensemble adds new queue edges. -/
+theorem queue_ledger
+    (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames channelNames availableTableChannels boundaryChannels))
+    (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels) :
+    (witness.interactionsWith stateChannel.toRaw).Perm
+      ((queueTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) ++
+        [stateChannel.pushedValue (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints),stateChannel.pulledValue final]) := by
+  have registered := auxiliary_channel_registered image source HostCallReceivers.available resources channels
+    (names := availableNames) (channelNames := channelNames) (tableChannels := availableTableChannels) HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw
+    (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
+  have ledger := interactions_split witness stateChannel.toRaw registered
+  have extra : (extraTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
+    apply List.flatMap_eq_nil_iff.mpr
+    intro table member
+    apply table.interactionsWith_nil_of_channel_not_mem
+    apply silent table.component
+    rw [← extraTables_components (projected witness)]
+    exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+  rwa [queue_interactions,extra,List.append_nil,ClosedVerifier.interactionsWith,ClosedVerifier.operations,
+    HostBoundary.closed_main,SP1Clean.HostBoundary.queue_values] at ledger
+
 /-- The complete queue ledger includes the verifier's endpoints and each physical handler row. -/
 theorem queue_balanced
     (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames channelNames availableTableChannels boundaryChannels))
@@ -432,21 +469,9 @@ theorem queue_balanced
   have registered := auxiliary_channel_registered image source HostCallReceivers.available resources channels
     (names := availableNames) (channelNames := channelNames) (tableChannels := availableTableChannels) HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw
     (by simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm])
-  have ledger := BalancedInteractions.of_perm
-    (balanced stateChannel.toRaw (List.mem_append_left _ registered)
-      (visible_of_name _ (of_decide_eq_true rfl)))
-    (interactions_split witness stateChannel.toRaw registered)
-  have extra : (extraTables (projected witness)).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
-    apply List.flatMap_eq_nil_iff.mpr
-    intro table member
-    apply table.interactionsWith_nil_of_channel_not_mem
-    apply silent table.component
-    rw [← extraTables_components (projected witness)]
-    exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  rw [queue_interactions, extra, List.append_nil,
-    ClosedVerifier.interactionsWith, ClosedVerifier.operations, HostBoundary.closed_main,
-    SP1Clean.HostBoundary.queue_values] at ledger
-  exact BalancedInteractions.of_perm ledger (List.perm_append_comm ..)
+  exact BalancedInteractions.of_perm
+    (balanced stateChannel.toRaw (List.mem_append_left _ registered) (visible_of_name _ (of_decide_eq_true rfl)))
+    ((queue_ledger witness silent).trans (List.perm_append_comm ..))
 
 /-- Every actual queue-handler row lies on the uniquely anchored path. Record authentication
 is retained for dynamic providers; this version covers resources without additional queue edges. -/

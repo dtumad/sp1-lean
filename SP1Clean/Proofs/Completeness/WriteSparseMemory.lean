@@ -40,17 +40,21 @@ snapshot value. The original three address limbs are preserved exactly. -/
 def genesis (snapshot : MemorySnapshot) (r : Terminal (ZMod p)) : MemoryMsg (ZMod p) :=
   { r.record with clk_high := 0, clk_low := 0, value := Target.bitVecToWord (snapshot.read (MemoryMsg.locOf r.record)) }
 
+omit [Fact (2 ^ 25 < p)] in
+/-- Every genuine finalizer has the exact canonical key of its decoded location. -/
+theorem Terminal.Valid.canonical {r : Terminal (ZMod p)} (valid : r.Valid) : MemoryBoundary.CanonicalSpec r.record := by
+  have d := valid.2.2.2
+  cases tag : r.ram <;> rw [tag] at d
+  · change FinalRegisterProvider.Domain r.record at d
+    exact FinalRegisterProvider.canonical _ d.1 d.2.1 d.2.2
+  · change FinalRamProvider.Domain r.record at d
+    have loc := MemoryBoundary.ram_location_of_key r.record _ d.2.1 d.2.2.1 d.2.2.2
+      (by simp [MemoryBoundary.address, Word.toNat])
+    exact ⟨loc.1, d.1, loc.2.1⟩
+
 private theorem genesis_spec (snapshot : MemorySnapshot) (r : Terminal (ZMod p)) (valid : r.Valid) :
     MemoryBoundary.SnapshotAtSpec snapshot r.key (genesis snapshot r) := by
-  have canonical : MemoryBoundary.CanonicalSpec r.record := by
-    have d := valid.2.2.2
-    cases tag : r.ram <;> rw [tag] at d
-    · change FinalRegisterProvider.Domain r.record at d
-      exact FinalRegisterProvider.canonical _ d.1 d.2.1 d.2.2
-    · change FinalRamProvider.Domain r.record at d
-      have loc := MemoryBoundary.ram_location_of_key r.record _ d.2.1 d.2.2.1 d.2.2.2
-        (by simp [MemoryBoundary.address, Word.toNat])
-      exact ⟨loc.1, d.1, loc.2.1⟩
+  have canonical := valid.canonical
   exact ⟨⟨Target.isU64_bitVecToWord _, by simp [MemoryMsg.ClkBound, genesis], by simp [MemoryMsg.timeNat, clkNat, genesis],
     canonical.1, (Target.toBitVec64_bitVecToWord _).symm, canonical.2⟩, valid.1⟩
 

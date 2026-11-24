@@ -92,13 +92,13 @@ private theorem sum_inputs {A : Type} (f : A → Option Entry) (xs : List A) :
       | none => simpa [inputs,emitted,alloc] using ih
       | some b => simpa [inputs,total,emitted,alloc,List.flatMap_append] using congrArg ((b.nodes.flatMap NodeRows.words).length + ·) ih
 
-/-- An entire native mixed tape adds at most the final store's historical bound of 2^29
-padded allocation words. This counts the actual word inputs of the shared collector before
-its single Clean demand-padding operation. -/
-theorem native_word_capacity {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+/-- Every collected allocation word is paid by the same final persistent store. A pop
+retains its historical record and cannot erase a charge from earlier in the tape. -/
+theorem words_le_stored {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) (readers : Readers)
-    {entries : List Entry} (collected : native? image source events readers = some entries) :
-    (inputs entries).words.length ≤ 2^29 := by
+    {entries : List Entry} (collected : native? image source events readers = some entries)
+    {last : Store × Nat} (finalStore : storeAfter? (policy SP1Prime image) image.program source.realize events (ofList source.host.io.hints) = some last) :
+    (inputs entries).words.length ≤ storedWordCount last.1 := by
   let f := fun x : ExecutionEvent × Nat => position image source events readers x.1 x.2
   let cost := fun x => (((f x).bind Entry.allocation).map total).getD 0
   have charge (i : Nat) (small : i ≤ events.length) (cur : Store × Nat)
@@ -117,16 +117,35 @@ theorem native_word_capacity {image : ProgramImage} {source target : ExecutionSn
       simp only [List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,Nat.add_zero]
       have delta := word_growth run readers (List.getElem?_eq_getElem inside) pre reached
       exact (Nat.add_le_add_right prior _).trans delta
-  obtain ⟨_,last,_,_,endStore,_,_,_,_,_,_,_,_,budget,_⟩ := admissibleExecution_historicalHintCapacity run events.length
-  have totalPaid := charge events.length (le_refl _) last endStore
-  have width : SP1Prime < 2^31 := by decide
-  have bound : storedWordCount last.1 ≤ 2^29 := by omega
+  have totalPaid := charge events.length (le_refl _) last (by simpa only [List.take_length] using finalStore)
   obtain ⟨actual,built,ordered,_⟩ := native_inputs run readers
   cases Option.some.inj (collected.symm.trans built)
   rw [ordered,sum_inputs]
   have full : events.zipIdx.take events.length = events.zipIdx := List.take_of_length_le (by simp)
   rw [full] at totalPaid
-  exact totalPaid.trans bound
+  exact totalPaid
+
+/-- The original semantic boundary and cumulative writes pay for the complete word inputs of
+the native collector, before their single demand padding. This applies unchanged to tighter
+semantic resource presets on the same domain. -/
+theorem word_charge {lim : ResourceLimits} {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution lim SP1Prime image source target events) (limits : lim.LE (.native SP1Prime)) (readers : Readers)
+    {entries : List Entry} (collected : native? image source events readers = some entries) :
+    8 * (inputs entries).words.length + 125 ≤ lim.boundaryBytes + lim.writeBytes := by
+  obtain ⟨final,built,_⟩ := storeAfter_of_path run.1.2 (ofList_wellFormed _) (ofList_represents _)
+  have available := (historical_hint_budget run.1.2 built run.2.2.2.1 run.2.2.1).2
+  have used := words_le_stored (run.mono limits) readers collected built
+  omega
+
+/-- At native limits all words of the shared collector together fit in 2^29 rows. -/
+theorem native_word_capacity {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) (readers : Readers)
+    {entries : List Entry} (collected : native? image source events readers = some entries) :
+    (inputs entries).words.length ≤ 2^29 := by
+  have charged := word_charge run (ResourceLimits.LE.refl _) readers collected
+  change 8 * (inputs entries).words.length + 125 ≤ (SP1Prime-1) + (SP1Prime-1) at charged
+  have bound : SP1Prime < 2^31 := by decide
+  omega
 
 private theorem nonempty_words_at {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution (.native SP1Prime) SP1Prime image source target events) (readers : Readers)

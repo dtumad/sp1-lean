@@ -25,16 +25,19 @@ aligned guest-buffer read has an original generated Memory row with the required
 value and clock interval. From those reads, the compiler builds five observer tables with checked
 constraints, exact heights and five balanced channels. The same execution supplies all eighteen
 commitment tables and four ordinary observation tables. Both commitment-state channels balance
-at the supplied snapshots, including repeated writes to a lane. Forty-one original supervisor
-slots remain to be constructed. [Native observer construction](SP1Clean/Export/WriteObservationReadBuild.lean)
+at the supplied snapshots, including repeated writes to a lane. The compiler also funds the Program ROM and both register and RAM snapshots from the actual reads
+and finalizers. Thirty-four original supervisor positions remain to be constructed. [Native observer construction](SP1Clean/Export/WriteObservationReadBuild.lean)
 
 The native 117-table observer extends WRITE with read-only guest-memory observations. A single
 pass over the mixed execution constructs the dispatcher and the four allocation tables.
 Every hint node retains its permanent pointer, and every padded word binds to the actual
-bytes even after a pop. The three internal allocation channels meet Clean’s occurrence
-bounds and close on the installed native tables. The external block provider accounts for
-the guest streams and supplied replies. Stock SP1 exposes the committed public-values digest.
-[Installed allocation ledgers](SP1Clean/Export/WriteInstalledAllocations.lean) · [Block construction](SP1Clean/Proofs/Completeness/WriteNativeBlockBalance.lean) · [Stock statement](SP1Clean/FormalModel/Contracts/StockPublicOutput.lean)
+bytes even after a pop. At the fixed-provider preset, one physical witness contains fourteen generated observer tables.
+Five read and two commitment ledgers balance. Four classifier handoffs and four allocation or
+block channels also pass the field-count test and match all active messages. Raw native
+acceptance determines a unique persistent store, including the bytes of nodes popped during
+the shard, and its sealed head recovers the entire outgoing hint queue. The stock SP1
+statement exposes the committed public-values digest.
+[Joint construction](SP1Clean/Export/WriteJointObservation.lean) · [Unique queue store](SP1Clean/Export/WriteAllocationStoreUnique.lean) · [Stock statement](SP1Clean/FormalModel/Contracts/StockPublicOutput.lean)
 
 The remaining capstone must construct one witness for all installed tables and prove its
 channel balances and physical capacity. [Mixed instruction rows](SP1Clean/Proofs/Completeness/MixedSyscallTable.lean) · [WRITE read funding](SP1Clean/Export/WriteMixedReadFunding.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
