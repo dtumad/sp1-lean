@@ -27,6 +27,14 @@ private theorem host_arrays (witness : EnsembleWitness (HostObserved.ensemble im
   rw [hostWitness, HostHintQueueBoundary.projected_drop _ _ (by decide), List.map_drop,
     HostFinalMemory.baseWitness_rows, HostObserved.baseWitness_rows witness, List.map_drop]
 
+private theorem ecall_rows (witness : EnsembleWitness (HostObserved.ensemble image source target final)) :
+    (HostLocalCore.hostCallTable (hostWitness witness)).table = (raw witness (.host .ecall)).table := by
+  have h := host_arrays witness
+  have same := List.getElem_of_eq h (i := 0) (by
+    rw [h, List.length_map, List.length_drop, ← witness.same_length, HostObserved.tables_length]; decide)
+  simp only [List.getElem_map, List.getElem_drop, Nat.add_zero] at same
+  exact same
+
 private theorem ecall_records (env : Environment Fp) :
     let r := HostCallLedger.input env
     let state := SyscallInstrsChip.statePulledMessage r
@@ -70,13 +78,7 @@ theorem syscall_predecessor (witness : EnsembleWitness (HostObserved.ensemble im
   obtain ⟨env, inRows, rfl⟩ := List.mem_map.mp active
   have enabled := HostCallLedger.activeRows_is_real _ _ _ inRows
   obtain ⟨cells, present, rfl⟩ := List.mem_map.mp (List.mem_filter.mp inRows).1
-  have h := host_arrays witness
-  have position := List.getElem_of_eq h (i := 0) (by
-    rw [h, List.length_map, List.length_drop, ← witness.same_length, HostObserved.tables_length]
-    decide)
-  simp only [List.getElem_map, List.getElem_drop, Nat.add_zero] at position
-  change cells ∈ (host.tables[58]'_).table at present
-  rw [position] at present
+  rw [ecall_rows witness] at present
   let table := raw witness (.host .ecall)
   have physical : cells ∈ table.table := present
   apply List.mem_flatMap.mpr
@@ -138,6 +140,78 @@ theorem word_predecessor (witness : EnsembleWitness (HostObserved.ensemble image
   refine ⟨.host (.word last), sources_complete _, List.mem_flatMap.mpr ⟨cells, physical, ?_⟩⟩
   rw [word_records]
   exact List.mem_singleton.mpr (Prod.ext on.symm rfl)
+
+private theorem host_record_of_origin (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (checked : witness.Constraints) (family : HostSources.Family) {record : Readback Fp}
+    (origin : Origin (raw witness) (.host family) record) :
+    ∃ cells ∈ (raw witness (.host family)).table, (1, record) ∈ rowRecords (.host family)
+      ((raw witness (.host family)).environment cells) := by
+  obtain ⟨cells, present, weight, prior, positive, pulled, rfl⟩ := origin
+  have occurrence := records_of_pull (raw witness) (raw_registered witness) (.host family) cells present weight prior pulled
+  have unit := positive_record_unit witness checked occurrence positive
+  subst weight
+  rw [raw_registered witness (.host family)] at pulled
+  exact ⟨cells, present, host_records_of_pull family _ 1 prior pulled⟩
+
+private theorem host_record_data (family : HostSources.Family) (cells : Array Fp) (left right : ProverData Fp) :
+    rowRecords (.host family) (Environment.fromArray cells left) = rowRecords (.host family) (Environment.fromArray cells right) := by
+  cases family with
+  | ecall => rw [ecall_records, ecall_records]; rfl
+  | word last => rw [word_records, word_records]; rfl
+
+/-- Each authenticated ECALL receipt is one of the three actual predecessor reads in a
+real decoded syscall row, stamped with that row's incoming State. -/
+theorem syscall_event_of_origin (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (checked : witness.Constraints) {record : Readback Fp} (origin : Origin (raw witness) (.host .ecall) record) :
+    ∃ row, ExecutionRow.syscall row ∈ LocalCore.executionRows (HostFinalMemory.coreWitness (HostObserved.baseWitness witness)) ∧
+      ∃ prior time, (prior, time) ∈ (syscallRowFacts row).memPulls ∧
+        let state := SyscallInstrsChip.statePulledMessage row
+        record = AccessSupply.atClock (state.clk_high, state.clk_low) prior := by
+  obtain ⟨cells, present, found⟩ := host_record_of_origin witness checked .ecall origin
+  let host := hostWitness witness
+  let env := Environment.fromArray cells host.data
+  simp only [Table.environment] at found
+  rw [host_record_data .ecall cells _ host.data, ecall_records] at found
+  obtain ⟨⟨prior, time⟩, read, eq⟩ := List.mem_map.mp found
+  have enabled : (HostCallLedger.input env).is_real = 1 := congrArg Prod.fst eq
+  have member : env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable host) host.data := by
+    apply List.mem_filter.mpr
+    refine ⟨List.mem_map.mpr ⟨cells, ?_, rfl⟩, ?_⟩
+    · rwa [ecall_rows witness]
+    · simpa only [decide_eq_true_eq] using enabled
+  have decoded := List.mem_map_of_mem (f := HostCallLedger.input) member
+  rw [HostLocalCore.hostCallTable_projection host] at decoded
+  refine ⟨HostCallLedger.input env, List.mem_append_right _ (List.mem_map_of_mem (f := ExecutionRow.syscall) decoded),
+    prior, time, read, ?_⟩
+  exact (congrArg Prod.snd eq).symm
+
+/-- Each authenticated HINT_READ receipt originates at the exact word and clock of one
+of the two active word tables. -/
+theorem word_of_origin (witness : EnsembleWitness (HostObserved.ensemble image source target final))
+    (checked : witness.Constraints) (last : Bool) {record : Readback Fp}
+    (origin : Origin (raw witness) (.host (.word last)) record) :
+    ∃ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+      (HostHintReadLocal.wordTables (hostWitness witness)), record = AccessSupply.atClock (wordClock row) (touch row).1.1 := by
+  obtain ⟨cells, present, found⟩ := host_record_of_origin witness checked (.word last) origin
+  let tables := HostHintReadLocal.wordTables (hostWitness witness)
+  have counts : 2 = tables.length := (HostHintReadLocal.wordTables_aligned (hostWitness witness)).length_eq
+  let index : Fin 2 := if last then 1 else 0
+  let table := tables[index.val]'(counts ▸ index.isLt)
+  have pair : (last, table) ∈ HintReadCoverage.variants.zip tables := by
+    have inside : index.val < (HintReadCoverage.variants.zip tables).length := by
+      rw [List.length_zip, ← counts]; exact index.isLt
+    have entry := List.getElem_mem (l := HintReadCoverage.variants.zip tables) inside
+    simp only [List.getElem_zip] at entry
+    cases last <;> exact entry
+  have physical : cells ∈ table.table := (word_origin witness pair).symm ▸ present
+  let row : HintReadCoverage.Row (p := SP1Prime) := (last, table.environment cells)
+  simp only [Table.environment] at found
+  rw [host_record_data (.word last) cells _ table.data, word_records, List.mem_singleton] at found
+  refine ⟨row, HintReadCoverage.mem_active_rows.mpr ⟨?_, ?_⟩, ?_⟩
+  · exact List.mem_flatMap.mpr ⟨(last, table), pair, List.mem_map.mpr ⟨cells, physical, rfl⟩⟩
+  · exact (congrArg Prod.fst found).symm
+  · change (1, record) = (HintReadCoverage.rowActivity row, AccessSupply.atClock (wordClock row) (touch row).1.1) at found
+    exact congrArg Prod.snd found
 
 /-- Every predecessor of an actual CPU event is published at that event's incoming cut.
 This combines ordinary accesses, ECALL operands, and HINT_READ words selected by the full
