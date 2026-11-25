@@ -1,4 +1,5 @@
 import SP1Clean.Export.NativeShardRows
+import SP1Clean.Export.WriteInstalledDeclarationLanes
 import SP1Clean.Export.WriteJointObservation
 import SP1Clean.Export.WriteSparseByteCapacity
 
@@ -15,6 +16,7 @@ open WriteObservationAssembly WriteSourceRegistry
 
 private abbrev F := ZMod SP1Prime
 private abbrev byte := (byteChannel (p := SP1Prime)).toRaw
+private abbrev decl := (CommitmentDeclaration.channel (p := SP1Prime)).toRaw
 
 variable {ctx : InstalledAssembly.Context} {events : List ExecutionEvent}
     (execution : ReleaseStatementExecution ctx.limits SP1Prime ctx.commitments ctx.image ctx.source ctx.target events)
@@ -111,19 +113,35 @@ theorem no_statement_at_funded_heights
   exact (Nat.not_lt_of_ge (fundedWitness_byte_overflow (ctx := ctx) execution bounds routed data hint packets prepared large))
     (of_decide_eq_true fits)
 
+/-- The original sixteen bank lanes supply every declaration read of the physical witness. -/
+theorem fundedWitness_declarations :
+    CheckedLedger ((fundedWitness (ctx := ctx) execution bounds routed data hint packets prepared).interactionsWith decl)
+      (CommitmentReaders.sites execution.1.1) := by
+  let run := release (ctx := ctx) execution bounds
+  let input := WriteGeneratedByteClients.demand run routed (last ctx) data hint ctx.header packets suffix
+  let typed := WriteGeneratedByteClients.reads run routed (last ctx) data hint ctx.header packets (header_limbs (ctx := ctx) execution) suffix prepared.byteReads
+  let original := supervisorFromReads run routed (last ctx) data hint ctx.header packets input typed
+  let observed := withPublicChecks (build original suffix prepared.registered)
+  apply checked_of_bank_ledger (ctx := ctx) execution observed data bounds
+  let bank := WriteByteProviderInstallation.ofReaders ctx.image ctx.source ctx.target (last ctx) data input (fun i m => (typed i m).2)
+  let controls := WriteMixedControlTables.install run routed data bank
+  let fixed := WriteMixedFixedResources.install run routed data hint packets controls
+  exact List.Perm.of_eq (installed_declaration_lanes run routed data hint ctx.header fixed packets suffix prepared.registered)
+
 /-- Every release statement execution in the fixed-provider preset gives physical rows for all
-118 tables at the public header, with all Byte requests funded. -/
+118 tables at the public header, with all Byte requests and commitment declarations funded. -/
 theorem compiled_rows
     (execution : ReleaseStatementExecution ctx.limits SP1Prime ctx.commitments ctx.image ctx.source ctx.target events)
     (preset : ctx.limits.LE InstalledAssembly.fixedProviderPreset) :
     ∃ w : EnsembleWitness (assembly ctx), w.publicInput = ctx.header ∧ w.Constraints ∧
-      LogUpBalanced (w.interactionsWith byte) := by
+      LogUpBalanced (w.interactionsWith byte) ∧ CheckedLedger (w.interactionsWith decl) (CommitmentReaders.sites execution.1.1) := by
   let data := ProverData.empty F
   let hint := ProverHint.empty F
   obtain ⟨rows, routed, packets, _, front, _, entries, _, _, _, _, alloc, _, _, cap, _, plan, _, _, _, _, _, _, _,
     prepared, _⟩ := native_observation_allocation (ctx := ctx) execution preset data hint
   have nativeBounds := preset.trans InstalledAssembly.fixedProviderPreset_le_native
   have built := fundedWitness_rows (ctx := ctx) execution nativeBounds routed data hint packets prepared
-  exact ⟨_, built.1, built.2, (fundedWitness_byte (ctx := ctx) execution nativeBounds routed data hint packets prepared).1⟩
+  exact ⟨_, built.1, built.2, (fundedWitness_byte (ctx := ctx) execution nativeBounds routed data hint packets prepared).1,
+    fundedWitness_declarations (ctx := ctx) execution nativeBounds routed data hint packets prepared⟩
 
 end SP1Clean.Export.NativeShard

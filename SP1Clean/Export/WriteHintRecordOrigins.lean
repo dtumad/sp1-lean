@@ -113,28 +113,45 @@ theorem halt_auxiliary (w : EnsembleWitness (preprocessing image source target f
   simpa only [mask, List.flatMap_cons, List.flatMap_nil, List.append_nil] using auxiliary_ledger w ch
 
 private theorem host_ledger (w : EnsembleWitness (preprocessing image source target final)) (ch : RawChannel F)
-    (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw ∨ ch = HintReadWordChip.stateChannel.toRaw) :
+    (which : ch = nodeChannel.toRaw ∨ ch = wordChannel.toRaw ∨ ch = HintReadWordChip.stateChannel.toRaw ∨ ch = CommitmentDeclaration.channel.toRaw) :
     (supervisor w).interactionsWith ch =
       (hostSupport source target ch).flatMap (fun i => (hintHostTable w i).interactionsWith ch) := by
   let host := hostWitness (original w)
   have registered : ch ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: HostFinalMemory.sourceChannels target.sail.memorySnapshot) := by
-    rcases which with rfl | rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
+    rcases which with rfl | rfl | rfl | rfl <;> simp [HostLocalCore.registry, HostFinalMemory.externalChannels, HostFinalMemory.sourceChannels]
   have fresh : ch ∉ (LocalCore.baseEnsemble (p := SP1Prime) image source).channels := by
     apply LocalCore.not_mem_baseEnsemble_channels
-    rcases which with rfl | rfl | rfl <;> simp [LocalCore.baseChannelNames, nodeChannel, wordChannel, HintReadWordChip.stateChannel, Channel.toRaw]
+    rcases which with rfl | rfl | rfl | rfl <;> simp [LocalCore.baseChannelNames, CommitmentDeclaration.channel, nodeChannel, wordChannel, HintReadWordChip.stateChannel, Channel.toRaw]
   have split := HostLocalCore.interactions_split_new host ch registered fresh
-    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,WritePermissionProvider.channel,Channel.toRaw])
-    (by rcases which with rfl | rfl | rfl <;> simp [nodeChannel,wordChannel,HintReadWordChip.stateChannel,StaticTable.channel,ProgramImage.writePermissionTable,StaticTable.ofRows,Channel.toRaw])
+    (by rcases which with rfl | rfl | rfl | rfl <;> simp [CommitmentDeclaration.channel,nodeChannel,wordChannel,HintReadWordChip.stateChannel,WritePermissionProvider.channel,Channel.toRaw])
+    (by rcases which with rfl | rfl | rfl | rfl <;> simp [CommitmentDeclaration.channel,nodeChannel,wordChannel,HintReadWordChip.stateChannel,StaticTable.channel,ProgramImage.writePermissionTable,StaticTable.ofRows,Channel.toRaw])
   have quiet : (HostLocalCore.hostCallTable host).interactionsWith ch = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [HostLocalCore.hostCallTable_component]
     intro used
     have found := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    rcases which with rfl | rfl | rfl <;> exact Bool.noConfusion (show false = true from found)
-  have transport := host_protocol_ledger (original w) ch (by rcases which with rfl | rfl | rfl <;> simp)
+    rcases which with rfl | rfl | rfl | rfl <;> exact Bool.noConfusion (show false = true from found)
+  have transport := host_protocol_ledger (original w) ch (by rcases which with rfl | rfl | rfl | rfl <;> simp)
   change (original w).interactionsWith ch = _
   rw [← transport,split,quiet,List.nil_append]
   exact auxiliary_ledger w ch
+
+/-- Physical offset of a public or deferred COMMIT receiver within the original host block. -/
+def declarationLane (deferred : Bool) (slot : Fin 8) : Fin 35 :=
+  ⟨HostTableRegistry.bankPosition deferred (some slot), (HostTableRegistry.bankPosition_lt ..).trans (by decide)⟩
+
+/-- The complete raw observer ledger contains the declaration pulls of the sixteen physical
+commit lanes in order, including the zero-weight pulls of their padding rows. -/
+theorem declaration_lanes (w : EnsembleWitness (preprocessing image source target final)) :
+    let ch := (CommitmentDeclaration.channel (p := SP1Prime)).toRaw
+    let lanes := fun deferred => (List.finRange 8).flatMap fun slot =>
+      (hintHostTable w (declarationLane deferred slot)).interactionsWith ch
+    w.interactionsWith ch = lanes false ++ lanes true := by
+  intro ch lanes
+  have mask : hostSupport source target ch = (List.finRange 8).map (declarationLane false) ++
+      (List.finRange 8).map (declarationLane true) := rfl
+  rw [unchanged_ledger w ch (by apply ne_of_apply_ne RawChannel.name; decide) (of_decide_eq_true rfl),
+    host_ledger w ch (Or.inr (Or.inr (Or.inr rfl))), mask, List.flatMap_append, List.flatMap_map, List.flatMap_map]
 
 /-- The two original metadata consumers and the incoming fixed node source, in physical order. -/
 theorem original_hint_nodes (w : EnsembleWitness (preprocessing image source target final)) :
@@ -161,7 +178,7 @@ theorem original_hint_cursors (w : EnsembleWitness (preprocessing image source t
       ((hintHostTable w 21).interactionsWith ch ++ (hintHostTable w 22).interactionsWith ch) := by
   let ch := (HintReadWordChip.stateChannel (p := SP1Prime)).toRaw
   have mask : hostSupport source target ch = [0,21,22] := rfl
-  simpa only [mask,List.flatMap_cons,List.flatMap_nil,List.append_nil] using host_ledger w ch (Or.inr (Or.inr rfl))
+  simpa only [mask,List.flatMap_cons,List.flatMap_nil,List.append_nil] using host_ledger w ch (Or.inr (Or.inr (Or.inl rfl)))
 
 private theorem empty_node (pointer : Nat) : node? #[] pointer = none := by cases pointer <;> rfl
 
