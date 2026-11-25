@@ -149,6 +149,7 @@ import SP1Clean.Export.WriteByteConsumers
 import SP1Clean.Export.WriteByteLedger
 import SP1Clean.Export.WriteOriginalByteDirections
 import SP1Clean.Export.WriteGeneratedByteClients
+import SP1Clean.Export.WriteFundedByteProviders
 import SP1Clean.Export.WriteMixedHostData
 import SP1Clean.Export.WriteMixedBankBalances
 import SP1Clean.Export.WriteMixedSourceRecords
