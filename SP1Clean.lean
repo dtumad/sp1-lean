@@ -69,6 +69,7 @@ import SP1Clean.Export.WriteObservationReadBuild
 import SP1Clean.Export.WriteSupplyCapacity
 import SP1Clean.Export.WriteObservationByte
 import SP1Clean.Export.WriteObserverByteReaders
+import SP1Clean.Export.WriteObserverByteCapacity
 import SP1Clean.Export.WriteObservationSources
 import SP1Clean.Export.WriteObservationReads
 import SP1Clean.Export.WriteObservationHandoff
