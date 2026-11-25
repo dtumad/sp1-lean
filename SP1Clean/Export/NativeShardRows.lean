@@ -1,6 +1,5 @@
 import SP1Clean.Export.NativeShardCommitments
-import SP1Clean.Export.WriteByteProviderInstallation
-import SP1Clean.Export.WriteByteConsumers
+import SP1Clean.Export.WriteFundedByteProviders
 
 /-! # Installing the physical Byte tally into the public mixed-execution shard
 
@@ -27,23 +26,23 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot} {events : Li
 /-- Use the counted reader support for precisely the 23 Byte slots of the original supervisor. -/
 noncomputable def supervisorFromReads : EnsembleWitness (base image source target final) :=
   let bank := WriteByteProviderInstallation.ofReaders image source target final data reads (fun i h => (typed i h).2)
-  let controls := WriteMixedControlTables.install run routed data bank
-  let fixed := WriteMixedFixedResources.install run routed data hint packets controls
-  WriteMixedSourceTables.ofExecution run routed final data hint header (WriteMixedHostTables.install run.1 data fixed) packets
+  WriteGeneratedByteClients.supervisor run routed final data hint header packets bank
 
 theorem supervisorFromReads_header : (supervisorFromReads run routed final data hint header packets reads typed).publicInput = header := by
-  unfold supervisorFromReads
+  unfold supervisorFromReads WriteGeneratedByteClients.supervisor
   apply WriteMixedSourceTables.ofExecution_publicInput
 
 /-- All original supervisor constraints follow from the generators, including the installed
 release Byte components. Both disabled and repeated reader occurrences enter their tally. -/
 theorem supervisorFromReads_constraints : (supervisorFromReads run routed final data hint header packets reads typed).Constraints := by
-  unfold supervisorFromReads
+  unfold supervisorFromReads WriteGeneratedByteClients.supervisor
   apply WriteMixedHostTables.supervisor_constraints data run routed header hint packets
   apply WriteMixedFixedResources.install_valid run routed data hint packets
   apply WriteMixedControlTables.install_valid run routed data
   intro i a h f n
   exact WriteByteProviderInstallation.remaining_valid image source target final _ _ _ data i a h f n
+
+attribute [local irreducible] base preprocessing build withPublicChecks supervisorFromReads statementWitness
 
 variable {ctx : InstalledAssembly.Context}
 
@@ -69,7 +68,8 @@ theorem compiled_row_constraints
   · exact (statementWitness_header (ctx := ctx) execution observer data).trans
       ((withPublicChecks_publicInput (build original suffix registered)).trans ((build_publicInput original suffix registered).trans
         (supervisorFromReads_header run routed last data hint ctx.header packets reads typed)))
-  · apply statementWitness_constraints
+  · apply statementWitness_constraints (ctx := ctx) execution observer data
+    apply (withPublicChecks_constraints (build original suffix registered)).mpr
     exact build_constraints original suffix registered
       (supervisorFromReads_constraints run routed last data hint ctx.header packets reads typed) checked
 

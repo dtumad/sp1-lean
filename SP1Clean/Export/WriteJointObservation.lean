@@ -17,8 +17,8 @@ queue state, the outgoing walk and its seal, and every alignment plan requested 
 guest group. The fixed stream metadata table counts the actual hook dispatches and allocation
 steps. The same execution supplies the original state bump, checkpoint padding, HINT_READ, both HINT_LEN
 modes, HALT and the shared ENTER/VERIFY receiver. All nineteen observer tables have constructors.
-The twenty-three original Byte and range providers and the remaining shared-channel checks
-are still required for whole-assembly completeness.
+The observer emits its complete Byte demand before installation of the original providers.
+The remaining shared-channel and field-capacity proofs belong to the assembled witness.
 -/
 
 namespace SP1Clean.Export.WriteObservationAssembly
@@ -65,6 +65,21 @@ def effectDemandHeight {entries : List Entry} (r : Fin 4) : Nat :=
 
 attribute [local irreducible] base preprocessing assembly withSources WriteMixedSourceTables.ofExecution
 
+/-- The observation compiler produces these rows and their typed read requests before
+the Byte providers are counted. They can be installed against any original supervisor. -/
+structure ObserverRows (source target : ExecutionSnapshot) (limits : ResourceLimits)
+    (entries : List Entry) (suffix : List (Table F)) : Prop where
+  /-- The suffix uses all nineteen components in verifier order. -/
+  registered : suffix.map Table.component = tables source target
+  /-- Every generated observer table satisfies its local row constraints and guarantees. -/
+  checked : ∀ t ∈ suffix, t.Constraints ∧ t.Guarantees
+  /-- Every physical Byte site is a reader and each active request is serviceable. -/
+  byteReads : WriteByteConsumers.Reads (suffix.flatMap (·.interactionsWith Channels.byteChannel.toRaw))
+  /-- The physical count includes all padded occurrences. -/
+  byteCount : (suffix.flatMap (·.interactionsWith Channels.byteChannel.toRaw)).length = observerByteSites entries
+  /-- The semantic shard limits bound the complete observer contribution. -/
+  byteBound : observerByteSites entries ≤ observerByteBudget limits
+
 /-- One release-encodable run supplies all nineteen native observer tables, the Memory and
 commitment families, the private outgoing queue state and its immutable reader counts.
 The complete slice and queue-walk ledgers keep their exact physical occurrence counts. -/
@@ -89,19 +104,15 @@ noncomputable def ObservationAllocation {ctx : InstalledAssembly.Context} {event
         ∃ cap : EffectFits events entries (.fromEndpoints ctx.source.host ctx.target.host), cap.Realized data ∧
         ∃ plan : Table F, plan.component = WriteEffects.planComponent ∧ plan.Constraints ∧ plan.Guarantees ∧ plan.length = 512 ∧
           (∀ t ∈ hints, t.Constraints ∧ t.Guarantees) ∧ close.Constraints ∧ close.Guarantees ∧
-        ∀ (remaining : WriteMixedControlTables.Remaining ctx.image ctx.source ctx.target final),
-          let fixed := WriteMixedControlTables.install release routed data remaining
-          let plans := [plan,close]
-          let w := WriteMixedSourceTables.ofExecution release routed final data hint header (WriteMixedHostTables.install release.1 data (WriteMixedFixedResources.install release routed data hint packets fixed)) packets
-          let suffix := front ++ fundedSuffix s data (effectMiddle cap data metadata) hints plans
-          ∃ reg : suffix.map Table.component = tables ctx.source ctx.target,
-            let pre := build w suffix reg
+        let plans := [plan,close]
+        let suffix := front ++ fundedSuffix s data (effectMiddle cap data metadata) hints plans
+        ∃ observedRows : ObserverRows ctx.source ctx.target ctx.limits entries suffix,
+          ∀ (remaining : WriteMixedControlTables.Remaining ctx.image ctx.source ctx.target final),
+            let fixed := WriteMixedControlTables.install release routed data remaining
+            let w := WriteMixedSourceTables.ofExecution release routed final data hint header (WriteMixedHostTables.install release.1 data (WriteMixedFixedResources.install release routed data hint packets fixed)) packets
+            let pre := build w suffix observedRows.registered
             let full := withPublicChecks pre
-            (∀ t ∈ suffix, t.Constraints ∧ t.Guarantees) ∧
             (∀ t ∈ full.tables.drop (installSources w).tables.length, t.Constraints ∧ t.Guarantees) ∧
-            WriteByteConsumers.Reads (suffix.flatMap (·.interactionsWith Channels.byteChannel.toRaw)) ∧
-            (suffix.flatMap (·.interactionsWith Channels.byteChannel.toRaw)).length = observerByteSites entries ∧
-            observerByteSites entries ≤ observerByteBudget ctx.limits ∧
             (∀ id, WriteMixedHostTables.InstalledAt pre id (WriteMixedHostTables.table release.1 data id)) ∧
             (∀ k, WriteMixedControlTables.InstalledAt pre k (WriteMixedControlTables.table release routed data k)) ∧
             (MixedHaltPadding.inputs ctx.source ctx.target).map (fun _ => (0 : BitVec 32)) ++ events.filterMap (hostExitAfter none) =
@@ -158,7 +169,7 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   have md := Metadata.checked release.1 readers collected s cap data
   refine ⟨rows,routed,_,observed,front,physical,entries,collected,md.constraints,md.guarantees,md.height,s,paid,funding,cap,realized,
     plan,planReg,planGood,planGuar,planSize,hintGood,closeGood,closeGuar,?_⟩
-  intro remaining fixed plans w suffix
+  intro plans suffix
   have hh : hints.map Table.component = ((tables ctx.source ctx.target).drop 10).take 2 := rfl
   have hplans : plans.map Table.component = ((tables ctx.source ctx.target).drop 13).take 2 := by
     simp only [plans,List.map_cons,List.map_nil,planReg]; rfl
@@ -174,9 +185,6 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
   have reg : suffix.map Table.component = tables ctx.source ctx.target := by
     change (front ++ tail).map Table.component = _
     rw [List.map_append,pfront,ptail,List.take_append_drop]
-  refine ⟨reg,?_⟩
-  intro pre full
-  obtain ⟨_,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets fixed) tail ptail
   have plansGood : ∀ t ∈ plans, t.Constraints ∧ t.Guarantees := by
     intro t member
     rcases List.mem_cons.mp member with rfl | last
@@ -189,14 +197,16 @@ theorem compiled_observation_allocation {ctx : InstalledAssembly.Context} {event
     · exact frontGood _ first
     · exact fundedSuffix_valid s data paid.toChecked effects hints plans
         (effectMiddle_valid cap data metadata realized ⟨md.constraints,md.guarantees⟩) hintGood plansGood t rest
+  have byteCount := compiled_observer_byte_count ctx.image final cap s metadata data realized front hints plans frontHeights rfl rfl reg
+  have byteBound := observerByteSites_le_budget run.1 (preset.trans InstalledAssembly.fixedProviderPreset_le_native) readers collected
+  refine ⟨⟨reg, suffixGood, generated_byte_readers suffix reg suffixGood, byteCount, byteBound⟩, ?_⟩
+  intro remaining fixed w pre full
+  obtain ⟨_,banks,bankPaid,readPaid⟩ := install final header (WriteMixedFixedResources.install release routed data hint (inputs entries).packets fixed) tail ptail
   have endpoints := installed_endpoint_ledgers w suffix reg (s.groups data) plan _ _ rfl rfl rfl rfl
   obtain ⟨nodeLedger,wordLedger,cursorLedger⟩ := installed_immutable_ledgers release routed data hint (inputs entries).packets header remaining
     suffix reg s rfl rfl rfl
   obtain ⟨_,nodePaid,wordPaid⟩ := InstalledAssembly.native_immutable_queue release.1 data collected s paid.toChecked
-  have byteCount := compiled_observer_byte_count ctx.image final cap s metadata data realized front hints plans frontHeights rfl rfl reg
-  have byteBound := observerByteSites_le_budget run.1 (preset.trans InstalledAssembly.fixedProviderPreset_le_native) readers collected
-  refine ⟨suffixGood,installed_observer_rows w suffix reg suffixGood,generated_byte_readers suffix reg suffixGood,
-    byteCount,byteBound,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
+  refine ⟨installed_observer_rows w suffix reg suffixGood,banks,WriteMixedControlTables.installed_at release routed data hint _ header remaining suffix reg,
     MixedHaltPadding.receipt release.1.1.2,
     installed_control_ledgers release routed data hint _ header remaining suffix reg run.1 preset,
     ?_,nodeLedger ▸ nodePaid,wordLedger ▸ wordPaid,?_,?_,?_,?_,?_,?_,?_,?_⟩

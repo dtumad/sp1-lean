@@ -26,6 +26,10 @@ def withPublicChecks (w : EnsembleWitness (preprocessing image source target fin
 theorem withPublicChecks_publicInput (w : EnsembleWitness (preprocessing image source target final)) :
     (withPublicChecks w).publicInput = w.publicInput := rfl
 
+/-- Installing both public checks preserves the row constraints of the physical witness. -/
+theorem withPublicChecks_constraints (w : EnsembleWitness (preprocessing image source target final)) :
+    (withPublicChecks w).Constraints ↔ w.Constraints := Iff.rfl
+
 theorem observed_constraints (w : EnsembleWitness (assembly image source target final)) :
     w.Constraints ↔ (observed w).Constraints := Iff.rfl
 
