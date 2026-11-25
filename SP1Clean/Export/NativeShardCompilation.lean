@@ -1,5 +1,6 @@
 import SP1Clean.Export.NativeShardRows
 import SP1Clean.Export.WriteJointObservation
+import SP1Clean.Export.WriteSparseByteCapacity
 
 /-! # Compiling the public native shard from a release execution
 
@@ -29,6 +30,15 @@ private theorem byte_registered : byte ∈ (preprocessing ctx.image ctx.source c
   let span : TableSlot seen.tables WriteBuffer.spanComponent := slot ctx.image ctx.source ctx.target (last ctx) 3
   exact seen.tables_channels _ (span.component_eq ▸ List.getElem_mem span.index.isLt)
     (show byte ∈ WriteBuffer.spanComponent.circuit.channels from List.mem_cons_self)
+
+private theorem statementWitness_byte (pre : EnsembleWitness (preprocessing ctx.image ctx.source ctx.target (last ctx)))
+    (data : ProverData F) :
+    (statementWitness (ctx := ctx) execution (withPublicChecks pre) data).interactionsWith byte = pre.interactionsWith byte := by
+  have registered := byte_registered (ctx := ctx)
+  have publicByte : byte ∈ (observer ctx).channels := List.mem_append_left _ registered
+  exact (statementWitness_other (ctx := ctx) execution (withPublicChecks pre) data byte publicByte
+    (fun eq => Bool.noConfusion (congrArg (fun c => c.name == "SP1Byte") eq))).trans
+    (withPublicChecks_ledger pre byte registered (of_decide_eq_true rfl))
 
 variable {rows : List MixedCompiledRow}
     (routed : routeMixedRows? (policy SP1Prime ctx.image) ctx.image.program AccessFrontier.initial ctx.source.realize events = some rows)
@@ -69,15 +79,37 @@ theorem fundedWitness_byte :
   let typed := WriteGeneratedByteClients.reads run routed (last ctx) data hint ctx.header packets limbs suffix prepared.byteReads
   let original := supervisorFromReads run routed (last ctx) data hint ctx.header packets input typed
   let pre := build original suffix prepared.registered
-  let observed := withPublicChecks pre
-  have registered := byte_registered (ctx := ctx)
-  have publicByte : byte ∈ (observer ctx).channels := List.mem_append_left _ registered
-  have same : w.interactionsWith byte = pre.interactionsWith byte :=
-    (statementWitness_other (ctx := ctx) execution observed data byte publicByte
-      (fun eq => Bool.noConfusion (congrArg (fun c => c.name == "SP1Byte") eq))).trans
-      (withPublicChecks_ledger pre byte registered (of_decide_eq_true rfl))
+  have same : w.interactionsWith byte = pre.interactionsWith byte := statementWitness_byte (ctx := ctx) execution pre data
   rw [same]
   exact WriteFundedByteProviders.full run routed (last ctx) data hint ctx.header packets limbs suffix prepared.registered prepared.byteReads
+
+/-- More than 2²⁴ distinct RAM words on the generated boundary prevent this witness from
+meeting the public verifier's Byte capacity, including when the signed ledger balances. -/
+theorem fundedWitness_byte_overflow
+    (large : 2^24 < WriteSparseByteCapacity.ramCount ctx.source (MixedMemoryHistory.stream ctx.image ctx.source events rows)
+      (WriteBoundaryBuild.demandKeys events packets) data hint) :
+    SP1Prime ≤ ((fundedWitness (ctx := ctx) execution bounds routed data hint packets prepared).interactionsWith byte).length := by
+  let run := release (ctx := ctx) execution bounds
+  let input := WriteGeneratedByteClients.demand run routed (last ctx) data hint ctx.header packets suffix
+  let typed := WriteGeneratedByteClients.reads run routed (last ctx) data hint ctx.header packets (header_limbs (ctx := ctx) execution) suffix prepared.byteReads
+  let bank := WriteByteProviderInstallation.ofReaders ctx.image ctx.source ctx.target (last ctx) data input (fun i m => (typed i m).2)
+  unfold fundedWitness
+  rw [statementWitness_byte (ctx := ctx) execution]
+  exact WriteSparseByteCapacity.assembled_overflow run routed (last ctx) data hint ctx.header packets bank suffix prepared.registered large
+
+/-- Every header fails the raw statement at these generated heights if the sparse RAM
+inventory alone exceeds the field. The claim is specific to this height vector. -/
+theorem no_statement_at_funded_heights
+    (large : 2^24 < WriteSparseByteCapacity.ramCount ctx.source (MixedMemoryHistory.stream ctx.image ctx.source events rows)
+      (WriteBoundaryBuild.demandKeys events packets) data hint) (header : SP1PublicIO F) :
+    let w := fundedWitness (ctx := ctx) execution bounds routed data hint packets prepared
+    ¬ (assembly ctx).Statement .logUp header w.heights := by
+  intro w accepted
+  have publicByte : byte ∈ (observer ctx).channels := List.mem_append_left _ (byte_registered (ctx := ctx))
+  have reg : byte ∈ (assembly ctx).channels := List.mem_append_left _ (List.mem_append_left _ publicByte)
+  have fits := ((w.interactionsFit_iff .logUp).mp accepted.1) byte reg
+  exact (Nat.not_lt_of_ge (fundedWitness_byte_overflow (ctx := ctx) execution bounds routed data hint packets prepared large))
+    (of_decide_eq_true fits)
 
 /-- Every release statement execution in the fixed-provider preset gives physical rows for all
 118 tables at the public header, with all Byte requests funded. -/
