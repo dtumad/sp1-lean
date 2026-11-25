@@ -29,6 +29,18 @@ theorem demandHeight_power {active : Nat} (positive : active ≠ 0) :
   rw [demandHeight,ite_eq_right positive,nextPowerOfTwo]
   exact aux_power _ _ 0
 
+/-- Increasing the number of active rows cannot decrease the padded height, including
+the zero-row case. -/
+theorem demandHeight_mono : Monotone demandHeight := by
+  intro a b smaller
+  by_cases empty : b = 0
+  · have same : a = b := by omega
+    rw [same]
+  · obtain ⟨k, height⟩ := demandHeight_power empty
+    have fits := smaller.trans (demandHeight_bounds b).1
+    rw [height] at fits ⊢
+    exact demandHeight_le_pow fits
+
 /-- The full power-of-two ceiling is reached whenever the raw row count is strictly
 above the preceding power of two, including the upper equality. -/
 theorem demandHeight_of_interval {active exponent : Nat} (above : 2 ^ exponent < active)

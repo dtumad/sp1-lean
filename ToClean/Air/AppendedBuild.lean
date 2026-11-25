@@ -26,6 +26,9 @@ def extend : EnsembleWitness whole :=
   EnsembleWitness.ofTables whole (w.tables ++ suffix) w.publicInput
     (by rw [List.map_append, w.tables_map_component, registered, layout.tables])
 
+theorem extend_publicInput : (layout.extend w suffix registered).publicInput = w.publicInput :=
+  EnsembleWitness.ofTables_publicInput ..
+
 theorem extend_data : (layout.extend w suffix registered).data =
     deriveProverData (w.tables ++ suffix) (toElements w.publicInput).toArray := EnsembleWitness.ofTables_data ..
 

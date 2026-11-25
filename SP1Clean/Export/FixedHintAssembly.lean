@@ -44,11 +44,12 @@ abbrev withoutCommitments (context : Context) : Ensemble Fp SP1PublicIO :=
   Shard.installed context.image context.source context.target context.finalHints
 
 /-- The declaration provider has a fresh name in the complete host inventory. -/
-private theorem declarationFresh (context : Context) :
-    (CommitmentDeclaration.source (p := SP1Prime) context.commitments).circuit.name ∉
-      (withoutCommitments context).tables.map (·.circuit.name) := by
+theorem declarationFresh (image : ProgramImage) (source target : ExecutionSnapshot) (final : HostHintQueue.State Fp)
+    (statement : CommitmentStatement) :
+    (CommitmentDeclaration.source (p := SP1Prime) statement).circuit.name ∉
+      (HostObserved.ensemble image source target final).tables.map (·.circuit.name) := by
   change "sp1.native.commitment_declaration.source" ∉ _
-  rw [withoutCommitments, Shard.installed, HostObserved.table_names]
+  rw [HostObserved.table_names]
   simp only [HostFinalMemory.Installed,
     HostFinalMemory.ensemble, ClosedVerifier.install, HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, HostFinalMemory.base,
@@ -66,7 +67,8 @@ private theorem declarationFresh (context : Context) :
 
 /-- The seven-call assembly with its verifier-owned commitment statement. -/
 def committedAssembly (context : Context) : Ensemble Fp SP1PublicIO :=
-  CommitmentEnsemble.install context.commitments (withoutCommitments context) (declarationFresh context)
+  CommitmentEnsemble.install context.commitments (withoutCommitments context)
+    (declarationFresh context.image context.source context.target context.finalHints context.commitments)
     (Shard.declarationsRegistered context.image context.source context.target context.finalHints)
 
 /-- Check the invariant Sail frame, canonical public endpoints, and exact outgoing host. -/

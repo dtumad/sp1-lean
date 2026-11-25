@@ -29,7 +29,27 @@ def rows? (deferred : Bool) (previous : ℕ) (values : Vector (BitVec 32) 8) : L
       (rows? deferred call.clock (bankUpdate values (call.arg1,call.arg2)) rest).map ((slot,row) :: ·)
     else none
 
-private theorem arg2_field (c : CoreSyscallEvent) : (message c).arg2 = bitVecToWord c.arg2 := by
+/-- Row population keeps the selected slot and the complete CPU message of each call in order. -/
+theorem rows_origins {deferred : Bool} {previous : ℕ} {values : Vector (BitVec 32) 8}
+    {calls : List CoreSyscallEvent} {rows : List Entry} (built : rows? deferred previous values calls = some rows) :
+    List.Forall₂ (fun (row : Entry) (call : CoreSyscallEvent) =>
+      row.1.val = call.arg1.toNat ∧ row.2.call = message call) rows calls := by
+  induction calls generalizing previous values rows with
+  | nil =>
+    obtain rfl := Option.some.inj built
+    exact .nil
+  | cons call rest ih =>
+    unfold rows? at built
+    split at built
+    · cases tail : rows? deferred call.clock (bankUpdate values (call.arg1,call.arg2)) rest with
+      | none => simp [tail] at built
+      | some rs =>
+        simp only [tail, Option.map_some, Option.some.injEq] at built
+        subst rows
+        exact .cons ⟨rfl,rfl⟩ (ih tail)
+    · contradiction
+
+theorem arg2_field (c : CoreSyscallEvent) : (message c).arg2 = bitVecToWord c.arg2 := by
   change wordOfNat c.arg2.toNat = _
   apply Word.eq_of_toBitVec64_eq (wordOfNat_isU64 _) (isU64_bitVecToWord _)
   rw [toBitVec64_wordOfNat, toBitVec64_bitVecToWord, BitVec.ofNat_toNat]

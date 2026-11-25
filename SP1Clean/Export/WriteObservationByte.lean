@@ -32,7 +32,8 @@ private theorem verifier_byte (data : ProverData F) :
     exact HostObserved.verifier_byte_requirements (image := image) (source := source) (target := target) (final := final) data
   exact verifier_of_eq ((appended image source target final).verifier.trans (verifier_eq image source target final)) old
 
-private theorem suffix_byte (c : Component F) (member : c ∈ tables source target)
+/-- The observer circuits establish typed Byte requirements at every constrained row. -/
+theorem observer_byte_requirements (c : Component F) (member : c ∈ tables source target)
     (env : Environment F) (checked : c.operations.ConstraintsHold env) : c.operations.ChannelRequirements byteChannel.toRaw env := by
   apply Operations.requirements_of_not_mem _ _ _ (c.inChannelsOrRequirements_of_constraints env checked) _
   have absent : (byteChannel (p := SP1Prime)).name ∉ (tables source target).flatMap
@@ -55,7 +56,7 @@ theorem byte_guarantees (w : EnsembleWitness (preprocessing image source target 
   · exact (sameRows image source target final).channelRequirements byteChannel.toRaw
       (fun eq => Bool.noConfusion (congrArg (fun c => c.name == "sp1.native.write_readback") eq))
       (fun _ h => byte_prior image source target final h) c old
-  · exact suffix_byte source target c added
+  · exact observer_byte_requirements source target c added
 
 private theorem byte_data {i : Interaction F} {a b : ProverData F} (onByte : i.channel = byteChannel.toRaw)
     (valid : i.Guarantees a) : i.Guarantees b := by

@@ -76,6 +76,20 @@ private theorem tables_registered (source target : ExecutionSnapshot) (c : Compo
   obtain ⟨i,_,rfl⟩ := List.mem_map.mp used
   exact List.getElem_mem ..
 
+/-- Every protocol used by an observer table checks its message at any shared prover data. -/
+theorem observer_guarantees_setData {source target : ExecutionSnapshot} {c : Component F}
+    (registered : c ∈ tables source target) (i : Interaction F) (used : i.channel ∈ c.circuit.channels)
+    {old fresh : ProverData F} (valid : i.Guarantees old) : i.Guarantees fresh := by
+  have transfer : ∀ ch ∈ protocols, ∀ (v : Interaction F), v.channel = ch → v.Guarantees old → v.Guarantees fresh := by
+    repeat' refine List.forall_mem_cons.mpr ⟨?_, ?_⟩
+    all_goals first
+      | exact fun _ mem => False.elim (List.not_mem_nil mem)
+      | intro ⟨ch, _, _, _, _⟩ same holds
+        change ch = _ at same
+        subst ch
+        exact holds
+  exact transfer i.channel (tables_registered _ _ c registered used) i rfl valid
+
 /-- All new effect and outgoing-queue rows have no Clean lookup operations. This is the
 suffix after the original seven physical packet, classifier and decoder components. -/
 theorem effect_lookupFree (source target : ExecutionSnapshot) : LookupFree ((tables source target).drop 7) := by

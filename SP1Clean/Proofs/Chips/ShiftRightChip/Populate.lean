@@ -648,10 +648,8 @@ theorem byteRow_lower (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 4)
       (ShiftLeftChip.cBits c0)[0] * (1 : ZMod p) + (ShiftLeftChip.cBits c0)[1] * (2 : ZMod p)
         + (ShiftLeftChip.cBits c0)[2] * (4 : ZMod p) + (ShiftLeftChip.cBits c0)[3] * (8 : ZMod p),
       0⟩ : ByteRow (ZMod p)) := by
-  have hp := Fact.out (p := 2 ^ 17 < p)
   rw [ShiftLeftChip.cBits_bitShift_sum]
-  refine ShiftLeftChip.byteRowSpec_range_intro ?_
-  rw [ZMod.val_natCast_of_lt (show c0.val % 16 < p by omega)]
+  refine (byteRowSpec_range (n := c0.val % 16) _ (by omega)).mpr ?_
   exact lowerLimb_val_lt b c0 f i hi
 
 /-- The `higher_limb` byte-range pull rows (`< 2^(16 - bitShift)`) are in the table
@@ -663,7 +661,6 @@ theorem byteRow_higher (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 4)
         + (ShiftLeftChip.cBits c0)[1] * (2 : ZMod p) + (ShiftLeftChip.cBits c0)[2] * (4 : ZMod p)
         + (ShiftLeftChip.cBits c0)[3] * (8 : ZMod p)),
       0⟩ : ByteRow (ZMod p)) := by
-  have hp := Fact.out (p := 2 ^ 17 < p)
   have hw : (16 : ZMod p) + -((ShiftLeftChip.cBits c0)[0] * (1 : ZMod p)
       + (ShiftLeftChip.cBits c0)[1] * (2 : ZMod p) + (ShiftLeftChip.cBits c0)[2] * (4 : ZMod p)
       + (ShiftLeftChip.cBits c0)[3] * (8 : ZMod p))
@@ -672,8 +669,7 @@ theorem byteRow_higher (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 4)
       show ((16 : ZMod p)) = ((16 : ℕ) : ZMod p) by push_cast; rfl,
       ← Nat.cast_sub (by omega)]
   rw [hw]
-  refine ShiftLeftChip.byteRowSpec_range_intro ?_
-  rw [ZMod.val_natCast_of_lt (show 16 - c0.val % 16 < p by omega)]
+  refine (byteRowSpec_range (n := 16 - c0.val % 16) _ (by omega)).mpr ?_
   exact higherLimb_val_lt b c0 f hb he14 i hi
 
 end ValueLemmas

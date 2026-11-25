@@ -28,6 +28,10 @@ noncomputable def ofExecution (packets : List WriteObservations.Packet) : Ensemb
   build image source target finish rows (HintReadTransfers.history image source events) (heights run routed) data hint remaining
     (MixedMemoryHistory.stream image source events rows) (WriteBoundaryBuild.demandKeys events packets) (MixedMemoryHistory.canonical run.1 routed) header
 
+/-- Canonicalizing the generated table arrays preserves the exact supplied public header. -/
+theorem ofExecution_publicInput (packets : List WriteObservations.Packet) :
+    (ofExecution run routed finish data hint header remaining packets).publicInput = header := rfl
+
 /-- All generated Memory sources and incoming boundaries satisfy the canonical global constraints.
 Other generators certify only the remaining non-Memory slots. -/
 theorem ofExecution_constraints (packets : List WriteObservations.Packet)

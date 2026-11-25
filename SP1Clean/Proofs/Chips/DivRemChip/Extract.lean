@@ -99,19 +99,6 @@ lemma iseqword_result_proj {F : Type} (W : Vector F 11) :
 
 /-! ## Byte-bus range extraction -/
 
-/-- Extract the `Range` bound `x.val < 2 ^ w.val` from a byte-table membership `⟨6, x, w, 0⟩` with a
-**symbolic** width column `w`. The `opcode = 6` column pins the `ByteOpcode` to `Range`
-(`cast_le6_inj`), whose `constrain` is exactly the bound. (Public sibling of the `private`
-`ShiftRightChip.byteRowSpec_range_val`; co-located here as the single shared home.) -/
-lemma byteRowSpec_range_val {x w : ZMod p}
-    (h : ByteRowSpec (⟨6, x, w, 0⟩ : ByteRow (ZMod p))) : x.val < 2 ^ w.val := by
-  obtain ⟨op, hop, hc⟩ := h
-  have hk : op.idx = 6 := cast_le6_inj (by cases op <;> decide) (by norm_num) (by rw [hop]; norm_cast)
-  cases op <;> simp only [ByteOpcode.idx] at hk <;>
-    first
-      | omega
-      | (simp only [ByteOpcode.constrain] at hc; exact hc)
-
 /-- `(16 : ZMod p).val = 16` (the byte-bus 16-bit range width column). -/
 @[simp] lemma val_16_zmod_p : (16 : ZMod p).val = 16 := _root_.SP1Clean.val_16_zmod_p
 

@@ -97,20 +97,27 @@ lemma cast_le6_inj {j k : ℕ} (hj : j ≤ 6) (hk : k ≤ 6)
   have hmod := (ZMod.natCast_eq_natCast_iff j k p).mp h
   rwa [Nat.ModEq, Nat.mod_eq_of_lt hjp, Nat.mod_eq_of_lt hkp] at hmod
 
-/-- A `Range` byte-table row `⟨6, x, (n : ZMod p), 0⟩` is in the table **iff** `x.val < 2^n`
-(`Range.constrain a b c := a.val < 2^b.val`). The `n`-bit check, SP1's `send_byte(Range, x, n, 0)` —
-the form the timestamp (`< 2^16`/`< 2^8`) and shifted-clock (`< 2^13`) checks use. Needs `n < p` so the
-bit-width column round-trips (`((n:ZMod p)).val = n`). -/
-lemma byteRowSpec_range (x : ZMod p) {n : ℕ} (hnp : n < p) :
-    ByteRowSpec (⟨(6 : ZMod p), x, ((n : ℕ) : ZMod p), 0⟩ : ByteRow (ZMod p)) ↔ x.val < 2 ^ n := by
-  have hvaln : ((n : ℕ) : ZMod p).val = n := ZMod.val_natCast_of_lt hnp
-  constructor
-  · rintro ⟨op, hop, hc⟩
-    have hk : op.idx = 6 := cast_le6_inj (by cases op <;> decide) (by norm_num) (by rw [hop]; norm_cast)
-    cases op <;> simp only [ByteOpcode.idx] at hk <;>
-      first | omega | (simp only [ByteOpcode.constrain] at hc; rwa [hvaln] at hc)
-  · intro hx
-    exact ⟨ByteOpcode.Range, by norm_cast, by simp only [ByteOpcode.constrain, hvaln]; exact hx⟩
+/-- The Range channel publishes its bounded operand, a released width and a zero unused field. -/
+lemma byteRowSpec_range_fields (x w c : ZMod p) :
+    ByteRowSpec (⟨6,x,w,c⟩ : ByteRow (ZMod p)) ↔ x.val < 2 ^ w.val ∧ w.val ≤ 16 ∧ c = 0 :=
+  ByteOpcode.constrainField_six x w c
+
+/-- Read a symbolic-width range bound from an authenticated lookup. -/
+lemma byteRowSpec_range_val {x w c : ZMod p} (h : ByteRowSpec (⟨6,x,w,c⟩ : ByteRow (ZMod p))) :
+    x.val < 2 ^ w.val :=
+  ((byteRowSpec_range_fields x w c).mp h).1
+
+/-- A Range row at a supported natural width is equivalent to the arithmetic range check. -/
+lemma byteRowSpec_range (x : ZMod p) {n : ℕ} (width : n ≤ 16) :
+    ByteRowSpec (⟨6,x,(n : ZMod p),0⟩ : ByteRow (ZMod p)) ↔ x.val < 2 ^ n := by
+  have modulus : 2 ^ 17 < p := Fact.out
+  rw [byteRowSpec_range_fields,ZMod.val_natCast_of_lt (by omega)]
+  simp only [width,and_self,and_true]
+
+/-- Sixteen-bit range requests use the widest released Range table. -/
+lemma byteRowSpec_u16 (x : ZMod p) :
+    ByteRowSpec (⟨6,x,((16 : ℕ) : ZMod p),0⟩ : ByteRow (ZMod p)) ↔ x.val < 2 ^ 16 :=
+  byteRowSpec_range x (by decide : 16 ≤ 16)
 
 omit [Fact p.Prime] in
 /-- An AND/OR/XOR byte-table row `⟨op, r, b, c⟩` (dynamic opcode, `op.val < 3`) is in the table
@@ -151,14 +158,8 @@ slots. Forward: `cast_le6_inj` turns the opcode column `= 3` into the *natural* 
 false index equations); then `U8Range.constrain` bounds both slots. Backward: provide `U8Range`. -/
 lemma byteRowSpec_u8range_pair (b c : ZMod p) :
     ByteRowSpec (⟨(3 : ZMod p), 0, b, c⟩ : ByteRow (ZMod p)) ↔ (b.val < 2 ^ 8 ∧ c.val < 2 ^ 8) := by
-  rw [show (2 : ℕ) ^ 8 = 256 from by norm_num]
-  constructor
-  · rintro ⟨op, hop, hc⟩
-    have hk : op.idx = 3 := cast_le6_inj (by cases op <;> decide) (by norm_num) (by rw [hop]; norm_cast)
-    cases op <;> simp only [ByteOpcode.idx] at hk <;>
-      first | omega | (simp only [ByteOpcode.constrain] at hc; exact ⟨hc.2.1, hc.2.2⟩)
-  · rintro ⟨hb, hc⟩
-    exact ⟨ByteOpcode.U8Range, by norm_cast, ⟨by simp, hb, hc⟩⟩
+  rw [show ByteRowSpec _ ↔ _ from ByteOpcode.constrainField_three 0 b c]
+  simp [ByteOpcode.constrain]
 
 /-- An `LTU` byte-table row `⟨4, a, b, c⟩` is in the table **iff** `a`/`b`/`c` are bytes, `a` is
 binary, and `a = 1` exactly when `b.val < c.val` — the unsigned byte comparison. SP1's
@@ -181,15 +182,8 @@ in `mul.rs`/signed-Lt sign extraction. Proof mirrors `byteRowSpec_u8range_pair`/
 lemma byteRowSpec_msb (m x : ZMod p) :
     ByteRowSpec (⟨(5 : ZMod p), m, x, 0⟩ : ByteRow (ZMod p)) ↔
       (m.val < 256 ∧ x.val < 256) ∧ (m = 0 ∨ m = 1) ∧ (m = 1 ↔ 128 ≤ x.val) := by
-  constructor
-  · rintro ⟨op, hop, hc⟩
-    have hk : op.idx = 5 := cast_le6_inj (by cases op <;> decide) (by norm_num) (by rw [hop]; norm_cast)
-    cases op <;> simp only [ByteOpcode.idx] at hk <;>
-      first
-        | omega
-        | (simp only [ByteOpcode.constrain] at hc; exact ⟨⟨hc.1.1, hc.1.2.1⟩, hc.2.1, hc.2.2⟩)
-  · rintro ⟨⟨hm, hx⟩, hbin, hiff⟩
-    exact ⟨ByteOpcode.MSB, by norm_cast, ⟨⟨hm, hx, by simp⟩, hbin, hiff⟩⟩
+  rw [show ByteRowSpec _ ↔ _ from ByteOpcode.constrainField_five m x 0]
+  simp only [ByteOpcode.constrain,and_true]
 
 /-! The in-circuit byte-op correctness is the byte channel's `Guarantees = ByteRowSpec` —
 `byteRowSpec_u8range_pair`/`byteRowSpec_range` above are what consumers project the pull guarantee

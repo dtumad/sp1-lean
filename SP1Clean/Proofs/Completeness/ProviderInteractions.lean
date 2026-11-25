@@ -659,8 +659,7 @@ theorem ltu_buildRow_cleanAccesses
 
 /-! ## Range — `U8Range`'s shape, parameterised by width
 
-Stated over `RangeChip.componentFor width`, which is what the trace builds (one table per width in
-SP1's complete `0 … 16` profile), rather than over `RangeChip.component n hn`. -/
+The trace builds one table per width in SP1's complete `0 … 16` profile. -/
 
 theorem range_interactionsWith_byte (width : RangeChip.Width)
     (input : Var RangeChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -687,13 +686,6 @@ theorem rangeVar_multiplicity :
     (varFromOffset RangeChip.Inputs 0 : Var RangeChip.Inputs (ZMod p)).multiplicity
       = var ⟨1⟩ := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
-
-/-- `Ledger.onlyChannel_Range` at the width-indexed component the trace actually builds.
-`componentFor width` and `component width.val _` are definitionally equal, but `rw` needs the
-spelling the goal carries. -/
-theorem onlyChannel_rangeComponentFor (width : RangeChip.Width) :
-    Ledger.OnlyChannel (RangeChip.componentFor (p := p) width) byteChannel.toRaw :=
-  Ledger.onlyChannel_Range width.val (RangeChip.two_pow_lt (Nat.le_of_lt_succ width.isLt))
 
 theorem range_component_interactionsWith_byte (width : RangeChip.Width) :
     (RangeChip.componentFor (p := p) width).operations.interactionsWith byteChannel.toRaw =
@@ -722,7 +714,7 @@ theorem range_buildRow_cleanAccesses (width : RangeChip.Width)
         [(6 : ZMod p).val, input.a.val, ((width.val : ℕ) : ZMod p).val, (0 : ZMod p).val],
         signedVal input.multiplicity)] := by
   rw [interactions_eq_interactionsWith_of_onlyChannel _ byteChannel.toRaw
-      (onlyChannel_rangeComponentFor width),
+      (Ledger.onlyChannel_Range width),
     range_component_interactionsWith_byte, range_interactionsWith_byte]
   unfold RangeChip.componentFor
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]

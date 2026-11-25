@@ -45,14 +45,14 @@ private theorem closed_silent {channel : RawChannel (ZMod p)} (closed : ClosedVe
   simp only [Operations.interactionValuesWith, ClosedVerifier.operations,
     InteractionRecovery.interactionsWith_main_eq_nil closed.circuit.base _ () 0 silent, List.map_nil]
 
-/-- An installed verifier emits nothing on a registered protocol outside its State, host
-and final-memory endpoints. The physical tables may still exchange values on this protocol. -/
-theorem verifier_silent {channel : RawChannel (ZMod p)}
+/-- Original public-verifier traffic survives the installed host and memory boundaries on
+a registered channel that neither extension uses. -/
+theorem verifier_core_values {channel : RawChannel (ZMod p)}
     (declared : channel ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels target.sail.memorySnapshot))
-    (core : channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels)
     (host : channel ∉ (HostHintQueueBoundary.boundary source final target.host).circuit.channels)
     (changes : channel ≠ FinalMemoryChange.channel.toRaw) (env : Environment (ZMod p)) :
-    (Installed image source target final).verifierOperations.interactionValuesWith channel env = [] := by
+    (Installed image source target final).verifierOperations.interactionValuesWith channel env =
+      (LocalCore.boundaryVerifier (p := p)).circuitOperations.interactionValuesWith channel env := by
   let registration := source_registration (p := p) image source target.sail.memorySnapshot
   let original := HostHintReadLocal.ensemble image source HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables target.sail.memorySnapshot)
@@ -77,7 +77,7 @@ theorem verifier_silent {channel : RawChannel (ZMod p)}
       · exact same
     simp [equal, receiptChannels]
   change ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target.sail.memorySnapshot).install
-    beforeChanges changesRegistered).verifierOperations.interactionValuesWith channel env = []
+    beforeChanges changesRegistered).verifierOperations.interactionValuesWith channel env = _
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ beforeChanges changesRegistered env _
       (List.mem_append_left _ originalDeclared),
     closed_silent _ (by
@@ -90,12 +90,23 @@ theorem verifier_silent {channel : RawChannel (ZMod p)}
         · exact same
       exact changes same), List.append_nil]
   change ((HostHintQueueBoundary.boundary source final target.host).install original boundaryRegistered).verifierOperations.interactionValuesWith
-    channel env = []
+    channel env = _
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ original boundaryRegistered env _ originalDeclared,
     closed_silent _ host, List.append_nil]
   change ((LocalSourceBoundary.checker image source).install (HostLocalCore.baseEnsemble image source _ _ _ _ _)).verifierOperations.interactionValuesWith
-    channel env = []
+    channel env = _
   rw [PublicVerifier.install_verifier_interactions_of_mem _ _ env _ declared]
+  rfl
+
+/-- An installed verifier emits nothing on a registered protocol outside its State, host
+and final-memory endpoints. The physical tables may still exchange values on this protocol. -/
+theorem verifier_silent {channel : RawChannel (ZMod p)}
+    (declared : channel ∈ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels target.sail.memorySnapshot))
+    (core : channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels)
+    (host : channel ∉ (HostHintQueueBoundary.boundary source final target.host).circuit.channels)
+    (changes : channel ≠ FinalMemoryChange.channel.toRaw) (env : Environment (ZMod p)) :
+    (Installed image source target final).verifierOperations.interactionValuesWith channel env = [] := by
+  rw [verifier_core_values declared host changes env]
   exact LocalCore.boundaryVerifier_silent image source _ core env
 
 /-- No underlying verifier emits on the external declarations, receipt, or observation protocol. -/

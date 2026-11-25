@@ -159,12 +159,12 @@ theorem onlyChannel_Ltu :
   unfold ByteChip.Ltu.circuit at h'
   simpa [circuit_norm] using h'
 
-theorem onlyChannel_Range (n : ℕ) (hn : 2 ^ n < p) :
-    OnlyChannel (RangeChip.component (p := p) n hn) byteChannel.toRaw := by
+theorem onlyChannel_Range (width : RangeChip.Width) :
+    OnlyChannel (RangeChip.componentFor (p := p) width) byteChannel.toRaw := by
   intro channel h
-  have h' : channel ∈ (RangeChip.circuit n hn).channels := h
+  have h' : channel ∈ (RangeChip.circuitFor width (p := p)).channels := h
   simp only [GeneralFormalCircuit.channels] at h'
-  unfold RangeChip.circuit at h'
+  unfold RangeChip.circuitFor at h'
   simpa [circuit_norm] using h'
 
 theorem onlyChannel_ProgramProvider :

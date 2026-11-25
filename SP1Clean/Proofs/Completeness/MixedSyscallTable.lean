@@ -62,7 +62,8 @@ def inputs (compiled : List MixedCompiledRow) : List Input :=
   let live := compiled.filterMap MixedCompiledRow.syscallInput?
   live ++ List.replicate (demandPadding live.length) padding
 
-private theorem height (compiled : List MixedCompiledRow) :
+/-- The canonical ECALL input list has the exact scheduler height at every active count. -/
+theorem input_height (compiled : List MixedCompiledRow) :
     (inputs compiled).length = demandHeight (compiled.filterMap (MixedCompiledRow.syscallInput? (p := SP1Prime))).length := by
   simp [inputs, add_demandPadding]
 
@@ -70,13 +71,19 @@ private theorem height (compiled : List MixedCompiledRow) :
 def table (compiled : List MixedCompiledRow) (data : ProverData F) (hint : ProverHint F)
     (fit : demandHeight (compiled.filterMap (MixedCompiledRow.syscallInput? (p := SP1Prime))).length ≤ UInt64.size) : Table F :=
   let rows := inputs compiled
-  Table.build component rows (component.inputData rows data) hint ((height compiled).trans_le fit)
+  Table.build component rows (component.inputData rows data) hint ((input_height compiled).trans_le fit)
     (by trivial) (component.inputData_consistent rows data)
 
 /-- The ECALL table has the exact rounded height of its generated instruction rows. -/
 theorem table_length (compiled : List MixedCompiledRow) (data : ProverData F) (hint : ProverHint F) (fit) :
     (table compiled data hint fit).length = demandHeight (compiled.filterMap (MixedCompiledRow.syscallInput? (p := SP1Prime))).length :=
-  (List.length_map ..).trans (height compiled)
+  (List.length_map ..).trans (input_height compiled)
+
+/-- Decoding every generated physical ECALL row at any evaluation data recovers its
+literal original input, including the scheduler's disabled suffix. -/
+theorem all_inputs (compiled : List MixedCompiledRow) (data evaluation : ProverData F) (hint : ProverHint F) (fit) :
+    (table compiled data hint fit).table.map (fun r => HostCallLedger.input (Environment.fromArray r evaluation)) = inputs compiled :=
+  Table.build_inputs component (inputs compiled) _ hint ((input_height compiled).trans_le fit) (by trivial) (component.inputData_consistent _ data) evaluation
 
 /-- Decoding the physical arrays recovers exactly the active compiler inputs for the eight calls. -/
 theorem active (compiled : List MixedCompiledRow) (data evaluation : ProverData F) (hint : ProverHint F) (fit) :
@@ -141,7 +148,7 @@ theorem of_execution {limits : ResourceLimits} {image : ProgramImage} {source ta
   have upper := (demandHeight_bounds calls.length).2
   have fit : demandHeight calls.length ≤ UInt64.size := by change _ ≤ 2 ^ 64; omega
   obtain ⟨constraints, guarantees⟩ := checked run built data hint fit
-  exact ⟨compiled, built, fit, constraints, guarantees, (List.length_map ..).trans (height compiled),
+  exact ⟨compiled, built, fit, constraints, guarantees, (List.length_map ..).trans (input_height compiled),
     fun evaluation => active compiled data evaluation hint fit⟩
 
 end SP1Clean.TraceGen.MixedSyscallTable

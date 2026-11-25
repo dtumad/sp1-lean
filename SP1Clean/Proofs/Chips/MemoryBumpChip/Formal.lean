@@ -65,12 +65,12 @@ theorem soundness :
     rw [hr1, one_mul] at a_cl a_hieq a_diff
     obtain ⟨hisu, hclk⟩ := h_mem hneg
     refine ⟨hisu, hclk,
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact b016 hneg),
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact b3248 hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact b016 hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact b3248 hneg),
       ((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).1,
       ((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).2,
       ?_, bool_of_mul_pred a_cl, a_hieq, by linear_combination a_diff,
-      (byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact bdlow hneg),
+      (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact bdlow hneg),
       ((byteRowSpec_u8range_pair _ _).mp (bdhigh hneg)).1⟩
     -- the register index: project the byte-bus `LTU` fact through `a = 1`
     have hltu := (byteRowSpec_ltu _ _ _).mp (bltu hneg)
@@ -81,7 +81,7 @@ theorem soundness :
     have hneg : input_is_real = 1 := by rw [hr1]
     obtain ⟨hisu, -⟩ := h_mem hneg
     exact ⟨hisu, clkLow_lt_2pow24
-      ((byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact b016 hneg))
+      ((byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact b016 hneg))
       (((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).1)⟩
 
 theorem completeness :
@@ -99,8 +99,8 @@ theorem completeness :
     obtain ⟨hisu, hclk, r016, r3248, r1624, r2432, haddr, hcl, hhieq, hdiff, rdlow, rdhigh⟩ :=
       h_gated h1
     refine ⟨by rw [h1, sub_self, mul_zero],
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr r016,
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr r3248,
+      fun _ => (byteRowSpec_u16 _).mpr r016,
+      fun _ => (byteRowSpec_u16 _).mpr r3248,
       fun _ => (byteRowSpec_u8range_pair _ _).mpr ⟨r1624, r2432⟩,
       fun _ => (byteRowSpec_ltu _ _ _).mpr
         ⟨⟨by rw [val1]; norm_num, by omega, by rw [val32]; norm_num⟩,
@@ -108,7 +108,7 @@ theorem completeness :
       by rw [h1, one_mul]; rcases hcl with h | h <;> simp [h],
       by rw [h1, one_mul]; linear_combination hhieq,
       by rw [h1, one_mul]; linear_combination hdiff,
-      fun _ => (byteRowSpec_range _ sixteen_lt).mpr rdlow,
+      fun _ => (byteRowSpec_u16 _).mpr rdlow,
       fun _ => (byteRowSpec_u8range_pair _ _).mpr ⟨rdhigh, by rw [ZMod.val_zero]; norm_num⟩,
       fun _ => ⟨hisu, hclk⟩⟩
 

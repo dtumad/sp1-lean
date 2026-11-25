@@ -177,7 +177,8 @@ theorem table_component (id : Index) : (table run routed data hint packets id).c
   | hint word => cases word <;> rfl
   | check ram => cases ram <;> rfl
 
-private theorem table_valid (id : Index) :
+/-- Every funded fixed resource satisfies its original local row conditions. -/
+theorem table_valid (id : Index) :
     (table run routed data hint packets id).Constraints ∧ (table run routed data hint packets id).Guarantees := by
   cases id with
   | program => exact ⟨(MixedProgramFetches.funded run.1 routed data).1,(MixedProgramFetches.funded run.1 routed data).2.1⟩

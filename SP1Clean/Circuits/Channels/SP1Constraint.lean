@@ -48,20 +48,22 @@ def idx : ByteOpcode → ℕ
 
 @[simp] lemma ofNat_idx (op : ByteOpcode) : ofNat op.idx = op := by cases op <;> rfl
 
-/-- The byte-opcode constraint. `Range` (used by Add's `slice_range_check_u16`) bounds
-`a.val < 2 ^ b.val`; `U8Range` (used by CPUState's `clk_16_24` byte check) bounds all three
-operands `< 256`; AND/OR/XOR (used by Bitwise) say `a` is the per-byte bitwise op of the
-two byte operands, all bounded `< 256`; `MSB` (used by Mul/LoadByte/signed-Lt) says `a` is the
-boolean top bit of `b` (`a = 1 ↔ 128 ≤ b.val`); `LTU` says `a` is the boolean `b.val < c.val`. -/
+/-- Decoding a physical opcode number recovers its original index. -/
+lemma idx_ofNat {n : ℕ} (bound : n ≤ 6) : (ofNat n).idx = n := by interval_cases n <;> rfl
+
+/-- Membership of a four-field tuple in the released Byte and Range interactions.
+The six byte operations use bytes as operands and derive their result. U8Range fixes
+the result field to zero and MSB fixes the unused operand to zero. Range publishes
+one bounded value, its width from 0 through 16 and a zero final field. -/
 def constrain {p : ℕ} [NeZero p] (op : ByteOpcode) (a b c : ZMod p) : Prop :=
   match op with
   | AND => (a.val < 256 ∧ b.val < 256 ∧ c.val < 256) ∧ a.val = b.val &&& c.val
   | OR  => (a.val < 256 ∧ b.val < 256 ∧ c.val < 256) ∧ a.val = b.val ||| c.val
   | XOR => (a.val < 256 ∧ b.val < 256 ∧ c.val < 256) ∧ a.val = b.val ^^^ c.val
-  | U8Range => a.val < 256 ∧ b.val < 256 ∧ c.val < 256
+  | U8Range => a = 0 ∧ b.val < 256 ∧ c.val < 256
   | LTU => (a.val < 256 ∧ b.val < 256 ∧ c.val < 256) ∧ (a = 0 ∨ a = 1) ∧ (a = 1 ↔ b.val < c.val)
-  | MSB => (a.val < 256 ∧ b.val < 256 ∧ c.val < 256) ∧ (a = 0 ∨ a = 1) ∧ (a = 1 ↔ 128 ≤ b.val)
-  | Range => a.val < 2 ^ b.val
+  | MSB => (a.val < 256 ∧ b.val < 256) ∧ (a = 0 ∨ a = 1) ∧ (a = 1 ↔ 128 ≤ b.val) ∧ c = 0
+  | Range => a.val < 2 ^ b.val ∧ b.val ≤ 16 ∧ c = 0
 
 /-- Meaning of a raw field-valued byte-bus opcode. This is the form carried by SP1's AIR
 interaction tuple: a valid byte row must exhibit an actual `ByteOpcode` whose numeric index is the
@@ -86,7 +88,7 @@ lemma constrainField_natCast {p k : ℕ} [NeZero p] [Fact (2 ^ 17 < p)]
       rwa [ZMod.val_natCast_of_lt hopLt, ZMod.val_natCast_of_lt hkLt] at hval
     rwa [← hidx, ofNat_idx]
   · intro hc
-    have hidx : (ofNat k).idx = k := by interval_cases k <;> rfl
+    have hidx := idx_ofNat hk
     exact ⟨ofNat k, by rw [hidx], hc⟩
 
 @[simp] lemma constrainField_zero {p : ℕ} [NeZero p] [Fact (2 ^ 17 < p)]
@@ -127,10 +129,10 @@ lemma constrainField_natCast {p k : ℕ} [NeZero p] [Fact (2 ^ 17 < p)]
   constrainField_natCast (k := 6) (by omega) a b c
 
 @[simp] lemma constrain_Range {p : ℕ} [NeZero p] (a b c : ZMod p) :
-    ByteOpcode.Range.constrain a b c ↔ (a.val < 2 ^ b.val) := Iff.rfl
+    ByteOpcode.Range.constrain a b c ↔ a.val < 2 ^ b.val ∧ b.val ≤ 16 ∧ c = 0 := Iff.rfl
 
 @[simp] lemma constrain_U8Range {p : ℕ} [NeZero p] (a b c : ZMod p) :
-    ByteOpcode.U8Range.constrain a b c ↔ (a.val < 256 ∧ b.val < 256 ∧ c.val < 256) := Iff.rfl
+    ByteOpcode.U8Range.constrain a b c ↔ a = 0 ∧ b.val < 256 ∧ c.val < 256 := Iff.rfl
 
 @[simp] lemma constrain_LTU {p : ℕ} [NeZero p] (a b c : ZMod p) :
     ByteOpcode.LTU.constrain a b c ↔
@@ -139,7 +141,7 @@ lemma constrainField_natCast {p k : ℕ} [NeZero p] [Fact (2 ^ 17 < p)]
 
 @[simp] lemma constrain_MSB {p : ℕ} [NeZero p] (a b c : ZMod p) :
     ByteOpcode.MSB.constrain a b c ↔
-      ((a.val < 256 ∧ b.val < 256 ∧ c.val < 256) ∧ (a = 0 ∨ a = 1) ∧ (a = 1 ↔ 128 ≤ b.val)) :=
+      (a.val < 256 ∧ b.val < 256) ∧ (a = 0 ∨ a = 1) ∧ (a = 1 ↔ 128 ≤ b.val) ∧ c = 0 :=
   Iff.rfl
 
 end ByteOpcode

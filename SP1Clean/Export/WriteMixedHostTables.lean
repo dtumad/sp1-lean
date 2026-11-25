@@ -20,12 +20,13 @@ private abbrev F := ZMod SP1Prime
 variable {limits : ResourceLimits} {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
     (run : AdmissibleExecution limits SP1Prime image source target events)
 
-private def bankRows (d : Bool) : List CommitBanks.Entry :=
+/-- The ordered physical inputs of a commitment bank. -/
+def bankRows (d : Bool) : List CommitBanks.Entry :=
   (CommitBanks.rows? d 0 (source.host.bank d) (CommitBanks.calls d events)).get (by
     obtain ⟨rows, routed, _⟩ := CommitBanks.of_execution run d
     exact Option.isSome_iff_exists.mpr ⟨rows,routed⟩)
 
-private theorem bankRows_eq (d : Bool) :
+theorem bankRows_eq (d : Bool) :
     CommitBanks.rows? d 0 (source.host.bank d) (CommitBanks.calls d events) = some (bankRows run d) :=
   (Option.some_get _).symm
 
@@ -40,9 +41,13 @@ private theorem bankFacts (d : Bool) :
   obtain rfl := Option.some.inj ((bankRows_eq run d).symm.trans routed)
   exact ⟨valid, handoff, last⟩
 
+theorem bankLaneFits (d : Bool) (slot : Fin 8) :
+    demandHeight (CommitBanks.lane slot (bankRows run d)).length ≤ UInt64.size :=
+  CommitBanks.lane_fits run d (bankFacts run d).2.1 slot
+
 private def builtBank (d : Bool) (data : ProverData F) :=
   CommitBanks.bankTable d (bankRows run d) (lastState d events target) data
-    (CommitBanks.lane_fits run d (bankFacts run d).2.1)
+    (bankLaneFits run d)
 
 private noncomputable def ordinaryRows : List RoutedEvent :=
   (routeObservations? (policy SP1Prime image) image.program (fun _ => 0) source.realize events).get (by
@@ -94,7 +99,7 @@ theorem valid (id : Index) : (table run data id).Constraints ∧ (table run data
     | none => exact CommitBanks.terminalTable_valid _ _ _ (bankFacts run d).2.2
     | some slot =>
       exact CommitBanks.laneTable_valid d slot _ data
-        (CommitBanks.lane_fits run d (bankFacts run d).2.1 slot) (bankFacts run d).1
+        (bankLaneFits run d slot) (bankFacts run d).1
   | observation i => exact ordinary_valid run data _ (List.getElem_mem i.isLt)
 
 /-- Both mutable bank channels close against the full incoming and outgoing host snapshots
@@ -106,6 +111,6 @@ theorem bank_state_balanced (d : Bool) :
   obtain ⟨rs, emitted, _, _, _, chain⟩ := CommitBanks.of_execution run d
   obtain rfl := Option.some.inj ((bankRows_eq run d).symm.trans emitted)
   exact CommitBanks.state_balanced d (bankRows run d) _ (lastState d events target) data
-    (CommitBanks.lane_fits run d (bankFacts run d).2.1) chain
+    (bankLaneFits run d) chain
 
 end SP1Clean.Export.WriteMixedHostTables

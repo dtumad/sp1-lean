@@ -42,10 +42,10 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   simp only [RawSpec, Nat.cast_ofNat]
   refine ⟨bool_of_mul_pred hgc0, bool_of_mul_pred hgc1, bool_of_mul_pred hgc2, bool_of_mul_pred hgc3,
     ?_, ?_, ?_, ?_⟩
-  · rw [← h65536]; exact (byteRowSpec_range _ sixteen_lt).mp R0
-  · rw [← h65536]; exact (byteRowSpec_range _ sixteen_lt).mp R1
-  · rw [← h65536]; exact (byteRowSpec_range _ sixteen_lt).mp R2
-  · rw [← h65536]; exact (byteRowSpec_range _ sixteen_lt).mp R3
+  · rw [← h65536]; exact (byteRowSpec_u16 _).mp R0
+  · rw [← h65536]; exact (byteRowSpec_u16 _).mp R1
+  · rw [← h65536]; exact (byteRowSpec_u16 _).mp R2
+  · rw [← h65536]; exact (byteRowSpec_u16 _).mp R3
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
@@ -55,10 +55,10 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     Word.lt_cases_of_isU64 (h_spec hneg).1
   simp only [circuit_norm, byteChannel]
   refine ⟨fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, ?_⟩
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.1
-  · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.2
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.2.1
+  · rw [← c16]; exact (byteRowSpec_u16 _).mpr (key hneg).2.2.2
   · rcases hbin with h0 | h1
     · simp [h0]
     · obtain ⟨hv, hbv⟩ := h_spec h1

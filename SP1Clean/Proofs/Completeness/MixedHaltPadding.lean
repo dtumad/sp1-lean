@@ -46,6 +46,12 @@ theorem checked (source target : ExecutionSnapshot) (data : ProverData F) :
   unfold inputs
   cases SP1StateBoundary.haltCode source target <;> rfl
 
+/-- The original legacy decoder recovers the literal disabled input at any evaluation data. -/
+theorem all_inputs (source target : ExecutionSnapshot) (data evaluation : ProverData F) :
+    (table source target data).table.map (haltRow evaluation) = inputs source target :=
+  Table.build_inputs HaltPaddingChip.component (inputs source target) _ (.empty _) (by unfold inputs; split <;> decide) (by trivial)
+    (HaltPaddingChip.component.inputData_consistent _ data) evaluation
+
 private def output (r : HaltChip.Inputs F) : List (Interaction F) :=
   [exitChannel.pushedIfValue r.is_real (HaltChip.exitMessage r),exitChannel.pushedIfValue (1-r.is_real) ⟨0⟩]
 

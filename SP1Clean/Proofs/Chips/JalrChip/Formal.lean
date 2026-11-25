@@ -194,7 +194,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have hguar := h_align (by rw [hr1])
     simp only [byteChannel] at hguar
     rw [← c14] at hguar
-    exact val_mod_four_of_mul_inv_four_lt ((byteRowSpec_range _ h14p).mp hguar)
+    exact val_mod_four_of_mul_inv_four_lt ((byteRowSpec_range (n := 14) _ (by decide)).mp hguar)
   · -- LSB-clearing: the committed `nextPcWord` is `add_value` with bit 0 cleared (`~~~1#64 &&&`).
     -- The binary `lsb` gate + the `÷4` byte-range pin `lsb = bit0(add_value[0])`; with `add_value[3] = 0`
     -- this makes `toNat add_value = toNat nextPcWord + lsb`, so `ofNat64_clear_lsb_and` applies.
@@ -203,7 +203,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     simp only [byteChannel] at hguar
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     rw [← c14] at hguar
-    have hlt := (byteRowSpec_range _ h14p).mp hguar
+    have hlt := (byteRowSpec_range (n := 14) _ (by decide)).mp hguar
     rw [sub_eq_add_neg] at hlt
     have hdlt : (env.get i₀ + -env.get (i₀ + 4 + 4)).val < 2 ^ 16 :=
       val_lt_65536_of_mul_inv_four_lt hlt
@@ -412,7 +412,7 @@ theorem completeness :
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hlsb_val hr1, hav0]
     rw [← c14]
-    exact (byteRowSpec_range _ h14p).mpr (h_align_pa hr1)
+    exact (byteRowSpec_range (n := 14) _ (by decide)).mpr (h_align_pa hr1)
   · exact h_op0_pad
   · rcases h_bin with h | h <;> rw [h] <;> simp
 

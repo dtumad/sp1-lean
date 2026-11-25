@@ -486,7 +486,7 @@ theorem providerTableFor_constraints (wf : trace.WellFormed) (id : ProviderTable
             (wf.provider (.byte .xorByte)) (trace.providerInputsFor_capacity (.byte .xorByte)) (trace.providerDataFor_consistent (.byte .xorByte))
       | ltu => exact ByteChip.Ltu.traceTable_constraints _ _ _ (wf.provider (.byte .ltu)) (trace.providerInputsFor_capacity (.byte .ltu)) (trace.providerDataFor_consistent (.byte .ltu))
   | range width =>
-      exact RangeChip.traceTable_constraints _ (Nat.le_of_lt_succ width.isLt) _ _ _
+      exact RangeChip.traceTable_constraints width _ _ _
         (wf.provider (.range width)) (trace.providerInputsFor_capacity (.range width)) (trace.providerDataFor_consistent (.range width))
   | program =>
       exact ProgramProviderChip.traceTable_constraints _ _ _ (wf.provider .program) (trace.providerInputsFor_capacity .program) (trace.providerDataFor_consistent .program)

@@ -32,7 +32,7 @@ theorem providerTableFor_lookups_empty (id : ProviderTableId) :
         Gadgets.BitwiseByte.circuit, circuit_norm]
   | range width =>
     simp [providerTableFor, Component.lookups_eq, Component.rowOperations,
-      RangeChip.circuitFor, RangeChip.circuit, circuit_norm]
+      RangeChip.circuitFor, circuit_norm]
   | program =>
     simp [providerTableFor, Component.lookups_eq, Component.rowOperations,
       ProgramProviderChip.circuit, ProgramProviderChip.main,

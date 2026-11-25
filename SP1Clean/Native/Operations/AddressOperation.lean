@@ -55,11 +55,6 @@ def RawSpec (b cc : Word (ZMod p)) (offset_bit0 offset_bit1 offset_bit2 : ZMod p
   ((cols.addr_operation.value[0] - 4 * offset_bit2 - 2 * offset_bit1 - offset_bit0)
       * (8 : ZMod p)⁻¹).val < 2 ^ 13
 
-omit [Fact p.Prime] in
-/-- `2 ^ 13 < p`, the side condition for the offset `rangeCheck 13`. -/
-lemma hn13 : 2 ^ 13 < p := by
-  have := Fact.out (p := 2 ^ 17 < p); omega
-
 /-- Soundness needs only genuine 64-bit operands. The circuit itself proves that their sum is a
 valid 48-bit address and constrains the remaining address metadata. -/
 def SoundnessAssumptions (input : Inputs (ZMod p)) : Prop :=
@@ -249,12 +244,11 @@ theorem soundness :
   have h_aa := (h_addrAdd ⟨hb, hcc, hbin⟩) hr'
   simp only [circuit_norm] at h_aa
   have c13 : ((13 : ℕ) : ZMod p) = (13 : ZMod p) := by norm_cast
-  have h13p : (13 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
   have hneg : input_is_real = 1 := hr'
   have h_range := h_range hneg
   simp only [byteChannel] at h_range
   rw [← c13] at h_range
-  have h_range_nat := (byteRowSpec_range _ h13p).mp h_range
+  have h_range_nat := (byteRowSpec_range (n := 13) _ (by decide)).mp h_range
   have h_inv_real : env.get (i₀ + 3) *
       (env.get (i₀ + 1) + env.get (i₀ + 2)) - 1 = 0 := by
     simpa only [hr'] using h_inv
@@ -367,11 +361,10 @@ theorem completeness :
   · -- the byte-bus `Range(13)` guarantee: `ByteRowSpec ⟨6, arg, 13, 0⟩ ↔ arg.val < 2^13`.
     intro hneg
     have hr1 : input_is_real = 1 := hneg
-    have h13p : (13 : ℕ) < p := by omega
     have c13 : ((13 : ℕ) : ZMod p) = (13 : ZMod p) := by norm_cast
     simp only [circuit_norm, byteChannel]
     rw [← c13]
-    refine (byteRowSpec_range _ h13p).mpr ?_
+    refine (byteRowSpec_range (n := 13) _ (by decide)).mpr ?_
     simp only [sub_eq_add_neg]
     show ((v0 + -(4 * input_offset_bit2) + -(2 * input_offset_bit1) + - input_offset_bit0)
         * (8 : ZMod p)⁻¹).val < 2 ^ 13

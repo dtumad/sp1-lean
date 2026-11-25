@@ -122,11 +122,6 @@ omit [Fact (2 ^ 24 < p)] in
 @[circuit_norm] lemma sp1StateVerifier_localLength_eq (x : Var SP1PublicIO (ZMod p)) :
     (sp1StateVerifierElaborated (p := p)).localLength x = 0 := rfl
 
-omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
-/-- `16 < p` for the byte-table width-column round-trip. -/
-private lemma h16p' [Fact (2 ^ 17 < p)] : (16 : ℕ) < p := by
-  have := Fact.out (p := 2 ^ 17 < p); omega
-
 theorem sp1StateVerifier_soundness :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) sp1StateVerifierMain
       (fun _ _ => True) (fun pi _ _ => pi.LimbBounds) := by
@@ -135,20 +130,20 @@ theorem sp1StateVerifier_soundness :
   simp only [circuit_norm, SP1StateBoundary.LimbBounds, Channels.stateChannel,
     Channels.byteChannel, Channels.exitChannel] at h_holds ⊢
   obtain ⟨i016, i3248, ipair, ipc0, ipc1, ipc2, f016, f3248, fpair, fpc0, fpc1, fpc2⟩ := h_holds
-  exact ⟨(byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact i016),
+  exact ⟨(byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact i016),
     ((byteRowSpec_u8range_pair _ _).mp ipair).2,
     ((byteRowSpec_u8range_pair _ _).mp ipair).1,
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact i3248),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact ipc0),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact ipc1),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact ipc2),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact f016),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact i3248),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact ipc0),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact ipc1),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact ipc2),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact f016),
     ((byteRowSpec_u8range_pair _ _).mp fpair).2,
     ((byteRowSpec_u8range_pair _ _).mp fpair).1,
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact f3248),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact fpc0),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact fpc1),
-    (byteRowSpec_range _ h16p').mp (by rw [Nat.cast_ofNat]; exact fpc2)⟩
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact f3248),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact fpc0),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact fpc1),
+    (byteRowSpec_u16 _).mp (by rw [Nat.cast_ofNat]; exact fpc2)⟩
 
 /-- The boundary row's prover obligation: the committed limbs really are in range (the honest
 public values are produced limb-wise from genuine 48-bit clocks and pcs). -/
@@ -164,18 +159,18 @@ theorem sp1StateVerifier_completeness :
   obtain ⟨i016, i1624, i2432, i3248, ipc0, ipc1, ipc2,
     f016, f1624, f2432, f3248, fpc0, fpc1, fpc2⟩ := h_assumptions
   simp only [circuit_norm, Channels.stateChannel, Channels.byteChannel, Channels.exitChannel]
-  exact ⟨(byteRowSpec_range _ h16p').mpr i016,
-    (byteRowSpec_range _ h16p').mpr i3248,
+  exact ⟨(byteRowSpec_u16 _).mpr i016,
+    (byteRowSpec_u16 _).mpr i3248,
     (byteRowSpec_u8range_pair _ _).mpr ⟨i2432, i1624⟩,
-    (byteRowSpec_range _ h16p').mpr ipc0,
-    (byteRowSpec_range _ h16p').mpr ipc1,
-    (byteRowSpec_range _ h16p').mpr ipc2,
-    (byteRowSpec_range _ h16p').mpr f016,
-    (byteRowSpec_range _ h16p').mpr f3248,
+    (byteRowSpec_u16 _).mpr ipc0,
+    (byteRowSpec_u16 _).mpr ipc1,
+    (byteRowSpec_u16 _).mpr ipc2,
+    (byteRowSpec_u16 _).mpr f016,
+    (byteRowSpec_u16 _).mpr f3248,
     (byteRowSpec_u8range_pair _ _).mpr ⟨f2432, f1624⟩,
-    (byteRowSpec_range _ h16p').mpr fpc0,
-    (byteRowSpec_range _ h16p').mpr fpc1,
-    (byteRowSpec_range _ h16p').mpr fpc2⟩
+    (byteRowSpec_u16 _).mpr fpc0,
+    (byteRowSpec_u16 _).mpr fpc1,
+    (byteRowSpec_u16 _).mpr fpc2⟩
 
 /-- The SP1 boundary verifier as a `GeneralFormalCircuit`: pulls the public final state, pushes the
 public initial state, range-checks every committed limb on the Byte bus (`Spec = LimbBounds`), and
@@ -327,7 +322,7 @@ theorem sp1ProviderTables_stateChannel_not_mem :
   fin_cases componentMem <;>
     simp [GeneralFormalCircuit.channels, ByteChip.U8Range.circuit, ByteChip.MSB.circuit,
       ByteChip.AndByte.circuit, ByteChip.OrByte.circuit, ByteChip.XorByte.circuit,
-      ByteChip.Ltu.circuit, RangeChip.circuitFor, RangeChip.circuit,
+      ByteChip.Ltu.circuit, RangeChip.circuitFor,
       ProgramProviderChip.circuit, MemoryProviderChip.circuit, MemoryFinalizeChip.circuit,
       MemoryBumpChip.circuit, circuit_norm]
 

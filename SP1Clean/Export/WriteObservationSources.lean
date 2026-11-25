@@ -49,7 +49,8 @@ private theorem supply_position :
   change _ + 0 = _
   exact Nat.add_zero _
 
-private theorem supervisor_lookupFree : LookupFree (withSources image source target final).tables := by
+/-- Decorating the physical supervisor sources introduces no legacy lookup operations. -/
+theorem supervisor_lookupFree : LookupFree (withSources image source target final).tables := by
   apply (sameRows image source target final).lookupFree
   change LookupFree (base image source target final).tables
   unfold base
