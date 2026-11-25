@@ -52,6 +52,7 @@ import SP1Clean.Export.CommitmentReaders
 import SP1Clean.Export.CommitmentReaderLedger
 import SP1Clean.Export.NativeShardCommitments
 import SP1Clean.Export.NativeShardRows
+import SP1Clean.Export.NativeShardCompilation
 import SP1Clean.Export.WriteObserverSlotLedger
 import SP1Clean.Proofs.Completeness.WriteCollectedEffects
 import SP1Clean.Proofs.Completeness.WriteEffectAssembly
