@@ -225,7 +225,7 @@ theorem assembled_overflow (suffix : List (Table F)) (registered : suffix.map Ta
   change 106 * WitnessGeneration.demandHeight n ≤ (w.interactionsWith bus).length at spent
   rw [height] at spent
   rw [WriteObservationAssembly.build_ledger,installSources_ledger _ _ (fun e => (by decide : bus.name ≠ WriteProbe.readbackChannel.toRaw.name) (congrArg RawChannel.name e)),List.length_append]
-  change 2130706433 ≤ _
+  apply (show SP1Prime ≤ 106 * 2^25 by decide).trans
   omega
 
 end SP1Clean.Export.WriteSparseByteCapacity
