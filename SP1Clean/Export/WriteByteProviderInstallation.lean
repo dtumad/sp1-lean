@@ -42,6 +42,15 @@ private theorem residual {i : Fin (suffix image source target finish).length}
   rw [WriteMixedControlTables.remaining_positions image source target finish,List.mem_range'_1] at found
   exact found
 
+include image source target finish in
+/-- The 23 actual providers are outside all original reader generators. -/
+theorem window (i : Fin 23) : let k := 32 + i.val
+    sourceAt k = none ∧ WriteMixedHostTables.indexAt k = none ∧ WriteMixedFixedResources.indexAt k = none ∧ WriteMixedControlTables.indexAt k = none := by
+  intro k
+  have member : k ∈ List.range' 32 23 := List.mem_range'_1.mpr (by dsimp only [k]; omega)
+  rw [← WriteMixedControlTables.remaining_positions image source target finish] at member
+  simpa only [Bool.and_eq_true,Option.isNone_iff_eq_none,and_assoc] using (List.mem_filter.mp member).2
+
 variable (support : List LookupKey) (count : LookupKey → ℕ) (valid : ∀ k ∈ support, ByteServable k) (data : ProverData F)
 
 /-- The 23 generated native providers fill all remaining original physical positions. -/
@@ -53,6 +62,16 @@ def remaining : WriteMixedControlTables.Remaining image source target finish :=
     have found := registered image source target finish pos
     rw [index,← List.getElem?_drop,List.getElem?_eq_getElem i.isLt] at found
     exact ⟨ByteProviderDemand.table support count valid data (provider pos),(Option.some.inj found).symm⟩
+
+/-- At each provider index, the installed physical table is its corresponding generated
+opcode or range bucket. -/
+theorem remaining_at (pos : Fin 23) (i : Fin (suffix image source target finish).length)
+    (same : 6 + i.val = 32 + pos.val) (a b c d) :
+    (remaining image source target finish support count valid data i a b c d).1 =
+      ByteProviderDemand.table support count valid data (provider pos) := by
+  let own : Fin 23 := ⟨6 + i.val - 32,by omega⟩
+  change ByteProviderDemand.table support count valid data (provider own) = _
+  exact congrArg (fun j => ByteProviderDemand.table support count valid data (provider j)) (Fin.ext (by dsimp [own]; omega))
 
 /-- All residual table constraints and guarantees are discharged by their original generated rows. -/
 theorem remaining_valid : ∀ i a b c d, let t := (remaining image source target finish support count valid data i a b c d).1
