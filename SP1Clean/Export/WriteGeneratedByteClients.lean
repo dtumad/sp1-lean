@@ -37,7 +37,8 @@ structure Client (index : ℕ) where
 
 private abbrev grid := Client run routed finish data hint header packets
 
-private theorem rows_at_boundary (rest : Rest image initial final finish) (i : Fin 6) :
+/-- The first six physical arrays retain the generated ordered boundaries for every filling of the provider window. -/
+theorem rows_at_boundary (rest : Rest image initial final finish) (i : Fin 6) :
     ((supervisor run routed finish data hint header packets rest).tables.map Table.table)[i.val]? =
       some ((WriteBoundaryBuild.boundaryTables initial.sail.memorySnapshot (MixedMemoryHistory.stream image initial events rows)
         (WriteBoundaryBuild.demandKeys events packets) (MixedMemoryHistory.canonical run.1 routed) data hint)[i.val]'i.isLt).table := by

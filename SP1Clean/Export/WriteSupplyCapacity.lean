@@ -1,9 +1,7 @@
 import SP1Clean.Export.WriteObservationBuild
 import SP1Clean.Proofs.Completeness.WriteCountedCost
 import ToClean.Air.AppendedAuthentication
-import Mathlib.Data.List.FinRange
-import Mathlib.Data.List.Perm.Subperm
-import Mathlib.Algebra.Order.BigOperators.Group.List
+import ToClean.Air.SelectedFootprint
 
 /-! # Paying for native WRITE supply from the installed supervisor's Memory ledger
 
@@ -22,15 +20,6 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : Hos
 
 attribute [local irreducible] base
 
-private theorem selected_cost {α : Type*} (xs : List α) (ids : List (Fin xs.length)) (unique : ids.Nodup) (cost : α → ℕ) :
-    (ids.map (fun i => cost xs[i.val])).sum ≤ (xs.map cost).sum := by
-  have inside : ids ⊆ List.finRange xs.length := fun i _ => List.mem_finRange i
-  obtain ⟨ordered, equal, subset⟩ := unique.subperm inside
-  let f := fun i : Fin xs.length => cost xs[i.val]
-  have total := (subset.map f).sum_le_sum (fun _ _ => Nat.zero_le _)
-  rw [(equal.map f).sum_eq, ← List.ofFn_eq_map, List.ofFn_getElem_eq_map] at total
-  exact total
-
 /-- Distinct registered slots pay for all source occurrences, including aliasing and
 disabled rows, in the original supervisor's full signed Memory ledger. -/
 theorem records_le_memory (w : EnsembleWitness (base image source target final)) :
@@ -42,13 +31,11 @@ theorem records_le_memory (w : EnsembleWitness (base image source target final))
   have unique : (sources.map index).Nodup := by
     apply List.Nodup.of_map Fin.val
     simpa only [List.map_map, Function.comp_def, index, originalSlot_index] using distinct
-  have sum := selected_cost w.tables (sources.map index) unique cost
-  have consumed : (sources.map (fun id => cost (raw w id))).sum ≤ (w.tables.map cost).sum := by
-    simpa only [List.map_map, Function.comp_def, slot] using sum
-  apply (records_le_source_memory (raw w) (raw_registered w)).trans
-  apply consumed.trans
+  have sum := w.selected_table_cost_le (sources.map index) unique memoryChannel.toRaw
   rw [← w.channelOccurrences_eq_length]
-  exact Nat.le_add_left _ _
+  apply (records_le_source_memory (raw w) (raw_registered w)).trans
+  change (sources.map (fun id => cost (raw w id))).sum ≤ _
+  simpa only [List.map_map,Function.comp_def,slot,cost] using sum
 
 /-- The real supplier always fits the row-index type when the original supervisor passed its own
 physical capacity check. The bound also accounts for canonical power-of-two padding. -/

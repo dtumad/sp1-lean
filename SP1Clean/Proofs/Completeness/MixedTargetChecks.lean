@@ -50,6 +50,15 @@ def checkTable (source target : MemorySnapshot) (ram : Bool) (rows : List (Termi
   | true => Table.ofInputs (checkComponent target true) (guardedRows (inputs source target true rows)) data
       ((guardedRows_length _).trans_le (by rw [inputs_length]; exact fit)) (fun _ => trivial)
 
+/-- Every target validator uses the same padded RAM or register key count as its finalizer. -/
+theorem checkTable_length (source target : MemorySnapshot) (ram : Bool) (rows : List (Terminal F)) (data : ProverData F) (fit) :
+    (checkTable source target ram rows data fit).length = demandHeight (rows.filter (fun r => r.ram == ram)).length := by
+  cases ram
+  · exact (Table.ofInputs_length (checkComponent target false) _ data _ (fun _ => trivial)).trans
+      ((guardedRows_length (F := F) (inputs source target false rows)).trans (congrArg demandHeight (inputs_length ..)))
+  · exact (Table.ofInputs_length (checkComponent target true) _ data _ (fun _ => trivial)).trans
+      ((guardedRows_length (F := F) (inputs source target true rows)).trans (congrArg demandHeight (inputs_length ..)))
+
 private theorem reg_input (source target : MemorySnapshot) (r : Terminal F) (valid : FinalRegisterValue.Spec target r.record) (d : ProverData F) (h : ProverHint F) :
     (FinalRegisterCheck.circuit target).ProverAssumptions (input false (Std.HashSet.ofList (source.changes target)) r.record,1) d h := by
   let built := input false (Std.HashSet.ofList (source.changes target)) r.record
