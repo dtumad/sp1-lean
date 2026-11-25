@@ -30,6 +30,7 @@ noncomputable def supervisor (rest : Rest image initial final finish) : Ensemble
 
 /-- A physical slot's generated cells, with its component and row conditions, prior to funding the Byte window. -/
 structure Client (index : ℕ) where
+  /-- The generated client rows before the Byte providers receive their multiplicities. -/
   table : Table F
   component : (base image initial final finish).tables[index]? = some table.component
   checked : table.Constraints ∧ table.Guarantees

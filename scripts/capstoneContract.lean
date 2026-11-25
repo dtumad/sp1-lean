@@ -12,6 +12,9 @@ import SP1Clean.Proofs.Completeness.WriteWitnessAllocationCounts
 import SP1Clean.Export.WriteInstalledAllocations
 import SP1Clean.Proofs.Completeness.WriteNativeBlockBalance
 import SP1Clean.Export.WriteJointObservation
+import SP1Clean.Export.NativeShardCompilation
+import SP1Clean.Export.WriteByteLedger
+import SP1Clean.Export.WriteByteProviderInstallation
 import SP1Clean.Export.WriteInstalledHostExit
 import SP1Clean.Export.WriteControlLedgers
 import SP1Clean.Export.WriteRealizedTranscript
@@ -249,6 +252,34 @@ def roots : Array Name := #[
   ``SP1Clean.Export.WriteObservationAssembly.installed_funded_write_allocation,
   ``SP1Clean.Export.WriteObservationAssembly.installed_effect_joins,
   ``SP1Clean.Export.WriteObservationAssembly.compiled_observation_allocation,
+  ``SP1Clean.Export.WriteObservationAssembly.native_observation_allocation,
+  ``SP1Clean.Export.WriteObservationAssembly.joint_publicInput,
+  ``SP1Clean.Export.WriteMixedSourceTables.ofExecution_publicInput,
+  ``SP1Clean.Export.NativeShard.table_count,
+  ``SP1Clean.Export.NativeShard.compiled_rows,
+  ``SP1Clean.Export.NativeShard.fundedWitness_byte,
+  ``SP1Clean.Export.NativeShard.fundedWitness_declarations,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_declaration_lanes,
+  ``SP1Clean.Export.NativeShard.no_statement_at_funded_heights,
+  ``SP1Clean.Export.WriteSparseByteCapacity.ram_widths,
+  ``SP1Clean.Export.WriteFundedByteProviders.full,
+  ``SP1Clean.Export.WriteGeneratedByteClients.demand_eq,
+  ``SP1Clean.Export.WriteObservationAssembly.observerByteSites_le_budget,
+  ``SP1Clean.Export.WriteObservationAssembly.compiled_observer_byte_count,
+  ``SP1Clean.Export.WriteObservationAssembly.observer_allocation_count,
+  ``SP1Clean.Export.NativeShard.statement_iff_of_execution,
+  ``SP1Clean.Export.CommitmentReaders.provider_checked,
+  ``SP1Clean.Export.CommitmentReaders.physical_checked,
+  ``SP1Clean.Export.NativeShard.statementWitness_other,
+  ``SP1Clean.Export.NativeShard.statementWitness_constraints,
+  ``SP1Clean.Export.WriteObservationAssembly.installed_observer_rows,
+  ``SP1Clean.Export.WriteObservationAssembly.generated_byte_readers,
+  ``SP1Clean.Export.WriteObservationAssembly.observer_byte_count,
+  ``SP1Clean.Export.WriteByteLedger.funded,
+  ``SP1Clean.Export.WriteByteProviderInstallation.remaining_valid,
+  ``SP1Clean.Export.WriteByteConsumers.ordinary,
+  ``SP1Clean.Export.WritePublicByteDemand.supervisor_readers,
+  ``SP1Clean.Soundness.byteRowSpec_iff_servable,
   ``SP1Clean.Export.WriteMixedControlTables.remaining_count,
   ``SP1Clean.Export.WriteMixedControlTables.remaining_positions,
   ``SP1Clean.Export.WriteObservationAssembly.installed_control_receipts,
